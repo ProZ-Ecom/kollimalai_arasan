@@ -1,0 +1,48 @@
+import { createApiHandler } from "@/lib/api/api-handler";
+import { apiSuccess, apiCreated } from "@/lib/api/api-response";
+import { productService } from "@/features/products/services/product.service";
+import {
+  createAdminProductSchema,
+  adminProductsQuerySchema,
+  type CreateAdminProductInput,
+  type AdminProductsQueryInput,
+} from "@/features/products/validations/admin-product.schema";
+
+export const GET = createApiHandler(
+  {
+    GET: async (_request, context) => {
+      const query = context.query as AdminProductsQueryInput;
+      const result = await productService.getAdminProducts({
+        page: query?.page ?? 1,
+        pageSize: query?.pageSize ?? 10,
+        search: query?.search
+      });
+
+      return apiSuccess(result.data, "Products fetched successfully", 200, result.meta);
+    },
+  },
+  {
+    requireAuth: true,
+    requiredRole: ["ADMIN"],
+    querySchema: adminProductsQuerySchema,
+  }
+);
+
+export const POST = createApiHandler(
+  {
+    POST: async (_request, context) => {
+      const body = context.body as CreateAdminProductInput;
+      const adminEmail = context.session?.user?.email ?? undefined;
+
+      const product = await productService.createAdminProduct(body, adminEmail);
+
+      return apiCreated(product, "Product created successfully");
+    },
+  },
+  {
+    method: "POST",
+    requireAuth: true,
+    requiredRole: ["ADMIN"],
+    bodySchema: createAdminProductSchema,
+  }
+);
