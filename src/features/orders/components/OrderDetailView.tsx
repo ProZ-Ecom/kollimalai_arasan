@@ -31,8 +31,8 @@ function getStatusBadgeMeta(status?: string) {
   switch (status?.toLowerCase()) {
     case "delivered":
       return {
-        bg: "bg-emerald-50 text-emerald-700 border-emerald-200",
-        dot: "bg-emerald-500",
+        bg: "bg-secondary-50 text-secondary-700 border-secondary-200",
+        dot: "bg-secondary-500",
       };
     case "cancelled":
       return {
@@ -53,8 +53,8 @@ function getStatusBadgeMeta(status?: string) {
     case "packed":
     case "processing":
       return {
-        bg: "bg-amber-50 text-amber-700 border-amber-200",
-        dot: "bg-amber-500",
+        bg: "bg-primary-50 text-primary-700 border-primary-200",
+        dot: "bg-primary-500",
       };
     case "pending":
     case "confirmed":
@@ -133,8 +133,8 @@ export function OrderDetailView({
             <span
               className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${
                 paymentStatus.toLowerCase() === "paid"
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : "bg-amber-50 text-amber-700 border-amber-200"
+                  ? "bg-secondary-50 text-secondary-700 border-secondary-200"
+                  : "bg-primary-50 text-primary-700 border-primary-200"
               }`}
             >
               {paymentStatus}
@@ -270,7 +270,7 @@ export function OrderDetailView({
                           {delivery.staff.name}
                         </p>
                         {delivery.assignmentStatus && (
-                          <span className="inline-block text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded capitalize">
+                          <span className="inline-block text-[10px] font-bold text-primary-700 bg-primary-50 px-1.5 py-0.5 rounded capitalize">
                             {delivery.assignmentStatus.replace(/_/g, " ")}
                           </span>
                         )}

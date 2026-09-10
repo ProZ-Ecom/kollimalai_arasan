@@ -11,6 +11,13 @@ export interface CustomerCategoryDto {
   id: string; // Category UUID
   name: string;
   image: string | null;
+  /**
+   * Sub-categories, when the endpoint returns the tree. The schema supports a
+   * parent/child relation (ProductCategory.parentId) but the customer list
+   * endpoint currently returns a flat set, so this stays optional and the nav
+   * degrades to a plain link when it is absent.
+   */
+  children?: CustomerCategoryDto[];
 }
 
 export interface CustomerProductListItemDto {

@@ -25,7 +25,7 @@ export function useCustomerVariants(params?: CustomerGlobalVariantListParams) {
     productIds: params?.productIds?.length ? params.productIds.join(",") : undefined,
     sortBy: params?.sortBy ?? "createdAt",
     sortOrder: params?.sortOrder ?? "desc",
-    isActive:false
+    isActive: true,
   };
 
   return useQuery({

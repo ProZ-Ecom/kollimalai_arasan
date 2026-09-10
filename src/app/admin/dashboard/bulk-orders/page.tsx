@@ -13,7 +13,6 @@ import { StatsCard } from "@/components/admin/StatsCard";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { SearchInput } from "@/components/ui/search-input";
 import {
@@ -25,6 +24,9 @@ import {
   RotateCcw,
 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { StatusBadge } from "@/components/common/status-badge";
+import { BULK_ORDER_STATUS } from "@/features/bulk-orders/constants/status";
+
 
 export default function AdminBulkOrdersPage() {
   const [search, setSearch] = useState("");
@@ -85,33 +87,6 @@ export default function AdminBulkOrdersPage() {
 
   const hasActiveFilters = search.trim() !== "" || statusFilter !== "all";
 
-  const getStatusBadge = (status: BulkOrderEnquiryStatus) => {
-    switch (status) {
-      case "new":
-        return (
-          <Badge className="bg-amber-100 text-amber-800 border-amber-200 gap-1 text-xs">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-            New
-          </Badge>
-        );
-      case "contacted":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 border-blue-200 gap-1 text-xs">
-            <CheckCircle2 className="h-3 w-3 text-blue-600" />
-            Contacted
-          </Badge>
-        );
-      case "closed":
-        return (
-          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 gap-1 text-xs">
-            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-            Closed
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
   const columns: ColumnDef<AdminBulkOrderListItem, unknown>[] = [
     {
@@ -179,7 +154,9 @@ export default function AdminBulkOrdersPage() {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => getStatusBadge(row.original.status),
+      cell: ({ row }) => (
+        <StatusBadge status={row.original.status} config={BULK_ORDER_STATUS} />
+      ),
     },
     {
       accessorKey: "createdAt",

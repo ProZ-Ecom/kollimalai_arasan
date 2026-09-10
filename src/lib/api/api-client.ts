@@ -79,6 +79,27 @@ const AUTH_BYPASS_ENDPOINTS = [
   "/api/auth/verify-email-otp",
 ];
 
+// Pages that actually require a session, mirroring the protected routes in
+// src/middleware.ts. A 401 from a background query (e.g. wishlist/cart count
+// widgets that fire for any authenticated session) should only evict the user
+// when they're standing on a page that needs auth — otherwise a role-mismatched
+// or short-lived token on a public page like "/" would force-redirect an
+// otherwise-valid admin/user off of it.
+const AUTH_REQUIRED_PATH_PREFIXES = [
+  "/cart",
+  "/checkout",
+  "/orders",
+  "/profile",
+  "/wishlist",
+  "/admin",
+];
+
+function pathRequiresAuth(pathname: string): boolean {
+  return AUTH_REQUIRED_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
 async function fetchApi<T>(
   endpoint: string,
   options: FetchOptions = {}
@@ -142,7 +163,13 @@ async function fetchApi<T>(
 
     // Refresh didn't help (or wasn't applicable, e.g. admin session) — send the
     // user back to the correct login page instead of leaving them stuck on an error toast.
-    if (!refreshed && typeof window !== "undefined") {
+    // Only do this when the current page actually requires auth: a public page
+    // like "/" must stay reachable even if an unrelated background query 401s.
+    if (
+      !refreshed &&
+      typeof window !== "undefined" &&
+      pathRequiresAuth(window.location.pathname)
+    ) {
       const isAdminEndpoint = endpoint.startsWith("/api/admin/");
       const loginPath = isAdminEndpoint ? "/admin/login" : "/login";
       if (!window.location.pathname.startsWith(loginPath)) {

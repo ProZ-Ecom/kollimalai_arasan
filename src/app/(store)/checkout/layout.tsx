@@ -57,9 +57,9 @@ function CheckoutStepper() {
                     className={cn(
                       "flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-all duration-300",
                       isDone
-                        ? "bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600/30"
+                        ? "bg-secondary-600 text-white shadow-sm ring-2 ring-secondary-600/30"
                         : isActive
-                        ? "bg-[#5C1512] text-white shadow-md ring-4 ring-[#5C1512]/20 scale-110"
+                        ? "bg-[#005A04] text-white shadow-md ring-4 ring-[#005A04]/20 scale-110"
                         : "bg-theme-surface-alt border-2 border-theme-border text-theme-text-muted"
                     )}
                   >
@@ -74,9 +74,9 @@ function CheckoutStepper() {
                     className={cn(
                       "mt-1.5 text-xs font-semibold tracking-tight transition-colors",
                       isDone
-                        ? "text-emerald-700 font-bold"
+                        ? "text-secondary-700 font-bold"
                         : isActive
-                        ? "text-[#5C1512] font-black"
+                        ? "text-[#005A04] font-black"
                         : "text-theme-text-muted"
                     )}
                   >
@@ -92,7 +92,7 @@ function CheckoutStepper() {
                     className={cn(
                       "h-full rounded-full transition-all duration-500",
                       isSuccessPage || stepIndex < activeIndex
-                        ? "w-full bg-emerald-500"
+                        ? "w-full bg-secondary-500"
                         : "w-0"
                     )}
                   />
@@ -113,7 +113,7 @@ export default function CheckoutLayout({
 }) {
   return (
     <CheckoutProvider>
-      <div className="min-h-screen bg-[#FFFDF9]/60">
+      <div className="min-h-screen bg-[#FFFFFF]/60">
         <div className="container mx-auto px-4 pt-6 pb-12 max-w-6xl">
           <div className="mb-6 sm:mb-8">
             <CheckoutStepper />

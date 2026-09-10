@@ -1,33 +1,61 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+
+/** A column entry: either plain text, or a real link when an href is known. */
+export type FooterLinkItem = string | { label: string; href: string };
 
 export interface FooterLinksProps {
   title: string;
-  items: string[];
+  items: readonly FooterLinkItem[];
   className?: string;
+  /** Overridable so the same column works on light and dark footers. */
+  titleClassName?: string;
+  linkClassName?: string;
 }
 
 export function FooterLinks({
   title,
   items,
   className = "",
+  titleClassName,
+  linkClassName,
 }: FooterLinksProps) {
-  const footerLinkClass =
-    "cursor-pointer transition-colors duration-300 hover:text-white";
-
   return (
     <div className={className}>
-      <h3 className="text-[24px] sm:text-[28px] lg:text-xl font-semibold mb-6">
+      <h3
+        className={cn(
+          "text-lg sm:text-xl font-bold mb-5",
+          titleClassName ?? "text-secondary-500"
+        )}
+      >
         {title}
       </h3>
 
-      <ul className="space-y-3 text-gray-200 header-font">
-        {items.map((item) => (
-          <li key={item} className={footerLinkClass}>
-            {item}
-          </li>
-        ))}
+      <ul className="space-y-3 header-font text-sm">
+        {items.map((item) => {
+          const label = typeof item === "string" ? item : item.label;
+          const href = typeof item === "string" ? undefined : item.href;
+          const classes = cn(
+            "transition-colors duration-300",
+            linkClassName ??
+              "text-theme-text-primary hover:text-secondary-500"
+          );
+
+          return (
+            <li key={label}>
+              {href ? (
+                <Link href={href} className={classes}>
+                  {label}
+                </Link>
+              ) : (
+                <span className={cn(classes, "cursor-default")}>{label}</span>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

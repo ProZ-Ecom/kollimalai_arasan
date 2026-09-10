@@ -72,7 +72,7 @@ function SuccessContent() {
     <div className="container mx-auto px-4 py-10 sm:py-14 max-w-3xl">
       {/* Header Congratulations */}
       <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100/80 border-2 border-emerald-300 text-emerald-600 shadow-sm animate-in zoom-in-75 duration-300">
+        <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-secondary-100/80 border-2 border-secondary-300 text-secondary-600 shadow-sm animate-in zoom-in-75 duration-300">
           <CheckCircle2 className="h-10 w-10" />
         </div>
         <div className="inline-flex items-center gap-1.5 rounded-full bg-theme-surface-alt border border-theme-border px-3 py-1 text-xs font-bold text-theme-primary mb-2">
@@ -120,7 +120,7 @@ function SuccessContent() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted block mb-1">
                 Payment Status
               </span>
-              <span className="inline-flex items-center rounded-md bg-emerald-100 text-emerald-800 px-2 py-0.5 text-xs font-bold">
+              <span className="inline-flex items-center rounded-md bg-secondary-100 text-secondary-800 px-2 py-0.5 text-xs font-bold">
                 {order?.paymentStatus ? order.paymentStatus.toUpperCase() : "PAID"}
               </span>
             </div>

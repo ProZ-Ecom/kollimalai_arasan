@@ -20,7 +20,7 @@ export function PrimaryButton({
   disabled = false,
 }: PrimaryButtonProps) {
   const variants = {
-    yellow: "btn-yellow text-[var(--brown-900)]",
+    yellow: "btn-yellow text-[var(--neutral-900)]",
     brown: "btn-brown text-white",
   };
 

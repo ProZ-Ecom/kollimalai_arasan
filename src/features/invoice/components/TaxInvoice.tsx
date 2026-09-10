@@ -1,4 +1,4 @@
-import { getImageUrl } from "@/lib/utils";
+import { formatDate, getImageUrl } from "@/lib/utils";
 import type { InvoiceDto } from "../types";
 
 const money = (value: number) =>
@@ -9,12 +9,6 @@ const money = (value: number) =>
 
 const percent = (value: number) => `${Number(value).toFixed(2)} %`;
 
-const formatDate = (date: Date) =>
-  new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
 
 function PartyAddress({
   lines,
@@ -107,7 +101,7 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
                     <td>
                       <span className="ti-label">Dated</span>
                       <span className="ti-value">
-                        {formatDate(invoice.invoiceDate)}
+                        {formatDate(invoice.invoiceDate, { locale: "en-GB", dateOptions: { day: "2-digit", month: "short", year: "numeric" } })}
                       </span>
                     </td>
                   </tr>

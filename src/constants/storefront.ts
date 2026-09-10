@@ -30,6 +30,7 @@ export const ICONS = {
   rightButton: "/icons/right_button.svg",
   leftButton: "/icons/left_button.svg",
   helpLine: "/icons/helpline.svg",
+  delivery: "/icons/delivery_icon.svg",
   payment: "/icons/payment.svg",
   quality: "/icons/quality.svg",
   season: "/icons/season.svg",
@@ -120,33 +121,27 @@ export const categories = [
 export const features = [
   {
     id: 1,
-    image: ICONS.shipping,
-    name: "Fast, Free Shipping",
-    footer: "9.00 AM to 10.00 PM",
+    image: ICONS.delivery,
+    name: "Free Delivery",
+    footer: "For all orders over ₹3500",
   },
   {
     id: 2,
-    image: ICONS.helpLine,
-    name: "Dedicated Support",
-    footer: "Always Available",
+    image: ICONS.payment,
+    name: "Safe Payment",
+    footer: "100% secure payment",
   },
   {
     id: 3,
-    image: ICONS.payment,
-    name: "Secure Payments",
-    footer: "Safe Transaction",
+    image: ICONS.quality,
+    name: "Shop With Confidence",
+    footer: "Safe and Secure Environment",
   },
   {
     id: 4,
-    image: ICONS.quality,
-    name: "Premeium Quality",
-    footer: "Trusted Brands",
-  },
-  {
-    id: 5,
-    image: ICONS.season,
-    name: "Fresh & Seasonal",
-    footer: "Inspired by the Seasons",
+    image: ICONS.whatsapp,
+    name: "Dedicated Help Center",
+    footer: "IST 8:30 AM to 8:30 PM",
   },
 ];
 
@@ -174,44 +169,31 @@ export const contacts = [
   },
 ];
 
-export const footerSocialIcons = [
-  {
-    id: 1,
-    icon: ICONS.facebook,
-    name: "facebook",
-  },
-  {
-    id: 2,
-    icon: ICONS.instagram,
-    name: "instagram",
-  },
-  {
-    id: 3,
-    icon: ICONS.youtube,
-    name: "youtube",
-  },
-  {
-    id: 4,
-    icon: ICONS.whatsapp1,
-    name: "whatsapp",
-  },
+export interface FooterSocialIcon {
+  id: number;
+  icon: string;
+  name: string;
+  /** Profile URL. "#" until the real handles are supplied. */
+  href: string;
+}
+
+export const footerSocialIcons: FooterSocialIcon[] = [
+  { id: 1, icon: ICONS.facebook, name: "facebook", href: "#" },
+  { id: 2, icon: ICONS.instagram, name: "instagram", href: "#" },
+  { id: 3, icon: ICONS.youtube, name: "youtube", href: "#" },
+  { id: 4, icon: ICONS.whatsapp1, name: "whatsapp", href: "#" },
 ];
 
 export const readyToAssist = [
-  "Track My Order",
-  "Terms & Condition",
+  // Only the routes that exist are linked; the policy pages are still text.
+  { label: "Track My Order", href: "/orders" },
+  "Terms & Conditions",
   "Privacy Policy",
   "Return & Refund Policy",
-  "FAQ's",
-];
+  { label: "FAQ's", href: "/faqs" },
+] as const;
 
-export const mainMenu = [
-  "Shop All",
-  "Our Snacks",
-  "Festive Gifting",
-  "Bulk Order",
-  "About Us",
-];
+
 
 export const pledges = [
   {
@@ -310,11 +292,12 @@ export const traditionImages = [
 ];
 
 export const navigation = [
-  { id: 1, text: "SHOP ALL", path: "/products" },
-  { id: 2, text: "OUR SNACKS", path: "/categories", icon: ICONS.drop_icon },
-  { id: 3, text: "FESTIVE GIFTING", path: "/festive-gifting" },
-  { id: 4, text: "BULK ORDER", path: "/bulk-order" },
-  { id: 5, text: "ABOUT US", path: "/about" },
+  { id: 1, text: "Home", path: "/" },
+  // Categories hang off this entry - the drawer expands it into the live
+  // category list, mirroring the "Shop All" dropdown on desktop.
+  { id: 2, text: "Shop All", path: "/products", icon: ICONS.drop_icon },
+  { id: 3, text: "About Us", path: "/about" },
+  { id: 4, text: "Contact", path: "/contact" },
 ];
 
 export const desktopIcons = [

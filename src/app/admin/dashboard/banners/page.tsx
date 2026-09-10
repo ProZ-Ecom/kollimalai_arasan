@@ -36,6 +36,7 @@ import {
 } from "@/features/banners/constants/banner-types";
 import type { BannerDto } from "@/features/banners/types";
 import { Video } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 
 export default function AdminBannersPage() {
   const [search, setSearch] = useState("");
@@ -93,20 +94,6 @@ export default function AdminBannersPage() {
     return [{ value: "", label: "All Banner Types" }, ...positionOptions];
   }, [positionOptions]);
 
-  const formatDateDisplay = (dateVal: unknown): string => {
-    if (!dateVal) return "";
-    try {
-      const d = new Date(dateVal as string | Date);
-      if (isNaN(d.getTime())) return "";
-      return d.toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-    } catch {
-      return "";
-    }
-  };
 
   const columns: ColumnDef<BannerDto>[] = [
     {
@@ -207,8 +194,8 @@ export default function AdminBannersPage() {
       accessorKey: "schedule",
       header: "Schedule",
       cell: ({ row }) => {
-        const starts = formatDateDisplay(row.original.startsAt);
-        const ends = formatDateDisplay(row.original.endsAt);
+        const starts = formatDate(row.original.startsAt, { style: "medium" });
+        const ends = formatDate(row.original.endsAt, { style: "medium" });
 
         if (!starts && !ends) {
           return (
@@ -301,7 +288,7 @@ export default function AdminBannersPage() {
       />
 
       <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden bg-[var(--color-background)] py-1 rounded-2xl">
+        <div className="flex h-full flex-col overflow-hidden bg-transparent py-1 rounded-2xl">
           {/* Top Bar: Search, Position Filter, Add Button */}
           <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">

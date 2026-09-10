@@ -33,7 +33,7 @@ export function OrderTotals({ totals, couponLabel, className }: OrderTotalsProps
       </div>
 
       {totals.discountAmount > 0 && (
-        <div className="flex items-center justify-between text-sm text-green-600">
+        <div className="flex items-center justify-between text-sm text-secondary-600">
           <span>
             Coupon Discount
             {couponLabel ? ` (${couponLabel})` : ""}

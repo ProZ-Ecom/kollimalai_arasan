@@ -21,14 +21,14 @@ export function SectionHeading({ title }: SectionHeadingProps) {
             text-center
             leading-none
             font-bold
-            text-[var(--brown-800)]
+            text-[var(--neutral-900)]
           "
         >
           {title}
         </h2>
 
         <div className="flex items-center mt-1 w-full">
-          <div className="flex-1 h-[2px] bg-[var(--brown-800)]" />
+          <div className="flex-1 h-[2px] bg-[var(--neutral-900)]" />
 
           <Image
             src={LOGOS.flower}
@@ -38,7 +38,7 @@ export function SectionHeading({ title }: SectionHeadingProps) {
             className="mx-3 w-7 sm:w-8 md:w-9 h-auto"
           />
 
-          <div className="flex-1 h-[2px] bg-[var(--brown-800)]" />
+          <div className="flex-1 h-[2px] bg-[var(--neutral-900)]" />
         </div>
       </div>
     </div>

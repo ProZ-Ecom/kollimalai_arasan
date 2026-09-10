@@ -32,7 +32,7 @@ export function DashboardTab({
     return (
       <div className="flex flex-col gap-5 min-w-0 animate-pulse">
         {/* Banner Shimmer */}
-        <div className="bg-gradient-to-r from-theme-primary/80 via-theme-primary to-[#8C2A1E]/80 rounded-2xl p-6 sm:p-7 shadow-xs">
+        <div className="bg-gradient-to-r from-theme-primary/80 via-theme-primary to-[#007F06]/80 rounded-2xl p-6 sm:p-7 shadow-xs">
           <div className="space-y-3">
             <div className="h-3.5 w-24 bg-white/20 rounded-md" />
             <div className="h-8 w-56 bg-white/30 rounded-md" />
@@ -188,7 +188,7 @@ export function DashboardTab({
         return "bg-blue-100 text-blue-800";
       case "packed":
       case "processing":
-        return "bg-amber-100 text-amber-800";
+        return "bg-primary-100 text-primary-800";
       case "pending":
       case "confirmed":
         return "bg-orange-100 text-orange-800";
@@ -204,7 +204,7 @@ export function DashboardTab({
   return (
     <div className="flex flex-col gap-5 min-w-0">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-theme-primary via-theme-primary-hover to-[#8C2A1E] rounded-2xl p-6 sm:p-7 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xs">
+      <div className="bg-gradient-to-r from-theme-primary via-theme-primary-hover to-[#007F06] rounded-2xl p-6 sm:p-7 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xs">
         <div className="space-y-2">
           <div className="text-xs uppercase tracking-widest text-theme-secondary font-medium">
             Welcome back
@@ -452,7 +452,7 @@ export function DashboardTab({
                 key={`${item.name}-${idx}`}
                 className="border border-theme-border-subtle rounded-xl overflow-hidden bg-theme-surface-warm flex flex-col justify-between"
               >
-                <div className="h-28 bg-[repeating-linear-gradient(45deg,#F6ECDC,#F6ECDC_8px,#EFE2CD_8px,#EFE2CD_16px)] flex items-center justify-center">
+                <div className="h-28 bg-[repeating-linear-gradient(45deg,#F5F5F5,#F5F5F5_8px,#EDEDED_8px,#EDEDED_16px)] flex items-center justify-center">
                   <span className="text-[10px] font-mono text-theme-text-muted uppercase tracking-wider">
                     {item.name.slice(0, 14)}
                   </span>
@@ -475,7 +475,7 @@ export function DashboardTab({
                       onClick={() => handleBuyAgain(item)}
                       className={`w-full text-xs font-semibold uppercase tracking-wider py-2.5 rounded-md transition-colors cursor-pointer min-h-[40px] ${
                         addedVariantId === item.variantId
-                          ? "bg-green-600 text-white"
+                          ? "bg-secondary-600 text-white"
                           : "bg-theme-secondary hover:bg-theme-secondary-hover text-theme-secondary-fg"
                       } disabled:opacity-50`}
                     >

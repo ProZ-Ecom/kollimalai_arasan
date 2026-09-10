@@ -51,7 +51,7 @@ export function Pledge() {
               transition-colors
               duration-300
               text-hover-primary
-              text-[var(--brown-800)]
+              text-[var(--neutral-900)]
             "
           />
         ))}

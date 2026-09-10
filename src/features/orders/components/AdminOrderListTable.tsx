@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { LoadingState } from "@/components/ui/loading-state";
+import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/common/FormModal";
@@ -365,9 +366,9 @@ export function AdminOrderListTable({
   ];
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[var(--color-background)] rounded-2xl">
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-transparent">
       {/* Filter and Search Bar */}
-      <div className="flex-shrink-0 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="admin-surface flex-shrink-0 mb-4 flex flex-col gap-3 rounded-xl p-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-3">
           <SearchInput
             placeholder="Search by order number, customer name, email, phone..."
@@ -378,6 +379,15 @@ export function AdminOrderListTable({
             }}
             className="w-full max-w-md bg-cream-50 border-cream-border-subtle"
           />
+          {!isLoading && !error && (
+            <span className="hidden whitespace-nowrap text-xs font-medium text-neutral-500 lg:inline">
+              <span className="font-bold text-neutral-800 tabular-nums">
+                {meta?.total ?? orders.length}
+              </span>{" "}
+              {(meta?.total ?? orders.length) === 1 ? "order" : "orders"}
+              {hasActiveFilters ? " found" : ""}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -405,7 +415,7 @@ export function AdminOrderListTable({
       {/* Table & Pagination Content */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {isLoading ? (
-          <LoadingState text="Loading orders..." />
+          <AdminTableSkeleton bare rows={8} columns={8} />
         ) : error ? (
           <ErrorState
             message="Failed to load orders. Please try again."
@@ -428,7 +438,7 @@ export function AdminOrderListTable({
               setPageSize(newSize);
               setPage(1);
             }}
-            className="bg-white border border-cream-border"
+            className="admin-surface"
             emptyMessage={emptyMessage}
           />
         )}

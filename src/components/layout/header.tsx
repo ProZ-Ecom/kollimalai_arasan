@@ -5,17 +5,130 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ChevronRight, LogIn } from "lucide-react";
-import { LOGOS, ICONS, navigation, desktopIcons, mobileBottomIcons } from "@/constants/storefront";
+import {
+  ChevronDown,
+  ChevronRight,
+  Heart,
+  LogIn,
+  Menu,
+  Phone,
+  Search,
+  ShoppingBag,
+  Truck,
+  User,
+} from "lucide-react";
+import { LOGOS, ICONS, navigation, mobileBottomIcons } from "@/constants/storefront";
 import { NavButton } from "@/components/storefront/buttons/NavButton";
-import { IconButton } from "@/components/storefront/buttons/IconButton";
 import { useClickOutside } from "@/hooks/useClickOutside";
+
 import { getInitials } from "@/lib/utils";
+import { ROLES } from "@/lib/constants";
 import { useCustomerWishlistCount } from "@/features/customers/hooks/use-customer-wishlist";
 import { useCustomerCartCount } from "@/features/customers/hooks/use-customer-cart";
-import { useCustomerCategories } from "@/features/customers/hooks/use-customer-catalog";
+import { useMainNavigation } from "@/hooks/use-main-navigation";
 import { useCustomerProfile } from "@/features/customers/hooks/use-customer-profile";
+import type { CustomerCategoryDto } from "@/features/customers/types/catalog.types";
 import { CategoryNavDropdown, resolveCategoryIcon } from "./CategoryNavDropdown";
+
+/** Shared styling for the row-2 nav links so active/idle states stay in step. */
+function navLinkClass(isActive: boolean) {
+  return [
+    "text-sm font-medium transition-colors cursor-pointer",
+    isActive
+      ? "text-secondary-500 font-semibold"
+      : "text-theme-text-primary hover:text-secondary-500",
+  ].join(" ");
+}
+
+/** Green-bar icon link with an optional count bubble (wishlist, cart). */
+function HeaderIconLink({
+  href,
+  label,
+  badge,
+  children,
+}: {
+  href: string;
+  label: string;
+  badge?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={badge ? `${label} (${badge})` : label}
+      className="relative text-white hover:opacity-80 transition-opacity"
+    >
+      {children}
+      {badge ? (
+        <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-theme-secondary text-theme-secondary-fg text-[10px] font-bold flex items-center justify-center leading-none">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
+/**
+ * A category entry in the main nav. It only grows a chevron and a dropdown
+ * when the catalog actually returns sub-categories - otherwise the chevron
+ * would advertise a menu with nothing behind it, so it stays a plain link.
+ */
+function CategoryMenuItem({
+  category,
+  isActive,
+}: {
+  category: CustomerCategoryDto;
+  isActive: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const href = `/categories/${category.id}`;
+  const children = category.children ?? [];
+
+  if (children.length === 0) {
+    return (
+      <Link href={href} className={navLinkClass(isActive)}>
+        {category.name}
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <Link
+        href={href}
+        className={`${navLinkClass(isActive)} flex items-center gap-1`}
+      >
+        {category.name}
+        <ChevronDown
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+          strokeWidth={2}
+        />
+      </Link>
+
+      {open && (
+        <div className="absolute left-0 top-full pt-2 min-w-[200px] z-50">
+          <div className="rounded-xl border border-theme-border bg-white shadow-lg py-1.5 animate-in fade-in zoom-in-95">
+            {children.map((sub) => (
+              <Link
+                key={sub.id}
+                href={`/categories/${sub.id}`}
+                className="block px-4 py-2 text-sm text-theme-text-primary hover:bg-secondary-50 hover:text-secondary-600 transition-colors"
+              >
+                {sub.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Header() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -36,6 +149,9 @@ export function Header() {
     return () => clearTimeout(timer);
   }, [status]);
   const isAuthLoading = status === "loading" && !authGraceExpired;
+  const userRole = session?.user?.role as string | undefined;
+  const isAdminUser = userRole === ROLES.ADMIN || userRole === ROLES.STAFF;
+  const accountHref = isAdminUser ? "/admin/dashboard" : "/profile";
   const { data: profile } = useCustomerProfile();
 
   // Get user name and initials for authenticated header state
@@ -60,14 +176,24 @@ export function Header() {
         (cartCountData as { count?: number })?.count ??
         0;
 
-  // Categories list for mobile drawer navigation
-  const { data: categoriesData, isLoading: isCategoriesLoading } = useCustomerCategories({
-    page: 1,
-    pageSize: 50,
-    sortBy: "name",
-    sortOrder: "asc",
-  });
-  const categories = categoriesData?.data ?? [];
+  // Categories for the drawer and the named nav entries. Shared with the
+  // footer's Quick Links so the two can never disagree.
+  const {
+    categories,
+    navCategories,
+    isLoading: isCategoriesLoading,
+  } = useMainNavigation();
+
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const handleSearchSubmit = React.useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const q = searchTerm.trim();
+      router.push(q ? `/products?search=${encodeURIComponent(q)}` : "/products");
+    },
+    [router, searchTerm]
+  );
+
 
   const menuRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLDivElement>(null);
@@ -87,7 +213,7 @@ export function Header() {
         item.alt === "cart" || item.text === "Cart" || item.path === "/cart";
 
       if (isUser) {
-        return isAuthenticated ? "/profile" : "/login";
+        return isAuthenticated ? accountHref : "/login";
       }
       if (isWishlist) {
         return isAuthenticated ? "/wishlist" : "/login?callbackUrl=/wishlist";
@@ -97,161 +223,176 @@ export function Header() {
       }
       return item.path || "/";
     },
-    [isAuthenticated]
+    [isAuthenticated, accountHref]
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white shadow-xs header-font">
-      <div className="max-w-[1400px] mx-auto h-20 sm:h-24 px-2 sm:px-4 md:px-8 flex items-center justify-between">
-        {/* Left Section (Logo + Brand Title) */}
-        <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
-          <Link href="/" className="inline-block">
+    <header className="sticky top-0 z-50 w-full header-font">
+      {/* ================================================================ */}
+      {/* Row 1 - green utility bar: logo, search, help, account icons     */}
+      {/* ================================================================ */}
+      <div className="bg-theme-primary">
+        <div className="max-w-[1400px] mx-auto h-16 lg:h-[68px] px-3 sm:px-4 md:px-8 flex items-center gap-3 sm:gap-5">
+          {/* The logo artwork carries its own light gradient background, so it
+              sits on a white card rather than flush on the green - otherwise
+              its backdrop reads as a stray box against the bar. */}
+          <Link href="/" className="shrink-0" aria-label="Home">
             <Image
               src={LOGOS.logo}
-              alt="logo"
-              width={100}
-              height={100}
+              alt="Kollimalai Arasan"
+              width={120}
+              height={120}
               priority
-              className="w-[55px] sm:w-[65px] md:w-[80px] hover:scale-105 transition-transform duration-300 active:scale-95"
+              className="w-[44px] sm:w-[52px] lg:w-[62px] h-auto rounded-lg bg-white/95 p-1 shadow-sm transition-transform duration-300 hover:scale-105 active:scale-95"
             />
           </Link>
 
-          {/* Mobile Title */}
-          <Link href="/" className="block md:hidden">
-            <Image
-              src={LOGOS.mobileTitle}
-              alt="mobile title"
-              width={80}
-              height={40}
-              priority
-              className="w-[95px] sm:w-[120px] hover:scale-105 transition-transform duration-300"
-            />
-          </Link>
-
-          {/* Desktop Title */}
-          <Link href="/" className="hidden md:block">
-            <Image
-              src={LOGOS.title}
-              alt="title"
-              width={80}
-              height={80}
-              priority
-              className="hover:scale-105 transition-transform duration-300"
-            />
-          </Link>
-        </div>
-
-        {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-8">
-          {navigation.map((item) => {
-            const isSnacks =
-              item.text === "OUR SNACKS" || item.path === "/categories";
-
-            if (isSnacks) {
-              return (
-                <CategoryNavDropdown
-                  key={item.id}
-                  text={item.text}
-                  icon={item.icon}
-                  isActive={
-                    pathname === item.path || pathname.startsWith("/categories")
-                  }
-                />
-              );
-            }
-
-            return (
-              <NavButton
-                key={item.id}
-                variant="desktop"
-                text={item.text}
-                icon={item.icon}
-                href={item.path}
-                isActive={pathname === item.path}
+          {/* Search */}
+          <form
+            role="search"
+            onSubmit={handleSearchSubmit}
+            className="flex-1 max-w-[620px] mx-auto"
+          >
+            <div className="relative">
+              <label htmlFor="site-search" className="sr-only">
+                Search products
+              </label>
+              <input
+                id="site-search"
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search..."
+                className="w-full h-10 lg:h-11 rounded-full bg-white pl-5 pr-12 text-sm text-theme-text-primary placeholder:text-theme-text-muted shadow-sm"
               />
-            );
-          })}
-        </nav>
+              <button
+                type="submit"
+                aria-label="Search"
+                className="absolute right-1 top-1/2 -translate-y-1/2 grid place-items-center w-9 h-9 rounded-full text-theme-text-primary hover:bg-neutral-100 transition-colors cursor-pointer"
+              >
+                <Search className="w-[18px] h-[18px]" strokeWidth={2} />
+              </button>
+            </div>
+          </form>
 
-        {/* Right Section (Icons & Hamburger) */}
-        <div className="flex items-center gap-2 sm:gap-3 md:gap-5">
-          <div className="hidden lg:flex items-center gap-5">
-            {desktopIcons.map((item) => {
-              const isUser =
-                item.alt === "user" || item.path === "/profile";
-              const targetPath = resolvePath(item);
-              const badge =
-                item.alt === "cart"
-                  ? cartCount
-                  : item.alt === "wishlist"
-                  ? wishlistCount
-                  : undefined;
+          {/* Right cluster (desktop) */}
+          <div className="hidden lg:flex items-center gap-5 shrink-0">
+            <Link
+              href="/contact"
+              className="flex items-center gap-2 text-sm text-white underline underline-offset-4 decoration-1 hover:opacity-80 transition-opacity"
+            >
+              <Phone className="w-[18px] h-[18px]" strokeWidth={1.75} />
+              <span>How Can We Help?</span>
+            </Link>
 
-              if (isUser) {
-                // The account cell is the last item in a right-anchored row,
-                // so the Login pill (~92px) collapsing to the 26px avatar would
-                // drag every icon beside it. A fixed slot keeps the swap
-                // contained: siblings never move, whichever state wins.
-                return (
-                  <div
-                    key={item.id}
-                    className="flex min-w-[92px] justify-end"
-                  >
-                    {isAuthLoading ? (
-                      <div
-                        className="w-[26px] h-[26px] rounded-full bg-theme-surface-alt animate-pulse"
-                        aria-hidden="true"
-                      />
-                    ) : !isAuthenticated ? (
-                      <Link
-                        href="/login"
-                        onClick={() => router.push("/login")}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-sm bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-fg border border-theme-primary text-xs sm:text-sm font-semibold transition-all duration-150 shadow-xs hover:shadow-sm active:scale-95 cursor-pointer"
-                        aria-label="Login"
-                      >
-                        <span>Login</span>
-                        <LogIn
-                          className="w-4 h-4 text-inherit shrink-0"
-                          strokeWidth={2}
-                        />
-                      </Link>
-                    ) : (
-                      <IconButton
-                        alt={userName ? `${userName}'s profile` : "Profile"}
-                        href="/profile"
-                        onClick={() => router.push("/profile")}
-                        customIcon={
-                          <div className="w-[26px] h-[26px] rounded-full bg-theme-primary text-theme-primary-fg text-[11px] font-bold flex items-center justify-center border border-theme-border-accent shadow-2xs select-none leading-none">
-                            {userInitials}
-                          </div>
-                        }
-                      />
-                    )}
-                  </div>
-                );
-              }
-
-              return (
-                <IconButton
-                  key={item.id}
-                  icon={item.icon}
-                  alt={item.alt}
-                  href={targetPath}
-                  badge={badge}
+            {/* Same fixed-slot trick as before: the login/avatar swap must not
+                drag the wishlist and cart icons sideways once auth resolves. */}
+            <div className="flex min-w-[26px] justify-end">
+              {isAuthLoading ? (
+                <div
+                  className="w-[26px] h-[26px] rounded-full bg-white/30 animate-pulse"
+                  aria-hidden="true"
                 />
-              );
-            })}
+              ) : isAuthenticated ? (
+                <Link
+                  href={accountHref}
+                  aria-label={
+                    isAdminUser
+                      ? "Admin Dashboard"
+                      : userName
+                      ? `${userName}'s profile`
+                      : "Profile"
+                  }
+                  className="w-[26px] h-[26px] rounded-full bg-white text-theme-primary text-[11px] font-bold flex items-center justify-center leading-none select-none hover:scale-105 transition-transform"
+                >
+                  {userInitials}
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  aria-label="Login"
+                  className="text-white hover:opacity-80 transition-opacity"
+                >
+                  <User className="w-[21px] h-[21px]" strokeWidth={1.75} />
+                </Link>
+              )}
+            </div>
+
+            <HeaderIconLink
+              href={isAuthenticated ? "/wishlist" : "/login?callbackUrl=/wishlist"}
+              label="Wishlist"
+              badge={wishlistCount}
+            >
+              <Heart className="w-[21px] h-[21px]" strokeWidth={1.75} />
+            </HeaderIconLink>
+
+            <HeaderIconLink
+              href={isAuthenticated ? "/cart" : "/login?callbackUrl=/cart"}
+              label="Cart"
+              badge={cartCount}
+            >
+              <ShoppingBag className="w-[21px] h-[21px]" strokeWidth={1.75} />
+            </HeaderIconLink>
           </div>
 
-          {/* Hamburger Menu Trigger */}
-          <div ref={buttonRef} className="lg:hidden">
-            <IconButton
-              icon={ICONS.menu}
-              alt="menu"
+          {/* Hamburger (mobile) */}
+          <div ref={buttonRef} className="lg:hidden shrink-0">
+            <button
+              type="button"
               onClick={() => setIsOpen(!isOpen)}
-              imageClassName="w-[22px] h-[22px]"
-            />
+              aria-label="Menu"
+              aria-expanded={isOpen}
+              className="grid place-items-center w-9 h-9 text-white cursor-pointer"
+            >
+              <Menu className="w-6 h-6" strokeWidth={2} />
+            </button>
           </div>
+        </div>
+      </div>
+
+      {/* ================================================================ */}
+      {/* Row 2 - white nav bar (desktop only)                             */}
+      {/* ================================================================ */}
+      <div className="hidden lg:block bg-white shadow-xs border-b border-theme-border-subtle">
+        <div className="max-w-[1400px] mx-auto h-12 px-8 flex items-center">
+          <nav className="flex-1 flex items-center justify-center gap-8">
+            <Link href="/" className={navLinkClass(pathname === "/")}>
+              Home
+            </Link>
+
+            <CategoryNavDropdown
+              text="Shop All"
+              isActive={
+                pathname === "/products" || pathname.startsWith("/categories")
+              }
+            />
+
+            {navCategories.map((category) => (
+              <CategoryMenuItem
+                key={category.id}
+                category={category}
+                isActive={pathname === `/categories/${category.id}`}
+              />
+            ))}
+
+            <Link href="/about" className={navLinkClass(pathname === "/about")}>
+              About Us
+            </Link>
+            <Link
+              href="/contact"
+              className={navLinkClass(pathname === "/contact")}
+            >
+              Contact
+            </Link>
+          </nav>
+
+          <Link
+            href="/bulk-order"
+            className="shrink-0 flex items-center gap-2 text-sm font-medium text-secondary-500 underline underline-offset-4 decoration-1 hover:text-secondary-600 transition-colors"
+          >
+            <Truck className="w-[18px] h-[18px]" strokeWidth={1.75} />
+            <span>Need Delivery?</span>
+          </Link>
         </div>
       </div>
 
@@ -271,7 +412,7 @@ export function Header() {
         {/* Drawer Panel */}
         <div
           ref={menuRef}
-          className={`fixed top-0 right-0 z-50 h-screen w-72 bg-[var(--brown-600)] border-l border-white/20 shadow-2xl transform transition-all duration-500 ease-in-out flex flex-col ${
+          className={`fixed top-0 right-0 z-50 h-screen w-72 bg-[var(--secondary-500)] border-l border-white/20 shadow-2xl transform transition-all duration-500 ease-in-out flex flex-col ${
             isOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
@@ -295,7 +436,7 @@ export function Header() {
           <nav className="flex-1 overflow-y-auto py-3 scrollbar-thin scrollbar-thumb-white/20">
             {navigation.map((item) => {
               const isSnacks =
-                item.text === "OUR SNACKS" || item.path === "/categories";
+                item.text === "Shop All" || item.path === "/products";
 
               if (isSnacks) {
                 return (
@@ -433,7 +574,7 @@ export function Header() {
           bg-white/90
           backdrop-blur-xl
           border-t
-          border-stone-200
+          border-neutral-200
           shadow-[0_-8px_30px_rgba(0,0,0,0.08)]
           flex
           justify-around
@@ -491,10 +632,10 @@ export function Header() {
                         {userInitials}
                       </div>
                     }
-                    text="Account"
-                    href="/profile"
-                    onClick={() => router.push("/profile")}
-                    isActive={pathname === "/profile"}
+                    text={isAdminUser ? "Admin" : "Account"}
+                    href={accountHref}
+                    onClick={() => router.push(accountHref)}
+                    isActive={pathname === accountHref}
                   />
                 )}
               </div>

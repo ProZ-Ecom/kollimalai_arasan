@@ -122,24 +122,24 @@ function OrdersContent() {
     <div className="container mx-auto px-4 py-8 sm:py-10 max-w-5xl">
       {/* Newly Placed Success Toast Banner */}
       {isJustPlaced && !dismissBanner && (
-        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50/90 p-4 sm:p-5 text-emerald-900 shadow-xs animate-in slide-in-from-top-2 duration-300">
+        <div className="mb-6 rounded-2xl border border-secondary-200 bg-secondary-50/90 p-4 sm:p-5 text-secondary-900 shadow-xs animate-in slide-in-from-top-2 duration-300">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shrink-0 shadow-xs">
+              <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-secondary-600 text-white shrink-0 shadow-xs">
                 <CheckCircle2 className="h-5 w-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-extrabold text-sm sm:text-base text-emerald-900">
+                  <h3 className="font-extrabold text-sm sm:text-base text-secondary-900">
                     Order Placed Successfully!
                   </h3>
                   {newOrderNumber && (
-                    <span className="font-mono text-xs font-bold bg-emerald-200/70 text-emerald-800 px-2 py-0.5 rounded-md">
+                    <span className="font-mono text-xs font-bold bg-secondary-200/70 text-secondary-800 px-2 py-0.5 rounded-md">
                       #{newOrderNumber}
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-xs text-emerald-700 max-w-xl leading-relaxed">
+                <p className="mt-1 text-xs text-secondary-700 max-w-xl leading-relaxed">
                   Thank you for ordering with Rithu Snacks. We have received your payment and our kitchen has started packing your authentic snacks.
                 </p>
               </div>
@@ -148,7 +148,7 @@ function OrdersContent() {
             <button
               type="button"
               onClick={() => setDismissBanner(true)}
-              className="text-emerald-700/70 hover:text-emerald-900 p-1 transition-colors"
+              className="text-secondary-700/70 hover:text-secondary-900 p-1 transition-colors"
               aria-label="Dismiss banner"
             >
               <X className="h-4 w-4" />

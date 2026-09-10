@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell, Menu } from "lucide-react";
+import { Bell, Home, Menu } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Dropdown, DropdownItem } from "@/components/common/dropdown";
 import { useSession, signOut } from "next-auth/react";
@@ -13,6 +14,7 @@ interface AdminHeaderProps {
 
 function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const { data: session } = useSession();
+  const router = useRouter();
 
   const handleLogout = async () => {
     try {
@@ -53,6 +55,10 @@ function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             </Button>
           }
         >
+          <DropdownItem onClick={() => router.push("/")}>
+            <Home className="mr-2 h-4 w-4" />
+            Visit Store
+          </DropdownItem>
           <DropdownItem onClick={handleLogout}>
             Logout
           </DropdownItem>

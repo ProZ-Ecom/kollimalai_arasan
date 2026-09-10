@@ -51,8 +51,8 @@ export function BulkOrderForm() {
   if (isSuccess) {
     return (
       <div className="flex flex-col items-center text-center gap-4 py-12">
-        <div className="h-14 w-14 rounded-full bg-green-100 flex items-center justify-center">
-          <CheckCircle2 className="h-8 w-8 text-green-600" />
+        <div className="h-14 w-14 rounded-full bg-secondary-100 flex items-center justify-center">
+          <CheckCircle2 className="h-8 w-8 text-secondary-600" />
         </div>
         <div>
           <h3 className="text-lg font-semibold text-gray-900">

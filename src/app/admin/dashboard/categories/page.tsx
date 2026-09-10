@@ -194,7 +194,7 @@ export default function AdminCategoriesPage() {
         description="Manage your product categories"
       />
       <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden bg-[var(--color-background)] py-1 rounded-2xl">
+        <div className="flex h-full flex-col overflow-hidden bg-transparent py-1 rounded-2xl">
           {/* Stats Cards */}
           {/* <div className="flex-shrink-0 flex gap-4 overflow-x-auto overscroll-x-contain pb-2">
             <StatsCard

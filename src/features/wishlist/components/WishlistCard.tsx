@@ -48,7 +48,7 @@ export function WishlistCard({
             </Badge>
           )}
           {!item.isAvailable && (
-            <Badge variant="outline" className="absolute top-2 right-2 bg-stone-900/80 text-white border-0 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full">
+            <Badge variant="outline" className="absolute top-2 right-2 bg-neutral-900/80 text-white border-0 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full">
               Out of stock
             </Badge>
           )}

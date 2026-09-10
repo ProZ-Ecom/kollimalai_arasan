@@ -22,6 +22,7 @@ import {
   getBannerTypeLabel,
 } from "../constants/banner-types";
 import type { BannerDto } from "../types";
+import { formatDate } from "@/lib/utils";
 
 const bannerFormSchema = z
   .object({
@@ -108,14 +109,6 @@ interface BannerFormProps {
   submitLabel?: string;
 }
 
-function formatDateForInput(dateValue: unknown): string {
-  if (!dateValue) return "";
-  const date = new Date(dateValue as string | Date);
-  if (Number.isNaN(date.getTime())) return "";
-  // datetime-local expects local time, not the UTC string from toISOString().
-  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
-}
 
 /**
  * Create / edit form for a storefront banner. Everything below the banner type
@@ -155,8 +148,8 @@ export function BannerForm({
       imageUrl: initialData?.imageUrl ?? "",
       videoUrl: initialData?.videoUrl ?? "",
       isActive: initialData?.isActive ?? true,
-      startsAt: formatDateForInput(initialData?.startsAt),
-      endsAt: formatDateForInput(initialData?.endsAt),
+      startsAt: formatDate(initialData?.startsAt, { style: "input" }),
+      endsAt: formatDate(initialData?.endsAt, { style: "input" }),
     }),
     [initialData]
   );

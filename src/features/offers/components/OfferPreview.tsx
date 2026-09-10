@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { priceLine } from "../services/offer-calculation";
 import { OFFER_TYPE_LABELS } from "../constants/offer-options";
 import type { ApplicableOffer, OfferItemTarget, OfferLevel, OfferType } from "../types";
+import { formatDate } from "@/lib/utils";
 
 interface OfferPreviewProps {
   level: OfferLevel;
@@ -22,16 +23,6 @@ interface OfferPreviewProps {
   sampleItems: OfferItemTarget[];
 }
 
-function formatDate(value: string): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 /**
  * Runs the real offer engine against the admin's current form values, so the
@@ -114,7 +105,7 @@ export function OfferPreview({
       </div>
 
       <p className="mb-3 text-xs text-neutral-500">
-        Valid {formatDate(startsAt)} — {formatDate(endsAt)}
+        Valid {formatDate(startsAt, { style: "medium", fallback: "-" })} — {formatDate(endsAt, { style: "medium", fallback: "-" })}
         {(Number(minQuantity) || 1) > 1 && ` · from ${minQuantity} units`}
         {maxQuantity ? ` · up to ${maxQuantity} units` : ""}
       </p>

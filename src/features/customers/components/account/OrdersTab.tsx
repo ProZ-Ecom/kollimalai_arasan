@@ -73,7 +73,7 @@ export function OrdersTab({
   const getStatusMeta = (status: string) => {
     switch (status?.toLowerCase()) {
       case "delivered":
-        return { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" };
+        return { bg: "bg-secondary-50 text-secondary-700 border-secondary-200", dot: "bg-secondary-500" };
       case "cancelled":
         return { bg: "bg-red-50 text-red-700 border-red-200", dot: "bg-red-500" };
       case "returned":
@@ -83,7 +83,7 @@ export function OrdersTab({
         return { bg: "bg-blue-50 text-blue-700 border-blue-200", dot: "bg-blue-500" };
       case "packed":
       case "processing":
-        return { bg: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" };
+        return { bg: "bg-primary-50 text-primary-700 border-primary-200", dot: "bg-primary-500" };
       case "pending":
       case "confirmed":
         return { bg: "bg-orange-50 text-orange-700 border-orange-200", dot: "bg-orange-500" };
@@ -408,7 +408,7 @@ export function OrdersTab({
                       onClick={() => handleReorder(order)}
                       className={`text-xs font-semibold uppercase tracking-wider py-2.5 px-4 rounded-lg transition-colors cursor-pointer min-h-[40px] ${
                         isReordered
-                          ? "bg-green-600 text-white"
+                          ? "bg-secondary-600 text-white"
                           : "bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-fg"
                       } disabled:opacity-50`}
                     >
@@ -580,12 +580,12 @@ export function OrdersTab({
                           : isLast && step.isReturn
                           ? "bg-purple-600 ring-2 ring-purple-100"
                           : isDone
-                          ? "bg-emerald-500 ring-2 ring-emerald-100"
+                          ? "bg-secondary-500 ring-2 ring-secondary-100"
                           : isActive
                           ? "bg-theme-secondary ring-2 ring-theme-secondary/20"
                           : "bg-theme-border";
 
-                      const lineColor = idx < currentStep ? "bg-emerald-400" : "bg-theme-border";
+                      const lineColor = idx < currentStep ? "bg-secondary-400" : "bg-theme-border";
 
                       return (
                         <div key={step.label} className="flex flex-col gap-1.5 sm:gap-2 min-w-0">

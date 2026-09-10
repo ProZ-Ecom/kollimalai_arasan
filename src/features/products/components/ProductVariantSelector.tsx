@@ -131,10 +131,10 @@ export function ProductVariantSelector({
       {/* Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-5 sm:mb-6 gap-3 sm:gap-4">
         <div>
-          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#8B1D1D] block mb-1 font-sans">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#007F06] block mb-1 font-sans">
             COMPLETE YOUR FESTIVE BOX
           </span>
-          <h2 className="font-serif text-xl sm:text-2xl lg:text-[34px] font-bold text-[#2B1B17] tracking-tight leading-tight">
+          <h2 className="font-serif text-xl sm:text-2xl lg:text-[34px] font-bold text-[#101010] tracking-tight leading-tight">
             You May Also Like
           </h2>
         </div>
@@ -142,20 +142,20 @@ export function ProductVariantSelector({
         <div className="flex items-center gap-4">
           <Link
             href="/products"
-            className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#8B1D1D] hover:text-[#5A1911] transition-colors group"
+            className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#007F06] hover:text-[#005A04] transition-colors group"
           >
             <span>View All Sweets & Savories</span>
             <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
 
           {/* Optional desktop arrows in header as backup / quick access */}
-          <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-stone-200">
+          <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-neutral-200">
             <button
               type="button"
               onClick={() => handleScroll("left")}
               disabled={!canScrollLeft}
               aria-label="Previous items"
-              className="w-8 h-8 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-stone-700 transition-colors shadow-2xs"
+              className="w-8 h-8 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-neutral-700 transition-colors shadow-2xs"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -164,7 +164,7 @@ export function ProductVariantSelector({
               onClick={() => handleScroll("right")}
               disabled={!canScrollRight}
               aria-label="Next items"
-              className="w-8 h-8 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-stone-700 transition-colors shadow-2xs"
+              className="w-8 h-8 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-neutral-700 transition-colors shadow-2xs"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -180,7 +180,7 @@ export function ProductVariantSelector({
             type="button"
             onClick={() => handleScroll("left")}
             aria-label="Scroll left"
-            className="absolute -left-2 sm:-left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-14 sm:w-10 sm:h-16 rounded-md sm:rounded-lg bg-white/95 backdrop-blur-xs border border-stone-300/80 shadow-md flex items-center justify-center text-stone-700 hover:bg-white hover:border-stone-400 hover:text-stone-950 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            className="absolute -left-2 sm:-left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-14 sm:w-10 sm:h-16 rounded-md sm:rounded-lg bg-white/95 backdrop-blur-xs border border-neutral-300/80 shadow-md flex items-center justify-center text-neutral-700 hover:bg-white hover:border-neutral-400 hover:text-stone-950 transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
             <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
           </button>
@@ -247,7 +247,7 @@ export function ProductVariantSelector({
             type="button"
             onClick={() => handleScroll("right")}
             aria-label="Scroll right"
-            className="absolute -right-2 sm:-right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-14 sm:w-10 sm:h-16 rounded-md sm:rounded-lg bg-white/95 backdrop-blur-xs border border-stone-300/80 shadow-md flex items-center justify-center text-stone-700 hover:bg-white hover:border-stone-400 hover:text-stone-950 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            className="absolute -right-2 sm:-right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-14 sm:w-10 sm:h-16 rounded-md sm:rounded-lg bg-white/95 backdrop-blur-xs border border-neutral-300/80 shadow-md flex items-center justify-center text-neutral-700 hover:bg-white hover:border-neutral-400 hover:text-stone-950 transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
             <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
           </button>

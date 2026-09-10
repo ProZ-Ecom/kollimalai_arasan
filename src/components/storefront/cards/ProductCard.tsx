@@ -93,7 +93,7 @@ export function ProductCard({
         flex-col
         justify-between
         cursor-pointer
-        hover:border-[var(--brown-700)]
+        hover:border-[var(--secondary-600)]
         hover:shadow-xl
         hover:-translate-y-2
       "
@@ -184,7 +184,7 @@ export function ProductCard({
               flex
               items-center
               justify-center
-              text-[var(--brown-800)]
+              text-[var(--neutral-900)]
               hover:bg-white
               hover:text-red-600
               transition-colors
@@ -210,7 +210,7 @@ export function ProductCard({
               transition-colors
               duration-300
               text-hover-primary
-              text-[var(--brown-900)]
+              text-[var(--neutral-900)]
             "
           >
             {product.name}
@@ -240,8 +240,8 @@ export function ProductCard({
                     rounded-xs
                     ${
                       selectedUnitPriceId === unitPrice.id
-                        ? "bg-[var(--brown-700)] text-white border-[var(--brown-700)]"
-                        : "bg-white text-[var(--brown-700)] border-[var(--brown-700)]"
+                        ? "bg-[var(--secondary-600)] text-white border-[var(--secondary-600)]"
+                        : "bg-white text-[var(--secondary-600)] border-[var(--secondary-600)]"
                     }
                   `}
                 >
@@ -260,7 +260,7 @@ export function ProductCard({
           <div className="flex gap-2 mt-2 items-center">
             {selectedUnitPrice ? (
               <>
-                <p className="font-semibold text-[11px] sm:text-[13px] text-[var(--brown-900)]">
+                <p className="font-semibold text-[11px] sm:text-[13px] text-[var(--neutral-900)]">
                   ₹{sellingPrice.toFixed(2)}
                 </p>
 

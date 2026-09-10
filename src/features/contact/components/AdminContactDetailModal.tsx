@@ -4,19 +4,14 @@ import * as React from "react";
 import {
   Mail,
   Phone,
-  User,
   Calendar,
-  Clock,
   Send,
-  CheckCircle2,
-  AlertCircle,
-  MessageSquare,
-  Sparkles,
   ExternalLink,
 } from "lucide-react";
 import { FormModal } from "@/components/common/FormModal";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/common/status-badge";
+import { CONTACT_STATUS } from "@/features/contact/constants/status";
 import {
   useAdminContactMessageDetail,
   useUpdateContactMessageStatus,
@@ -24,7 +19,6 @@ import {
 } from "../hooks";
 import type {
   AdminContactMessageListItem,
-  ContactMessageResponse,
   ContactMessageStatus,
 } from "../types";
 
@@ -92,33 +86,6 @@ export function AdminContactDetailModal({
     );
   };
 
-  const getStatusBadge = (status: ContactMessageStatus) => {
-    switch (status) {
-      case "new":
-        return (
-          <Badge className="bg-amber-100 text-amber-800 border-amber-200 gap-1 text-xs">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-            New
-          </Badge>
-        );
-      case "read":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 border-blue-200 gap-1 text-xs">
-            <CheckCircle2 className="h-3 w-3 text-blue-600" />
-            Read
-          </Badge>
-        );
-      case "replied":
-        return (
-          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 gap-1 text-xs">
-            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-            Replied
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
   const formattedDate = item.createdAt
     ? new Date(item.createdAt).toLocaleDateString("en-IN", {
@@ -150,7 +117,7 @@ export function AdminContactDetailModal({
                 <h3 className="font-bold text-neutral-900 text-base leading-tight truncate">
                   {item.name || "Anonymous Sender"}
                 </h3>
-                {getStatusBadge(currentStatus)}
+                <StatusBadge status={currentStatus} config={CONTACT_STATUS} />
               </div>
               <div className="flex items-center gap-3 text-xs text-neutral-500 pt-1 flex-wrap">
                 <span className="flex items-center gap-1">

@@ -162,7 +162,7 @@ export default function CheckoutPage() {
   if (isOrderPlaced) {
     return (
       <div className="container mx-auto px-4 py-16 max-w-lg text-center space-y-4 animate-in fade-in duration-300">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 border border-emerald-300 text-emerald-600 shadow-sm animate-in zoom-in-75 duration-300">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary-100 border border-secondary-300 text-secondary-600 shadow-sm animate-in zoom-in-75 duration-300">
           <CheckCircle2 className="h-8 w-8" />
         </div>
         <h2 className="text-xl sm:text-2xl font-black text-theme-text-primary">
@@ -776,7 +776,7 @@ export default function CheckoutPage() {
             {paymentMethod === "CARD" && (
               <div className="rounded-xl border border-theme-border-subtle bg-theme-surface-alt/50 p-4 sm:p-5 space-y-4">
                 {/* Simulated Card Preview */}
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-tr from-[#5C1512] via-[#7A211B] to-[#9E2E27] p-5 text-white shadow-md">
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-tr from-[#005A04] via-[#006B05] to-[#2D9A38] p-5 text-white shadow-md">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="h-4 w-4 text-theme-secondary" />

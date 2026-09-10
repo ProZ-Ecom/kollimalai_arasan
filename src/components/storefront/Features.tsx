@@ -8,8 +8,8 @@ import { InfoCard } from "./cards/InfoCard";
 export function Features() {
   return (
     <Section className="py-8">
-      <div className="grid lg:grid-cols-5 grid-cols-2 gap-6">
-        {features.map((item, index) => (
+      <div className="grid lg:grid-cols-4 grid-cols-2 gap-6">
+        {features.map((item) => (
           <InfoCard
             key={item.id}
             image={item.image}
@@ -18,17 +18,12 @@ export function Features() {
             subtitle={item.footer}
             imageWidth={40}
             imageHeight={40}
-            cardClassName={`
+            cardClassName="
               flex
               flex-col
               items-center
               text-center
-              ${
-                index === features.length - 1
-                  ? "col-span-2 justify-self-center lg:col-span-1 lg:justify-self-auto"
-                  : ""
-              }
-            `}
+            "
             imageClassName="
               w-9
               h-9
@@ -46,13 +41,13 @@ export function Features() {
               transition-colors
               duration-300
               text-hover-primary
-              text-[var(--brown-900)]
+              text-[var(--neutral-900)]
             "
             subtitleClassName="
               mt-1
               text-[14px]
               header-font
-              text-[var(--brown-800)]
+              text-[var(--neutral-900)]
               transition-opacity
               duration-300
               group-hover:opacity-80

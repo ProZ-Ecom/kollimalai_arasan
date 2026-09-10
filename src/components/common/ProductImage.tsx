@@ -32,35 +32,35 @@ export function SnackFallbackIllustration({
   return (
     <div
       className={cn(
-        "relative flex flex-col items-center justify-center overflow-hidden select-none bg-gradient-to-br from-[#FFF9F2] via-[#FFF1E5] to-[#FDE8D4] text-[#8B1D1D] p-4 text-center",
+        "relative flex flex-col items-center justify-center overflow-hidden select-none bg-gradient-to-br from-[#FFFFFF] via-[#F5F5F5] to-[#FEF2D0] text-[#007F06] p-4 text-center",
         className
       )}
       aria-label={title || "Authentic Snack"}
     >
       {/* Decorative background radial pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(#8B1D1D_0.75px,transparent_0.75px)] opacity-[0.07] [background-size:12px_12px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(#007F06_0.75px,transparent_0.75px)] opacity-[0.07] [background-size:12px_12px]" />
 
       {/* Decorative corner accents */}
-      <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-[#8B1D1D]/20 rounded-tl-sm pointer-events-none" />
-      <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-[#8B1D1D]/20 rounded-tr-sm pointer-events-none" />
-      <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-[#8B1D1D]/20 rounded-bl-sm pointer-events-none" />
-      <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-[#8B1D1D]/20 rounded-br-sm pointer-events-none" />
+      <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-[#007F06]/20 rounded-tl-sm pointer-events-none" />
+      <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-[#007F06]/20 rounded-tr-sm pointer-events-none" />
+      <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-[#007F06]/20 rounded-bl-sm pointer-events-none" />
+      <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-[#007F06]/20 rounded-br-sm pointer-events-none" />
 
       {/* Center Illustration */}
       <div className="relative z-10 flex flex-col items-center justify-center max-w-[85%]">
-        <div className="w-16 h-16 md:w-20 md:h-20 mb-3 rounded-full bg-white/80 shadow-sm border border-[#8B1D1D]/15 flex items-center justify-center p-2.5 backdrop-blur-xs">
+        <div className="w-16 h-16 md:w-20 md:h-20 mb-3 rounded-full bg-white/80 shadow-sm border border-[#007F06]/15 flex items-center justify-center p-2.5 backdrop-blur-xs">
           <svg
             viewBox="0 0 64 64"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className="w-full h-full text-[#8B1D1D]"
+            className="w-full h-full text-[#007F06]"
           >
             {/* Urli / Bowl */}
             <path
               d="M8 36C8 47.0457 18.7452 56 32 56C45.2548 56 56 47.0457 56 36H8Z"
-              fill="#E3A857"
+              fill="#F9CB44"
               fillOpacity="0.3"
-              stroke="#8B1D1D"
+              stroke="#007F06"
               strokeWidth="2.5"
               strokeLinejoin="round"
             />
@@ -69,34 +69,34 @@ export function SnackFallbackIllustration({
               cy="36"
               rx="24"
               ry="7"
-              fill="#F4D39B"
-              stroke="#8B1D1D"
+              fill="#FBD873"
+              stroke="#007F06"
               strokeWidth="2.5"
             />
             {/* Murukku / Ribbon pakoda spirals */}
             <path
               d="M24 33C24 28 28 24 32 24C36 24 40 28 38 33C37 36 34 37 32 37"
-              stroke="#8B1D1D"
+              stroke="#007F06"
               strokeWidth="2.5"
               strokeLinecap="round"
             />
             <path
               d="M18 34C19 26 26 20 33 20C41 20 46 25 45 32"
-              stroke="#C97A1E"
+              stroke="#C69811"
               strokeWidth="2.2"
               strokeLinecap="round"
             />
             {/* Steam / Aroma curls */}
             <path
               d="M28 16C27 13 29 11 29 9"
-              stroke="#8B1D1D"
+              stroke="#007F06"
               strokeWidth="2"
               strokeLinecap="round"
               opacity="0.6"
             />
             <path
               d="M35 15C36 12 34 10 35 7"
-              stroke="#8B1D1D"
+              stroke="#007F06"
               strokeWidth="2"
               strokeLinecap="round"
               opacity="0.6"
@@ -105,10 +105,10 @@ export function SnackFallbackIllustration({
         </div>
 
         {/* Brand signature & label */}
-        <span className="font-serif font-bold text-sm md:text-base tracking-wide text-[#8B1D1D]">
+        <span className="font-serif font-bold text-sm md:text-base tracking-wide text-[#007F06]">
           Rithu&apos;s Snacks
         </span>
-        <span className="text-[11px] md:text-xs text-[#8B1D1D]/70 font-medium mt-0.5 line-clamp-1">
+        <span className="text-[11px] md:text-xs text-[#007F06]/70 font-medium mt-0.5 line-clamp-1">
           {title || "Fresh & Handcrafted"}
         </span>
       </div>
@@ -206,7 +206,7 @@ export function ProductImage({
   return (
     <div
       className={cn(
-        "relative w-full overflow-hidden bg-stone-50",
+        "relative w-full overflow-hidden bg-neutral-50",
         aspectClass,
         containerClassName
       )}
@@ -221,7 +221,7 @@ export function ProductImage({
       ) : (
         <>
           {isLoading && (
-            <div className="absolute inset-0 z-10 animate-pulse bg-gradient-to-br from-stone-100 via-amber-50/40 to-stone-100" />
+            <div className="absolute inset-0 z-10 animate-pulse bg-gradient-to-br from-neutral-100 via-primary-50/40 to-neutral-100" />
           )}
 
           {fill ? (

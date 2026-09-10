@@ -9,7 +9,7 @@ interface AdminTableSkeletonProps {
 
 function TableGridSkeleton({ rows, columns }: { rows: number; columns: number }) {
   return (
-    <div className="flex-1 min-h-0 overflow-hidden flex flex-col rounded-xl border border-[var(--color-neutral-100)]">
+    <div className="admin-surface flex-1 min-h-0 overflow-hidden flex flex-col rounded-xl">
       <div className="flex gap-4 border-b border-[var(--color-neutral-100)] bg-[var(--color-neutral-50)] px-4 py-3">
         {Array.from({ length: columns }).map((_, i) => (
           <Skeleton key={i} className="h-4 flex-1" />
@@ -44,7 +44,7 @@ function AdminTableSkeleton({ rows = 8, columns = 5, showStats = false, bare = f
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[var(--color-background)] py-1 rounded-2xl">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-transparent py-1 rounded-2xl">
         {showStats && (
           <div className="flex-shrink-0 flex gap-4 overflow-x-auto pb-2">
             {Array.from({ length: 3 }).map((_, i) => (

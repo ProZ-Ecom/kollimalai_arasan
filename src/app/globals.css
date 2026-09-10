@@ -1,15 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  /* Existing variables (DO NOT CHANGE) */
-  --background: #fffcf8;
-  --foreground: #1c1917;
+  /* ------------------------------------------------------------------ */
+  /* Brand palette                                                       */
+  /*   Gold   #F8BE15  - accent / CTA                                    */
+  /*   Green  #007F06  - primary (header, footer, buttons)               */
+  /*   Brown  #642A1E  - warm secondary accent                           */
+  /*   Ink    #101010  - text                                            */
+  /*   White  #FFFFFF  - surfaces                                        */
+  /* ------------------------------------------------------------------ */
+  --background: #ffffff;
+  --foreground: #101010;
 
   /* Fonts */
   --font-inter: var(--font-inter);
   --font-hanken: var(--font-hanken);
 
-  /* Primary (Gold/Yellow) - Existing */
+  /* Primary (Gold) - legacy aliases */
   --primary-base: #f8be15;
   --primary-shade-200: #c69811;
   --primary-shade-400: #95720d;
@@ -20,26 +27,11 @@
   --primary-tint-600: #fce5a1;
   --primary-tint-800: #fef2d0;
 
-  /* Secondary (Deep Maroon) - Existing */
-  --secondary-base: #5a1911;
-  --secondary-shade-200: #4a140d;
-  --secondary-shade-400: #3a0f0a;
-  --secondary-shade-600: #2a0b07;
-  --secondary-shade-800: #1a0604;
-  --secondary-tint-200: #7b4740;
-  --secondary-tint-400: #9c7570;
-  --secondary-tint-600: #bda3a0;
-  --secondary-tint-800: #ded1cf;
-
-  /* Danger - Existing */
+  /* Danger */
   --danger-base: #fb0000;
 
-  /* ------------------------------------------------------------------ */
-  /* New Semantic Color Scale (50–900)                                  */
-  /* ------------------------------------------------------------------ */
-
-  /* Primary */
-  --primary-50: #fffaf0;
+  /* Primary (Gold) */
+  --primary-50: #fffbef;
   --primary-100: #fef2d0;
   --primary-200: #fce5a1;
   --primary-300: #fbd873;
@@ -50,40 +42,40 @@
   --primary-800: #634c08;
   --primary-900: #322604;
 
-  /* Secondary (Brand Maroon) */
-  --secondary-base: #7a2224;
-  --secondary-50: #fbf3f2;
-  --secondary-100: #f0e7e5;
-  --secondary-200: #e3c8c4;
-  --secondary-300: #d0a7a2;
-  --secondary-400: #b0706a;
-  --secondary-500: #94433e;
-  --secondary-600: #7a2224;
-  --secondary-700: #5a1911;
-  --secondary-800: #40100f;
-  --secondary-900: #260706;
+  /* Secondary (Brand Green) */
+  --secondary-base: #007f06;
+  --secondary-50: #eaf7ec;
+  --secondary-100: #c5e8c9;
+  --secondary-200: #92cf99;
+  --secondary-300: #5fb569;
+  --secondary-400: #2d9a38;
+  --secondary-500: #007f06;
+  --secondary-600: #006b05;
+  --secondary-700: #005a04;
+  --secondary-800: #004203;
+  --secondary-900: #002a02;
 
-  /* Cream & Warm Neutral (Surfaces & Borders) */
-  --cream-50: #fcfaf7;
-  --cream-100: #faf6f0;
-  --cream-200: #f7f2ec;
-  --cream-300: #f3ede6;
-  --cream-border: #ede4d9;
-  --cream-border-subtle: #ebe1d6;
-  --cream-border-hover: #d8cbbc;
-  --cream-white: #fff6ec;
+  /* Surfaces & Borders (formerly cream, now neutral white) */
+  --cream-50: #ffffff;
+  --cream-100: #fafafa;
+  --cream-200: #f5f5f5;
+  --cream-300: #efefef;
+  --cream-border: #e5e5e5;
+  --cream-border-subtle: #ededed;
+  --cream-border-hover: #d4d4d4;
+  --cream-white: #ffffff;
 
-  /* Neutral */
-  --neutral-50: #fafaf9;
-  --neutral-100: #f5f5f4;
-  --neutral-200: #e7e5e4;
-  --neutral-300: #d6d3d1;
-  --neutral-400: #a2968c;
-  --neutral-500: #7c7169;
-  --neutral-600: #57534e;
-  --neutral-700: #4a423d;
-  --neutral-800: #292524;
-  --neutral-900: #211c1a;
+  /* Neutral (Ink) */
+  --neutral-50: #fafafa;
+  --neutral-100: #f5f5f5;
+  --neutral-200: #e5e5e5;
+  --neutral-300: #d4d4d4;
+  --neutral-400: #a3a3a3;
+  --neutral-500: #8a8a8a;
+  --neutral-600: #5a5a5a;
+  --neutral-700: #404040;
+  --neutral-800: #2b2b2b;
+  --neutral-900: #101010;
 
   /* Success */
   --success-50: #ecfdf5;
@@ -109,18 +101,18 @@
   --error-800: #991b1b;
   --error-900: #7f1d1d;
 
-  /* Primary Brown Colors (Storefront) */
-  --brown-50: #F8F5F4;
-  --brown-100: #EEE7E5;
-  --brown-200: #DDD0CC;
-  --brown-300: #C5AEA8;
-  --brown-400: #A4847C;
-  --brown-500: #86655D;
-  --brown-600: #684944;
-  --brown-700: #4A322F;
-  --brown-800: #392624;
-  --brown-900: #281B1A;
-  --brown-950: #160F0F;
+  /* Brown (warm secondary accent) */
+  --brown-50: #faf4f2;
+  --brown-100: #f0e4e0;
+  --brown-200: #dfc5be;
+  --brown-300: #c7a096;
+  --brown-400: #a5705f;
+  --brown-500: #85463a;
+  --brown-600: #642a1e;
+  --brown-700: #4e2018;
+  --brown-800: #381712;
+  --brown-900: #220e0b;
+  --brown-950: #150807;
 
   /* Pastels & Accents for Reviews & Cards */
   --red-50: #fef2f2;
@@ -129,98 +121,128 @@
   --green-100: #dcfce7;
   --blue-50: #eff6ff;
   --blue-100: #dbeafe;
-  --yellow-50: #fefce8;
-  --yellow-100: #fef9c3;
-  --yellow-200: #fef08a;
-  --yellow-300: #fde047;
-  --yellow-400: #facc15;
-  --yellow-500: #eab308;
-  --yellow-600: #ca8a04;
-  --yellow-700: #a16207;
-  --yellow-800: #854d0e;
-  --yellow-900: #713f12;
-  --yellow-950: #422006;
+  --yellow-50: #fffbef;
+  --yellow-100: #fef2d0;
+  --yellow-200: #fce5a1;
+  --yellow-300: #fbd873;
+  --yellow-400: #f9cb44;
+  --yellow-500: #f8be15;
+  --yellow-600: #c69811;
+  --yellow-700: #95720d;
+  --yellow-800: #634c08;
+  --yellow-900: #322604;
+  --yellow-950: #1f1703;
+
+  /* Footer panel - warm off-white behind the link columns. */
+  --footer-bg: #fdf3f1;
+
+  /* ------------------------------------------------------------------ */
+  /* Admin dashboard canvas                                              */
+  /* The admin shell used to sit on plain #ffffff, which made white      */
+  /* cards, white tables and the white page all read as one flat sheet.  */
+  /* A faintly green-tinted canvas lets the white surfaces lift off it.  */
+  /* ------------------------------------------------------------------ */
+  --admin-canvas: #f4f7f3;
+  --admin-canvas-strong: #eaf1e9;
+  --admin-card-ring: rgba(0, 127, 6, 0.08);
+  --admin-card-shadow: 0 1px 2px rgba(16, 16, 16, 0.04),
+    0 6px 16px -8px rgba(0, 66, 3, 0.16);
+  --admin-card-shadow-hover: 0 2px 4px rgba(16, 16, 16, 0.05),
+    0 14px 28px -12px rgba(0, 66, 3, 0.28);
+
+  /* ------------------------------------------------------------------ */
+  /* Brand-promise strip (directly under the hero)                       */
+  /* These sit outside the 5-colour brand palette on purpose - they come  */
+  /* from the section artwork, where the icons are deliberately multi-    */
+  /* coloured and the headline accent is a warm orange.                   */
+  /* ------------------------------------------------------------------ */
+  --accent-orange: #e2551c;
+  --promise-leaf: #7cc242;
+  --promise-check: #29abe2;
+  --promise-box: #d9a76c;
 
   /* ================================================================== */
   /* Multi-Company / Centralized Customer & Account Theme System        */
   /* ================================================================== */
-  --theme-primary: #5C1512;               /* Brand primary maroon / deep header */
-  --theme-primary-hover: #7A211B;
-  --theme-primary-light: #FCF7EE;
-  --theme-primary-fg: #FFFFFF;
+  --theme-primary: #007f06;               /* Brand green - header / footer / primary CTA */
+  --theme-primary-hover: #006b05;
+  --theme-primary-light: #eaf7ec;
+  --theme-primary-fg: #ffffff;
 
-  --theme-secondary: #E8A020;             /* Brand accent / Gold / CTA */
-  --theme-secondary-hover: #F0A81E;
-  --theme-secondary-fg: #3A1B08;
-  --theme-secondary-light: #FFF1D6;
+  --theme-secondary: #f8be15;             /* Gold accent / CTA */
+  --theme-secondary-hover: #f9cb44;
+  --theme-secondary-fg: #101010;
+  --theme-secondary-light: #fef2d0;
 
-  --theme-bg: #F3EDE4;                    /* Customer shell warm cream background */
-  --theme-surface: #FFFFFF;               /* Card / container surface */
-  --theme-surface-warm: #FFFDF9;          /* Sub-card surface */
-  --theme-surface-alt: #FCF7EE;           /* Card header warm background */
+  --theme-bg: #ffffff;                    /* Customer shell background */
+  --theme-surface: #ffffff;               /* Card / container surface */
+  --theme-surface-warm: #fafafa;          /* Sub-card surface */
+  --theme-surface-alt: #f5f5f5;           /* Card header background */
 
-  --theme-text-primary: #2C2420;          /* Primary body / title text */
-  --theme-text-secondary: #3A302A;        /* Secondary headings */
-  --theme-text-muted: #9A8B79;            /* Muted / labels / captions */
-  --theme-text-subtle: #7A6A58;           /* Subtle text */
-  --theme-text-gold: #D9B98F;             /* Header breadcrumb accent */
+  --theme-text-primary: #101010;          /* Primary body / title text */
+  --theme-text-secondary: #2b2b2b;        /* Secondary headings */
+  --theme-text-muted: #8a8a8a;            /* Muted / labels / captions */
+  --theme-text-subtle: #5a5a5a;           /* Subtle text */
+  --theme-text-gold: #f8be15;             /* Header breadcrumb accent */
 
-  --theme-border: #EBE0D0;                /* Card & section borders */
-  --theme-border-subtle: #F0E6D6;         /* Table / divider borders */
-  --theme-border-input: #E3D7C4;          /* Form input borders */
-  --theme-border-accent: #E8D6BC;         /* Highlighted borders */
+  --theme-border: #e5e5e5;                /* Card & section borders */
+  --theme-border-subtle: #ededed;         /* Table / divider borders */
+  --theme-border-input: #d4d4d4;          /* Form input borders */
+  --theme-border-accent: #c5e8c9;         /* Highlighted borders */
 
-  --theme-status-out-bg: #FFF1D6;
-  --theme-status-out-fg: #9A6208;
-  --theme-status-del-bg: #E4F2E8;
-  --theme-status-del-fg: #2F6E48;
-  --theme-status-can-bg: #F7E6E4;
-  --theme-status-can-fg: #A9433A;
-  --theme-tag-work-bg: #EDE7F6;
-  --theme-tag-work-fg: #5B4B8A;
+  --theme-status-out-bg: #fef2d0;
+  --theme-status-out-fg: #95720d;
+  --theme-status-del-bg: #eaf7ec;
+  --theme-status-del-fg: #005a04;
+  --theme-status-can-bg: #fee2e2;
+  --theme-status-can-fg: #b91c1c;
+  --theme-tag-work-bg: #ede7f6;
+  --theme-tag-work-fg: #5b4b8a;
 
   /* ================================================================== */
-  /* About Us Page Design Tokens (Figma Design System)                  */
+  /* About Us Page Design Tokens                                        */
   /* ================================================================== */
-  --about-hero-bg: #381514;
-  --about-hero-bg-dark: #2D100F;
-  --about-hero-gold: #E5B880;
-  --about-hero-gold-hover: #DDAA6D;
-  --about-hero-gold-text: #E8BF87;
-  --about-hero-btn-dark: #2C1210;
-  --about-hero-badge-bg: rgba(255, 255, 255, 0.06);
-  --about-hero-badge-border: rgba(231, 195, 146, 0.3);
-  --about-hero-border: rgba(255, 255, 255, 0.12);
-  --about-hero-subtext: #D5C7C5;
-  --about-hero-circle-bg: #DCAE74;
-  --about-hero-circle-border: #381514;
+  --about-hero-bg: #004203;
+  --about-hero-bg-dark: #002a02;
+  --about-hero-gold: #f8be15;
+  --about-hero-gold-hover: #f9cb44;
+  --about-hero-gold-text: #fbd873;
+  --about-hero-btn-dark: #101010;
+  --about-hero-badge-bg: rgba(255, 255, 255, 0.08);
+  --about-hero-badge-border: rgba(248, 190, 21, 0.35);
+  --about-hero-border: rgba(255, 255, 255, 0.14);
+  --about-hero-subtext: #d8e6d9;
+  --about-hero-circle-bg: #f8be15;
+  --about-hero-circle-border: #004203;
 
-  --about-story-bg: #FFFFFF;
-  --about-story-badge-bg: #D7A368;
-  --about-story-badge-text: #2C1210;
-  --about-story-badge-sub: #4A2518;
-  --about-eyebrow: #C87A38;
-  --about-heading: #2B1B17;
-  --about-body: #57534E;
-  --about-card-bg: #FDFBF7;
-  --about-card-border: #EFE8DC;
-  --about-card-border-hover: #DFCBB5;
-  --about-card-icon-bg: #F7EFE3;
-  --about-card-icon-fg: #B67332;
+  --about-story-bg: #ffffff;
+  --about-story-badge-bg: #f8be15;
+  --about-story-badge-text: #101010;
+  --about-story-badge-sub: #642a1e;
+  --about-eyebrow: #007f06;
+  --about-heading: #101010;
+  --about-body: #5a5a5a;
+  --about-card-bg: #fafafa;
+  --about-card-border: #e5e5e5;
+  --about-card-border-hover: #92cf99;
+  --about-card-icon-bg: #eaf7ec;
+  --about-card-icon-fg: #007f06;
 
-  --about-founder-bg: #F8F3EC;
-  --about-arch-from: #C49377;
-  --about-arch-via: #B88467;
-  --about-arch-to: #A46E51;
-  --about-signature: #9E6438;
-  --about-quote-bg: #361514;
-  --about-quote-accent: #E5B880;
-  --about-divider: #E3D7C5;
+  --about-founder-bg: #fafafa;
+  --about-arch-from: #642a1e;
+  --about-arch-via: #4e2018;
+  --about-arch-to: #381712;
+  --about-signature: #642a1e;
+  --about-quote-bg: #004203;
+  --about-quote-accent: #f8be15;
+  --about-divider: #e5e5e5;
 }
 
 @theme inline {
   /* Existing */
   --color-background: var(--background);
+  --color-admin-canvas: var(--admin-canvas);
+  --color-admin-canvas-strong: var(--admin-canvas-strong);
   --color-foreground: var(--foreground);
 
   /* Fonts */
@@ -350,6 +372,14 @@
   --color-theme-tag-work-bg: var(--theme-tag-work-bg);
   --color-theme-tag-work-fg: var(--theme-tag-work-fg);
 
+  --color-footer-bg: var(--footer-bg);
+
+  /* Brand-promise strip */
+  --color-accent-orange: var(--accent-orange);
+  --color-promise-leaf: var(--promise-leaf);
+  --color-promise-check: var(--promise-check);
+  --color-promise-box: var(--promise-box);
+
   /* About Us Theme Scale */
   --color-about-hero-bg: var(--about-hero-bg);
   --color-about-hero-bg-dark: var(--about-hero-bg-dark);
@@ -403,6 +433,39 @@ body {
   font-family: var(--font-inter);
 }
 
+/* ------------------------------------------------------------------ */
+/* Admin shell canvas                                                   */
+/* Tinted ground + two very soft brand washes so the white cards and    */
+/* tables in the dashboard have something to sit on instead of          */
+/* dissolving into a plain white page.                                  */
+/* ------------------------------------------------------------------ */
+.admin-canvas {
+  background-color: var(--admin-canvas);
+  background-image: radial-gradient(
+      42rem 24rem at 0% 0%,
+      rgba(0, 127, 6, 0.07),
+      transparent 70%
+    ),
+    radial-gradient(
+      36rem 22rem at 100% 0%,
+      rgba(248, 190, 21, 0.1),
+      transparent 70%
+    );
+  background-attachment: local;
+  background-repeat: no-repeat;
+}
+
+/* Card surface used across admin stat tiles and panels. */
+.admin-surface {
+  background-color: var(--cream-white);
+  border: 1px solid var(--cream-border-subtle);
+  box-shadow: var(--admin-card-shadow);
+}
+
+.admin-surface-hover:hover {
+  box-shadow: var(--admin-card-shadow-hover);
+}
+
 @layer utilities {
   .animate-in {
     animation: animateIn 0.2s ease-out;
@@ -443,7 +506,7 @@ textarea:focus,
 textarea:focus-visible {
   outline: none !important;
   border-color: var(--color-secondary-600) !important;
-  box-shadow: 0 0 0 2px rgba(90, 25, 17, 0.15) !important;
+  box-shadow: 0 0 0 2px rgba(0, 127, 6, 0.15) !important;
 }
 
 /* Custom Scrollbar for Popups & Dropdowns */
@@ -488,19 +551,19 @@ textarea:focus-visible {
   background-color: var(--yellow-400);
 }
 .btn-brown {
-  background-color: var(--brown-600);
+  background-color: var(--secondary-500);
 }
 .btn-brown:hover {
-  background-color: var(--brown-700);
+  background-color: var(--secondary-600);
 }
 .drawer-active {
-  background-color: var(--brown-700);
+  background-color: var(--secondary-600);
 }
 .header-font {
   font-family: var(--font-inter), sans-serif;
 }
 .text-hover-primary:hover {
-  color: var(--brown-700);
+  color: var(--secondary-500);
 }
 
 /* ================================================================== */
@@ -553,11 +616,11 @@ textarea:focus-visible {
   overflow: hidden;
   background: linear-gradient(
     90deg,
-    #f3ede6 0%,
-    #faf6f0 35%,
+    #efefef 0%,
+    #f7f7f7 35%,
     #ffffff 50%,
-    #faf6f0 65%,
-    #f3ede6 100%
+    #f7f7f7 65%,
+    #efefef 100%
   );
   background-size: 200% 100%;
   animation: skeletonPulse 1.8s ease-in-out infinite;
@@ -565,7 +628,7 @@ textarea:focus-visible {
 
 .skeleton-box {
   border-radius: 0.75rem;
-  background-color: #f1ebd8;
+  background-color: #efefef;
   position: relative;
   overflow: hidden;
 }

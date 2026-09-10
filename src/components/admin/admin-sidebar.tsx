@@ -31,6 +31,7 @@ import {
   Mail,
   PackagePlus,
   HelpCircle,
+  Home,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
@@ -364,6 +365,17 @@ function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
           </div>
         </div>
       )}
+      <Link
+        href="/"
+        title={collapsed ? "Visit Store" : undefined}
+        className={cn(
+          "group flex w-full items-center gap-2.5 rounded-lg py-2 text-sm font-medium text-neutral-600 transition-all duration-200 hover:bg-white/70 hover:text-secondary-600",
+          collapsed ? "justify-center px-0" : "pl-2 pr-3"
+        )}
+      >
+        <Home className="h-4 w-4 flex-shrink-0" />
+        {!collapsed && "Visit Store"}
+      </Link>
       <button
         onClick={handleLogout}
         title={collapsed ? "Logout" : undefined}

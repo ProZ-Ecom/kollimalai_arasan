@@ -1,11 +1,10 @@
 
 import {
   HeroSlider,
-  CategorySection,
+  BrandPromise,
   ProductSection,
-  Banner,
-  Pledge,
-  Tradition,
+  LowestPrice,
+  WhyChooseUs,
   Features,
   Feedback,
   OfferPopup,
@@ -17,12 +16,11 @@ export default function HomePage() {
     <div className="pb-16 lg:pb-0 bg-white">
       <OfferPopup />
       <HeroSlider />
-      <CategorySection />
-      <ProductSection />
-      <Banner />
+      <BrandPromise />
       <OfferReels />
-      <Pledge />
-      <Tradition />
+      <ProductSection title="Freshly Launched" accent="Flavours" />
+      <WhyChooseUs />
+      <LowestPrice />
       <Features />
       <Feedback />
     </div>

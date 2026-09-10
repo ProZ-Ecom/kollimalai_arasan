@@ -5,29 +5,106 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPrice(amount: number, currency = "INR"): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency,
-  }).format(amount);
-}
+/**
+ * Named date shapes used across the app. Each call site used to hand-roll its
+ * own Intl options (there were eight near-identical `formatDate` helpers), so
+ * the presets live here and differences are passed as options instead.
+ */
+export type DateStyle = "long" | "medium" | "datetime" | "input";
 
-export function formatDate(date: Date | string): string {
-  return new Intl.DateTimeFormat("en-IN", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(new Date(date));
-}
-
-export function formatDateTime(date: Date | string): string {
-  return new Intl.DateTimeFormat("en-IN", {
+const DATE_STYLE_OPTIONS: Record<
+  Exclude<DateStyle, "input">,
+  Intl.DateTimeFormatOptions
+> = {
+  long: { year: "numeric", month: "long", day: "numeric" },
+  medium: { year: "numeric", month: "short", day: "numeric" },
+  datetime: {
     year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(date));
+  },
+};
+
+export interface FormatDateOptions {
+  /** Preset shape. Defaults to "long", matching this helper's original output. */
+  style?: DateStyle;
+  locale?: string;
+  /** Returned for null/undefined/unparseable input. */
+  fallback?: string;
+  /** Escape hatch for one-off shapes (e.g. a 2-digit day). Wins over `style`. */
+  dateOptions?: Intl.DateTimeFormatOptions;
+}
+
+export function formatDate(
+  date: Date | string | number | null | undefined,
+  options: FormatDateOptions = {}
+): string {
+  const {
+    style = "long",
+    locale = "en-IN",
+    fallback = "",
+    dateOptions,
+  } = options;
+
+  if (date === null || date === undefined || date === "") return fallback;
+
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return fallback;
+
+  // `datetime-local` inputs want local wall-clock time, not the UTC string
+  // toISOString() produces, so shift by the offset before slicing.
+  if (style === "input" && !dateOptions) {
+    const offsetMs = parsed.getTimezoneOffset() * 60 * 1000;
+    return new Date(parsed.getTime() - offsetMs).toISOString().slice(0, 16);
+  }
+
+  try {
+    return new Intl.DateTimeFormat(
+      locale,
+      dateOptions ?? DATE_STYLE_OPTIONS[style === "input" ? "medium" : style]
+    ).format(parsed);
+  } catch {
+    return parsed.toLocaleDateString(locale);
+  }
+}
+
+/** Convenience wrapper - the date/time shape used by order and review views. */
+export function formatDateTime(
+  date: Date | string | number | null | undefined,
+  options: Omit<FormatDateOptions, "style"> = {}
+): string {
+  return formatDate(date, { ...options, style: "datetime" });
+}
+
+export interface FormatPriceOptions {
+  currency?: string;
+  locale?: string;
+  minimumFractionDigits?: number;
+  maximumFractionDigits?: number;
+}
+
+export function formatPrice(
+  amount: number,
+  currencyOrOptions: string | FormatPriceOptions = "INR"
+): string {
+  const options =
+    typeof currencyOrOptions === "string"
+      ? { currency: currencyOrOptions }
+      : currencyOrOptions;
+  const { currency = "INR", locale = "en-IN" } = options;
+
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    ...(options.minimumFractionDigits !== undefined && {
+      minimumFractionDigits: options.minimumFractionDigits,
+    }),
+    ...(options.maximumFractionDigits !== undefined && {
+      maximumFractionDigits: options.maximumFractionDigits,
+    }),
+  }).format(amount);
 }
 
 export function slugify(text: string): string {

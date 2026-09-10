@@ -421,7 +421,7 @@ export default function AdminVariantsPage() {
       />
 
       <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden bg-[var(--color-background)] py-1 rounded-2xl">
+        <div className="flex h-full flex-col overflow-hidden bg-transparent py-1 rounded-2xl">
           {/* Controls Header */}
           <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">

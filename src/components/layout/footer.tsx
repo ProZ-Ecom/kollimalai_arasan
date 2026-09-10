@@ -2,36 +2,26 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { MapPin } from "lucide-react";
 import {
   LOGOS,
   ICONS,
   contacts as defaultContacts,
   footerSocialIcons,
   readyToAssist,
-  mainMenu,
 } from "@/constants/storefront";
-import { ContactCard, ContactItem } from "@/components/storefront/cards/ContactCard";
+import type { ContactItem } from "@/components/storefront/cards/ContactCard";
 import { FooterLinks } from "@/components/storefront/footer/FooterLinks";
-import { IconButton } from "@/components/storefront/buttons/IconButton";
 import { useCustomerCompany } from "@/features/customers/hooks/use-customer-company";
+import { useMainNavigation } from "@/hooks/use-main-navigation";
 import { getImageUrl } from "@/lib/utils";
 
 export function Footer() {
-  const [email, setEmail] = React.useState("");
-  const [isSubscribed, setIsSubscribed] = React.useState(false);
 
   const { data: company } = useCustomerCompany();
+  const { items: navItems } = useMainNavigation();
 
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email.trim()) {
-      setIsSubscribed(true);
-      setTimeout(() => {
-        setEmail("");
-        setIsSubscribed(false);
-      }, 3000);
-    }
-  };
 
   // Dynamic Contact Cards based on Company API
   const dynamicContacts: ContactItem[] = React.useMemo(() => {
@@ -94,7 +84,7 @@ export function Footer() {
       {
         id: 1,
         icon: ICONS.call,
-        title: "Call",
+        title: "Contact Us",
         value: callValue,
         link: callLink,
       },
@@ -155,141 +145,129 @@ export function Footer() {
   }, [company, formattedLocation]);
 
   return (
-    <footer className="relative pt-12">
-      {/* Floating Contact Cards */}
-      <div className="relative z-10 lg:translate-y-12 mb-6 lg:mb-0">
-        <div className="grid md:grid-cols-3 gap-5 max-w-[1100px] mx-auto px-4">
-          {dynamicContacts.map((contact) => (
-            <ContactCard key={contact.id} contact={contact} />
-          ))}
-        </div>
-      </div>
-
-      {/* Main Brown Footer Area */}
-      <div className="bg-[var(--brown-700)] min-h-[350px] pt-10 lg:pt-24 text-white">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
-          <div className="flex flex-col gap-10 lg:justify-between lg:flex-row">
-            {/* Column 1: Ready to Assist */}
-            <FooterLinks
-              title="Ready to Assist"
-              items={readyToAssist}
-              className="mb-2"
-            />
-
-            {/* Column 2: Main Menu */}
-            <FooterLinks
-              title="Main Menu"
-              items={mainMenu}
-              className="mb-2"
-            />
-
-            {/* Column 3: Newsletter Sign Up */}
+    <footer className="header-font">
+      {/* ================================================================ */}
+      {/* Main panel - brand, link columns, contact details                */}
+      {/* ================================================================ */}
+      <div className="bg-footer-bg">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10 lg:py-14">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Brand, address, socials */}
             <div>
-              <h3 className="text-[24px] sm:text-[28px] lg:text-xl font-semibold mb-6">
-                Sign Up and Save
+              <Link href="/" className="inline-block" aria-label="Home">
+                <Image
+                  src={companyLogo}
+                  alt={companyName}
+                  width={160}
+                  height={110}
+                  className="w-[130px] h-auto rounded-lg object-contain"
+                />
+              </Link>
+
+              <h3 className="mt-5 text-lg font-bold text-secondary-500">
+                MKT &amp; Packed By :
               </h3>
 
-              <p className="text-gray-200 header-font">
-                Join Our Newsletter for Updates & Offers
-              </p>
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 flex items-start gap-2 max-w-[240px] text-sm leading-relaxed text-theme-text-primary hover:text-secondary-500 transition-colors"
+              >
+                <MapPin
+                  className="w-4 h-4 mt-0.5 shrink-0 text-secondary-500"
+                  strokeWidth={1.75}
+                />
+                <span>{formattedLocation}</span>
+              </a>
 
-              {isSubscribed ? (
-                <div className="mt-8 py-2 text-sm text-amber-300 font-medium header-font">
-                  ✓ Thank you for subscribing!
-                </div>
-              ) : (
-                <form
-                  onSubmit={handleSubscribe}
-                  className="mt-8 border-b border-gray-300 flex items-center pb-3 header-font max-w-[300px] lg:max-w-none transition-colors duration-300 hover:border-white"
-                >
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter Your Email"
-                    className="flex-1 bg-transparent outline-hidden text-white placeholder:text-gray-300 text-sm"
-                  />
-
-                  {email.trim() ? (
-                    <button
-                      type="submit"
-                      className="bg-[var(--brown-600)] text-white px-4 py-1 rounded-md text-sm transition-all duration-300 hover:bg-[var(--brown-500)] cursor-pointer"
-                    >
-                      Submit
-                    </button>
-                  ) : (
-                    <Image
-                      src={ICONS.mail}
-                      alt="mail"
-                      width={20}
-                      height={20}
-                      className="invert transition-all duration-300"
-                    />
-                  )}
-                </form>
-              )}
-
-              {/* Social Icons */}
-              <div className="flex mt-7 gap-5">
+              <div className="mt-5 flex items-center gap-3">
                 {footerSocialIcons.map((item) => (
-                  <IconButton
+                  <a
                     key={item.id}
-                    icon={item.icon}
-                    alt={item.name}
-                    imageClassName="w-[30px] h-[30px]"
-                    className="hover:-translate-y-1"
-                  />
+                    href={item.href ?? "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={item.name}
+                    className="grid place-items-center w-8 h-8 rounded-md bg-secondary-500 hover:bg-secondary-600 transition-colors"
+                  >
+                    <Image
+                      src={item.icon}
+                      alt=""
+                      aria-hidden="true"
+                      width={16}
+                      height={16}
+                      className="w-4 h-4 brightness-0 invert"
+                    />
+                  </a>
                 ))}
               </div>
             </div>
 
-            {/* Column 4: Brand Logo & Address */}
-            <div className="mt-2 lg:mt-0">
-              <div className="flex justify-center">
-                <Image
-                  src={companyLogo}
-                  alt={companyName}
-                  width={90}
-                  height={90}
-                  className="transition-transform duration-300 hover:scale-105 object-contain"
-                />
-              </div>
+            {/* Quick Links - same source as the header nav, so they cannot drift */}
+            <FooterLinks title="Quick Links" items={navItems} />
 
-              <h3 className="text-xl lg:text-2xl font-semibold mt-5 text-center">
-                {companyName}
-              </h3>
+            {/* Here to Help */}
+            <FooterLinks title="Here to Help" items={readyToAssist} />
 
-              <div className="flex gap-2 mt-4 justify-center lg:justify-start">
-                <Image
-                  src={ICONS.location}
-                  alt="location_icon"
-                  width={25}
-                  height={25}
-                />
+            {/* Contact details */}
+            <div className="space-y-5">
+              {dynamicContacts.map((contact) => (
                 <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="header-font text-sm hover:underline text-gray-200"
+                  key={contact.id}
+                  href={contact.link}
+                  target={contact.link.startsWith("http") ? "_blank" : undefined}
+                  rel={
+                    contact.link.startsWith("http")
+                      ? "noopener noreferrer"
+                      : undefined
+                  }
+                  className="flex items-start gap-3 group"
                 >
-                  {formattedLocation}
+                  <span className="grid place-items-center w-9 h-9 rounded-lg border-2 border-secondary-500 shrink-0 transition-colors group-hover:bg-secondary-50">
+                    <Image
+                      src={contact.icon}
+                      alt=""
+                      aria-hidden="true"
+                      width={18}
+                      height={18}
+                      className="w-[18px] h-[18px]"
+                    />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-bold text-secondary-500 leading-tight">
+                      {contact.title}
+                    </span>
+                    <span className="block text-sm text-theme-text-primary break-words">
+                      {contact.value}
+                    </span>
+                  </span>
                 </a>
-              </div>
+              ))}
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Separator Line */}
-        <div className="mt-8 h-[3px] bg-[var(--brown-600)]" />
-
-        {/* Copyright Bar */}
-        <div className="flex flex-col gap-2 py-5 text-sm text-gray-200 header-font text-center lg:flex-row lg:justify-between lg:items-center lg:text-left lg:px-8 max-w-[1400px] mx-auto">
-          <p className="header-font">
-            Copyright © {new Date().getFullYear()} {companyName}. All Rights Reserved.
+      {/* ================================================================ */}
+      {/* Bottom bar                                                       */}
+      {/* ================================================================ */}
+      <div className="bg-theme-primary text-white">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-4 flex flex-col gap-2 text-xs sm:text-sm text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+          <p>
+            Copyright &copy; {new Date().getFullYear()} {companyName}. All
+            Rights Reserved.
           </p>
-
-          <p className="header-font">
-            Design and Developed By ProZ Solutions LLP.
+          <p>
+            Design and Developed By{" "}
+            <a
+              href="https://prozsolutions.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:opacity-80 transition-opacity"
+            >
+              ProZ Solutions LLP.
+            </a>
           </p>
         </div>
       </div>
@@ -298,4 +276,3 @@ export function Footer() {
 }
 
 export default Footer;
-

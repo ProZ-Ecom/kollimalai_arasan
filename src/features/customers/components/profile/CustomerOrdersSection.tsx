@@ -10,6 +10,7 @@ import type {
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
+import { formatDate, formatPrice } from "@/lib/utils";
 
 interface CustomerOrdersSectionProps {
   orders?: AdminCustomerOrderItemDto[];
@@ -94,21 +95,7 @@ export function CustomerOrdersSection({
     );
   };
 
-  const formatDate = (date: Date | string | null | undefined) => {
-    if (!date) return "—";
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "2-digit",
-      year: "numeric",
-    });
-  };
 
-  const formatAmount = (amount: number) => {
-    return `₹${amount.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
 
   return (
     <div className="w-full overflow-hidden">
@@ -150,7 +137,7 @@ export function CustomerOrdersSection({
 
                   {/* Date */}
                   <td className="py-3 sm:py-4 px-3.5 sm:px-6 whitespace-nowrap text-xs sm:text-sm text-neutral-600">
-                    {formatDate(order.placedAt || order.createdAt)}
+                    {formatDate(order.placedAt || order.createdAt, { locale: "en-US", fallback: "—", dateOptions: { month: "short", day: "2-digit", year: "numeric" } })}
                   </td>
 
                   {/* Status */}
@@ -160,7 +147,7 @@ export function CustomerOrdersSection({
 
                   {/* Total */}
                   <td className="py-3 sm:py-4 px-3.5 sm:px-6 whitespace-nowrap text-right text-xs sm:text-sm font-semibold text-neutral-900 font-mono">
-                    {formatAmount(order.totalAmount)}
+                    {formatPrice(order.totalAmount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
               );

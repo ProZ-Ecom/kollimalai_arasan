@@ -34,12 +34,12 @@ function ProductGallery({
   if (validImages.length === 0) {
     return (
       <div className={cn("space-y-4", className)}>
-        <div className="relative aspect-square w-full rounded-2xl overflow-hidden border border-amber-200/50 bg-gradient-to-br from-[#FFFDF9] to-[#FFF5EB] shadow-xs group">
+        <div className="relative aspect-square w-full rounded-2xl overflow-hidden border border-primary-200/50 bg-gradient-to-br from-[#FFFFFF] to-[#FAFAFA] shadow-xs group">
           {/* Top badges */}
           <div className="absolute top-3.5 left-3.5 z-20 flex flex-wrap gap-2">
             {isVeg && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-2xs backdrop-blur-xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-600 ring-2 ring-emerald-600/30" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-secondary-50 text-secondary-800 border border-secondary-200/80 shadow-2xs backdrop-blur-xs">
+                <span className="w-2 h-2 rounded-full bg-secondary-600 ring-2 ring-secondary-600/30" />
                 100% Veg
               </span>
             )}
@@ -47,7 +47,7 @@ function ProductGallery({
               className={cn(
                 "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shadow-2xs backdrop-blur-xs",
                 isInStock
-                  ? "bg-stone-50/90 text-stone-700 border-stone-200/80"
+                  ? "bg-neutral-50/90 text-neutral-700 border-neutral-200/80"
                   : "bg-rose-50 text-rose-700 border-rose-200/80"
               )}
             >
@@ -71,12 +71,12 @@ function ProductGallery({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-stone-200/80 bg-stone-50 shadow-xs group">
+      <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-neutral-200/80 bg-neutral-50 shadow-xs group">
         {/* Badges */}
         <div className="absolute top-3.5 left-3.5 z-20 flex flex-wrap gap-2">
           {isVeg && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-2xs backdrop-blur-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-600 ring-2 ring-emerald-600/30" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-secondary-50 text-secondary-800 border border-secondary-200/80 shadow-2xs backdrop-blur-xs">
+              <span className="w-2 h-2 rounded-full bg-secondary-600 ring-2 ring-secondary-600/30" />
               100% Veg
             </span>
           )}
@@ -84,7 +84,7 @@ function ProductGallery({
             className={cn(
               "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shadow-2xs backdrop-blur-xs",
               isInStock
-                ? "bg-white/90 text-stone-700 border-stone-200/80"
+                ? "bg-white/90 text-neutral-700 border-neutral-200/80"
                 : "bg-rose-50 text-rose-700 border-rose-200/80"
             )}
           >
@@ -94,8 +94,8 @@ function ProductGallery({
 
         {/* Quality Seal */}
         <div className="absolute top-3.5 right-3.5 z-20">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#8B1D1D]/10 text-[#8B1D1D] border border-[#8B1D1D]/20 shadow-2xs backdrop-blur-xs">
-            <Sparkles className="w-3 h-3 text-[#8B1D1D]" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#007F06]/10 text-[#007F06] border border-[#007F06]/20 shadow-2xs backdrop-blur-xs">
+            <Sparkles className="w-3 h-3 text-[#007F06]" />
             Traditional
           </span>
         </div>
@@ -115,7 +115,7 @@ function ProductGallery({
               type="button"
               variant="secondary"
               size="icon"
-              className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-stone-700 shadow-md h-9 w-9 rounded-full border border-stone-200 transition-transform active:scale-95"
+              className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-neutral-700 shadow-md h-9 w-9 rounded-full border border-neutral-200 transition-transform active:scale-95"
               onClick={() => setSelectedIndex((i) => (i > 0 ? i - 1 : validImages.length - 1))}
               aria-label="Previous image"
             >
@@ -125,7 +125,7 @@ function ProductGallery({
               type="button"
               variant="secondary"
               size="icon"
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-stone-700 shadow-md h-9 w-9 rounded-full border border-stone-200 transition-transform active:scale-95"
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-neutral-700 shadow-md h-9 w-9 rounded-full border border-neutral-200 transition-transform active:scale-95"
               onClick={() => setSelectedIndex((i) => (i < validImages.length - 1 ? i + 1 : 0))}
               aria-label="Next image"
             >
@@ -145,8 +145,8 @@ function ProductGallery({
               className={cn(
                 "relative h-18 w-18 shrink-0 overflow-hidden rounded-xl border-2 transition-all p-0.5 bg-white",
                 selectedIndex === index
-                  ? "border-[#8B1D1D] ring-2 ring-[#8B1D1D]/20 shadow-xs scale-102"
-                  : "border-stone-200 hover:border-stone-400 opacity-70 hover:opacity-100"
+                  ? "border-[#007F06] ring-2 ring-[#007F06]/20 shadow-xs scale-102"
+                  : "border-neutral-200 hover:border-neutral-400 opacity-70 hover:opacity-100"
               )}
             >
               <ProductImage

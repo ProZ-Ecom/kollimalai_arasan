@@ -38,6 +38,7 @@ import {
   formatOfferDiscount,
 } from "@/features/offers/constants/offer-options";
 import type { CreateOfferSchemaInput } from "@/features/offers/validations/offer.schema";
+import { formatDate } from "@/lib/utils";
 import type {
   OfferLevel,
   OfferListItem,
@@ -45,16 +46,6 @@ import type {
   OfferType,
 } from "@/features/offers/types";
 
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 /** Turns an API failure into the message the admin should actually read. */
 function errorMessage(error: unknown, fallback: string): string {
@@ -301,7 +292,7 @@ export default function AdminOffersPage() {
       cell: ({ row }) => (
         <div className="flex items-center gap-1.5 whitespace-nowrap text-xs text-neutral-600">
           <Calendar className="h-3.5 w-3.5 text-neutral-400" />
-          {formatDate(row.original.startsAt)} — {formatDate(row.original.endsAt)}
+          {formatDate(row.original.startsAt, { style: "medium", fallback: "—" })} — {formatDate(row.original.endsAt, { style: "medium", fallback: "—" })}
         </div>
       ),
     },
@@ -326,7 +317,7 @@ export default function AdminOffersPage() {
       header: "Created",
       cell: ({ row }) => (
         <span className="whitespace-nowrap text-xs text-neutral-500">
-          {formatDate(row.original.createdAt)}
+          {formatDate(row.original.createdAt, { style: "medium", fallback: "—" })}
         </span>
       ),
     },
@@ -414,7 +405,7 @@ export default function AdminOffersPage() {
       />
 
       <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-[var(--color-background)] py-1">
+        <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-transparent py-1">
           {/* Filters */}
           <div className="flex-shrink-0 space-y-3">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">

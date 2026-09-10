@@ -58,23 +58,23 @@ export function ReviewCard({ review }: ReviewCardProps) {
           <h6
             className="
               font-semibold
-              text-[var(--brown-700)]
+              text-[var(--secondary-600)]
               text-lg
               transition-colors
               duration-300
-              group-hover:text-[var(--brown-800)]
+              group-hover:text-[var(--neutral-900)]
             "
           >
             {review.name}
           </h6>
 
-          <p className="header-font text-sm text-[var(--brown-500)]">
+          <p className="header-font text-sm text-[var(--secondary-400)]">
             {review.location}
           </p>
         </div>
       </div>
 
-      <p className="pt-4 feedback-font text-base leading-8 text-[var(--brown-800)]">
+      <p className="pt-4 feedback-font text-base leading-8 text-[var(--neutral-900)]">
         {review.feedback}
       </p>
     </div>

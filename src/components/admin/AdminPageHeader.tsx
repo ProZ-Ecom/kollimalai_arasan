@@ -34,10 +34,17 @@ function AdminPageHeader({
     <div className={cn("space-y-4 flex-shrink-0", className)}>
       {renderedBreadcrumbs}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+        <div className="relative pl-3.5">
+          {/* Brand accent rule so the title reads as a heading, not body text */}
+          <span
+            aria-hidden
+            className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-gradient-to-b from-secondary-500 to-primary-500"
+          />
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+            {title}
+          </h1>
           {displayDescription && (
-            <p className="mt-1 text-sm text-gray-500">{displayDescription}</p>
+            <p className="mt-1 text-sm text-neutral-500">{displayDescription}</p>
           )}
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}

@@ -142,7 +142,7 @@ export function AccountShell({ activeTab, onTabChange }: AccountShellProps) {
         {/* Desktop Sticky Sidebar */}
         <aside className="hidden md:flex flex-col w-full bg-theme-surface border border-theme-border rounded-2xl overflow-hidden sticky top-24 shadow-2xs">
           {/* User Card in Sidebar */}
-          <div className="p-5 bg-gradient-to-b from-[#FFF7E8] to-theme-surface border-b border-theme-border-subtle flex items-center gap-3.5">
+          <div className="p-5 bg-gradient-to-b from-[#FFFBEF] to-theme-surface border-b border-theme-border-subtle flex items-center gap-3.5">
             {profileLoading ? (
               <>
                 <div className="w-13 h-13 rounded-full bg-theme-border animate-pulse flex-shrink-0" />

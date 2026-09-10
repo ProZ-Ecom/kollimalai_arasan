@@ -18,6 +18,7 @@ import {
   Clock,
 } from "lucide-react";
 import type { AdminCustomerListItemDto } from "../types/admin-customer.types";
+import { formatDateTime } from "@/lib/utils";
 
 interface CustomerDetailModalProps {
   customer: AdminCustomerListItemDto | null;
@@ -32,16 +33,6 @@ export function CustomerDetailModal({
 }: CustomerDetailModalProps) {
   if (!customer) return null;
 
-  const formatDate = (date: Date | string | null | undefined) => {
-    if (!date) return "-";
-    return new Date(date).toLocaleDateString("en-IN", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   const getStatusBadge = (
     status: string,
@@ -246,7 +237,7 @@ export function CustomerDetailModal({
               <div>
                 <p className="text-neutral-500">Registered</p>
                 <p className="font-medium text-neutral-800">
-                  {formatDate(customer.createdAt)}
+                  {formatDateTime(customer.createdAt, { fallback: "-" })}
                 </p>
               </div>
             </div>
@@ -256,7 +247,7 @@ export function CustomerDetailModal({
               <div>
                 <p className="text-neutral-500">Last Login</p>
                 <p className="font-medium text-neutral-800">
-                  {customer.lastLoginAt ? formatDate(customer.lastLoginAt) : "Never"}
+                  {customer.lastLoginAt ? formatDateTime(customer.lastLoginAt, { fallback: "-" }) : "Never"}
                 </p>
               </div>
             </div>
@@ -266,7 +257,7 @@ export function CustomerDetailModal({
               <div>
                 <p className="text-neutral-500">Profile Updated</p>
                 <p className="font-medium text-neutral-800">
-                  {formatDate(customer.updatedAt)}
+                  {formatDateTime(customer.updatedAt, { fallback: "-" })}
                 </p>
               </div>
             </div>

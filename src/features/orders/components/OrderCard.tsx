@@ -23,8 +23,8 @@ function getStatusBadgeMeta(status?: string) {
   switch (status?.toLowerCase()) {
     case "delivered":
       return {
-        bg: "bg-emerald-50 text-emerald-700 border-emerald-200",
-        dot: "bg-emerald-500",
+        bg: "bg-secondary-50 text-secondary-700 border-secondary-200",
+        dot: "bg-secondary-500",
       };
     case "cancelled":
       return {
@@ -45,8 +45,8 @@ function getStatusBadgeMeta(status?: string) {
     case "packed":
     case "processing":
       return {
-        bg: "bg-amber-50 text-amber-700 border-amber-200",
-        dot: "bg-amber-500",
+        bg: "bg-primary-50 text-primary-700 border-primary-200",
+        dot: "bg-primary-500",
       };
     case "pending":
     case "confirmed":
@@ -216,7 +216,7 @@ export function OrderCard({ order }: OrderCardProps) {
             {formatPrice(order.totalAmount)}
           </span>
           {anyOrder.paymentStatus && (
-            <span className="ml-2 inline-block rounded bg-emerald-100/70 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800 uppercase">
+            <span className="ml-2 inline-block rounded bg-secondary-100/70 border border-secondary-200 px-2 py-0.5 text-[10px] font-bold text-secondary-800 uppercase">
               {anyOrder.paymentStatus}
             </span>
           )}

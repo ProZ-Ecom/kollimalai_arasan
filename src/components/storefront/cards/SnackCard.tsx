@@ -3,13 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { Heart } from "lucide-react";
-import { formatPrice, getImageUrl } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 import { ProductImage } from "@/components/common/ProductImage";
 import type { StorefrontProduct } from "@/constants/storefront";
 
 export interface SnackCardVariant {
   id: string;
   label: string; // e.g. "50g", "100g"
+  /** Stock-keeping code, shown by the "stacked" layout. */
+  sku?: string | null;
   price: number; // Selling price e.g. 45
   comparePrice?: number | null; // Original price before discount e.g. 50
   inStock?: boolean;
@@ -52,6 +54,26 @@ export interface SnackCardProps {
   fallbackPrice?: number;
   /** Optional preformatted price range text (e.g. "₹135.00 – ₹260.00") */
   priceRangeText?: string;
+  /**
+   * "split"   - title left, variant pills and price right (default).
+   * "stacked" - name, SKU and price stacked left with a full-width CTA,
+   *             used by the "Freshly Launched" style grids.
+   */
+  layout?: "split" | "stacked";
+}
+
+/**
+ * Pack labels normally arrive as a plain string, but some catalog rows carry
+ * a `{ value, unit }` object. Rendering that straight into JSX throws, so both
+ * shapes are funnelled through here.
+ */
+function variantLabel(label: SnackCardVariant["label"]): string {
+  if (typeof label === "string") return label;
+  if (label && typeof label === "object") {
+    const parts = label as { value?: string | number; unit?: string };
+    return `${parts.value ?? ""} ${parts.unit ?? ""}`.trim() || "Standard";
+  }
+  return String(label ?? "");
 }
 
 export function SnackCard({
@@ -73,6 +95,7 @@ export function SnackCard({
   product,
   fallbackPrice,
   priceRangeText,
+  layout = "split",
 }: SnackCardProps) {
   // If product prop is supplied, derive fields from it
   const resolvedId = id || product?.productId || product?.id || "";
@@ -87,6 +110,7 @@ export function SnackCard({
       return product.unitPrices.map((up) => ({
         id: up.id,
         label: up.label,
+        sku: up.sku,
         price: up.sellingPrice,
         comparePrice: up.basePrice > up.sellingPrice ? up.basePrice : null,
         inStock: !product.outOfStock,
@@ -128,7 +152,11 @@ export function SnackCard({
 
   return (
     <div
-      className={`group bg-[var(--theme-surface)]  pb-3 flex flex-col justify-between w-full max-w-sm transition-all duration-300 hover:shadow-md hover:border-[var(--brown-700)]/40 ${className}`}
+      className={`group bg-[var(--theme-surface)] flex flex-col justify-between w-full max-w-sm transition-all duration-300 hover:shadow-md ${
+        layout === "stacked"
+          ? "rounded-xl border border-theme-border p-3 hover:border-secondary-500/40"
+          : "pb-3 hover:border-[var(--secondary-600)]/40"
+      } ${className}`}
     >
       {/* 1. Square Product Image Container */}
       <div className="relative aspect-square w-full overflow-hidden bg-[var(--cream-100)]">
@@ -170,89 +198,131 @@ export function SnackCard({
         </button>
       </div>
 
-      {/* 2. Middle Info Row: Title on Left, Variants + Price on Right */}
-      <div className="mt-3.5 sm:mt-4 flex items-start justify-between gap-3 px-0.5">
-        {/* Left Column: Product/Variant Title using global brown typography */}
-        <div className="flex-1 pr-1 min-w-0">
-          {subtitle && (
-            <p className="text-[11px] sm:text-xs text-stone-500 font-medium truncate mb-0.5">
-              {subtitle}
+      {layout === "stacked" ? (
+        <>
+          {/* Name, SKU and pack price, stacked left */}
+          <div className="mt-3 px-0.5">
+            <Link href={resolvedHref} className="block">
+              <h3 className="font-bold text-sm text-secondary-500 leading-tight line-clamp-2 hover:text-secondary-600 transition-colors">
+                {resolvedName}
+              </h3>
+            </Link>
+
+            {activeVariant?.sku ? (
+              <p className="mt-1 text-xs text-theme-text-muted">
+                SKU: {activeVariant.sku}
+              </p>
+            ) : null}
+
+            <p className="mt-1 text-xs font-medium text-accent-orange">
+              {activeVariant?.label
+                ? `${variantLabel(activeVariant.label)} - `
+                : ""}
+              {priceRangeText ?? formatPrice(currentPrice)}
             </p>
-          )}
-          <Link href={resolvedHref} className="block">
-            <h3 className="font-extrabold text-[var(--brown-900)] uppercase text-sm sm:text-base md:text-[17px] tracking-tight leading-tight line-clamp-2 text-hover-primary transition-colors">
-              {resolvedName}
-            </h3>
-          </Link>
-        </div>
+          </div>
 
-        {/* Right Column: Variant Selector & Prices */}
-        <div className="flex flex-col items-end shrink-0">
-          {/* Variant Selector Pills using global brown colors */}
-          {resolvedVariants.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap justify-end">
-              {resolvedVariants.map((v) => {
-                const isSelected = v.id === activeVariant?.id;
-                return (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => handleSelectVariant(v.id)}
-                    className={`px-2 sm:px-2.5 py-0.5 text-xs font-bold rounded-[2px] transition-all cursor-pointer select-none ${
-                      isSelected
-                        ? "bg-[var(--brown-700)] text-white border border-[var(--brown-700)]"
-                        : "bg-white text-[var(--brown-700)] border border-[var(--brown-700)] hover:bg-[var(--cream-50)]"
-                    }`}
-                  >
-                    {typeof v.label === "string"
-                      ? v.label
-                      : typeof v.label === "object" && v.label !== null
-                      ? `${(v.label as any).value ?? ""} ${(v.label as any).unit ?? ""}`.trim() || "Standard"
-                      : String(v.label || "")}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Price & Strikethrough Row */}
-          <div className="flex items-baseline gap-1.5 sm:gap-2 mt-1.5 justify-end">
-            {priceRangeText && resolvedVariants.length === 0 ? (
-              <span className="font-bold text-[var(--brown-900)] text-sm sm:text-base tracking-tight">
-                {priceRangeText}
-              </span>
-            ) : (
-              <>
-                <span className="font-bold text-[var(--brown-900)] text-sm sm:text-base tracking-tight">
-                  {formatPrice(currentPrice)}
-                </span>
-
-                {originalPrice && originalPrice > currentPrice && (
-                  <span className="text-xs sm:text-sm text-[var(--neutral-400)] line-through tracking-tight font-normal">
-                    {formatPrice(originalPrice)}
-                  </span>
-                )}
-              </>
+          <button
+            type="button"
+            disabled={
+              disabled ||
+              isLoading ||
+              (activeVariant && activeVariant.inStock === false) ||
+              undefined
+            }
+            onClick={() => onAddToCart?.(activeVariant?.id)}
+            className="mt-3 w-full bg-theme-primary hover:bg-theme-primary-hover text-white font-bold text-xs tracking-wider uppercase py-2.5 px-4 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading
+              ? "Adding..."
+              : activeVariant?.inStock === false
+                ? "Out of Stock"
+                : "ADD TO CART"}
+          </button>
+        </>
+      ) : (
+        <>
+        {/* 2. Middle Info Row: Title on Left, Variants + Price on Right */}
+        <div className="mt-3.5 sm:mt-4 flex items-start justify-between gap-3 px-0.5">
+          {/* Left Column: Product/Variant Title using global brown typography */}
+          <div className="flex-1 pr-1 min-w-0">
+            {subtitle && (
+              <p className="text-[11px] sm:text-xs text-neutral-500 font-medium truncate mb-0.5">
+                {subtitle}
+              </p>
             )}
+            <Link href={resolvedHref} className="block">
+              <h3 className="font-extrabold text-[var(--neutral-900)] uppercase text-sm sm:text-base md:text-[17px] tracking-tight leading-tight line-clamp-2 text-hover-primary transition-colors">
+                {resolvedName}
+              </h3>
+            </Link>
+          </div>
+
+          {/* Right Column: Variant Selector & Prices */}
+          <div className="flex flex-col items-end shrink-0">
+            {/* Variant Selector Pills using global brown colors */}
+            {resolvedVariants.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                {resolvedVariants.map((v) => {
+                  const isSelected = v.id === activeVariant?.id;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => handleSelectVariant(v.id)}
+                      className={`px-2 sm:px-2.5 py-0.5 text-xs font-bold rounded-[2px] transition-all cursor-pointer select-none ${
+                        isSelected
+                          ? "bg-[var(--secondary-600)] text-white border border-[var(--secondary-600)]"
+                          : "bg-white text-[var(--secondary-600)] border border-[var(--secondary-600)] hover:bg-[var(--cream-50)]"
+                      }`}
+                    >
+                      {variantLabel(v.label)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Price & Strikethrough Row */}
+            <div className="flex items-baseline gap-1.5 sm:gap-2 mt-1.5 justify-end">
+              {priceRangeText && resolvedVariants.length === 0 ? (
+                <span className="font-bold text-[var(--neutral-900)] text-sm sm:text-base tracking-tight">
+                  {priceRangeText}
+                </span>
+              ) : (
+                <>
+                  <span className="font-bold text-[var(--neutral-900)] text-sm sm:text-base tracking-tight">
+                    {formatPrice(currentPrice)}
+                  </span>
+
+                  {originalPrice && originalPrice > currentPrice && (
+                    <span className="text-xs sm:text-sm text-[var(--neutral-400)] line-through tracking-tight font-normal">
+                      {formatPrice(originalPrice)}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* 3. Bottom Action: Bright Golden "ADD TO CART" Button using global .btn-yellow */}
-      <div className="w-full flex justify-end mt-3.5 sm:mt-4">
-        <button
-          type="button"
-          disabled={disabled || isLoading || (activeVariant && activeVariant.inStock === false)}
-          onClick={() => onAddToCart?.(activeVariant?.id)}
-          className="w-[75%] sm:w-[70%] btn-yellow text-[var(--brown-900)] hover:scale-[1.02] active:scale-[0.98] font-extrabold text-xs sm:text-sm tracking-wider uppercase py-2.5 sm:py-3 px-4 rounded-[2px] shadow-xs flex items-center justify-center transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading
-            ? "Adding..."
-            : activeVariant?.inStock === false
-              ? "Out of Stock"
-              : "ADD TO CART"}
-        </button>
-      </div>
+        {/* 3. Bottom Action: Bright Golden "ADD TO CART" Button using global .btn-yellow */}
+        <div className="w-full flex justify-end mt-3.5 sm:mt-4">
+          <button
+            type="button"
+            disabled={disabled || isLoading || (activeVariant && activeVariant.inStock === false)}
+            onClick={() => onAddToCart?.(activeVariant?.id)}
+            className="w-[75%] sm:w-[70%] btn-yellow text-[var(--neutral-900)] hover:scale-[1.02] active:scale-[0.98] font-extrabold text-xs sm:text-sm tracking-wider uppercase py-2.5 sm:py-3 px-4 rounded-[2px] shadow-xs flex items-center justify-center transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading
+              ? "Adding..."
+              : activeVariant?.inStock === false
+                ? "Out of Stock"
+                : "ADD TO CART"}
+          </button>
+        </div>
+        </>
+      )}
     </div>
   );
 }

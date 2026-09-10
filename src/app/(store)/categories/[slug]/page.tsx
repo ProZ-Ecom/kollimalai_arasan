@@ -37,23 +37,23 @@ function ProductCatalogSkeleton() {
       {[1, 2, 3, 4, 5, 6,7,8,9].map((n) => (
         <div
           key={n}
-          className="bg-white rounded-2xl border border-[#E8D9CD]/80 p-3.5 flex flex-col justify-between overflow-hidden shadow-2xs space-y-3"
+          className="bg-white rounded-2xl border border-[#E5E5E5]/80 p-3.5 flex flex-col justify-between overflow-hidden shadow-2xs space-y-3"
         >
           {/* Image skeleton with shimmer */}
-          <div className="relative aspect-square w-full rounded-xl skeleton-shimmer overflow-hidden bg-stone-100" />
+          <div className="relative aspect-square w-full rounded-xl skeleton-shimmer overflow-hidden bg-neutral-100" />
 
           {/* Info row: Category, title & pack size pills */}
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between gap-2">
-              <div className="h-3 w-20 rounded skeleton-shimmer bg-stone-100" />
+              <div className="h-3 w-20 rounded skeleton-shimmer bg-neutral-100" />
               <div className="flex gap-1">
-                <div className="h-4.5 w-10 rounded skeleton-shimmer bg-stone-100" />
-                <div className="h-4.5 w-10 rounded skeleton-shimmer bg-stone-100" />
+                <div className="h-4.5 w-10 rounded skeleton-shimmer bg-neutral-100" />
+                <div className="h-4.5 w-10 rounded skeleton-shimmer bg-neutral-100" />
               </div>
             </div>
             <div className="flex items-baseline justify-between gap-2">
-              <div className="h-4.5 w-36 rounded skeleton-shimmer bg-stone-100" />
-              <div className="h-4.5 w-14 rounded skeleton-shimmer bg-stone-100" />
+              <div className="h-4.5 w-36 rounded skeleton-shimmer bg-neutral-100" />
+              <div className="h-4.5 w-14 rounded skeleton-shimmer bg-neutral-100" />
             </div>
           </div>
 
@@ -300,11 +300,11 @@ export default function CategoryProductsPage({
   return (
     <div className="min-h-screen bg-white">
       {/* Hero / Header Banner with Warm Background */}
-      <div className="border-b border-[var(--theme-border)] bg-gradient-to-b from-[#FFFDF9] via-[#FAF4ED] to-[#F5ECE1] py-8 sm:py-12">
+      <div className="border-b border-[var(--theme-border)] bg-gradient-to-b from-[#FFFFFF] via-[#FAFAFA] to-[#F5F5F5] py-8 sm:py-12">
         <div className="container mx-auto px-4 max-w-7xl">
           {/* Breadcrumb navigation */}
-          <nav className="flex items-center justify-center gap-2 text-xs sm:text-sm text-[#7A6258] mb-3">
-            <Link href="/" className="hover:text-[#7A2224] transition-colors">
+          <nav className="flex items-center justify-center gap-2 text-xs sm:text-sm text-[#5A5A5A] mb-3">
+            <Link href="/" className="hover:text-[#007F06] transition-colors">
               Home
             </Link>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -312,27 +312,27 @@ export default function CategoryProductsPage({
               <>
                 <Link
                   href="/categories/all"
-                  className="hover:text-[#7A2224] transition-colors"
+                  className="hover:text-[#007F06] transition-colors"
                 >
                   Categories
                 </Link>
                 <ChevronRight className="w-3.5 h-3.5" />
-                <span className="font-bold text-[#2D1810]">{categoryTitle}</span>
+                <span className="font-bold text-[#101010]">{categoryTitle}</span>
               </>
             ) : (
-              <span className="font-bold text-[#2D1810]">All Categories</span>
+              <span className="font-bold text-[#101010]">All Categories</span>
             )}
           </nav>
 
           <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#7A2224]/10 text-[#7A2224] text-xs font-bold uppercase tracking-wider mb-2">
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#007F06]/10 text-[#007F06] text-xs font-bold uppercase tracking-wider mb-2">
               <Sparkles className="h-3.5 w-3.5 text-[#F8BE15]" />
               Authentic Collection
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#2D1810] font-serif tracking-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#101010] font-serif tracking-tight">
               {categoryTitle}
             </h1>
-            <p className="mt-2 text-xs sm:text-sm text-[#7A6258] max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-2 text-xs sm:text-sm text-[#5A5A5A] max-w-2xl mx-auto leading-relaxed">
               Handcrafted authentic snacks and delicacies made with traditional recipes, pure ingredients, and rich heritage.
             </p>
           </div>
@@ -342,23 +342,23 @@ export default function CategoryProductsPage({
       <div className="w-full bg-white">
         <div className="container mx-auto px-4 py-6 sm:py-10 max-w-7xl bg-white">
         {/* Mobile Filter Toggle Button */}
-        <div className="lg:hidden mb-6 flex items-center justify-between gap-3 bg-white border border-[#E8D9CD] rounded-xl p-3 shadow-xs">
+        <div className="lg:hidden mb-6 flex items-center justify-between gap-3 bg-white border border-[#E5E5E5] rounded-xl p-3 shadow-xs">
           <button
             type="button"
             onClick={() => setIsMobileFilterOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#7A2224] text-white font-bold text-xs shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#007F06] text-white font-bold text-xs shadow-xs cursor-pointer"
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             Filters
             {activeFilterCount > 0 && (
-              <span className="w-4.5 h-4.5 rounded-full bg-[#F8BE15] text-[#2D1810] font-black text-[10px] flex items-center justify-center">
+              <span className="w-4.5 h-4.5 rounded-full bg-[#F8BE15] text-[#101010] font-black text-[10px] flex items-center justify-center">
                 {activeFilterCount}
               </span>
             )}
           </button>
 
-          <span className="text-xs text-[#7A6258] font-medium">
-            Showing <strong className="text-[#2D1810]">{meta?.total ?? displayedVariants.length}</strong> snacks
+          <span className="text-xs text-[#5A5A5A] font-medium">
+            Showing <strong className="text-[#101010]">{meta?.total ?? displayedVariants.length}</strong> snacks
           </span>
         </div>
 
@@ -423,18 +423,18 @@ export default function CategoryProductsPage({
           {/* Right Main Products Display (3 cards per row) */}
           <div className="flex-1 min-w-0 w-full">
             {/* Header info bar */}
-            <div className="hidden lg:flex items-center justify-between mb-6 pb-3 border-b border-[#E8D9CD]">
-              <p className="text-sm text-[#7A6258]">
+            <div className="hidden lg:flex items-center justify-between mb-6 pb-3 border-b border-[#E5E5E5]">
+              <p className="text-sm text-[#5A5A5A]">
                 Showing{" "}
-                <strong className="text-[#2D1810]">
+                <strong className="text-[#101010]">
                   {meta?.total ?? displayedVariants.length}
                 </strong>{" "}
                 authentic {meta?.total === 1 ? "snack" : "snacks"} in{" "}
-                <strong className="text-[#7A2224] font-bold">
+                <strong className="text-[#007F06] font-bold">
                   {categoryTitle}
                 </strong>
                 {selectedProductIds.length > 0 && (
-                  <span className="ml-2 text-xs bg-[#F5ECE1] text-[#7A2224] px-2 py-0.5 rounded-full font-semibold">
+                  <span className="ml-2 text-xs bg-[#F5F5F5] text-[#007F06] px-2 py-0.5 rounded-full font-semibold">
                     {selectedProductIds.length === 1
                       ? "1 Product filtered"
                       : `${selectedProductIds.length} Products filtered`}
@@ -446,7 +446,7 @@ export default function CategoryProductsPage({
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="text-xs font-bold text-[#7A2224] hover:underline cursor-pointer transition-colors"
+                  className="text-xs font-bold text-[#007F06] hover:underline cursor-pointer transition-colors"
                 >
                   Reset All Filters
                 </button>
@@ -455,16 +455,16 @@ export default function CategoryProductsPage({
 
             {/* Error State */}
             {error && (
-              <div className="rounded-2xl border border-[#E8D9CD] bg-[#FFFDF9] p-8 text-center max-w-md mx-auto my-8 shadow-xs">
-                <h3 className="text-base font-bold text-[#2D1810] mb-2">
+              <div className="rounded-2xl border border-[#E5E5E5] bg-[#FFFFFF] p-8 text-center max-w-md mx-auto my-8 shadow-xs">
+                <h3 className="text-base font-bold text-[#101010] mb-2">
                   Unable to load snacks
                 </h3>
-                <p className="text-xs text-[#7A6258] mb-4">
+                <p className="text-xs text-[#5A5A5A] mb-4">
                   We encountered a connection issue fetching the snacks for this category.
                 </p>
                 <Button
                   onClick={() => refetch()}
-                  className="h-9 px-5 rounded-xl bg-[#7A2224] hover:bg-[#5A1911] text-white text-xs font-bold cursor-pointer"
+                  className="h-9 px-5 rounded-xl bg-[#007F06] hover:bg-[#005A04] text-white text-xs font-bold cursor-pointer"
                 >
                   Retry
                 </Button>
@@ -488,15 +488,15 @@ export default function CategoryProductsPage({
                     {[1, 2, 3].map((n) => (
                       <div
                         key={`append-skel-${n}`}
-                        className="bg-white rounded-2xl border border-[#E8D9CD]/80 p-3.5 flex flex-col justify-between overflow-hidden shadow-2xs space-y-3"
+                        className="bg-white rounded-2xl border border-[#E5E5E5]/80 p-3.5 flex flex-col justify-between overflow-hidden shadow-2xs space-y-3"
                       >
-                        <div className="relative aspect-square w-full rounded-xl skeleton-shimmer overflow-hidden bg-stone-100" />
+                        <div className="relative aspect-square w-full rounded-xl skeleton-shimmer overflow-hidden bg-neutral-100" />
                         <div className="space-y-2 pt-1">
                           <div className="flex items-center justify-between gap-2">
-                            <div className="h-3 w-20 rounded skeleton-shimmer bg-stone-100" />
-                            <div className="h-4.5 w-10 rounded skeleton-shimmer bg-stone-100" />
+                            <div className="h-3 w-20 rounded skeleton-shimmer bg-neutral-100" />
+                            <div className="h-4.5 w-10 rounded skeleton-shimmer bg-neutral-100" />
                           </div>
-                          <div className="h-4.5 w-36 rounded skeleton-shimmer bg-stone-100" />
+                          <div className="h-4.5 w-36 rounded skeleton-shimmer bg-neutral-100" />
                         </div>
                         <div className="h-10 w-full rounded-xl skeleton-shimmer bg-[#F8BE15]/20" />
                       </div>
@@ -510,14 +510,14 @@ export default function CategoryProductsPage({
                   className="h-16 flex items-center justify-center my-6"
                 >
                   {isFetching && page > 1 && (
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E8D9CD] shadow-xs text-xs font-bold text-[#7A2224] animate-in fade-in">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#7A2224]" />
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E5E5E5] shadow-xs text-xs font-bold text-[#007F06] animate-in fade-in">
+                      <Loader2 className="w-4 h-4 animate-spin text-[#007F06]" />
                       Loading more snacks...
                     </div>
                   )}
 
                   {!hasMorePages && displayedVariants.length > 0 && !isFetching && (
-                    <p className="text-xs font-semibold text-[#9C8274] select-none">
+                    <p className="text-xs font-semibold text-[#8A8A8A] select-none">
                       ✦ You have viewed all {displayedVariants.length} snacks ✦
                     </p>
                   )}

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { SnackCard } from "./cards/SnackCard";
 import { ProductCardSkeleton } from "./cards/ProductCardSkeleton";
-import { SectionHeading } from "./heading/SectionHeading";
+import { SectionHeader } from "./heading/SectionHeader";
 import { PrimaryButton } from "./buttons/PrimaryButton";
 import { Section } from "./Section";
 import { useCustomerVariants } from "@/features/variants";
@@ -21,9 +21,23 @@ import { ICONS, type StorefrontProduct } from "@/constants/storefront";
 
 export interface ProductSectionProps {
   selectedCategoryId?: string | null;
+  /** Leading heading words, in the primary text colour. */
+  title?: string;
+  /** Trailing heading words, in the accent colour. */
+  accent?: string;
+  /** Cards shown before "View All" reveals the rest. */
+  initialCount?: number;
+  /** Card treatment - see SnackCard's `layout` prop. */
+  cardLayout?: "split" | "stacked";
 }
 
-export function ProductSection({ selectedCategoryId }: ProductSectionProps) {
+export function ProductSection({
+  selectedCategoryId,
+  title = "Freshly Launched",
+  accent = "Flavours",
+  initialCount = 8,
+  cardLayout = "stacked",
+}: ProductSectionProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const [showAll, setShowAll] = React.useState(false);
@@ -80,18 +94,42 @@ export function ProductSection({ selectedCategoryId }: ProductSectionProps) {
     }
   };
 
-  const visibleProducts = showAll ? products : products.slice(0, 4);
+  const visibleProducts = showAll ? products : products.slice(0, initialCount);
 
   return (
     <Section className="py-12 relative">
       {/* Toast alert feedback */}
       {toastMessage && (
-        <div className="fixed top-24 right-4 z-50 rounded-xl bg-[var(--brown-800)] text-white px-5 py-3 shadow-xl text-sm font-medium animate-in fade-in-0 duration-200">
+        <div className="fixed top-24 right-4 z-50 rounded-xl bg-[var(--neutral-900)] text-white px-5 py-3 shadow-xl text-sm font-medium animate-in fade-in-0 duration-200">
           {toastMessage}
         </div>
       )}
 
-      <SectionHeading title="Better snacking starts here!" />
+      <SectionHeader
+        title={title}
+        accent={accent}
+        action={
+          products.length > initialCount ? (
+            <PrimaryButton
+              variant="brown"
+              onClick={() => setShowAll(!showAll)}
+              className="flex items-center justify-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm cursor-pointer transition-all hover:scale-105 duration-300"
+            >
+              <Image
+                src={ICONS.view_all}
+                alt=""
+                aria-hidden="true"
+                width={14}
+                height={14}
+                className="invert"
+              />
+              <span className="header-font">
+                {showAll ? "Show Less" : "View All"}
+              </span>
+            </PrimaryButton>
+          ) : null
+        }
+      />
 
       {/* Products Grid */}
       <div
@@ -105,7 +143,7 @@ export function ProductSection({ selectedCategoryId }: ProductSectionProps) {
         "
       >
         {isLoading &&
-          Array.from({ length: 4 }).map((_, index) => (
+          Array.from({ length: initialCount }).map((_, index) => (
             <ProductCardSkeleton key={`skeleton-${index}`} />
           ))}
 
@@ -121,6 +159,7 @@ export function ProductSection({ selectedCategoryId }: ProductSectionProps) {
               onAddToCart={(unitPriceId) =>
                 handleAddToCart(product, unitPriceId || product.unitPrices[0]?.id)
               }
+              layout={cardLayout}
               disabled={addToCart.isPending}
             />
           ))}
@@ -129,7 +168,7 @@ export function ProductSection({ selectedCategoryId }: ProductSectionProps) {
       {/* Empty State */}
       {!isLoading && !isError && products.length === 0 && (
         <div className="py-16 text-center text-sm text-[var(--color-neutral-500)]">
-          <p className="text-base font-medium text-[var(--brown-800)]">
+          <p className="text-base font-medium text-[var(--neutral-900)]">
             No snacks found in this category.
           </p>
           <p className="mt-1 text-xs text-gray-400">
@@ -138,27 +177,6 @@ export function ProductSection({ selectedCategoryId }: ProductSectionProps) {
         </div>
       )}
 
-      {/* View All Button */}
-      {products.length > 4 && (
-        <div className="flex justify-center mt-12">
-          <PrimaryButton
-            variant="brown"
-            onClick={() => setShowAll(!showAll)}
-            className="flex items-center justify-center gap-2 px-8 py-3 rounded-full text-sm cursor-pointer hover:scale-105 duration-300 transition-all"
-          >
-            <Image
-              src={ICONS.view_all}
-              alt="view_all"
-              width={16}
-              height={16}
-              className="invert"
-            />
-            <span className="header-font">
-              {showAll ? "Show Less" : "View All"}
-            </span>
-          </PrimaryButton>
-        </div>
-      )}
     </Section>
   );
 }

@@ -50,9 +50,9 @@ export function ReviewRatingStars({
                 sizeClasses[size],
                 "transition-colors",
                 isFilled
-                  ? "fill-amber-400 text-amber-400"
+                  ? "fill-primary-400 text-primary-400"
                   : isHalf
-                  ? "fill-amber-400/50 text-amber-400"
+                  ? "fill-primary-400/50 text-primary-400"
                   : "fill-neutral-200 text-neutral-300"
               )}
             />

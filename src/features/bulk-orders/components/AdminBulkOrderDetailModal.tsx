@@ -5,20 +5,20 @@ import {
   Mail,
   Phone,
   Calendar,
-  CheckCircle2,
   Building2,
   Package,
   Hash,
   ExternalLink,
 } from "lucide-react";
 import { FormModal } from "@/components/common/FormModal";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   useAdminBulkOrderDetail,
   useUpdateBulkOrderStatus,
 } from "../hooks";
-import type { AdminBulkOrderListItem, BulkOrderEnquiryStatus } from "../types";
+import type { AdminBulkOrderListItem } from "../types";
+import { StatusBadge } from "@/components/common/status-badge";
+import { BULK_ORDER_STATUS } from "@/features/bulk-orders/constants/status";
 
 interface AdminBulkOrderDetailModalProps {
   enquiry: AdminBulkOrderListItem | null;
@@ -65,33 +65,6 @@ export function AdminBulkOrderDetailModal({
     updateStatus({ uuid: item.id, status: "closed", comment });
   };
 
-  const getStatusBadge = (status: BulkOrderEnquiryStatus) => {
-    switch (status) {
-      case "new":
-        return (
-          <Badge className="bg-amber-100 text-amber-800 border-amber-200 gap-1 text-xs">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-            New
-          </Badge>
-        );
-      case "contacted":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 border-blue-200 gap-1 text-xs">
-            <CheckCircle2 className="h-3 w-3 text-blue-600" />
-            Contacted
-          </Badge>
-        );
-      case "closed":
-        return (
-          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 gap-1 text-xs">
-            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-            Closed
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
   const formattedDate = item.createdAt
     ? new Date(item.createdAt).toLocaleDateString("en-IN", {
@@ -122,7 +95,7 @@ export function AdminBulkOrderDetailModal({
                 <h3 className="font-bold text-neutral-900 text-base leading-tight truncate">
                   {item.name}
                 </h3>
-                {getStatusBadge(currentStatus)}
+                <StatusBadge status={currentStatus} config={BULK_ORDER_STATUS} />
               </div>
               <div className="flex items-center gap-3 text-xs text-neutral-500 pt-1 flex-wrap">
                 <span className="flex items-center gap-1">

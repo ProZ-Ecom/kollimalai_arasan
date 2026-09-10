@@ -62,13 +62,13 @@ export function ContactCard({ contact }: ContactCardProps) {
             transition-colors
             duration-300
             text-hover-primary
-            text-[var(--brown-800)]
+            text-[var(--neutral-900)]
           "
         >
           {contact.title}
         </h6>
 
-        <p className="mt-2 text-sm header-font text-hover-primary text-[var(--brown-600)]">
+        <p className="mt-2 text-sm header-font text-hover-primary text-[var(--secondary-500)]">
           {contact.value}
         </p>
       </div>

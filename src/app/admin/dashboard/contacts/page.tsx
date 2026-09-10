@@ -11,27 +11,25 @@ import {
 } from "@/features/contact";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { SearchInput } from "@/components/ui/search-input";
 import {
   Mail,
   MessageSquare,
-  Clock,
   CheckCircle2,
   AlertCircle,
   Eye,
   Send,
   RotateCcw,
-  Sparkles,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
+import { StatusBadge } from "@/components/common/status-badge";
+import { CONTACT_STATUS } from "@/features/contact/constants/status";
+
 
 export default function AdminContactsPage() {
   const [search, setSearch] = useState("");
@@ -100,33 +98,6 @@ export default function AdminContactsPage() {
 
   const hasActiveFilters = search.trim() !== "" || statusFilter !== "all";
 
-  const getStatusBadge = (status: ContactMessageStatus) => {
-    switch (status) {
-      case "new":
-        return (
-          <Badge className="bg-amber-100 text-amber-800 border-amber-200 gap-1 text-xs">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-            New
-          </Badge>
-        );
-      case "read":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 border-blue-200 gap-1 text-xs">
-            <CheckCircle2 className="h-3 w-3 text-blue-600" />
-            Read
-          </Badge>
-        );
-      case "replied":
-        return (
-          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 gap-1 text-xs">
-            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-            Replied
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
   const columns: ColumnDef<AdminContactMessageListItem, unknown>[] = [
     {
@@ -184,7 +155,7 @@ export default function AdminContactsPage() {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        return getStatusBadge(row.original.status);
+        return <StatusBadge status={row.original.status} config={CONTACT_STATUS} />;
       },
     },
     {

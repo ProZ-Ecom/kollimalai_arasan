@@ -219,7 +219,7 @@ export function VariantCustomerPreviewModal({
               }`}
             >
               {/* Storefront Product Card Rendering */}
-              <div className="group bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 transition-all duration-300 flex flex-col justify-between hover:border-[var(--brown-700)] hover:shadow-xl shadow-xs">
+              <div className="group bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 transition-all duration-300 flex flex-col justify-between hover:border-[var(--secondary-600)] hover:shadow-xl shadow-xs">
                 {/* Product Image Slider Container */}
                 <div className="relative aspect-square overflow-hidden rounded-xl bg-cream-50 border border-cream-border-subtle group/slider">
                   <Image
@@ -305,7 +305,7 @@ export function VariantCustomerPreviewModal({
                         onClick={() => setActiveImageIndex(tIdx)}
                         className={`relative w-10 h-10 rounded-lg overflow-hidden border-2 shrink-0 transition-all cursor-pointer ${
                           tIdx === activeImageIndex
-                            ? "border-[var(--brown-700)] shadow-xs scale-105"
+                            ? "border-[var(--secondary-600)] shadow-xs scale-105"
                             : "border-cream-border opacity-60 hover:opacity-100"
                         }`}
                       >
@@ -322,19 +322,19 @@ export function VariantCustomerPreviewModal({
 
                 {/* Name + Weight */}
                 <div className="flex mt-3 gap-2 justify-between items-start">
-                  <h3 className="flex-1 pr-2 uppercase text-xs sm:text-[13px] font-bold leading-snug text-[var(--brown-900)]">
+                  <h3 className="flex-1 pr-2 uppercase text-xs sm:text-[13px] font-bold leading-snug text-[var(--neutral-900)]">
                     {variant.productName || variant.variantName}
                   </h3>
 
                   <div className="flex flex-col items-end shrink-0">
                     {/* Measurement Pill */}
-                    <span className="px-2 py-0.5 text-[10px] font-bold bg-[var(--brown-700)] text-white rounded-xs">
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-[var(--secondary-600)] text-white rounded-xs">
                       {measurementStr}
                     </span>
 
                     {/* Pricing */}
                     <div className="flex gap-1.5 mt-2 items-center">
-                      <p className="font-bold text-xs sm:text-sm text-[var(--brown-900)]">
+                      <p className="font-bold text-xs sm:text-sm text-[var(--neutral-900)]">
                         ₹{salePrice.toLocaleString("en-IN")}.00
                       </p>
 
@@ -351,7 +351,7 @@ export function VariantCustomerPreviewModal({
                 <div className="w-full flex justify-end mt-3.5">
                   <button
                     type="button"
-                    className="w-full sm:w-[75%] py-2 px-3 rounded-md bg-[#d28b18] hover:bg-[#b87612] text-white text-xs font-bold uppercase tracking-wider text-center shadow-xs transition-all cursor-pointer active:scale-95"
+                    className="w-full sm:w-[75%] py-2 px-3 rounded-md bg-[#C69811] hover:bg-[#95720D] text-white text-xs font-bold uppercase tracking-wider text-center shadow-xs transition-all cursor-pointer active:scale-95"
                   >
                     Add To Cart
                   </button>
