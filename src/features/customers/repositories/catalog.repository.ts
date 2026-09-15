@@ -77,11 +77,9 @@ function toVariantListItemDto(
     id: bigint;
     uuid: string;
     variant_name: string | null;
+    short_description?: string | null;
     out_of_stock?: boolean;
-    ingredients?: string | null;
-    is_ready_to_mix?: boolean;
-    cooking_recipe?: string | null;
-    shelf_life?: string | null;
+    video_url?: string | null;
     variant_unit_prices?: VariantUnitPriceForDto[] | null;
     product_variant_images?: Array<{ image_url: string }> | null;
   },
@@ -109,6 +107,7 @@ function toVariantListItemDto(
     productId: productUuid,
     productName,
     variantName: variant.variant_name || "",
+    shortDescription: variant.short_description ?? null,
     measurement: formatVariantMeasurement(
       defaultUnitPrice?.product_units,
       defaultUnitPrice?.unit_value ?? 0
@@ -123,10 +122,7 @@ function toVariantListItemDto(
       : 0,
     primaryImage: variant.product_variant_images?.[0]?.image_url ?? null,
     outOfStock: Boolean(variant.out_of_stock),
-    ingredients: variant.ingredients ?? null,
-    isReadyToMix: Boolean(variant.is_ready_to_mix),
-    cookingRecipe: variant.cooking_recipe ?? null,
-    shelfLife: variant.shelf_life ?? null,
+    videoUrl: variant.video_url ?? null,
     unitPrices,
   };
 }
@@ -340,7 +336,7 @@ export const catalogRepository = {
       where.OR = [{ name: { contains: params.search } }];
     }
 
-    // Variant-level filters (inStock, vegType, price range)
+    // Variant-level filters (inStock, price range)
     const variantWhere: Prisma.ProductVariantWhereInput = {
       isActive: true,
       deleted_at: null,
@@ -348,14 +344,6 @@ export const catalogRepository = {
 
     if (params.inStock !== undefined) {
       variantWhere.out_of_stock = !params.inStock;
-    }
-
-    if (params.vegType) {
-      const mappedVegType =
-        params.vegType === "non_veg" || params.vegType === "nonveg"
-          ? ("nonveg" as const)
-          : (params.vegType as "veg" | "vegan" | "na");
-      variantWhere.veg_type = mappedVegType;
     }
 
     if (params.minPrice !== undefined || params.maxPrice !== undefined) {
@@ -372,7 +360,6 @@ export const catalogRepository = {
 
     if (
       params.inStock !== undefined ||
-      params.vegType ||
       params.minPrice !== undefined ||
       params.maxPrice !== undefined
     ) {

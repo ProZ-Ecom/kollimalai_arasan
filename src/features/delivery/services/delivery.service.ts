@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/api/api-error";
+import { db } from "@/lib/db/prisma";
 import { deliveryRepository } from "../repositories/delivery.repository";
 import { userRepository } from "@/features/users/repositories/user.repository";
 import type {
@@ -444,6 +445,58 @@ export const deliveryService = {
       shipment.id,
       shipment.orders.id,
       staffUser.internalId
+    );
+
+    return {
+      shipmentId: result.shipment.uuid || String(result.shipment.id),
+      orderId: result.order.uuid || String(result.order.id),
+      shipmentStatus: result.shipment.status,
+      orderStatus: result.order.order_status,
+    };
+  },
+
+  async adminMarkOutForDelivery(
+    adminSessionUserId: string,
+    orderUuid: string
+  ): Promise<DeliveryTransitionResult> {
+    const adminUser = await userRepository.findById(adminSessionUserId);
+    if (!adminUser || !adminUser.internalId) {
+      throw ApiError.unauthorized("Session expired. Please log in again.");
+    }
+
+    const order = await db.order.findFirst({
+      where: { uuid: orderUuid, is_active: true },
+    });
+
+    if (!order) {
+      throw ApiError.notFound("Order not found");
+    }
+
+    if (order.order_status !== "packed") {
+      throw ApiError.badRequest(
+        `Order status is '${order.order_status}'. Only 'packed' orders can be transitioned to 'out_for_delivery'.`
+      );
+    }
+
+    const shipment = await deliveryRepository.findActiveShipmentByOrderId(order.id);
+    if (!shipment) {
+      throw ApiError.badRequest(
+        "Assign a delivery staff member before marking the order out for delivery"
+      );
+    }
+
+    if (shipment.status === "out_for_delivery") {
+      throw ApiError.badRequest("Delivery is already marked as out for delivery");
+    }
+
+    if (shipment.status === "delivered") {
+      throw ApiError.badRequest("Delivery is already delivered");
+    }
+
+    const result = await deliveryRepository.markOutForDeliveryTransaction(
+      shipment.id,
+      order.id,
+      adminUser.internalId
     );
 
     return {

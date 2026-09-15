@@ -1,11 +1,8 @@
 import { createApiHandler } from "@/lib/api/api-handler";
 import { apiSuccess } from "@/lib/api/api-response";
 import { ApiError } from "@/lib/api/api-error";
-import { orderService } from "@/features/orders/services/order.service";
-import {
-  updateOrderStatusSchema,
-  type UpdateOrderStatusSchemaInput,
-} from "@/features/orders/validations/order.schema";
+import { deliveryService } from "@/features/delivery/services/delivery.service";
+import { orderStatusTransitionSchema } from "@/features/orders/validations/order.schema";
 
 export const PATCH = createApiHandler(
   {
@@ -20,19 +17,17 @@ export const PATCH = createApiHandler(
         throw ApiError.badRequest("Invalid order UUID");
       }
 
-      const body = context.body as UpdateOrderStatusSchemaInput;
-      const result = await orderService.setOrderStatus(
+      const result = await deliveryService.adminMarkOutForDelivery(
         sessionUserId,
-        uuid,
-        body
+        uuid
       );
 
-      return apiSuccess(result, "Order status updated successfully", 200);
+      return apiSuccess(result, "Order marked as out for delivery", 200);
     },
   },
   {
     requireAuth: true,
     requiredRole: ["ADMIN", "STAFF"],
-    bodySchema: updateOrderStatusSchema,
+    bodySchema: orderStatusTransitionSchema,
   }
 );

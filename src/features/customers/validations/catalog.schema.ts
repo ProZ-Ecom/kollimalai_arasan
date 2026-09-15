@@ -37,7 +37,6 @@ export const customerProductListSchema = z
     minPrice: z.number().min(0, "minPrice cannot be negative").optional().nullable(),
     maxPrice: z.number().min(0, "maxPrice cannot be negative").optional().nullable(),
     inStock: z.boolean().optional(),
-    vegType: z.enum(["veg", "non_veg", "nonveg", "vegan", "na"]).optional(),
     sortBy: z.enum(["name", "price", "createdAt"]).optional().default("createdAt"),
     sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
   })

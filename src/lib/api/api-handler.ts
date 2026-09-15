@@ -165,7 +165,7 @@ export function createApiHandler(
     } catch (error: any) {
       try {
         const fs = await import("fs");
-        fs.writeFileSync("d:/Projects/Rithu snacks/rithu-snacks/handler_error.log", String(error?.stack || error?.message || error));
+        fs.writeFileSync("handler_error.log", String(error?.stack || error?.message || error));
       } catch {}
 
       if (error instanceof ApiError) {

@@ -265,8 +265,8 @@ export function VariantPriceHistoryCard({
               </div>
             </div>
 
-            <div className="rounded-2xl bg-cream-50/50 border border-cream-border p-5">
-              <div className="flex items-end gap-3 sm:gap-6 h-40 pt-4 pb-2 border-b border-cream-border relative">
+            <div className="rounded-2xl bg-cream-50/50 border border-cream-border p-5 overflow-x-auto">
+              <div className="flex items-end gap-3 sm:gap-6 h-40 pt-4 pb-2 border-b border-cream-border relative min-w-max">
                 {chartSeries.map((pt, idx) => {
                   const isLatest = idx === chartSeries.length - 1;
                   const isHot = hoveredIndex === idx;
@@ -283,7 +283,7 @@ export function VariantPriceHistoryCard({
                       key={idx}
                       onMouseEnter={() => setHoveredIndex(idx)}
                       onMouseLeave={() => setHoveredIndex(null)}
-                      className="flex-1 relative flex flex-col items-center justify-end h-full group cursor-pointer"
+                      className="w-10 sm:w-14 shrink-0 relative flex flex-col items-center justify-end h-full group cursor-pointer"
                     >
                       {isHot && (
                         <div
@@ -324,13 +324,14 @@ export function VariantPriceHistoryCard({
                 })}
               </div>
 
-              <div className="flex gap-3 sm:gap-6 mt-2.5">
+              <div className="flex gap-3 sm:gap-6 mt-2.5 min-w-max">
                 {chartSeries.map((pt, idx) => (
                   <div
                     key={idx}
-                    className="flex-1 text-center text-[10.5px] font-semibold text-neutral-400 truncate"
+                    className="w-10 sm:w-14 shrink-0 text-center text-[10.5px] font-semibold text-neutral-400"
                   >
-                    {pt.date}
+                    <span className="sm:hidden">{pt.date.slice(0, 1)}</span>
+                    <span className="hidden sm:inline">{pt.date}</span>
                   </div>
                 ))}
               </div>

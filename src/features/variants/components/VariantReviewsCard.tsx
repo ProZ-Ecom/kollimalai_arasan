@@ -298,9 +298,9 @@ export function VariantReviewsCard({
       )}
 
       {/* Filter and Search Controls Toolbar */}
-      <div className="p-4 sm:p-5 border-b border-cream-border flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white">
+      <div className="p-4 sm:p-5 border-b border-cream-border flex flex-wrap lg:items-center justify-between gap-3 bg-white">
         {/* Search, Rating & Sort */}
-        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap w-full lg:w-auto">
+        <div className="flex items-center gap-2.5 flex-wrap w-full lg:w-auto">
           <div className="w-full sm:w-64">
             <SearchInput
               value={search}

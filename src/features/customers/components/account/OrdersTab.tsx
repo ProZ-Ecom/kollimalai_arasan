@@ -358,7 +358,12 @@ export function OrdersTab({
                       <div key={idx} className="flex items-center gap-3.5 py-2.5 first:pt-0 last:pb-0">
                         <div className="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden border border-theme-border-subtle">
                           <ProductImage
-                            src={(it as any).image || (it as any).productImage || null}
+                            src={
+                              (it as any).primaryImage ||
+                              (it as any).image ||
+                              (it as any).productImage ||
+                              null
+                            }
                             alt={it.productName || "Snack"}
                             fallbackText={it.productName || "Snack"}
                             containerClassName="w-full h-full"
@@ -649,7 +654,12 @@ export function OrdersTab({
                   <div key={idx} className="flex items-center gap-3 py-2 border-b border-theme-border-subtle last:border-0">
                     <div className="w-9 h-9 rounded-lg overflow-hidden border border-theme-border-subtle flex-shrink-0">
                       <ProductImage
-                        src={(it as any).image || (it as any).productImage || null}
+                        src={
+                          (it as any).primaryImage ||
+                          (it as any).image ||
+                          (it as any).productImage ||
+                          null
+                        }
                         alt={it.productName || "Snack"}
                         fallbackText={it.productName}
                         containerClassName="w-full h-full"

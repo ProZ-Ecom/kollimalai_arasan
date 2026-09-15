@@ -1,5 +1,5 @@
 export const siteConfig = {
-  name: "RithuSnacks",
+  name: "Kollimalai Arasan",
   description: "Premium snacks delivered to your doorstep.",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 };

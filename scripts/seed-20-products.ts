@@ -494,11 +494,11 @@ async function main() {
       `INSERT INTO \`product_variants\` (
         \`uuid\`, \`product_id\`, \`variant_name\`, \`sku\`, \`slug\`, \`unit_value\`, \`unit_id\`,
         \`base_price\`, \`sale_price\`, \`is_default\`, \`is_active\`, \`out_of_stock\`,
-        \`created_at\`, \`updated_at\`, \`short_description\`, \`description\`, \`veg_type\`, \`is_featured\`
+        \`created_at\`, \`updated_at\`, \`short_description\`, \`description\`, \`is_featured\`
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?,
         ?, ?, 1, 1, 0,
-        NOW(), NOW(), ?, ?, 'veg', 0
+        NOW(), NOW(), ?, ?, 0
       )`,
       variantUuid,
       product.id,

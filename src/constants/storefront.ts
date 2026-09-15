@@ -2,7 +2,7 @@ export const LOGOS = {
   logo: "/logos/logo.svg",
   title: "/logos/title.svg",
   mobileTitle: "/logos/mobile_title.svg",
-  hero_banner: "/logos/hero_banner.svg",
+  hero_banner: "/logos/hero_banner.jpg",
   banner: "/logos/banner.svg",
   CategorySection: "/logos/explore_category.svg",
   flower: "/logos/flower_image.svg",
@@ -43,6 +43,9 @@ export const ICONS = {
   instagram: "/icons/instagram.svg",
   youtube: "/icons/youtube.svg",
   whatsapp1: "/icons/whatsapp1.svg",
+  leaf: "/icons/leaf.svg",
+  badge: "/icons/verified-badge.svg",
+  box: "/icons/box-icon.svg",
 };
 
 export const SNACKSLOGOS = {

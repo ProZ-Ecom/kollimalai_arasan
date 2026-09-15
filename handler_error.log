@@ -1,32 +1,25 @@
-ZodError: [
-  {
-    "origin": "string",
-    "code": "invalid_format",
-    "format": "regex",
-    "pattern": "/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i",
-    "path": [],
-    "message": "Invalid UUID format"
-  }
-]
-    at GET (webpack-internal:///(rsc)/./src/app/api/customer/products/[productUuid]/variants/[variantUuid]/route.ts:25:126)
-    at eval (webpack-internal:///(rsc)/./src/lib/api/api-handler.ts:115:26)
+ApiError: Order already has an active delivery assignment
+    at ApiError.conflict (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\src_07iv44x._.js:1790:16)
+    at Object.assignDelivery (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\src_20q8_1h._.js:921:163)
     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at async AppRouteRouteModule.do (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:5:42791)
-    at async AppRouteRouteModule.handle (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:5:50709)
-    at async responseGenerator (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fcustomer%2Fproducts%2F%5BproductUuid%5D%2Fvariants%2F%5BvariantUuid%5D%2Froute&page=%2Fapi%2Fcustomer%2Fproducts%2F%5BproductUuid%5D%2Fvariants%2F%5BvariantUuid%5D%2Froute&appPaths=&allNormalizedAppPaths=&pagePath=private-next-app-dir%2Fapi%2Fcustomer%2Fproducts%2F%5BproductUuid%5D%2Fvariants%2F%5BvariantUuid%5D%2Froute.ts&appDir=D%3A%5CProjects%5CRithu%20snacks%5Crithu-snacks%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CProjects%5CRithu%20snacks%5Crithu-snacks&isDev=true&tsconfigPath=&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:219:30)
-    at async AppRouteRouteModule.handleResponse (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:1:248724)
-    at async handleResponse (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fcustomer%2Fproducts%2F%5BproductUuid%5D%2Fvariants%2F%5BvariantUuid%5D%2Froute&page=%2Fapi%2Fcustomer%2Fproducts%2F%5BproductUuid%5D%2Fvariants%2F%5BvariantUuid%5D%2Froute&appPaths=&allNormalizedAppPaths=&pagePath=private-next-app-dir%2Fapi%2Fcustomer%2Fproducts%2F%5BproductUuid%5D%2Fvariants%2F%5BvariantUuid%5D%2Froute.ts&appDir=D%3A%5CProjects%5CRithu%20snacks%5Crithu-snacks%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CProjects%5CRithu%20snacks%5Crithu-snacks&isDev=true&tsconfigPath=&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:292:32)
-    at async Module.handler (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fcustomer%2Fproducts%2F%5BproductUuid%5D%2Fvariants%2F%5BvariantUuid%5D%2Froute&page=%2Fapi%2Fcustomer%2Fproducts%2F%5BproductUuid%5D%2Fvariants%2F%5BvariantUuid%5D%2Froute&appPaths=&allNormalizedAppPaths=&pagePath=private-next-app-dir%2Fapi%2Fcustomer%2Fproducts%2F%5BproductUuid%5D%2Fvariants%2F%5BvariantUuid%5D%2Froute.ts&appDir=D%3A%5CProjects%5CRithu%20snacks%5Crithu-snacks%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CProjects%5CRithu%20snacks%5Crithu-snacks&isDev=true&tsconfigPath=&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:413:9)
-    at async DevServer.renderToResponseWithComponentsImpl (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\base-server.js:1537:9)
-    at async DevServer.renderPageComponent (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\base-server.js:1589:24)
-    at async DevServer.renderToResponseImpl (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\base-server.js:1639:32)
-    at async DevServer.pipeImpl (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\base-server.js:1088:25)
-    at async NextNodeServer.handleCatchallRenderRequest (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\next-server.js:338:17)
-    at async DevServer.handleRequestImpl (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\base-server.js:979:17)
-    at async D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\dev\next-dev-server.js:426:20
-    at async Span.traceAsyncFn (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\trace\trace.js:164:20)
-    at async DevServer.handleRequest (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\dev\next-dev-server.js:422:24)
-    at async invokeRender (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\lib\router-server.js:306:21)
-    at async handleRequest (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\lib\router-server.js:508:24)
-    at async requestHandlerImpl (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\lib\router-server.js:565:13)
-    at async Server.requestListener (D:\Projects\Rithu snacks\rithu-snacks\node_modules\next\dist\server\lib\start-server.js:225:13)
+    at async POST (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\src_20q8_1h._.js:27:24)
+    at async D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\src_07iv44x._.js:1944:20
+    at async AppRouteRouteModule.do (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:42791)
+    at async AppRouteRouteModule.handle (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:50709)
+    at async responseGenerator (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\node_modules_next_0ptdqbu._.js:5328:30)
+    at async AppRouteRouteModule.handleResponse (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:248823)
+    at async handleResponse (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\node_modules_next_0ptdqbu._.js:5400:32)
+    at async Module.handler (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\node_modules_next_0ptdqbu._.js:5520:9)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\base-server.js:1537:9)
+    at async DevServer.renderPageComponent (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\base-server.js:1589:24)
+    at async DevServer.renderToResponseImpl (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\base-server.js:1639:32)
+    at async DevServer.pipeImpl (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\base-server.js:1088:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\next-server.js:338:17)
+    at async DevServer.handleRequestImpl (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\base-server.js:979:17)
+    at async D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\dev\next-dev-server.js:426:20
+    at async Span.traceAsyncFn (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\trace\trace.js:164:20)
+    at async DevServer.handleRequest (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\dev\next-dev-server.js:422:24)
+    at async invokeRender (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\lib\router-server.js:306:21)
+    at async handleRequest (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\lib\router-server.js:508:24)
+    at async requestHandlerImpl (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\lib\router-server.js:565:13)
+    at async Server.requestListener (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\lib\start-server.js:225:13)

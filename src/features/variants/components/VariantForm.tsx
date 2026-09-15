@@ -6,20 +6,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Info } from "lucide-react";
 import type { UnitOption } from "../types";
-import { vegTypeEnum } from "@/features/products/validations/admin-product.schema";
 import { FormInput } from "@/components/forms/form-input";
 import { FormTextarea } from "@/components/forms/form-textarea";
 import { FormRichText } from "@/components/forms/form-rich-text";
 import { FormSelect } from "@/components/forms/form-select";
 import { FormCheckbox } from "@/components/forms/form-checkbox";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
-
-const vegTypeOptions = [
-  { label: "Vegetarian (Veg)", value: "veg" },
-  { label: "Non-Vegetarian (Non-Veg)", value: "nonveg" },
-  { label: "Vegan", value: "vegan" },
-  { label: "Not Applicable (N/A)", value: "na" },
-];
+import { FormVideoUpload } from "@/components/forms/form-video-upload";
 
 // Item-level fields only. Unit + price combinations (sku, unit, base price)
 // are managed separately per (unit) via VariantUnitPriceList, since one item
@@ -45,15 +38,11 @@ const variantFormSchema = z.object({
     .max(500, "Short description cannot exceed 500 characters")
     .optional(),
   description: z.string().trim().optional(),
-  ingredients: z.string().trim().optional(),
-  isReadyToMix: z.boolean(),
-  cookingRecipe: z.string().trim().optional(),
-  shelfLife: z
+  videoUrl: z
     .string()
     .trim()
-    .max(100, "Best before cannot exceed 100 characters")
+    .max(500, "Video URL cannot exceed 500 characters")
     .optional(),
-  vegType: vegTypeEnum,
   isFeatured: z.boolean(),
 });
 
@@ -150,18 +139,13 @@ function VariantForm({
       slug: initialData?.slug || "",
       shortDescription: initialData?.shortDescription || "",
       description: initialData?.description || "",
-      ingredients: initialData?.ingredients || "",
-      isReadyToMix: initialData?.isReadyToMix ?? false,
-      cookingRecipe: initialData?.cookingRecipe || "",
-      shelfLife: initialData?.shelfLife || "",
-      vegType: initialData?.vegType || "na",
+      videoUrl: initialData?.videoUrl || "",
       isFeatured: initialData?.isFeatured ?? false,
     },
   });
 
   const selectedProductId = methods.watch("productId");
   const watchedVariantName = methods.watch("variantName");
-  const watchedIsReadyToMix = methods.watch("isReadyToMix");
 
   // Dynamic non-editable prefix based on currently selected Product
   const slugPrefix = useMemo(
@@ -197,11 +181,7 @@ function VariantForm({
         slug: initialData.slug || "",
         shortDescription: initialData.shortDescription || "",
         description: initialData.description || "",
-        ingredients: initialData.ingredients || "",
-        isReadyToMix: initialData.isReadyToMix ?? false,
-        cookingRecipe: initialData.cookingRecipe || "",
-        shelfLife: initialData.shelfLife || "",
-        vegType: initialData.vegType || "na",
+        videoUrl: initialData.videoUrl || "",
         isFeatured: initialData.isFeatured ?? false,
       });
 
@@ -277,22 +257,12 @@ function VariantForm({
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormInput
-              name="variantName"
-              label="Item Name"
-              placeholder="e.g. Classic Mixture, Butter Cookies"
-              required
-            />
-
-            <FormSelect
-              name="vegType"
-              label="Dietary Type"
-              placeholder="Select dietary type"
-              options={vegTypeOptions}
-              required
-            />
-          </div>
+          <FormInput
+            name="variantName"
+            label="Item Name"
+            placeholder="e.g. Classic Mixture, Butter Cookies"
+            required
+          />
         )}
 
         {/* Row 2: Item Code (Full Width) with Category + Product Code Prefix & Floating Info Pop-Up */}
@@ -399,30 +369,12 @@ function VariantForm({
           </div>
         </div>
 
-        {/* Dietary Type & Featured Item (Dietary Type already shown above when product is fixed) */}
-        {!fixedProductId ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <FormSelect
-              name="vegType"
-              label="Dietary Type"
-              placeholder="Select dietary type"
-              options={vegTypeOptions}
-              required
-            />
-
-            <FormCheckbox
-              name="isFeatured"
-              label="Featured Item"
-              description="Display this item prominently in featured sections"
-            />
-          </div>
-        ) : (
-          <FormCheckbox
-            name="isFeatured"
-            label="Featured Item"
-            description="Display this item prominently in featured sections"
-          />
-        )}
+        {/* Featured Item */}
+        <FormCheckbox
+          name="isFeatured"
+          label="Featured Item"
+          description="Display this item prominently in featured sections"
+        />
 
         {/* Short Description */}
         <FormTextarea
@@ -439,36 +391,12 @@ function VariantForm({
           placeholder="Detailed item information and description"
         />
 
-        {/* Ingredients */}
-        <FormTextarea
-          name="ingredients"
-          label="Ingredients"
-          placeholder="e.g. Rice flour, Bengal gram, Groundnut oil, Salt, Spices"
-          rows={3}
-        />
-
-        {/* Ready to Mix */}
-        <FormCheckbox
-          name="isReadyToMix"
-          label="Ready to Mix"
-          description="Enable if this item needs to be mixed/prepared before eating (e.g. instant mixes)"
-        />
-
-        {/* Cooking Recipe - only relevant for Ready to Mix items */}
-        {watchedIsReadyToMix && (
-          <FormTextarea
-            name="cookingRecipe"
-            label="Cooking Recipe"
-            placeholder="Preparation / cooking instructions for this item (e.g. mix ingredients before serving)"
-            rows={4}
-          />
-        )}
-
-        {/* Best Before / Shelf Life */}
-        <FormInput
-          name="shelfLife"
-          label="Best Before"
-          placeholder="e.g. 6 months from packing"
+        {/* Item Video (uploaded file, same as item images) */}
+        <FormVideoUpload
+          name="videoUrl"
+          label="Item Video"
+          folder="variants"
+          aspectRatioClassName="aspect-video w-full max-h-80"
         />
 
         <div className="flex justify-end pt-2">

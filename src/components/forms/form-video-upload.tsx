@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useController, useFormContext } from "react-hook-form";
-import { Upload, X } from "lucide-react";
+import { ExternalLink, Pencil, PlayCircle, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { parseVideoUrl } from "@/lib/utils/video-url.util";
 
 interface FormVideoUploadProps {
   name: string;
@@ -35,6 +36,7 @@ function FormVideoUpload({
   } = useController({ name, control });
 
   const videoUrl = field.value as string;
+  const parsed = useMemo(() => parseVideoUrl(videoUrl), [videoUrl]);
 
   const uploadFile = async (file: File) => {
     try {
@@ -110,24 +112,59 @@ function FormVideoUpload({
       >
         {videoUrl ? (
           <>
-            <video
-              src={videoUrl}
-              className="h-full w-full object-contain bg-black"
-              controls
-              muted
-            />
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                field.onChange("");
-                setFileError(null);
-              }}
-              className="absolute right-3 top-3 rounded-full bg-white p-2 shadow-md hover:bg-neutral-100 transition-colors z-10"
-              title="Remove video"
-            >
-              <X className="h-4 w-4 text-[var(--color-neutral-700)]" />
-            </button>
+            {parsed?.embedUrl ? (
+              <iframe
+                src={parsed.embedUrl}
+                className="h-full w-full"
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : parsed && parsed.kind !== "file" ? (
+              <a
+                href={parsed.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex flex-col items-center gap-2 p-4 text-center text-white"
+              >
+                <PlayCircle className="h-8 w-8" />
+                <span className="inline-flex items-center gap-1 text-xs font-medium underline">
+                  <ExternalLink className="h-3 w-3" /> Open video link
+                </span>
+              </a>
+            ) : (
+              <video
+                src={videoUrl}
+                className="h-full w-full object-contain bg-black"
+                controls
+                muted
+              />
+            )}
+            <div className="absolute right-3 top-3 flex items-center gap-2 z-10">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+                className="rounded-full bg-white p-2 shadow-md hover:bg-neutral-100 transition-colors"
+                title="Edit video"
+              >
+                <Pencil className="h-4 w-4 text-[var(--color-neutral-700)]" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  field.onChange("");
+                  setFileError(null);
+                }}
+                className="rounded-full bg-white p-2 shadow-md hover:bg-neutral-100 transition-colors"
+                title="Remove video"
+              >
+                <X className="h-4 w-4 text-[var(--color-neutral-700)]" />
+              </button>
+            </div>
           </>
         ) : isUploading ? (
           <div className="flex flex-col items-center gap-3 text-center">

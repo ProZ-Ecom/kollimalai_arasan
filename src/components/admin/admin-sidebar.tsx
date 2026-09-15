@@ -120,8 +120,8 @@ const sidebarItems: SidebarItem[] = [
 ];
 
 const activeRowClasses =
-  "relative bg-white text-secondary-600 shadow-sm ring-1 ring-black/[0.04] before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-secondary-600";
-const inactiveRowClasses = "text-neutral-600 hover:bg-white/60 hover:text-neutral-900";
+  "relative bg-secondary-50 text-secondary-600 shadow-sm ring-1 ring-black/[0.04] before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-secondary-600";
+const inactiveRowClasses = "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900";
 
 function IconChip({
   icon: Icon,
@@ -225,8 +225,8 @@ function SidebarItemComponent({
                     className={cn(
                       "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-all duration-200",
                       childActive
-                        ? "bg-white text-secondary-600 font-medium shadow-sm ring-1 ring-black/[0.04]"
-                        : "text-neutral-600 hover:bg-white/60 hover:text-neutral-900 hover:translate-x-0.5"
+                        ? "bg-secondary-50 text-secondary-600 font-medium shadow-sm ring-1 ring-black/[0.04]"
+                        : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 hover:translate-x-0.5"
                     )}
                   >
                     <child.icon className="h-3.5 w-3.5 flex-shrink-0" />
@@ -355,7 +355,7 @@ function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
   return (
     <div className="border-t border-neutral-300/70 p-3">
       {!collapsed && (
-        <div className="mb-2 flex items-center gap-2.5 rounded-xl bg-white/70 px-2.5 py-2.5 shadow-sm ring-1 ring-black/[0.04]">
+        <div className="mb-2 flex items-center gap-2.5 rounded-xl bg-neutral-50 px-2.5 py-2.5 shadow-sm ring-1 ring-black/[0.04]">
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-secondary-600 text-xs font-semibold text-white ring-2 ring-white">
             {getInitials(name)}
           </div>
@@ -369,7 +369,7 @@ function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
         href="/"
         title={collapsed ? "Visit Store" : undefined}
         className={cn(
-          "group flex w-full items-center gap-2.5 rounded-lg py-2 text-sm font-medium text-neutral-600 transition-all duration-200 hover:bg-white/70 hover:text-secondary-600",
+          "group flex w-full items-center gap-2.5 rounded-lg py-2 text-sm font-medium text-neutral-600 transition-all duration-200 hover:bg-neutral-100 hover:text-secondary-600",
           collapsed ? "justify-center px-0" : "pl-2 pr-3"
         )}
       >
@@ -380,7 +380,7 @@ function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
         onClick={handleLogout}
         title={collapsed ? "Logout" : undefined}
         className={cn(
-          "group flex w-full items-center gap-2.5 rounded-lg py-2 text-sm font-medium text-neutral-600 transition-all duration-200 cursor-pointer hover:bg-white/70 hover:text-secondary-600",
+          "group flex w-full items-center gap-2.5 rounded-lg py-2 text-sm font-medium text-neutral-600 transition-all duration-200 cursor-pointer hover:bg-neutral-100 hover:text-secondary-600",
           collapsed ? "justify-center px-0" : "pl-2 pr-3"
         )}
       >
@@ -422,7 +422,7 @@ function AdminSidebar({
       </Drawer>
       <aside
         className={cn(
-          "relative hidden h-screen flex-col border-r border-neutral-300/80 bg-secondary-100 shadow-[2px_0_12px_-4px_rgba(0,0,0,0.06)] transition-[width] duration-200 lg:flex",
+          "relative hidden h-screen flex-col border-r border-neutral-300/80 bg-white shadow-[2px_0_12px_-4px_rgba(0,0,0,0.06)] transition-[width] duration-200 lg:flex",
           collapsed ? "w-20" : "w-64"
         )}
       >

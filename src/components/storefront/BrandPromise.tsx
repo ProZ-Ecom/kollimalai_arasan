@@ -1,41 +1,28 @@
 "use client";
 
 import * as React from "react";
-import { BadgeCheck, Leaf, Package } from "lucide-react";
+import Image from "next/image";
 import { Section } from "./Section";
+import { ICONS } from "@/constants/storefront";
 
-/**
- * The three promises that sit directly beneath the hero banner.
- *
- * The glyphs are lucide icons filled with their own accent colour rather than
- * flat image assets - they stay crisp at any size and add no files to public/.
- * `stroke` differs per icon on purpose: the badge and the box read as solid
- * shapes with white detailing punched out, while the leaf is a single colour.
- */
 const PROMISES = [
   {
     id: 1,
-    Icon: Leaf,
-    colorClassName: "text-promise-leaf",
-    stroke: "currentColor",
+    icon: ICONS.leaf,
     title: "Farm Fresh",
     description:
       "From the start, it's been about pure spices and Millets our promise to never compromise.",
   },
   {
     id: 2,
-    Icon: BadgeCheck,
-    colorClassName: "text-promise-check",
-    stroke: "#ffffff",
+    icon: ICONS.badge,
     title: "Authentic Taste",
     description:
-      "Our process keeps the taste, smell, and color just right\u2014so they stay fresh for longer.",
+      "Our process keeps the taste, smell, and color just right—so they stay fresh for longer.",
   },
   {
     id: 3,
-    Icon: Package,
-    colorClassName: "text-promise-box",
-    stroke: "#ffffff",
+    icon: ICONS.box,
     title: "Freshly Packed",
     description:
       "We use a fully automated system to keep every step clean, safe, and pure.",
@@ -53,28 +40,26 @@ export function BrandPromise() {
       </h2>
 
       <div className="mt-9 sm:mt-12 grid grid-cols-1 sm:grid-cols-3 gap-9 sm:gap-6">
-        {PROMISES.map(
-          ({ id, Icon, colorClassName, stroke, title, description }) => (
-            <div
-              key={id}
-              className="flex flex-col items-center text-center px-2"
-            >
-              <Icon
-                className={`w-12 h-12 sm:w-14 sm:h-14 ${colorClassName}`}
-                fill="currentColor"
-                stroke={stroke}
-                strokeWidth={1.5}
-                aria-hidden="true"
-              />
-              <h3 className="mt-4 text-base sm:text-lg font-bold text-theme-text-primary">
-                {title}
-              </h3>
-              <p className="mt-2 max-w-[330px] text-sm leading-relaxed text-theme-text-muted">
-                {description}
-              </p>
-            </div>
-          )
-        )}
+        {PROMISES.map(({ id, icon, title, description }) => (
+          <div
+            key={id}
+            className="flex flex-col items-center text-center px-2"
+          >
+            <Image
+              src={icon}
+              alt={title}
+              width={56}
+              height={56}
+              className="w-12 h-12 sm:w-14 sm:h-14"
+            />
+            <h3 className="mt-4 text-base sm:text-lg font-bold text-theme-text-primary">
+              {title}
+            </h3>
+            <p className="mt-2 max-w-[330px] text-sm leading-relaxed text-theme-text-muted">
+              {description}
+            </p>
+          </div>
+        ))}
       </div>
     </Section>
   );

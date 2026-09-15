@@ -1,4 +1,4 @@
-export const APP_NAME = "RithuSnacks";
+export const APP_NAME = "Kollimalai Arasan";
 export const APP_DESCRIPTION = "Premium Snacks - Quality You Can Trust";
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 

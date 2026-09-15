@@ -14,7 +14,7 @@ const hanken = Hanken_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "RithuSnacks - Premium Snacks",
+  title: "Kollimalai Arasan - Premium Snacks",
   description: "Premium snacks delivered to your doorstep. Quality you can taste.",
 };
 

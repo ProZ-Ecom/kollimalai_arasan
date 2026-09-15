@@ -1,4 +1,4 @@
-# RithuSnacks
+# Kollimalai Arasan
 
 A reusable, scalable, and production-ready full-stack e-commerce application built with Next.js, TypeScript, Prisma, and Auth.js.
 

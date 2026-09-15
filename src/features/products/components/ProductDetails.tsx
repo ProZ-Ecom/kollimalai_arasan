@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -15,13 +15,18 @@ import {
   Loader2,
   Star,
   Clock,
+  Share2,
+  MapPin,
+  MessageCircle,
   ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductGallery } from "./ProductGallery";
 import { ProductVariantSelector } from "./ProductVariantSelector";
-import { getImageUrl } from "@/lib/utils";
+import { getImageUrl, cn } from "@/lib/utils";
 import { formatMeasurementLabel } from "@/features/variants/utils/measurement.util";
+import { useCustomerVariant } from "@/features/customers/hooks/use-customer-catalog";
+import { useCustomerCompany } from "@/features/customers/hooks/use-customer-company";
 import { useAddToCart } from "@/features/cart/hooks/use-cart";
 import { useWishlist, useAddToWishlist, useRemoveFromWishlist } from "@/features/wishlist/hooks/use-wishlist";
 import { usePublicVariantReviews } from "@/features/reviews/hooks/use-public-reviews";
@@ -31,6 +36,36 @@ import { sanitizeRichText } from "@/lib/sanitize-html";
 
 interface ProductDetailsProps {
   product: CustomerProductDetailDto;
+}
+
+const SHIPPING_POINTS = [
+  "Free shipping on all orders above ₹999",
+  "Delivered in 3–5 days, pan-India",
+  "Dispatches within 24 hours via Express",
+  "Hassle-free replacement guarantee on damaged items",
+];
+
+function AccordionSection({
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details
+      className="group border-b border-neutral-100 py-4 first:pt-0 last:border-b-0"
+      open={defaultOpen}
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-neutral-900">
+        {title}
+        <ChevronDown className="h-4 w-4 text-neutral-400 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="mt-3 text-sm text-neutral-600 leading-relaxed">{children}</div>
+    </details>
+  );
 }
 
 function ProductDetails({ product }: ProductDetailsProps) {
@@ -55,6 +90,9 @@ function ProductDetails({ product }: ProductDetailsProps) {
   const selectedVariant: CustomerVariantListItemDto | null =
     variants.find((v) => v.id === selectedVariantId) ?? variants[0] ?? null;
 
+  const { data: variantDetail } = useCustomerVariant(product.id, selectedVariant?.id ?? null);
+  const { data: company } = useCustomerCompany();
+
   const unitPrices = selectedVariant?.unitPrices ?? [];
   const [selectedUnitPriceId, setSelectedUnitPriceId] = useState<string | null>(
     unitPrices.find((u) => u.isDefault)?.id ?? unitPrices[0]?.id ?? null
@@ -63,16 +101,7 @@ function ProductDetails({ product }: ProductDetailsProps) {
     unitPrices.find((u) => u.id === selectedUnitPriceId) ?? unitPrices[0] ?? null;
 
   const [quantity, setQuantity] = useState(1);
-
-  // Accordion state (Authentic Ingredients open by default like Figma)
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    ingredients: true,
-    storage: false,
-  });
-
-  const toggleSection = (key: string) => {
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  const [shareCopied, setShareCopied] = useState(false);
 
   const addToCart = useAddToCart();
   const { data: wishlist } = useWishlist({ enabled: !!session });
@@ -111,17 +140,28 @@ function ProductDetails({ product }: ProductDetailsProps) {
     !!selectedUnitPrice &&
     !!wishlist?.items.some((i) => i.variantUnitPriceId === selectedUnitPrice.id);
 
-  const galleryImages = selectedVariant?.primaryImage
-    ? [
-        {
-          id: selectedVariant.id,
-          url: getImageUrl(selectedVariant.primaryImage),
-          altText: selectedVariant.variantName || product.name,
-        },
-      ]
-    : product.image
-      ? [{ id: product.id, url: getImageUrl(product.image), altText: product.name }]
-      : [];
+  const variantImages = variantDetail?.id === selectedVariant?.id ? variantDetail?.images ?? [] : [];
+
+  const galleryImages =
+    variantImages.length > 0
+      ? [...variantImages]
+          .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.sortOrder - b.sortOrder)
+          .map((img) => ({
+            id: img.id,
+            url: getImageUrl(img.imageUrl),
+            altText: selectedVariant?.variantName || product.name,
+          }))
+      : selectedVariant?.primaryImage
+        ? [
+            {
+              id: selectedVariant.id,
+              url: getImageUrl(selectedVariant.primaryImage),
+              altText: selectedVariant.variantName || product.name,
+            },
+          ]
+        : product.image
+          ? [{ id: product.id, url: getImageUrl(product.image), altText: product.name }]
+          : [];
 
   const handleAddToCart = () => {
     if (!session) {
@@ -153,53 +193,90 @@ function ProductDetails({ product }: ProductDetailsProps) {
     }
   };
 
-  const rawIngredients = selectedVariant?.ingredients?.trim();
-  const hasIngredients = Boolean(rawIngredients);
-  const parsedIngredients = hasIngredients
-    ? rawIngredients!
-        .split(/[,;\n]+/)
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : [];
+  const handleShare = async () => {
+    if (typeof window === "undefined") return;
+    const shareData = {
+      title: product.name,
+      text: `Check out ${product.name} on Kollimalai Arasan`,
+      url: window.location.href,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // user cancelled share sheet
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      // clipboard unavailable
+    }
+  };
 
-  const shelfLife = selectedVariant?.shelfLife?.trim();
-  const hasShelfLife = Boolean(shelfLife);
+  const waDigitsRaw = (company?.phone || "8667380899").replace(/\D/g, "");
+  const waNumber = waDigitsRaw.length === 10 ? `91${waDigitsRaw}` : waDigitsRaw;
+  const waDisplay = `+${waNumber.length > 10 ? `${waNumber.slice(0, 2)} ${waNumber.slice(2)}` : waNumber}`;
+  const waMessage = encodeURIComponent(
+    `Hi, I'd like to order ${product.name}${
+      selectedVariant?.variantName ? ` - ${selectedVariant.variantName}` : ""
+    }${
+      selectedUnitPrice ? ` (${formatMeasurementLabel(selectedUnitPrice.measurement)})` : ""
+    }.`
+  );
+  const waHref = `https://wa.me/${waNumber}?text=${waMessage}`;
+
+  const sourcingLocation = [company?.city, company?.state].filter(Boolean).join(", ");
+
+  const variantSubtitle = [selectedVariant?.variantName, selectedVariant?.shortDescription]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="w-full space-y-12">
       {/* 2-Column Product Gallery + Details Buy Box */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-        {/* Left Gallery (sticky only on lg screens within this block) */}
-        <div className="lg:col-span-6 lg:sticky lg:top-24">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-start">
+        {/* Left Gallery (sticky only on md+ screens within this block) */}
+        <div className="md:col-span-6 md:sticky md:top-24">
           <ProductGallery
             images={galleryImages}
+            videoUrl={selectedVariant?.videoUrl}
             productName={selectedVariant?.variantName || product.name}
             isInStock={isInStock}
           />
         </div>
 
         {/* Right Details */}
-        <div className="lg:col-span-6 space-y-6">
-          {/* Category, Brand & SKU Pills */}
-          <div className="flex flex-wrap items-center gap-2">
-            {product.category && (
-              <Link
-                href={`/categories/${product.category.id}`}
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#007F06]/10 text-[#007F06] hover:bg-[#007F06]/20 transition-colors"
-              >
-                {product.category.name}
-              </Link>
-            )}
-            {product.brand && (
-              <span className="text-xs font-medium text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-full">
-                Brand: <strong className="text-neutral-700">{product.brand.name}</strong>
-              </span>
-            )}
-            {selectedUnitPrice?.sku && (
-              <span className="text-xs font-mono text-neutral-400 bg-neutral-50 border border-neutral-200/80 px-2.5 py-1 rounded-full">
-                SKU: {selectedUnitPrice.sku}
-              </span>
-            )}
+        <div className="md:col-span-6 space-y-6">
+          {/* Category, Brand & SKU Pills + Share */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {product.category && (
+                <Link
+                  href={`/categories/${product.category.id}`}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#007F06]/10 text-[#007F06] hover:bg-[#007F06]/20 transition-colors"
+                >
+                  {product.category.name}
+                </Link>
+              )}
+              {selectedUnitPrice?.sku && (
+                <span className="text-xs font-mono text-neutral-400 bg-neutral-50 border border-neutral-200/80 px-2.5 py-1 rounded-full">
+                  SKU: {selectedUnitPrice.sku}
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleShare}
+              className="relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-neutral-500 border border-neutral-200 bg-white hover:border-[#007F06]/40 hover:text-[#007F06] transition-colors shrink-0"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              {shareCopied ? "Link copied!" : "Share"}
+            </button>
           </div>
 
           {/* Titles & Review Social Proof */}
@@ -207,9 +284,15 @@ function ProductDetails({ product }: ProductDetailsProps) {
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-neutral-900 tracking-tight leading-tight">
               {product.name}
             </h1>
-            {selectedVariant && (
+            {variantSubtitle && (
               <p className="text-base sm:text-lg text-neutral-600 font-medium mt-1">
-                {selectedVariant.variantName}
+                {variantSubtitle}
+              </p>
+            )}
+            {sourcingLocation && (
+              <p className="inline-flex items-center gap-1.5 mt-1.5 text-xs font-medium text-neutral-500">
+                <MapPin className="w-3.5 h-3.5 text-[#007F06]/70" />
+                Sourced from {sourcingLocation}
               </p>
             )}
 
@@ -250,26 +333,32 @@ function ProductDetails({ product }: ProductDetailsProps) {
           </div>
 
           {/* Pricing Card */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-primary-50/50 via-neutral-50 to-white border border-primary-200/40">
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-[#007F06]/[0.06] via-white to-white border border-[#007F06]/15 shadow-2xs">
             {selectedUnitPrice ? (
-              <div className="flex items-baseline gap-3 flex-wrap">
-                <span className="text-3xl sm:text-4xl font-extrabold text-[#007F06] tracking-tight">
-                  ₹{sellingPrice.toFixed(2)}
-                </span>
-                {hasDiscount && (
-                  <span className="text-lg sm:text-xl line-through text-neutral-400">
-                    ₹{basePrice.toFixed(2)}
+              <div>
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <span className="text-3xl sm:text-4xl font-extrabold text-[#006B05] tracking-tight">
+                    ₹{sellingPrice.toFixed(2)}
                   </span>
-                )}
-                {hasDiscount && discountPercent > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-secondary-100 text-secondary-800 border border-secondary-200">
-                    <Sparkles className="w-3 h-3" />
-                    Save {discountPercent}%
-                  </span>
-                )}
-                <span className="text-xs text-neutral-400 block w-full mt-1">
+                  {hasDiscount && (
+                    <span className="flex items-baseline gap-1.5">
+                      <span className="text-xs text-neutral-400">MRP</span>
+                      <span className="text-lg sm:text-xl line-through text-neutral-400">
+                        ₹{basePrice.toFixed(2)}
+                      </span>
+                    </span>
+                  )}
+                  {hasDiscount && discountPercent > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-secondary-100 text-secondary-800 border border-secondary-200">
+                      <Sparkles className="w-3 h-3" />
+                      Save {discountPercent}%
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-neutral-400 mt-2 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#007F06]/70" />
                   Inclusive of all taxes • Freshly packed
-                </span>
+                </p>
               </div>
             ) : (
               <p className="text-sm text-neutral-500 italic">
@@ -277,14 +366,6 @@ function ProductDetails({ product }: ProductDetailsProps) {
               </p>
             )}
           </div>
-
-          {/* Description */}
-          {product.description && (
-            <div
-              className="rich-text-content text-sm text-neutral-600 leading-relaxed max-w-none border-b border-neutral-100 pb-4"
-              dangerouslySetInnerHTML={{ __html: sanitizeRichText(product.description) }}
-            />
-          )}
 
           {/* Pack Size Selection (Figma Style) */}
           {unitPrices.length > 0 && (
@@ -315,8 +396,8 @@ function ProductDetails({ product }: ProductDetailsProps) {
                       onClick={() => setSelectedUnitPriceId(unitPrice.id)}
                       className={`relative flex flex-col items-center justify-center p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer select-none ${
                         isSelected
-                          ? "border-[#006B05] bg-[#006B05] text-white shadow-sm"
-                          : "border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400 hover:bg-neutral-50"
+                          ? "border-[#006B05] bg-[#006B05] text-white shadow-md scale-[1.02]"
+                          : "border-neutral-200 bg-white text-neutral-800 hover:border-[#007F06]/50 hover:bg-[#007F06]/5 hover:shadow-2xs"
                       }`}
                     >
                       {discount > 0 && (
@@ -346,24 +427,24 @@ function ProductDetails({ product }: ProductDetailsProps) {
           <div className="pt-2 space-y-3">
             <div className="flex items-center gap-3">
               {/* Quantity Selector */}
-              <div className="flex items-center border border-neutral-200 rounded-xl bg-white shadow-2xs overflow-hidden h-12">
+              <div className="flex items-center border border-neutral-200 rounded-xl bg-white shadow-2xs overflow-hidden h-12 shrink-0">
                 <button
                   type="button"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={quantity <= 1 || addToCart.isPending}
-                  className="w-11 h-full flex items-center justify-center text-lg font-bold text-neutral-700 hover:bg-neutral-100 disabled:opacity-40 transition-colors"
+                  className="w-10 sm:w-11 h-full flex items-center justify-center text-lg font-bold text-neutral-700 hover:bg-neutral-100 disabled:opacity-40 transition-colors"
                   aria-label="Decrease quantity"
                 >
                   -
                 </button>
-                <span className="w-11 text-center text-sm font-semibold text-neutral-900 select-none">
+                <span className="w-9 sm:w-11 text-center text-sm font-semibold text-neutral-900 select-none">
                   {quantity}
                 </span>
                 <button
                   type="button"
                   onClick={() => setQuantity(quantity + 1)}
                   disabled={addToCart.isPending}
-                  className="w-11 h-full flex items-center justify-center text-lg font-bold text-neutral-700 hover:bg-neutral-100 disabled:opacity-40 transition-colors"
+                  className="w-10 sm:w-11 h-full flex items-center justify-center text-lg font-bold text-neutral-700 hover:bg-neutral-100 disabled:opacity-40 transition-colors"
                   aria-label="Increase quantity"
                 >
                   +
@@ -376,7 +457,7 @@ function ProductDetails({ product }: ProductDetailsProps) {
                 size="lg"
                 disabled={!isInStock || !selectedUnitPrice || addToCart.isPending}
                 onClick={handleAddToCart}
-                className="flex-1 h-12 bg-[#006B05] hover:bg-[#004203] text-white rounded-xl shadow-xs font-semibold text-base transition-all active:scale-[0.99] disabled:opacity-50"
+                className="flex-1 h-12 bg-[#006B05] hover:bg-[#004203] text-white rounded-xl shadow-md hover:shadow-lg font-semibold text-base transition-all active:scale-[0.99] disabled:opacity-50 disabled:shadow-none"
               >
                 {addToCart.isPending ? (
                   <>
@@ -421,10 +502,29 @@ function ProductDetails({ product }: ProductDetailsProps) {
               </Button>
             </div>
 
+            {/* Order on WhatsApp */}
+            <a
+              href={waHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#007F06]/30 bg-[#007F06]/5 text-sm font-semibold text-[#006B05] hover:bg-[#007F06]/10 transition-colors"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Order on WhatsApp · {waDisplay}
+            </a>
+
             {/* Stock availability indicator */}
-            <div className="flex items-center gap-2">
+            <div
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg w-fit ${
+                !selectedUnitPrice
+                  ? "bg-neutral-50"
+                  : isInStock
+                    ? "bg-secondary-50"
+                    : "bg-rose-50"
+              }`}
+            >
               <span
-                className={`w-2.5 h-2.5 rounded-full ${
+                className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                   !selectedUnitPrice
                     ? "bg-neutral-300"
                     : isInStock
@@ -444,143 +544,71 @@ function ProductDetails({ product }: ProductDetailsProps) {
                 {!selectedUnitPrice
                   ? "Unavailable"
                   : isInStock
-                    ? "In Stock • Ready to ship (Dispatches in 24 hours via Express)"
+                    ? "In Stock • Ready to ship"
                     : "Currently Out of Stock"}
               </span>
             </div>
           </div>
 
-          {/* Collapsible Accordions (Render ONLY if backend ingredients or shelfLife available) */}
-          {(hasIngredients || hasShelfLife) && (
-            <div className="space-y-3 pt-2">
-              {/* Accordion 1: Authentic Ingredients (Only if backend ingredients available) */}
-              {hasIngredients && (
-                <div className="rounded-2xl border border-[#F5F5F5] bg-[#FAFAFA]/40 overflow-hidden transition-all">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection("ingredients")}
-                    className="w-full p-4 sm:p-4.5 flex items-center justify-between text-left hover:bg-[#FAFAFA]/80 transition-colors select-none"
-                  >
-                    <div className="flex items-center gap-2.5 text-[#006B05]">
-                      <Sparkles className="w-4 h-4 stroke-[2.2]" />
-                      <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#101010]">
-                        AUTHENTIC INGREDIENTS
-                      </span>
-                    </div>
-                    <ChevronDown
-                      className={`w-4 h-4 text-neutral-500 transition-transform duration-200 ${
-                        openSections.ingredients ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {openSections.ingredients && (
-                    <div className="px-4 pb-4 sm:px-5 sm:pb-5 pt-1 border-t border-[#F5F5F5]/70">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs sm:text-[13px] text-neutral-600 pt-2">
-                        {parsedIngredients.map((ingredient, i) => (
-                          <div key={i} className="flex items-start gap-2">
-                            <span className="text-neutral-400 font-bold">•</span>
-                            <span>{ingredient}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+          {/* About / Sourcing / Shipping accordion */}
+          <div className="pt-2 border-t border-neutral-100">
+            <AccordionSection title="About this product" defaultOpen>
+              {product.description ? (
+                <div
+                  className="rich-text-content max-w-none"
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(product.description) }}
+                />
+              ) : (
+                <p className="text-neutral-400 italic">No description available yet.</p>
               )}
+            </AccordionSection>
 
-              {/* Accordion 2: Best Before & Storage Guide (Only if backend shelfLife available) */}
-              {hasShelfLife && (
-                <div className="rounded-2xl border border-[#F5F5F5] bg-[#FAFAFA]/40 overflow-hidden transition-all">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection("storage")}
-                    className="w-full p-4 sm:p-4.5 flex items-center justify-between text-left hover:bg-[#FAFAFA]/80 transition-colors select-none"
-                  >
-                    <div className="flex items-center gap-2.5 text-[#006B05]">
-                      <Clock className="w-4 h-4 stroke-[2.2]" />
-                      <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#101010]">
-                        BEST BEFORE & STORAGE GUIDE
-                      </span>
-                    </div>
-                    <ChevronDown
-                      className={`w-4 h-4 text-neutral-500 transition-transform duration-200 ${
-                        openSections.storage ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
+            <AccordionSection title="Shipping & returns">
+              <ul className="space-y-2">
+                {SHIPPING_POINTS.map((point) => (
+                  <li key={point} className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#007F06]" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </AccordionSection>
+          </div>
 
-                  {openSections.storage && (
-                    <div className="px-4 pb-4 sm:px-5 sm:pb-5 pt-1 border-t border-[#F5F5F5]/70 text-xs sm:text-[13px] text-neutral-600 space-y-2.5">
-                      <div className="pt-2">
-                        <span className="font-bold text-neutral-800">Best Before: </span>
-                        <span>{shelfLife}</span>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="font-bold text-neutral-800 block">Storage Guidelines:</span>
-                        <ul className="space-y-1 pl-1">
-                          <li className="flex items-start gap-2">
-                            <span className="text-neutral-400 font-bold">•</span>
-                            <span>Store in a cool, dry place away from direct sunlight and ambient humidity.</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="text-neutral-400 font-bold">•</span>
-                            <span>Transfer into an airtight container immediately after opening to preserve crunch and aroma.</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="text-neutral-400 font-bold">•</span>
-                            <span>Do not refrigerate. Use a clean, dry spoon for serving.</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
       {/* End 2-Column Product Gallery + Details Buy Box */}
 
-      {/* Full-Width Guarantees Row Below Gallery & Details (Moved Below Like Figma) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 pt-2">
-        <div className="flex items-center gap-3.5 p-4 sm:p-5 rounded-2xl bg-[#FAFAFA] border border-[#F5F5F5] shadow-2xs">
-          <div className="w-12 h-12 rounded-full bg-[#007F06]/10 flex items-center justify-center text-[#007F06] shrink-0">
-            <Truck className="w-5 h-5 stroke-[1.8]" />
-          </div>
+      {/* Full-Width Guarantees Row Below Gallery & Details */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-4 pt-6 border-t border-neutral-100">
+        <div className="flex items-center gap-3">
+          <Truck className="w-5 h-5 text-[#007F06] shrink-0" strokeWidth={1.8} />
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-[#101010] uppercase tracking-wide">FREE SHIPPING</h4>
+            <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wide">Free Shipping</h4>
             <p className="text-xs text-neutral-500 mt-0.5">On all orders above ₹999</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3.5 p-4 sm:p-5 rounded-2xl bg-[#FAFAFA] border border-[#F5F5F5] shadow-2xs">
-          <div className="w-12 h-12 rounded-full bg-[#007F06]/10 flex items-center justify-center text-[#007F06] shrink-0">
-            <Clock className="w-5 h-5 stroke-[1.8]" />
-          </div>
+        <div className="flex items-center gap-3">
+          <Clock className="w-5 h-5 text-[#007F06] shrink-0" strokeWidth={1.8} />
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-[#101010] uppercase tracking-wide">FAST DELIVERY</h4>
+            <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wide">Fast Delivery</h4>
             <p className="text-xs text-neutral-500 mt-0.5">Delivered in 3–5 days pan-India</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3.5 p-4 sm:p-5 rounded-2xl bg-[#FAFAFA] border border-[#F5F5F5] shadow-2xs">
-          <div className="w-12 h-12 rounded-full bg-[#007F06]/10 flex items-center justify-center text-[#007F06] shrink-0">
-            <ShieldCheck className="w-5 h-5 stroke-[1.8]" />
-          </div>
+        <div className="flex items-center gap-3">
+          <ShieldCheck className="w-5 h-5 text-[#007F06] shrink-0" strokeWidth={1.8} />
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-[#101010] uppercase tracking-wide">100% AUTHENTIC</h4>
-            <p className="text-xs text-neutral-500 mt-0.5">Traditional South Indian recipes</p>
+            <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wide">Hand-Sorted</h4>
+            <p className="text-xs text-neutral-500 mt-0.5">Cleaned and graded by hand</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3.5 p-4 sm:p-5 rounded-2xl bg-[#FAFAFA] border border-[#F5F5F5] shadow-2xs">
-          <div className="w-12 h-12 rounded-full bg-[#007F06]/10 flex items-center justify-center text-[#007F06] shrink-0">
-            <RotateCcw className="w-5 h-5 stroke-[1.8]" />
-          </div>
+        <div className="flex items-center gap-3">
+          <RotateCcw className="w-5 h-5 text-[#007F06] shrink-0" strokeWidth={1.8} />
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-[#101010] uppercase tracking-wide">FRESHNESS GUARANTEE</h4>
+            <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wide">Freshness Guarantee</h4>
             <p className="text-xs text-neutral-500 mt-0.5">Hassle-free replacement guarantee</p>
           </div>
         </div>

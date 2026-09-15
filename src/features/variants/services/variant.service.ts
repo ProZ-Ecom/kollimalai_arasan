@@ -86,11 +86,7 @@ function formatAdminVariantResponse(
     slug?: string | null;
     short_description?: string | null;
     description?: string | null;
-    ingredients?: string | null;
-    is_ready_to_mix?: boolean;
-    cooking_recipe?: string | null;
-    shelf_life?: string | null;
-    veg_type?: string | null;
+    video_url?: string | null;
     is_featured?: boolean;
     isActive: boolean;
     out_of_stock?: boolean;
@@ -135,11 +131,7 @@ function formatAdminVariantResponse(
     slug: variant.slug || "",
     shortDescription: variant.short_description ?? null,
     description: variant.description ?? null,
-    ingredients: variant.ingredients ?? null,
-    isReadyToMix: Boolean(variant.is_ready_to_mix),
-    cookingRecipe: variant.cooking_recipe ?? null,
-    shelfLife: variant.shelf_life ?? null,
-    vegType: (variant.veg_type as AdminVariantResponse["vegType"]) || "na",
+    videoUrl: variant.video_url ?? null,
     isFeatured: Boolean(variant.is_featured),
     primaryImage,
     isActive: Boolean(variant.isActive),
@@ -197,11 +189,7 @@ export const variantService = {
       slug: variantSlug,
       short_description: data.shortDescription ?? null,
       description: data.description ?? null,
-      ingredients: data.ingredients ?? null,
-      is_ready_to_mix: data.isReadyToMix ?? false,
-      cooking_recipe: data.cookingRecipe ?? null,
-      shelf_life: data.shelfLife ?? null,
-      veg_type: (data.vegType as Prisma.ProductVariantUncheckedCreateInput["veg_type"]) ?? "na",
+      video_url: data.videoUrl || null,
       is_featured: data.isFeatured ?? false,
       isActive: data.isActive !== undefined ? data.isActive : true,
       out_of_stock: data.outOfStock !== undefined ? data.outOfStock : false,
@@ -372,7 +360,7 @@ function buildVariantUpdateData(
   const updateData: Prisma.ProductVariantUncheckedUpdateInput = {};
 
   if (adminId) {
-    updateData.updated_by = adminId;
+    updateData.users_product_variants_updated_byTousers = { connect: { id: adminId } };
   }
   if (data.variantName !== undefined) {
     updateData.variant_name = data.variantName;
@@ -383,20 +371,8 @@ function buildVariantUpdateData(
   if (data.description !== undefined) {
     updateData.description = data.description;
   }
-  if (data.ingredients !== undefined) {
-    updateData.ingredients = data.ingredients;
-  }
-  if (data.isReadyToMix !== undefined) {
-    updateData.is_ready_to_mix = data.isReadyToMix;
-  }
-  if (data.cookingRecipe !== undefined) {
-    updateData.cooking_recipe = data.cookingRecipe;
-  }
-  if (data.shelfLife !== undefined) {
-    updateData.shelf_life = data.shelfLife;
-  }
-  if (data.vegType !== undefined) {
-    updateData.veg_type = data.vegType as Prisma.ProductVariantUncheckedUpdateInput["veg_type"];
+  if (data.videoUrl !== undefined) {
+    updateData.video_url = data.videoUrl || null;
   }
   if (data.isFeatured !== undefined) {
     updateData.is_featured = data.isFeatured;

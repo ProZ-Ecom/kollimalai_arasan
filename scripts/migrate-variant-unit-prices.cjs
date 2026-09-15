@@ -36,10 +36,6 @@ async function run() {
     await conn.query('ALTER TABLE `product_variants` ADD COLUMN `description` TEXT NULL;');
     console.log('  + Added description to product_variants');
   }
-  if (!pvColSet.has('veg_type')) {
-    await conn.query("ALTER TABLE `product_variants` ADD COLUMN `veg_type` ENUM('veg','non_veg','egg','na') NOT NULL DEFAULT 'na';");
-    console.log('  + Added veg_type to product_variants');
-  }
   if (!pvColSet.has('is_featured')) {
     await conn.query('ALTER TABLE `product_variants` ADD COLUMN `is_featured` TINYINT(1) NOT NULL DEFAULT 0;');
     console.log('  + Added is_featured to product_variants');

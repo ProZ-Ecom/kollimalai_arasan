@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, ShoppingBag, Wallet, Star, Heart, ArrowRight, Sparkles } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { CustomerProfileResponse } from "../../types";
 import type { OrderDetailResponse } from "@/features/orders/types";
@@ -204,9 +204,14 @@ export function DashboardTab({
   return (
     <div className="flex flex-col gap-5 min-w-0">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-theme-primary via-theme-primary-hover to-[#007F06] rounded-2xl p-6 sm:p-7 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xs">
-        <div className="space-y-2">
-          <div className="text-xs uppercase tracking-widest text-theme-secondary font-medium">
+      <div className="relative overflow-hidden bg-gradient-to-br from-theme-primary via-theme-primary-hover to-[#007F06] rounded-2xl p-6 sm:p-7 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-md">
+        {/* Decorative background accents */}
+        <div className="pointer-events-none absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-16 right-16 w-40 h-40 rounded-full bg-white/5" />
+        <Sparkles className="pointer-events-none absolute top-5 right-6 w-5 h-5 text-theme-secondary/70" />
+
+        <div className="relative space-y-2.5">
+          <div className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-theme-secondary font-semibold bg-white/10 px-2.5 py-1 rounded-full">
             Welcome back
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold uppercase tracking-wide text-white">
@@ -219,14 +224,15 @@ export function DashboardTab({
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex items-center gap-3 flex-wrap">
           {orders.length > 0 && (
             <button
               type="button"
               onClick={() => onNavigateTab("orders")}
-              className="bg-theme-secondary hover:bg-theme-secondary-hover text-theme-secondary-fg text-xs font-semibold uppercase tracking-wider py-3 px-5 rounded-lg transition-colors cursor-pointer min-h-[44px]"
+              className="group bg-theme-secondary hover:bg-theme-secondary-hover text-theme-secondary-fg text-xs font-semibold uppercase tracking-wider py-3 px-5 rounded-lg transition-all cursor-pointer min-h-[44px] shadow-sm hover:shadow-md inline-flex items-center gap-2"
             >
               View All Orders ({orders.length})
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
             </button>
           )}
         </div>
@@ -234,38 +240,58 @@ export function DashboardTab({
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-theme-surface border border-theme-border rounded-xl p-4 sm:p-5 shadow-2xs">
+        <div className="group bg-theme-surface border border-theme-border rounded-xl p-4 sm:p-5 shadow-2xs hover:shadow-sm hover:border-theme-primary/30 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-9 h-9 rounded-lg bg-theme-primary/10 flex items-center justify-center text-theme-primary group-hover:bg-theme-primary group-hover:text-white transition-colors">
+              <ShoppingBag className="w-4.5 h-4.5" />
+            </div>
+          </div>
           <div className="text-2xl sm:text-3xl font-bold text-theme-primary">
             {totalOrdersCount}
           </div>
-          <div className="text-xs text-theme-text-muted mt-1.5 font-medium">
+          <div className="text-xs text-theme-text-muted mt-1 font-medium">
             Orders placed
           </div>
         </div>
 
-        <div className="bg-theme-surface border border-theme-border rounded-xl p-4 sm:p-5 shadow-2xs">
+        <div className="group bg-theme-surface border border-theme-border rounded-xl p-4 sm:p-5 shadow-2xs hover:shadow-sm hover:border-theme-primary/30 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-9 h-9 rounded-lg bg-theme-primary/10 flex items-center justify-center text-theme-primary group-hover:bg-theme-primary group-hover:text-white transition-colors">
+              <Wallet className="w-4.5 h-4.5" />
+            </div>
+          </div>
           <div className="text-2xl sm:text-3xl font-bold text-theme-primary">
             {formatPrice(lifetimeSpend)}
           </div>
-          <div className="text-xs text-theme-text-muted mt-1.5 font-medium">
+          <div className="text-xs text-theme-text-muted mt-1 font-medium">
             Lifetime spend
           </div>
         </div>
 
-        <div className="bg-theme-surface border border-theme-border rounded-xl p-4 sm:p-5 shadow-2xs">
+        <div className="group bg-theme-surface border border-theme-border rounded-xl p-4 sm:p-5 shadow-2xs hover:shadow-sm hover:border-theme-primary/30 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-9 h-9 rounded-lg bg-theme-primary/10 flex items-center justify-center text-theme-primary group-hover:bg-theme-primary group-hover:text-white transition-colors">
+              <Star className="w-4.5 h-4.5" />
+            </div>
+          </div>
           <div className="text-2xl sm:text-3xl font-bold text-theme-primary">
             {profile?.referralCode ? "Active" : "Standard"}
           </div>
-          <div className="text-xs text-theme-text-muted mt-1.5 font-medium">
+          <div className="text-xs text-theme-text-muted mt-1 font-medium">
             Member Status
           </div>
         </div>
 
-        <div className="bg-theme-surface border border-theme-border rounded-xl p-4 sm:p-5 shadow-2xs">
+        <div className="group bg-theme-surface border border-theme-border rounded-xl p-4 sm:p-5 shadow-2xs hover:shadow-sm hover:border-theme-primary/30 transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-9 h-9 rounded-lg bg-theme-primary/10 flex items-center justify-center text-theme-primary group-hover:bg-theme-primary group-hover:text-white transition-colors">
+              <Heart className="w-4.5 h-4.5" />
+            </div>
+          </div>
           <div className="text-2xl sm:text-3xl font-bold text-theme-primary">
             {wishlistCount}
           </div>
-          <div className="text-xs text-theme-text-muted mt-1.5 font-medium">
+          <div className="text-xs text-theme-text-muted mt-1 font-medium">
             Wishlist items
           </div>
         </div>

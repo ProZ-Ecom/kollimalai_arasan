@@ -15,6 +15,7 @@ import {
   confirmAdminOrder,
   processAdminOrder,
   packAdminOrder,
+  markOutForDeliveryAdminOrder,
   assignOrderDelivery,
   getCheckoutSummary,
   type AssignDeliveryInput,
@@ -173,6 +174,23 @@ export function usePackAdminOrder() {
       queryClient.invalidateQueries({
         queryKey: adminOrderKeys.detail(variables.id),
       });
+    },
+  });
+}
+
+export function useMarkOutForDeliveryAdminOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string | number; note?: string }) =>
+      markOutForDeliveryAdminOrder(id, note),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: adminOrderKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders", "count"] });
+      queryClient.invalidateQueries({
+        queryKey: adminOrderKeys.detail(variables.id),
+      });
+      queryClient.invalidateQueries({ queryKey: deliveryKeys.all });
     },
   });
 }

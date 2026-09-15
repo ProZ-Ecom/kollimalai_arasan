@@ -190,6 +190,17 @@ export async function packAdminOrder(
   return response.data!;
 }
 
+export async function markOutForDeliveryAdminOrder(
+  uuid: string | number,
+  note?: string
+): Promise<OrderStatusTransitionResponse> {
+  const response = await apiClient.patch<OrderStatusTransitionResponse>(
+    `/api/admin/orders/${uuid}/status`,
+    { note: note || "Order marked out for delivery by admin" }
+  );
+  return response.data!;
+}
+
 export async function cancelOrderAdmin(
   idOrUuid: string | number,
   input?: { reason?: string; note?: string }

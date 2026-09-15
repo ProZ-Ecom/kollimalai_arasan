@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, LockKeyhole, AlertCircle } from "lucide-react";
+import { Mail, LockKeyhole, AlertCircle, ShieldCheck, ArrowLeft } from "lucide-react";
 
 import AuthBanner from "@/components/auth/AuthBanner";
 import AuthFormLayout from "@/components/auth/AuthFormLayout";
@@ -80,8 +80,28 @@ function AdminLoginForm() {
     <AuthFormLayout
       showLogo
       showFooter
-      title="Welcome back"
-      subtitle="Enter your credentials to access the Rithu's Snacks admin portal."
+      variant="admin"
+      eyebrow={
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-900 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+          Admin Portal
+        </span>
+      }
+      icon={
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-secondary-600 to-secondary-800 text-white shadow-md shadow-secondary-900/20 ring-4 ring-secondary-100">
+          <ShieldCheck size={28} />
+        </div>
+      }
+      switchLink={
+        <Link
+          href="/login"
+          className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 transition-colors hover:text-secondary-600"
+        >
+          <ArrowLeft size={14} />
+          Back to User Login
+        </Link>
+      }
+      title="Admin Portal"
+      subtitle="Administrator Login — enter your credentials to access the dashboard."
     >
       <FormProvider {...methods}>
         <form
@@ -98,9 +118,9 @@ function AdminLoginForm() {
 
           <FormInput
             name="email"
-            label="Email Address"
+            label="Admin Email"
             type="email"
-            placeholder="admin@rithusnacks.com"
+            placeholder="admin@kollimalaiarasan.com"
             autoComplete="email"
             leftIcon={<Mail size={18} />}
             required
@@ -134,7 +154,7 @@ function AdminLoginForm() {
           <FormSubmitButton
             size="xl"
             disabled={loginMutation.isPending}
-            className="mt-2 h-10 w-full rounded-lg bg-secondary-600 text-sm text-white transition-all hover:bg-secondary-700 cursor-pointer disabled:opacity-50"
+            className="mt-2 h-11 w-full rounded-lg bg-gradient-to-r from-secondary-600 to-secondary-700 text-sm font-medium text-white shadow-sm transition-all hover:from-secondary-700 hover:to-secondary-800 hover:shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
           >
             {loginMutation.isPending ? (
               <Spinner size="sm" className="text-white" />
@@ -153,7 +173,7 @@ export default function AdminLoginPage() {
     <div className="grid h-screen w-full overflow-hidden bg-background lg:grid-cols-2">
       {/* Left Banner */}
       <div className="hidden h-screen min-h-0 w-full overflow-hidden lg:block">
-        <AuthBanner />
+        <AuthBanner variant="admin" />
       </div>
 
       {/* Right Form */}

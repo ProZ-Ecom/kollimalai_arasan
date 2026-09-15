@@ -31,6 +31,7 @@ import {
   useConfirmAdminOrder,
   useProcessAdminOrder,
   usePackAdminOrder,
+  useMarkOutForDeliveryAdminOrder,
   useCancelOrderAdmin,
 } from "@/features/orders/hooks";
 import { OrderDetailView } from "@/features/orders/components/OrderDetailView";
@@ -80,6 +81,7 @@ export function AdminOrderListTable({
   const confirmOrder = useConfirmAdminOrder();
   const processOrder = useProcessAdminOrder();
   const packOrder = usePackAdminOrder();
+  const markOutForDelivery = useMarkOutForDeliveryAdminOrder();
   const cancelOrder = useCancelOrderAdmin();
 
   const orders = data?.data ?? [];
@@ -103,6 +105,7 @@ export function AdminOrderListTable({
     confirmOrder.isPending ||
     processOrder.isPending ||
     packOrder.isPending ||
+    markOutForDelivery.isPending ||
     cancelOrder.isPending;
 
   const currentDetailStatus = orderDetail?.status?.toLowerCase();
@@ -568,6 +571,34 @@ export function AdminOrderListTable({
                   >
                     <Truck className="mr-1.5 h-4 w-4" />
                     Assign Delivery Staff
+                  </Button>
+                )}
+
+                {currentDetailStatus === "packed" && (
+                  <Button
+                    size="sm"
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                    onClick={() => {
+                      markOutForDelivery.mutate(
+                        {
+                          id: orderDetail.id,
+                          note: "Order marked out for delivery by admin",
+                        },
+                        {
+                          onSuccess: () => {
+                            refetch();
+                          },
+                        }
+                      );
+                    }}
+                    disabled={isTransitionPending}
+                  >
+                    {markOutForDelivery.isPending ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowRight className="mr-1.5 h-4 w-4" />
+                    )}
+                    Mark Out for Delivery
                   </Button>
                 )}
 

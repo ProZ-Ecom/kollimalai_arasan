@@ -34,7 +34,6 @@ export async function getAdminProducts(
   if (p?.categoryId) body.categoryId = String(p.categoryId);
   if (p?.brandId) body.brandId = String(p.brandId);
   if (p?.hsnCodeId) body.hsnCodeId = String(p.hsnCodeId);
-  if (p?.vegType) body.vegType = p.vegType;
   if (p?.isFeatured !== undefined && p?.isFeatured !== null) {
     body.isFeatured = Boolean(p.isFeatured);
   }

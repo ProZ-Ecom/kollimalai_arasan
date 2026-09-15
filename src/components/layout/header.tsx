@@ -56,11 +56,11 @@ function HeaderIconLink({
     <Link
       href={href}
       aria-label={badge ? `${label} (${badge})` : label}
-      className="relative text-white hover:opacity-80 transition-opacity"
+      className="relative grid place-items-center w-9 h-9 -m-1.5 rounded-full text-white transition-colors hover:bg-white/15"
     >
       {children}
       {badge ? (
-        <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-theme-secondary text-theme-secondary-fg text-[10px] font-bold flex items-center justify-center leading-none">
+        <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-theme-secondary text-theme-secondary-fg text-[10px] font-bold flex items-center justify-center leading-none">
           {badge > 99 ? "99+" : badge}
         </span>
       ) : null}
@@ -236,14 +236,18 @@ export function Header() {
           {/* The logo artwork carries its own light gradient background, so it
               sits on a white card rather than flush on the green - otherwise
               its backdrop reads as a stray box against the bar. */}
-          <Link href="/" className="shrink-0" aria-label="Home">
+          <Link
+            href="/"
+            className="shrink-0 rounded-xl bg-white/95 p-1 shadow-sm ring-1 ring-black/5 transition-transform duration-300 hover:scale-105 active:scale-95"
+            aria-label="Home"
+          >
             <Image
               src={LOGOS.logo}
               alt="Kollimalai Arasan"
-              width={120}
-              height={120}
+              width={220}
+              height={200}
               priority
-              className="w-[44px] sm:w-[52px] lg:w-[62px] h-auto rounded-lg bg-white/95 p-1 shadow-sm transition-transform duration-300 hover:scale-105 active:scale-95"
+              className="h-12 lg:h-[52px] w-auto rounded-lg"
             />
           </Link>
 
@@ -263,12 +267,12 @@ export function Header() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search..."
-                className="w-full h-10 lg:h-11 rounded-full bg-white pl-5 pr-12 text-sm text-theme-text-primary placeholder:text-theme-text-muted shadow-sm"
+                className="w-full h-10 lg:h-11 rounded-full bg-white pl-5 pr-12 text-sm text-theme-text-primary placeholder:text-theme-text-muted shadow-sm ring-1 ring-transparent transition-shadow focus:outline-none focus:ring-2 focus:ring-white/70"
               />
               <button
                 type="submit"
                 aria-label="Search"
-                className="absolute right-1 top-1/2 -translate-y-1/2 grid place-items-center w-9 h-9 rounded-full text-theme-text-primary hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="absolute right-1 top-1/2 -translate-y-1/2 grid place-items-center w-9 h-9 rounded-full text-theme-text-primary hover:bg-secondary-50 hover:text-secondary-600 transition-colors cursor-pointer"
               >
                 <Search className="w-[18px] h-[18px]" strokeWidth={2} />
               </button>

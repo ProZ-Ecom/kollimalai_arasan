@@ -11,7 +11,7 @@ import { FormPasswordInput } from "@/components/forms/FormPasswordInput";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Spinner } from "@/components/ui/spinner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, LockKeyhole, User, Phone, AlertCircle } from "lucide-react";
+import { Mail, LockKeyhole, User, Phone, AlertCircle, UserPlus } from "lucide-react";
 import { z } from "zod";
 
 const registerFormSchema = z
@@ -172,6 +172,18 @@ function RegisterForm() {
   return (
     <AuthFormLayout
       showLogo
+      variant="card"
+      accentGradient="from-secondary-500 via-secondary-400 to-secondary-200"
+      eyebrow={
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-secondary-700">
+          New Account
+        </span>
+      }
+      icon={
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-secondary-50 to-secondary-100 text-secondary-600 ring-4 ring-secondary-50/80">
+          <UserPlus size={28} />
+        </div>
+      }
       title="Create Account"
       subtitle="Welcome to Rithu&apos;s Snacks"
       bottomContent={
@@ -292,7 +304,7 @@ function RegisterForm() {
           <FormSubmitButton
             size="xl"
             disabled={sendEmailOtpMutation.isPending}
-            className="mt-2 h-10 w-full rounded-lg bg-secondary-600 text-sm text-white transition-all hover:bg-secondary-700 cursor-pointer disabled:opacity-50"
+            className="mt-2 h-11 w-full rounded-lg bg-gradient-to-r from-secondary-600 to-secondary-700 text-sm font-medium text-white shadow-sm transition-all hover:from-secondary-700 hover:to-secondary-800 hover:shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
           >
             {sendEmailOtpMutation.isPending ? (
               <Spinner size="sm" className="text-white" />

@@ -67,7 +67,6 @@ export default function ShopAllPage() {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [stockStatus, setStockStatus] = useState<"all" | "in_stock" | "out_of_stock">("all");
-  const [vegType, setVegType] = useState<"all" | "veg" | "non_veg">("all");
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(1000);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -203,7 +202,6 @@ export default function ShopAllPage() {
     setSelectedCategoryIds([]);
     setSelectedProductIds([]);
     setStockStatus("all");
-    setVegType("all");
     setMinPrice(0);
     setMaxPrice(1000);
     setPage(1);
@@ -215,7 +213,6 @@ export default function ShopAllPage() {
     selectedCategoryIds.length > 0 ||
     selectedProductIds.length > 0 ||
     stockStatus !== "all" ||
-    vegType !== "all" ||
     minPrice > 0 ||
     maxPrice < 1000 ||
     sortKey !== "createdAt_desc";
@@ -225,7 +222,6 @@ export default function ShopAllPage() {
     selectedCategoryIds.length > 0,
     selectedProductIds.length > 0,
     stockStatus !== "all",
-    vegType !== "all",
     minPrice > 0 || maxPrice < 1000,
     sortKey !== "createdAt_desc",
   ].filter(Boolean).length;
@@ -331,13 +327,6 @@ export default function ShopAllPage() {
                 setIsFilterSwitching(true);
                 setAccumulatedVariants([]);
                 setStockStatus(val);
-                setPage(1);
-              }}
-              vegType={vegType}
-              onVegTypeChange={(val) => {
-                setIsFilterSwitching(true);
-                setAccumulatedVariants([]);
-                setVegType(val);
                 setPage(1);
               }}
               minPriceLimit={0}

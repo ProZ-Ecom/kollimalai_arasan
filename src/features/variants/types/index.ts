@@ -66,11 +66,7 @@ export interface AdminVariantResponse {
   slug: string;
   shortDescription: string | null;
   description: string | null;
-  ingredients: string | null;
-  isReadyToMix: boolean;
-  cookingRecipe: string | null;
-  shelfLife: string | null;
-  vegType: "veg" | "nonveg" | "vegan" | "na";
+  videoUrl: string | null;
   isFeatured: boolean;
   primaryImage: string | null;
   isActive: boolean;
@@ -132,7 +128,6 @@ export interface AdminVariantListParams {
   unitIds?: string[];
   isActive?: boolean;
   outOfStock?: boolean;
-  vegType?: "veg" | "nonveg" | "vegan" | "na";
   minPrice?: number;
   maxPrice?: number;
   sortBy?:
@@ -188,10 +183,6 @@ export interface AdminVariantsCountResponse {
   inactive: number;
   inStock: number;
   outOfStock: number;
-  veg: number;
-  nonveg: number;
-  vegan: number;
-  na: number;
   all: number;
 }
 

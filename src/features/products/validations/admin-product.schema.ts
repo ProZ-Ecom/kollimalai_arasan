@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-export const vegTypeEnum = z.enum(["veg", "nonveg", "vegan", "na"]);
-export type VegType = z.infer<typeof vegTypeEnum>;
-
 export const createAdminProductSchema = z
   .object({
     categoryId: z

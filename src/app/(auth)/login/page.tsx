@@ -12,7 +12,7 @@ import { FormInput } from "@/components/forms/form-input";
 import { FormPasswordInput } from "@/components/forms/FormPasswordInput";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Spinner } from "@/components/ui/spinner";
-import { LockKeyhole, Mail, AlertCircle } from "lucide-react";
+import { LockKeyhole, Mail, AlertCircle, User } from "lucide-react";
 import Link from "next/link";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -57,11 +57,23 @@ function LoginForm() {
     <AuthFormLayout
       showLogo
       showFooter
+      variant="card"
+      accentGradient="from-secondary-500 via-secondary-400 to-secondary-200"
+      eyebrow={
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-secondary-700">
+          User Login
+        </span>
+      }
+      icon={
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-secondary-50 to-secondary-100 text-secondary-600 ring-4 ring-secondary-50/80">
+          <User size={28} />
+        </div>
+      }
       title="Welcome Back"
       subtitle="Sign in to access your favorite heritage snacks."
       bottomContent={
         <div className="text-sm text-neutral-600">
-          New to RithuSnacks?{" "}
+          New to Kollimalai Arasan?{" "}
           <Link
             href={
               callbackUrl !== "/"
@@ -120,7 +132,7 @@ function LoginForm() {
           <FormSubmitButton
             size="xl"
             disabled={loginMutation.isPending}
-            className="mt-2 h-12 md:h-14 w-full rounded-lg bg-secondary-600 text-sm text-white hover:bg-secondary-700 cursor-pointer disabled:opacity-50"
+            className="mt-2 h-12 md:h-14 w-full rounded-lg bg-gradient-to-r from-secondary-600 to-secondary-700 text-sm font-medium text-white shadow-sm transition-all hover:from-secondary-700 hover:to-secondary-800 hover:shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
           >
             {loginMutation.isPending ? <Spinner size="sm" className="text-white" /> : "Sign In"}
           </FormSubmitButton>

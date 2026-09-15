@@ -2,6 +2,17 @@
 
 import React from "react";
 import { signOut } from "next-auth/react";
+import {
+  LayoutDashboard,
+  Package,
+  UserRound,
+  MapPin,
+  Heart,
+  Wallet as WalletIcon,
+  Settings as SettingsIcon,
+  LogOut,
+  ChevronRight,
+} from "lucide-react";
 import { DashboardTab } from "./DashboardTab";
 import { OrdersTab } from "./OrdersTab";
 import { ProfileDetailsTab } from "./ProfileDetailsTab";
@@ -36,14 +47,14 @@ export function AccountShell({ activeTab, onTabChange }: AccountShellProps) {
   const userInitials = userName ? userName.slice(0, 2).toUpperCase() : "CU";
 
   const navItems = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "orders", label: "My Orders", badge: orders.length > 0 ? String(orders.length) : undefined },
-    { id: "profile", label: "Profile Details" },
-    { id: "addresses", label: "Saved Addresses" },
-    { id: "wishlist", label: "Wishlist", badge: wishlistCount > 0 ? String(wishlistCount) : undefined },
-    { id: "wallet", label: "Wallet & Rewards" },
-    { id: "settings", label: "Settings & Password" },
-    { id: "logout", label: "Logout" },
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "orders", label: "My Orders", icon: Package, badge: orders.length > 0 ? String(orders.length) : undefined },
+    { id: "profile", label: "Profile Details", icon: UserRound },
+    { id: "addresses", label: "Saved Addresses", icon: MapPin },
+    { id: "wishlist", label: "Wishlist", icon: Heart, badge: wishlistCount > 0 ? String(wishlistCount) : undefined },
+    { id: "wallet", label: "Wallet & Rewards", icon: WalletIcon },
+    { id: "settings", label: "Settings & Password", icon: SettingsIcon },
+    { id: "logout", label: "Logout", icon: LogOut },
   ];
 
   const tabLabels: Record<string, string> = {
@@ -67,21 +78,27 @@ export function AccountShell({ activeTab, onTabChange }: AccountShellProps) {
   return (
     <div className="min-h-screen bg-theme-bg pb-16">
       {/* Top Banner with Breadcrumb */}
-      <div className="bg-theme-primary py-5 sm:py-7 px-4 sm:px-8 shadow-xs">
-        <div className="max-w-[1440px] mx-auto flex flex-wrap items-baseline gap-3.5">
+      <div className="relative overflow-hidden bg-gradient-to-r from-theme-primary via-theme-primary to-theme-primary-hover py-6 sm:py-8 px-4 sm:px-8 shadow-sm">
+        <div className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-20 left-1/3 w-40 h-40 rounded-full bg-white/5" />
+        <div className="relative max-w-[1440px] mx-auto flex flex-col gap-2">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-wider text-white">
             My Account
           </h1>
-          <span className="text-xs text-theme-text-gold font-normal">
-            Home &nbsp;/&nbsp; Account &nbsp;/&nbsp; {tabLabels[activeTab] || "Dashboard"}
-          </span>
+          <div className="flex items-center gap-1.5 text-xs text-theme-text-gold font-normal">
+            <span>Home</span>
+            <ChevronRight className="w-3.5 h-3.5 opacity-70" />
+            <span>Account</span>
+            <ChevronRight className="w-3.5 h-3.5 opacity-70" />
+            <span className="text-white font-medium">{tabLabels[activeTab] || "Dashboard"}</span>
+          </div>
         </div>
       </div>
 
       {/* Main Layout Shell */}
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-5 sm:py-7 flex flex-col md:grid md:grid-cols-[260px_1fr] lg:grid-cols-[280px_1fr] gap-5 lg:gap-7 items-start">
         {/* Mobile User Summary Card */}
-        <div className="md:hidden w-full bg-theme-surface border border-theme-border rounded-2xl p-4 flex items-center gap-3.5 shadow-2xs">
+        <div className="md:hidden w-full bg-theme-surface border border-theme-border rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
           {profileLoading ? (
             <>
               <div className="w-11 h-11 rounded-full bg-theme-border animate-pulse flex-shrink-0" />
@@ -92,7 +109,7 @@ export function AccountShell({ activeTab, onTabChange }: AccountShellProps) {
             </>
           ) : (
             <>
-              <div className="w-11 h-11 rounded-full bg-theme-primary flex items-center justify-center font-bold text-sm text-theme-secondary-light flex-shrink-0">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-theme-primary to-theme-primary-hover ring-2 ring-white shadow-sm flex items-center justify-center font-bold text-sm text-theme-secondary-light flex-shrink-0">
                 {userInitials}
               </div>
               <div className="min-w-0">
@@ -113,17 +130,19 @@ export function AccountShell({ activeTab, onTabChange }: AccountShellProps) {
         <div className="md:hidden w-full flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
+            const Icon = item.icon;
             return (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => handleNavClick(item.id)}
-                className={`flex-shrink-0 rounded-full px-4 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors min-h-[44px] cursor-pointer flex items-center gap-1.5 ${
+                className={`flex-shrink-0 rounded-full px-4 py-2.5 text-xs font-semibold whitespace-nowrap transition-all min-h-[44px] cursor-pointer flex items-center gap-1.5 ${
                   isActive
-                    ? "bg-theme-primary text-theme-primary-fg border border-theme-primary"
+                    ? "bg-theme-primary text-theme-primary-fg border border-theme-primary shadow-sm"
                     : "bg-theme-surface text-theme-text-subtle border border-theme-border hover:bg-theme-surface-alt"
                 }`}
               >
+                <Icon className="w-3.5 h-3.5" />
                 <span>{item.label}</span>
                 {item.badge && (
                   <span
@@ -140,9 +159,9 @@ export function AccountShell({ activeTab, onTabChange }: AccountShellProps) {
         </div>
 
         {/* Desktop Sticky Sidebar */}
-        <aside className="hidden md:flex flex-col w-full bg-theme-surface border border-theme-border rounded-2xl overflow-hidden sticky top-24 shadow-2xs">
+        <aside className="hidden md:flex flex-col w-full bg-theme-surface border border-theme-border rounded-2xl overflow-hidden sticky top-24 shadow-sm">
           {/* User Card in Sidebar */}
-          <div className="p-5 bg-gradient-to-b from-[#FFFBEF] to-theme-surface border-b border-theme-border-subtle flex items-center gap-3.5">
+          <div className="p-5 bg-gradient-to-br from-theme-primary/5 via-[#FFFBEF] to-theme-surface border-b border-theme-border-subtle flex items-center gap-3.5">
             {profileLoading ? (
               <>
                 <div className="w-13 h-13 rounded-full bg-theme-border animate-pulse flex-shrink-0" />
@@ -153,7 +172,7 @@ export function AccountShell({ activeTab, onTabChange }: AccountShellProps) {
               </>
             ) : (
               <>
-                <div className="w-13 h-13 rounded-full bg-theme-primary flex items-center justify-center font-bold text-base text-theme-secondary-light flex-shrink-0">
+                <div className="w-13 h-13 rounded-full bg-gradient-to-br from-theme-primary to-theme-primary-hover ring-2 ring-white ring-offset-2 ring-offset-transparent shadow-sm flex items-center justify-center font-bold text-base text-theme-secondary-light flex-shrink-0">
                   {userInitials}
                 </div>
                 <div className="min-w-0">
@@ -175,35 +194,37 @@ export function AccountShell({ activeTab, onTabChange }: AccountShellProps) {
           </div>
 
           {/* Desktop Nav Items */}
-          <nav className="flex flex-col p-2 gap-1">
+          <nav className="flex flex-col p-2.5 gap-1">
             {navItems.map((item) => {
               const isActive = activeTab === item.id;
               const isLogout = item.id === "logout";
+              const Icon = item.icon;
 
               return (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => handleNavClick(item.id)}
-                  className={`flex items-center gap-3 w-full text-left rounded-xl px-3.5 py-3 transition-colors cursor-pointer min-h-[44px] ${
+                  className={`flex items-center gap-3 w-full text-left rounded-xl px-3.5 py-3 transition-all cursor-pointer min-h-[44px] ${
                     isActive
-                      ? "bg-theme-primary text-theme-primary-fg font-semibold"
+                      ? "bg-theme-primary text-theme-primary-fg font-semibold shadow-sm"
                       : isLogout
                       ? "text-theme-status-can-fg hover:bg-theme-status-can-bg font-medium"
-                      : "text-theme-text-subtle hover:bg-theme-surface-alt font-medium"
+                      : "text-theme-text-subtle hover:bg-theme-surface-alt hover:translate-x-0.5 font-medium"
                   }`}
                 >
-                  {/* Rotated Diamond Indicator */}
-                  <span
-                    className={`w-2 h-2 rotate-45 rounded-2xs flex-shrink-0 transition-colors ${
-                      isActive ? "bg-theme-secondary" : isLogout ? "bg-red-300" : "bg-theme-border"
+                  <Icon
+                    className={`w-4 h-4 flex-shrink-0 transition-colors ${
+                      isActive ? "text-theme-secondary" : isLogout ? "text-theme-status-can-fg" : "text-theme-text-muted"
                     }`}
                   />
                   <span className="flex-1 text-xs sm:text-sm">{item.label}</span>
                   {item.badge && (
                     <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        isActive ? "text-theme-secondary" : "text-theme-text-muted"
+                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                        isActive
+                          ? "bg-theme-secondary text-theme-secondary-fg"
+                          : "bg-theme-primary/10 text-theme-primary"
                       }`}
                     >
                       {item.badge}

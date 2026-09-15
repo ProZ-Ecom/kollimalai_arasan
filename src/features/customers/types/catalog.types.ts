@@ -71,6 +71,7 @@ export interface CustomerVariantListItemDto {
   productId: string; // Product UUID
   productName: string;
   variantName: string;
+  shortDescription: string | null;
   measurement: VariantMeasurement;
   sku: string;
   basePrice: number;
@@ -78,10 +79,7 @@ export interface CustomerVariantListItemDto {
   salePrice: number;
   primaryImage: string | null;
   outOfStock?: boolean;
-  ingredients: string | null;
-  isReadyToMix: boolean;
-  cookingRecipe: string | null;
-  shelfLife: string | null;
+  videoUrl: string | null;
   // Full list of sellable pack sizes for this item - an item can have any
   // number of pack sizes, each independently priced. `sku`/`basePrice`/
   // `salePrice`/`measurement` above mirror the default (or first) entry here

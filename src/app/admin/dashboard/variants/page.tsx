@@ -726,7 +726,7 @@ export default function AdminVariantsPage() {
                 slug: formData.slug,
                 shortDescription: formData.shortDescription || null,
                 description: formData.description || null,
-                vegType: formData.vegType,
+                videoUrl: formData.videoUrl || null,
                 isFeatured: formData.isFeatured,
               };
 
@@ -885,7 +885,7 @@ export default function AdminVariantsPage() {
                   slug: selectedVariant.slug || "",
                   shortDescription: selectedVariant.shortDescription || "",
                   description: selectedVariant.description || "",
-                  vegType: selectedVariant.vegType || "na",
+                  videoUrl: selectedVariant.videoUrl || "",
                   isFeatured: selectedVariant.isFeatured ?? false,
                 }}
                 isEditing
@@ -899,7 +899,7 @@ export default function AdminVariantsPage() {
                     slug: formData.slug,
                     shortDescription: formData.shortDescription || null,
                     description: formData.description || null,
-                    vegType: formData.vegType,
+                    videoUrl: formData.videoUrl || null,
                     isFeatured: formData.isFeatured,
                   };
 

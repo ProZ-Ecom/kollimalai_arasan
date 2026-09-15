@@ -77,7 +77,6 @@ export default function CategoryProductsPage({
   const [activeCategoryOverride, setActiveCategoryOverride] = useState<string | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [stockStatus, setStockStatus] = useState<"all" | "in_stock" | "out_of_stock">("all");
-  const [vegType, setVegType] = useState<"all" | "veg" | "non_veg">("all");
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(1000);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -264,7 +263,6 @@ export default function CategoryProductsPage({
     setSearch("");
     setSortKey("createdAt_desc");
     setStockStatus("all");
-    setVegType("all");
     setMinPrice(0);
     setMaxPrice(1000);
     setSelectedProductIds([]);
@@ -279,7 +277,6 @@ export default function CategoryProductsPage({
     Boolean(search.trim()) ||
     selectedProductIds.length > 0 ||
     stockStatus !== "all" ||
-    vegType !== "all" ||
     minPrice > 0 ||
     maxPrice < 1000 ||
     sortKey !== "createdAt_desc" ||
@@ -289,7 +286,6 @@ export default function CategoryProductsPage({
     Boolean(search.trim()),
     selectedProductIds.length > 0,
     stockStatus !== "all",
-    vegType !== "all",
     minPrice > 0 || maxPrice < 1000,
     sortKey !== "createdAt_desc",
     !isSingleCategoryMode && Boolean(activeCategoryId),
@@ -393,13 +389,6 @@ export default function CategoryProductsPage({
               setIsFilterSwitching(true);
               setAccumulatedVariants([]);
               setStockStatus(val);
-              setPage(1);
-            }}
-            vegType={vegType}
-            onVegTypeChange={(val) => {
-              setIsFilterSwitching(true);
-              setAccumulatedVariants([]);
-              setVegType(val);
               setPage(1);
             }}
             minPriceLimit={0}

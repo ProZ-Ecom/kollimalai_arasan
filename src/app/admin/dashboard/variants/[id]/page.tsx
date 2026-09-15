@@ -32,6 +32,7 @@ import {
 } from "@/features/variants/components";
 import type { UnitFormItem } from "@/features/variants/components/VariantForm";
 import type { AdminVariantResponse } from "@/features/variants/types";
+import { parseVideoUrl } from "@/lib/utils/video-url.util";
 import {
   Package,
   Pencil,
@@ -47,37 +48,9 @@ import {
   XCircle,
   Star,
   Loader2,
+  ExternalLink,
+  PlayCircle,
 } from "lucide-react";
-
-function renderDietaryBadge(vegType?: string | null) {
-  const type = (vegType || "na").toLowerCase();
-  let label = "Vegetarian";
-  let markBorder = "border-success-600";
-  let markBg = "bg-success-600";
-
-  if (type === "nonveg" || type === "non-veg") {
-    label = "Non-vegetarian";
-    markBorder = "border-error-600";
-    markBg = "bg-error-600";
-  } else if (type === "vegan") {
-    label = "Vegan";
-    markBorder = "border-success-700";
-    markBg = "bg-success-700";
-  } else if (type === "na" || !vegType) {
-    label = "Not Assigned";
-    markBorder = "border-neutral-400";
-    markBg = "bg-neutral-400";
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cream-200 text-neutral-700 text-xs font-bold border border-cream-border-subtle">
-      <span className={`w-3 h-3 rounded-[2px] border-[1.5px] ${markBorder} flex items-center justify-center`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${markBg}`} />
-      </span>
-      <span>{label}</span>
-    </span>
-  );
-}
 
 export default function AdminVariantDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -425,9 +398,6 @@ export default function AdminVariantDetailsPage() {
                   Featured
                 </span>
               )}
-
-              {/* Dietary Badge */}
-              {renderDietaryBadge(variant.vegType)}
             </div>
 
             <div className="flex items-center gap-2 flex-wrap text-xs text-neutral-500">
@@ -768,67 +738,63 @@ export default function AdminVariantDetailsPage() {
             </div>
           </div>
 
-          {/* Ingredients / Recipe / Best Before Card */}
+          {/* Video Card */}
           <div className="bg-white border border-cream-border rounded-2xl overflow-hidden shadow-xs">
             <div className="px-6 py-4.5 border-b border-cream-border flex items-center justify-between">
               <h2 className="text-[15px] font-bold text-neutral-900 tracking-tight">
-                Ingredients &amp; Recipe
+                Video
               </h2>
             </div>
             <div className="p-6">
-              {variant.ingredients ||
-              (variant.isReadyToMix && variant.cookingRecipe) ||
-              variant.shelfLife ? (
-                <div className="space-y-4">
-                  {variant.ingredients && (
-                    <div>
-                      <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-1">
-                        Ingredients
-                      </div>
-                      <p className="text-xs sm:text-sm text-neutral-700 leading-relaxed whitespace-pre-line">
-                        {variant.ingredients}
-                      </p>
-                    </div>
-                  )}
-
-                  {variant.isReadyToMix && variant.cookingRecipe && (
-                    <div>
-                      <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-1">
-                        Cooking Recipe
-                      </div>
-                      <p className="text-xs sm:text-sm text-neutral-700 leading-relaxed whitespace-pre-line">
-                        {variant.cookingRecipe}
-                      </p>
-                    </div>
-                  )}
-
-                  {variant.shelfLife && (
-                    <div>
-                      <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-1">
-                        Best Before
-                      </div>
-                      <p className="text-xs sm:text-sm text-neutral-700 leading-relaxed">
-                        {variant.shelfLife}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
+              {variant.videoUrl ? (() => {
+                const parsedVideo = parseVideoUrl(variant.videoUrl);
+                return (
+                  <div className="relative aspect-video w-full max-w-md overflow-hidden rounded-xl border border-cream-border bg-black">
+                    {parsedVideo?.embedUrl ? (
+                      <iframe
+                        src={parsedVideo.embedUrl}
+                        className="h-full w-full"
+                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : parsedVideo && parsedVideo.kind !== "file" ? (
+                      <a
+                        href={parsedVideo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex h-full w-full flex-col items-center justify-center gap-2 text-white"
+                      >
+                        <PlayCircle className="h-8 w-8" />
+                        <span className="inline-flex items-center gap-1 text-xs font-medium underline">
+                          <ExternalLink className="h-3 w-3" /> Open video link
+                        </span>
+                      </a>
+                    ) : (
+                      <video
+                        src={variant.videoUrl}
+                        controls
+                        className="h-full w-full object-contain"
+                      />
+                    )}
+                  </div>
+                );
+              })() : (
                 <div className="py-6 px-4 text-center flex flex-col items-center gap-2">
                   <p className="text-xs sm:text-sm font-semibold text-neutral-700">
-                    No ingredients or recipe added yet
+                    No video added yet
                   </p>
                   <button
                     type="button"
                     onClick={() => setIsEditModalOpen(true)}
                     className="mt-1 border border-cream-border-subtle bg-white text-secondary-600 hover:bg-secondary-50 hover:border-secondary-200 text-xs font-bold px-3.5 py-1.5 rounded-lg cursor-pointer transition-colors"
                   >
-                    Add ingredients / recipe
+                    Add video
                   </button>
                 </div>
               )}
             </div>
           </div>
+
         </div>
       </section>
 
@@ -851,11 +817,7 @@ export default function AdminVariantDetailsPage() {
             slug: variant.slug || "",
             shortDescription: variant.shortDescription || "",
             description: variant.description || "",
-            ingredients: variant.ingredients || "",
-            isReadyToMix: variant.isReadyToMix ?? false,
-            cookingRecipe: variant.cookingRecipe || "",
-            shelfLife: variant.shelfLife || "",
-            vegType: variant.vegType || "na",
+            videoUrl: variant.videoUrl || "",
             isFeatured: variant.isFeatured ?? false,
           }}
           isEditing
@@ -873,11 +835,7 @@ export default function AdminVariantDetailsPage() {
                   slug: formData.slug,
                   shortDescription: formData.shortDescription || null,
                   description: formData.description || null,
-                  ingredients: formData.ingredients || null,
-                  isReadyToMix: formData.isReadyToMix,
-                  cookingRecipe: formData.cookingRecipe || null,
-                  shelfLife: formData.shelfLife || null,
-                  vegType: formData.vegType,
+                  videoUrl: formData.videoUrl || null,
                   isFeatured: formData.isFeatured,
                 },
               });

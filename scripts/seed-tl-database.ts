@@ -578,57 +578,15 @@ async function main() {
         const isDefault = vIdx === 0 ? 1 : 0;
         const isFeatured = vIdx < 3 ? 1 : 0;
 
-        const getSeedIngredients = (name: string, catName: string) => {
-          const lower = (name + " " + catName).toLowerCase();
-          if (lower.includes("cashew") || lower.includes("mundhiri")) {
-            return "Whole Cashews (Premium Grade), Gram Flour (Besan), Rice Flour, Refined Cooking Oil, Cumin Seeds, Asafoetida (Hing), Fresh Curry Leaves, Red Chilli Powder, Salt";
-          }
-          if (lower.includes("ribbon") || lower.includes("ola")) {
-            return "Raw Rice Flour, Roasted Gram Flour, Filtered Water, Pure Butter, Red Chilli Powder, Asafoetida (Hing), White Sesame Seeds, Cooking Oil, Salt";
-          }
-          if (lower.includes("omapodi") || lower.includes("sev")) {
-            return "Gram Flour (Besan), Rice Flour, Filtered Ajwain (Omam) Extract, Pure Ghee, Turmeric Powder, Cold-Pressed Oil, Salt";
-          }
-          if (lower.includes("murukku") || lower.includes("thenkuzhal")) {
-            return "Raw Rice Flour, Urad Dal Flour, Pure Desi Butter, Cumin Seeds, White Sesame Seeds, Filtered Water, Pure Vegetable Oil, Salt";
-          }
-          if (lower.includes("chegodilu") || lower.includes("ring")) {
-            return "Rice Flour, Moong Dal, White Sesame Seeds, Cumin Seeds, Pure Ghee, Red Chilli Powder, Vegetable Oil, Salt";
-          }
-          if (lower.includes("chips")) {
-            return "Farm-Fresh Raw Plantain / Potato, Pure Groundnut Oil, Rock Salt, Crushed Black Pepper, Red Chilli";
-          }
-          if (lower.includes("laddu") || lower.includes("laddoo")) {
-            return "Besan (Gram Flour), Pure Desi Ghee, Pure Cane Sugar, Cardamom (Elaichi) Powder, Golden Raisins, Roasted Cashews, Edible Camphor";
-          }
-          if (lower.includes("sweet") || lower.includes("halwa") || lower.includes("mysore pak")) {
-            return "Gram Flour, Pure Cow Ghee, Pure Cane Sugar, Filtered Water, Cardamom Essence";
-          }
-          return "Traditional Rice Flour, Gram Flour (Besan), Pure Spices, Cold Pressed Cooking Oil, Salt";
-        };
-
-        const getSeedShelfLife = (name: string, catName: string) => {
-          const lower = (name + " " + catName).toLowerCase();
-          if (lower.includes("sweet") || lower.includes("laddu") || lower.includes("halwa")) {
-            return "Best before 21 days from date of dispatch.";
-          }
-          return "Best before 45 days from date of dispatch.";
-        };
-
-        const vIngredients = getSeedIngredients(vData.name, catData.name);
-        const vShelfLife = getSeedShelfLife(vData.name, catData.name);
-
         await prisma.$executeRawUnsafe(
           `INSERT INTO \`product_variants\` (
             \`uuid\`, \`product_id\`, \`variant_name\`, \`sku\`, \`slug\`, \`unit_value\`, \`unit_id\`,
             \`base_price\`, \`sale_price\`, \`is_default\`, \`is_active\`, \`out_of_stock\`,
-            \`created_at\`, \`updated_at\`, \`short_description\`, \`description\`, \`veg_type\`, \`is_featured\`,
-            \`ingredients\`, \`shelf_life\`
+            \`created_at\`, \`updated_at\`, \`short_description\`, \`description\`, \`is_featured\`
           ) VALUES (
             ?, ?, ?, ?, ?, ?, ?,
             ?, ?, ?, 1, 0,
-            NOW(), NOW(), ?, ?, 'veg', ?,
-            ?, ?
+            NOW(), NOW(), ?, ?, ?
           )`,
           variantUuid,
           product.id,
@@ -642,9 +600,7 @@ async function main() {
           isDefault,
           `Fresh & crunchy ${vData.name}.`,
           `${vData.name} freshly prepared in small batches using traditional South Indian recipes.`,
-          isFeatured,
-          vIngredients,
-          vShelfLife
+          isFeatured
         );
 
         const variant = await prisma.productVariant.findFirstOrThrow({

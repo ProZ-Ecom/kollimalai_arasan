@@ -54,10 +54,6 @@ export interface FilterSidebarProps {
   stockStatus: "all" | "in_stock" | "out_of_stock";
   onStockStatusChange: (status: "all" | "in_stock" | "out_of_stock") => void;
 
-  // Dietary (Veg / Non-Veg)
-  vegType: "all" | "veg" | "non_veg";
-  onVegTypeChange: (vegType: "all" | "veg" | "non_veg") => void;
-
   // Price Range Slider
   minPriceLimit?: number;
   maxPriceLimit?: number;
@@ -103,8 +99,6 @@ export function FilterSidebar({
   onSortChange,
   stockStatus,
   onStockStatusChange,
-  vegType,
-  onVegTypeChange,
   minPriceLimit = 0,
   maxPriceLimit = 1000,
   currentMinPrice,
@@ -494,41 +488,7 @@ export function FilterSidebar({
         </div>
       </div>
 
-      {/* 5. Dietary (Veg / Non-Veg) Pills */}
-      <div className="flex flex-col gap-2">
-        <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#5A5A5A]">
-          Dietary
-        </span>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => onVegTypeChange(vegType === "veg" ? "all" : "veg")}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer select-none flex items-center gap-1.5 ${
-              vegType === "veg"
-                ? "bg-secondary-700 text-white border border-secondary-700 shadow-xs"
-                : "bg-white text-secondary-800 border border-secondary-300 hover:bg-secondary-50"
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-secondary-500" />
-            Pure Veg
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onVegTypeChange(vegType === "non_veg" ? "all" : "non_veg")}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer select-none flex items-center gap-1.5 ${
-              vegType === "non_veg"
-                ? "bg-red-700 text-white border border-red-700 shadow-xs"
-                : "bg-white text-red-800 border border-red-300 hover:bg-red-50"
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-red-500" />
-            Non-Veg
-          </button>
-        </div>
-      </div>
-
-      {/* 6. Categories -> Product List Nested Tree (Matching Image 3 on light theme) */}
+      {/* 5. Categories -> Product List Nested Tree (Matching Image 3 on light theme) */}
       <div className="flex flex-col gap-2.5 pt-3 border-t border-[#EDEDED]">
         <button
           type="button"

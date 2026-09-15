@@ -409,11 +409,7 @@ model ProductVariant {
   slug                                     String?                  @unique(map: "idx_variant_slug") @db.VarChar(255)
   short_description                        String?                  @db.VarChar(500)
   description                              String?                  @db.Text
-  ingredients                              String?                  @db.Text
-  is_ready_to_mix                          Boolean                  @default(false) @map("is_ready_to_mix")
-  cooking_recipe                           String?                  @map("cooking_recipe") @db.Text
-  shelf_life                               String?                  @map("shelf_life") @db.VarChar(100)
-  veg_type                                 products_veg_type        @default(na)
+  video_url                                String?                  @map("video_url") @db.VarChar(500)
   is_featured                              Boolean                  @default(false)
   is_default                               Boolean                  @default(false)
   isActive                                 Boolean                  @default(true) @map("is_active")
@@ -2513,13 +2509,6 @@ enum users_status {
   active
   inactive
   banned
-}
-
-enum products_veg_type {
-  veg
-  nonveg
-  vegan
-  na
 }
 
 model variant_price_history {

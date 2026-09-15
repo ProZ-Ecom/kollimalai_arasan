@@ -1,7 +1,4 @@
 import { z } from "zod";
-import { vegTypeEnum } from "@/features/products/validations/admin-product.schema";
-
-export { vegTypeEnum };
 
 export const createAdminVariantSchema = z
   .object({
@@ -26,24 +23,12 @@ export const createAdminVariantSchema = z
       .trim()
       .optional()
       .nullable(),
-    ingredients: z
+    videoUrl: z
       .string()
       .trim()
+      .max(500, "Video URL cannot exceed 500 characters")
       .optional()
       .nullable(),
-    isReadyToMix: z.boolean().optional().default(false),
-    cookingRecipe: z
-      .string()
-      .trim()
-      .optional()
-      .nullable(),
-    shelfLife: z
-      .string()
-      .trim()
-      .max(100, "Best before cannot exceed 100 characters")
-      .optional()
-      .nullable(),
-    vegType: vegTypeEnum.optional(),
     isFeatured: z.boolean().optional().default(false),
     isActive: z.boolean().optional().default(true),
     outOfStock: z.boolean().optional().default(false),
@@ -77,24 +62,12 @@ export const updateAdminVariantSchema = z
       .trim()
       .optional()
       .nullable(),
-    ingredients: z
+    videoUrl: z
       .string()
       .trim()
+      .max(500, "Video URL cannot exceed 500 characters")
       .optional()
       .nullable(),
-    isReadyToMix: z.boolean().optional(),
-    cookingRecipe: z
-      .string()
-      .trim()
-      .optional()
-      .nullable(),
-    shelfLife: z
-      .string()
-      .trim()
-      .max(100, "Best before cannot exceed 100 characters")
-      .optional()
-      .nullable(),
-    vegType: vegTypeEnum.optional(),
     isFeatured: z.boolean().optional(),
     isActive: z.boolean().optional(),
     outOfStock: z.boolean().optional(),
@@ -190,7 +163,6 @@ export const adminVariantListSchema = z
       .default([]),
     isActive: z.boolean().optional(),
     outOfStock: z.boolean().optional(),
-    vegType: z.enum(["veg", "nonveg", "vegan", "na"]).optional(),
     minPrice: z
       .number()
       .min(0, "minPrice must be greater than or equal to 0")

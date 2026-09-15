@@ -250,10 +250,6 @@ export const variantRepository = {
       where.out_of_stock = params.outOfStock;
     }
 
-    if (params.vegType) {
-      where.veg_type = params.vegType;
-    }
-
     return where;
   },
 
@@ -262,25 +258,11 @@ export const variantRepository = {
   ): Promise<AdminVariantsCountResponse> {
     const baseWhere = await this.buildAdminVariantsBaseWhere(params);
 
-    const [
-      active,
-      inactive,
-      inStock,
-      outOfStock,
-      veg,
-      nonveg,
-      vegan,
-      na,
-      all,
-    ] = await Promise.all([
+    const [active, inactive, inStock, outOfStock, all] = await Promise.all([
       db.productVariant.count({ where: { ...baseWhere, isActive: true } }),
       db.productVariant.count({ where: { ...baseWhere, isActive: false } }),
       db.productVariant.count({ where: { ...baseWhere, out_of_stock: false } }),
       db.productVariant.count({ where: { ...baseWhere, out_of_stock: true } }),
-      db.productVariant.count({ where: { ...baseWhere, veg_type: "veg" } }),
-      db.productVariant.count({ where: { ...baseWhere, veg_type: "nonveg" } }),
-      db.productVariant.count({ where: { ...baseWhere, veg_type: "vegan" } }),
-      db.productVariant.count({ where: { ...baseWhere, veg_type: "na" } }),
       db.productVariant.count({ where: baseWhere }),
     ]);
 
@@ -289,10 +271,6 @@ export const variantRepository = {
       inactive,
       inStock,
       outOfStock,
-      veg,
-      nonveg,
-      vegan,
-      na,
       all,
     };
   },
