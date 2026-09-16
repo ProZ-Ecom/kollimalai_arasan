@@ -366,4 +366,37 @@ export const variantRepository = {
       },
     });
   },
+
+  async bulkSoftDeleteByUuids(uuids: string[], adminId?: bigint | null) {
+    if (!uuids || uuids.length === 0) return { count: 0 };
+    const existing = await db.productVariant.findMany({
+      where: { uuid: { in: uuids }, deleted_at: null },
+      select: { id: true },
+    });
+    if (existing.length === 0) return { count: 0 };
+    const variantIds = existing.map((v) => v.id);
+    const now = new Date();
+
+    return db.$transaction(async (tx) => {
+      const res = await tx.productVariant.updateMany({
+        where: { id: { in: variantIds } },
+        data: {
+          isActive: false,
+          deleted_at: now,
+          ...(adminId ? { updated_by: adminId } : {}),
+        },
+      });
+
+      await tx.variantUnitPrice.updateMany({
+        where: { variant_id: { in: variantIds } },
+        data: {
+          isActive: false,
+          deleted_at: now,
+          ...(adminId ? { updated_by: adminId } : {}),
+        },
+      });
+
+      return res;
+    });
+  },
 };

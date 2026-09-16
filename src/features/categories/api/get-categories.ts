@@ -45,3 +45,13 @@ export async function deleteCategory(id: number) {
   const response = await apiClient.delete<null>(`/api/admin/categories/${id}`);
   return response;
 }
+
+export async function bulkDeleteCategories(ids: (string | number)[]) {
+  const response = await apiClient.post<{ count: number; message: string }>(
+    "/api/admin/categories/bulk-delete",
+    { ids }
+  );
+  return response;
+}
+
+

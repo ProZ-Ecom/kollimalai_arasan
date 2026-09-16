@@ -32,6 +32,8 @@ import {
   PackagePlus,
   HelpCircle,
   Home,
+  MessageCircle,
+  Megaphone,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
@@ -116,6 +118,17 @@ const sidebarItems: SidebarItem[] = [
     ],
   },
   { label: "Reports", href: "/admin/dashboard/reports", icon: BarChart3 },
+  {
+    label: "WhatsApp",
+    href: "/admin/dashboard/whatsapp",
+    icon: MessageCircle,
+    children: [
+      { label: "Overview", href: "/admin/dashboard/whatsapp", icon: LayoutDashboard },
+      { label: "Campaigns", href: "/admin/dashboard/whatsapp/campaigns", icon: Megaphone },
+      { label: "Templates", href: "/admin/dashboard/whatsapp/templates", icon: Tag },
+      { label: "Reports", href: "/admin/dashboard/whatsapp/reports", icon: BarChart3 },
+    ],
+  },
   { label: "Settings", href: "/admin/dashboard/settings", icon: Settings },
 ];
 

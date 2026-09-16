@@ -164,7 +164,7 @@ export function CategoryNavDropdown({
           </div>
 
           {/* Categories List */}
-          <div className="max-h-[320px] overflow-y-auto py-1 scrollbar-thin scrollbar-thumb-neutral-200">
+          <div className="max-h-[320px] overflow-y-auto py-1 scrollbar-thin">
             {isLoading ? (
               <div className="space-y-2 p-2">
                 {[1, 2, 3, 4].map((n) => (

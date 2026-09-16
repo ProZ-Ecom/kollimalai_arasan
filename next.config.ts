@@ -12,7 +12,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverExternalPackages: ["@prisma/adapter-mariadb", "mariadb"],
+  serverExternalPackages: [
+    "@prisma/adapter-mariadb",
+    "mariadb",
+    "@whiskeysockets/baileys",
+    "pino",
+    "razorpay",
+  ],
   experimental: {
     optimizePackageImports: [
       "lucide-react",

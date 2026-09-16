@@ -11,6 +11,7 @@ export {
   useCreateProduct,
   useUpdateProduct,
   useDeleteProduct,
+  useBulkDeleteProducts,
   useCreateProductImages,
   useUpdateProductImage,
   useSetPrimaryProductImage,

@@ -85,3 +85,23 @@ export const adminCategoryListSchema = z
 
 export type AdminCategoryListInput = z.infer<typeof adminCategoryListSchema>;
 
+export const bulkDeleteAdminCategoriesSchema = z
+  .object({
+    ids: z.array(z.union([z.string(), z.number()])).optional(),
+    uuids: z.array(z.string()).optional(),
+  })
+  .refine(
+    (data) =>
+      (Array.isArray(data.ids) && data.ids.length > 0) ||
+      (Array.isArray(data.uuids) && data.uuids.length > 0),
+    {
+      message: "At least one category ID or UUID is required",
+    }
+  );
+
+export type BulkDeleteAdminCategoriesInput = {
+  ids?: (string | number)[];
+  uuids?: string[];
+};
+
+

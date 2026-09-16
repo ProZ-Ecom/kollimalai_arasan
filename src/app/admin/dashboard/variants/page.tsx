@@ -5,13 +5,17 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   useVariants,
+  useVariantUnitPrices,
   useCreateVariant,
   useUpdateVariant,
   useDeleteVariant,
+  useBulkDeleteVariants,
 } from "@/features/variants/hooks";
+import { toast } from "@/components/ui/Toast";
 import { useProducts } from "@/features/products/hooks";
 import { useUnits } from "@/features/units/hooks";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
 import {
   AdminPageHeader,
   AdminContent,
@@ -42,6 +46,7 @@ import {
   Filter,
   Loader2,
   ArrowLeftRight,
+  AlertCircle,
 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AdminVariantResponse } from "@/features/variants/types";
@@ -89,9 +94,21 @@ export default function AdminVariantsPage() {
   const [previewVariant, setPreviewVariant] =
     useState<AdminVariantResponse | null>(null);
 
+  // Bulk Selection State
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<AdminVariantResponse[]>([]);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+
   useEffect(() => {
     setPage(1);
+    setSelectedRowIds({});
+    setSelectedRows([]);
   }, [search, selectedProductFilter]);
+
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [page, pageSize]);
 
   // Main Variants Query
   const { data, isLoading, error, refetch } = useVariants({
@@ -108,6 +125,14 @@ export default function AdminVariantsPage() {
   const createMutation = useCreateVariant();
   const updateMutation = useUpdateVariant();
   const deleteMutation = useDeleteVariant();
+  const bulkDeleteMutation = useBulkDeleteVariants();
+
+  // Unit prices for the newly created item in the modal stepper
+  const { data: createdVariantPrices = [] } = useVariantUnitPrices(
+    createdVariant?.productId || null,
+    createdVariant?.id || null
+  );
+  const hasCreatedPrices = createdVariantPrices.length > 0;
 
   const variants = data?.data ?? [];
   const products = productsData?.data ?? [];
@@ -119,7 +144,7 @@ export default function AdminVariantsPage() {
 
   // Options for form dropdowns & filter
   const productOptions = useMemo(() => {
-    return products.map((p) => ({
+    return products.map((p: any) => ({
       value: p.id,
       label: p.name,
       slug: p.slug,
@@ -133,6 +158,19 @@ export default function AdminVariantsPage() {
     ];
   }, [productOptions]);
 
+  const activeProductName = useMemo(() => {
+    if (!selectedProductFilter) return null;
+    const match = products.find((p: any) => String(p.id) === selectedProductFilter);
+    return match?.name || null;
+  }, [selectedProductFilter, products]);
+
+  const filterNotice = useMemo(() => {
+    const parts: string[] = [];
+    if (search.trim()) parts.push(`"${search.trim()}"`);
+    if (activeProductName) parts.push(`Product: ${activeProductName}`);
+    return parts.length > 0 ? `Filtered by ${parts.join(" & ")}` : undefined;
+  }, [search, activeProductName]);
+
   const handleClearFilters = () => {
     setSearch("");
     setSelectedProductFilter("");
@@ -145,6 +183,13 @@ export default function AdminVariantsPage() {
     variant: AdminVariantResponse,
     nextActive: boolean
   ) => {
+    if (nextActive && (!variant.unitPrices || variant.unitPrices.length === 0)) {
+      toast.error(
+        "Cannot activate item",
+        "Please add at least one unit price before activating this item for customers."
+      );
+      return;
+    }
     try {
       await updateMutation.mutateAsync({
         productUuid: variant.productId,
@@ -152,8 +197,12 @@ export default function AdminVariantsPage() {
         data: { isActive: nextActive },
       });
       refetch();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to toggle Items status", err);
+      toast.error(
+        "Status not changed",
+        err?.message || "Please add at least one unit price first."
+      );
     }
   };
 
@@ -168,8 +217,12 @@ export default function AdminVariantsPage() {
         data: { outOfStock: nextOutOfStock },
       });
       refetch();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to toggle Item stock", err);
+      toast.error(
+        "Stock not changed",
+        err?.message || "Failed to update stock status."
+      );
     }
   };
 
@@ -290,8 +343,6 @@ export default function AdminVariantsPage() {
       header: "Stock",
       cell: ({ row }) => {
         const isOutOfStock = Boolean(row.original.outOfStock);
-        const stockCount =
-          typeof row.original.stock === "number" ? row.original.stock : undefined;
         const isRowPending =
           updateMutation.isPending &&
           updateMutation.variables?.variantUuid === row.original.id;
@@ -302,25 +353,23 @@ export default function AdminVariantsPage() {
             onClick={() => handleToggleStock(row.original, !isOutOfStock)}
             disabled={isRowPending}
             title={isOutOfStock ? "Click to mark In Stock" : "Click to mark Out of Stock"}
-            className={`group inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-bold border bg-white cursor-pointer shadow-xs transition-all hover:shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 ${!isOutOfStock
+            className={`group inline-flex items-center justify-between min-w-[132px] h-8 px-3 rounded-md text-xs font-bold border bg-white cursor-pointer shadow-xs transition-all hover:shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 ${!isOutOfStock
                 ? "text-emerald-700 border-emerald-300 hover:bg-emerald-50"
                 : "text-rose-700 border-rose-300 hover:bg-rose-50"
               }`}
           >
-            {isRowPending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : !isOutOfStock ? (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            ) : (
-              <XCircle className="w-3.5 h-3.5 text-rose-600" />
-            )}
-            <span>
-              {!isOutOfStock
-                ? `In Stock${stockCount !== undefined ? ` (${stockCount})` : ""}`
-                : "Out of Stock"}
+            <span className="flex items-center gap-1.5 whitespace-nowrap">
+              {isRowPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+              ) : !isOutOfStock ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              ) : (
+                <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+              )}
+              <span className="whitespace-nowrap select-none">{!isOutOfStock ? "In Stock" : "Out of Stock"}</span>
             </span>
             {!isRowPending && (
-              <ArrowLeftRight className="w-3 h-3 opacity-40 group-hover:opacity-80 transition-opacity" />
+              <ArrowLeftRight className="w-3 h-3 opacity-40 group-hover:opacity-80 transition-opacity shrink-0 ml-1.5" />
             )}
           </button>
         );
@@ -329,26 +378,41 @@ export default function AdminVariantsPage() {
     {
       accessorKey: "isActive",
       header: "Status",
-      cell: ({ row }) => (
-        <span
-          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${row.original.isActive
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-              : "bg-neutral-100 text-neutral-600 border border-neutral-200"
-            }`}
-        >
-          <span
-            className={`w-1.5 h-1.5 rounded-full ${row.original.isActive ? "bg-emerald-600" : "bg-neutral-400"
+      cell: ({ row }) => {
+        const isActive = Boolean(row.original.isActive);
+        const isRowPending =
+          updateMutation.isPending &&
+          updateMutation.variables?.variantUuid === row.original.id;
+
+        return (
+          <button
+            type="button"
+            onClick={() => handleToggleStatus(row.original, !isActive)}
+            disabled={isRowPending}
+            title={isActive ? "Click to set Inactive" : "Click to set Active"}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer border transition-all hover:opacity-80 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed ${isActive
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                : "bg-neutral-100 text-neutral-600 border-neutral-200 hover:bg-neutral-200"
               }`}
-          />
-          {row.original.isActive ? "Active" : "Inactive"}
-        </span>
-      ),
+          >
+            {isRowPending ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-600" : "bg-neutral-400"
+                  }`}
+              />
+            )}
+            {isActive ? "Active" : "Inactive"}
+          </button>
+        );
+      },
     },
     {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex gap-1.5">
+        <div className="flex items-center justify-center gap-1.5">
           <Link
             href={`/admin/dashboard/variants/${encodeURIComponent(
               row.original.id
@@ -421,7 +485,7 @@ export default function AdminVariantsPage() {
       />
 
       <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden bg-transparent py-1 rounded-2xl">
+        <div className="flex h-full flex-col overflow-hidden  py-1 rounded-2xl">
           {/* Controls Header */}
           <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
@@ -455,8 +519,8 @@ export default function AdminVariantsPage() {
                   type="button"
                   onClick={() => setViewMode("table")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${viewMode === "table"
-                      ? "bg-[var(--color-secondary-600)] text-white shadow-xs"
-                      : "text-neutral-600 hover:text-neutral-900"
+                    ? "bg-[var(--color-secondary-600)] text-white shadow-xs"
+                    : "text-neutral-600 hover:text-neutral-900"
                     }`}
                   title="Table List View"
                 >
@@ -468,8 +532,8 @@ export default function AdminVariantsPage() {
                   type="button"
                   onClick={() => setViewMode("cards")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${viewMode === "cards"
-                      ? "bg-[var(--color-secondary-600)] text-white shadow-xs"
-                      : "text-neutral-600 hover:text-neutral-900"
+                    ? "bg-[var(--color-secondary-600)] text-white shadow-xs"
+                    : "text-neutral-600 hover:text-neutral-900"
                     }`}
                   title="Storefront Customer Card View"
                 >
@@ -494,6 +558,18 @@ export default function AdminVariantsPage() {
 
           {/* VIEW RENDERER: Table View vs Customer Card View */}
           <div className="mt-6 flex-1 min-h-0 overflow-hidden flex flex-col">
+            <BulkActionsBar
+              selectedCount={selectedRows.length}
+              entityName="item"
+              filterNotice={filterNotice}
+              onClearSelection={() => {
+                setSelectedRowIds({});
+                setSelectedRows([]);
+              }}
+              onDelete={() => setIsBulkDeleteOpen(true)}
+              isDeleting={bulkDeleteMutation.isPending}
+            />
+
             {viewMode === "table" ? (
               <DataTable
                 columns={columns}
@@ -508,6 +584,12 @@ export default function AdminVariantsPage() {
                   setPageSize(newPageSize);
                   setPage(1);
                 }}
+                selectedRowIds={selectedRowIds}
+                onRowSelectionChange={(newSelection, items) => {
+                  setSelectedRowIds(newSelection);
+                  setSelectedRows(items);
+                }}
+                getRowId={(row) => String(row.id)}
                 className="bg-white"
               />
             ) : (
@@ -654,8 +736,8 @@ export default function AdminVariantsPage() {
         <div className="mb-6 flex items-center justify-center gap-2 sm:gap-3 border-b border-[var(--color-neutral-200)] pb-4">
           <div
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${createStep === 1
-                ? "bg-[var(--color-secondary-600)] text-white shadow"
-                : "bg-[var(--color-success-100)] text-[var(--color-success-700)]"
+              ? "bg-[var(--color-secondary-600)] text-white shadow"
+              : "bg-[var(--color-success-100)] text-[var(--color-success-700)]"
               }`}
           >
             {createStep > 1 ? (
@@ -670,10 +752,10 @@ export default function AdminVariantsPage() {
 
           <div
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${createStep === 2
-                ? "bg-[var(--color-secondary-600)] text-white shadow"
-                : createStep > 2
-                  ? "bg-[var(--color-success-100)] text-[var(--color-success-700)]"
-                  : "bg-[var(--color-neutral-100)] text-[var(--color-neutral-500)]"
+              ? "bg-[var(--color-secondary-600)] text-white shadow"
+              : createStep > 2
+                ? "bg-[var(--color-success-100)] text-[var(--color-success-700)]"
+                : "bg-[var(--color-neutral-100)] text-[var(--color-neutral-500)]"
               }`}
           >
             {createStep > 2 ? (
@@ -688,10 +770,10 @@ export default function AdminVariantsPage() {
 
           <div
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${createStep === 3
-                ? "bg-[var(--color-secondary-600)] text-white shadow"
-                : createStep > 3
-                  ? "bg-[var(--color-success-100)] text-[var(--color-success-700)]"
-                  : "bg-[var(--color-neutral-100)] text-[var(--color-neutral-500)]"
+              ? "bg-[var(--color-secondary-600)] text-white shadow"
+              : createStep > 3
+                ? "bg-[var(--color-success-100)] text-[var(--color-success-700)]"
+                : "bg-[var(--color-neutral-100)] text-[var(--color-neutral-500)]"
               }`}
           >
             {createStep > 3 ? (
@@ -706,8 +788,8 @@ export default function AdminVariantsPage() {
 
           <div
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${createStep === 4
-                ? "bg-[var(--color-secondary-600)] text-white shadow"
-                : "bg-[var(--color-neutral-100)] text-[var(--color-neutral-500)]"
+              ? "bg-[var(--color-secondary-600)] text-white shadow"
+              : "bg-[var(--color-neutral-100)] text-[var(--color-neutral-500)]"
               }`}
           >
             <span>4</span>
@@ -750,18 +832,56 @@ export default function AdminVariantsPage() {
 
         {createStep === 2 && createdVariant && (
           <div className="space-y-4">
+
+
+
+
+
             <VariantUnitPriceList
               productUuid={createdVariant.productId}
               variantUuid={createdVariant.id}
             />
-            <div className="flex justify-end">
+
+            <div className="flex items-center justify-between pt-2">
               <Button
                 type="button"
-                onClick={() => setCreateStep(3)}
-                className="h-10 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)]"
+                variant="outline"
+                onClick={() => setCreateStep(1)}
+                className="h-10 rounded-xl text-xs font-semibold cursor-pointer"
               >
-                Next: Upload Images
+                Back
               </Button>
+
+              <div className="flex items-center gap-2">
+                {!hasCreatedPrices ? (
+                  <Button
+                    type="button"
+                    onClick={() => setCreateStep(3)}
+                    className="h-10 rounded-xl bg-neutral-100 text-neutral-800 border border-neutral-300 hover:bg-neutral-200 px-5 text-sm font-semibold cursor-pointer"
+                  >
+                    Skip for now (Save as Inactive)
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await updateMutation.mutateAsync({
+                          productUuid: createdVariant.productId,
+                          variantUuid: createdVariant.id,
+                          data: { isActive: true },
+                        });
+                      } catch (e) {
+                        console.error("Failed to activate variant:", e);
+                      }
+                      setCreateStep(3);
+                    }}
+                    className="h-10 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] cursor-pointer"
+                  >
+                    Next: Upload Images
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -772,22 +892,34 @@ export default function AdminVariantsPage() {
             variantUuid={createdVariant.id}
             variantName={createdVariant.name}
             isStepperMode={true}
+            onBack={() => setCreateStep(2)}
             onFinish={() => setCreateStep(4)}
-            onSkip={() => setCreateStep(4)}
           />
         )}
 
         {createStep === 4 && createdVariant && (
           <div className="space-y-6">
-            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800 text-xs flex items-center gap-3">
-              <Check className="h-5 w-5 text-emerald-600 shrink-0" />
-              <div>
-                <p className="font-bold">Item Created Successfully!</p>
-                <p className="text-emerald-700 mt-0.5">
-                  Here is how this Item appears to customers on the storefront:
-                </p>
+            {!hasCreatedPrices ? (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-amber-900 text-xs flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-amber-900 text-sm">Saved as Inactive (Hidden from Customers)</p>
+                  <p className="text-amber-800 mt-0.5">
+                    Price details were skipped. This item is safely placed in your <strong>Inactive list</strong>. It will not be shown to customers until you add unit pricing.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800 text-xs flex items-center gap-3">
+                <Check className="h-5 w-5 text-emerald-600 shrink-0" />
+                <div>
+                  <p className="font-bold">Item Created Successfully!</p>
+                  <p className="text-emerald-700 mt-0.5">
+                    Here is how this Item appears to customers on the storefront:
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-center p-4 bg-neutral-50 rounded-2xl border border-neutral-200">
               <div className="w-full max-w-[300px]">
@@ -843,9 +975,10 @@ export default function AdminVariantsPage() {
               <button
                 type="button"
                 onClick={() => setEditTab("details")}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${editTab === "details"
-                    ? "border-[var(--color-secondary-600)] text-[var(--color-secondary-600)]"
-                    : "border-transparent text-[var(--color-neutral-500)] hover:text-[var(--color-neutral-800)]"
+                disabled={updateMutation.isPending}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${editTab === "details"
+                  ? "border-[var(--color-secondary-600)] text-[var(--color-secondary-600)]"
+                  : "border-transparent text-[var(--color-neutral-500)] hover:text-[var(--color-neutral-800)]"
                   }`}
               >
                 <Package className="h-4 w-4" />
@@ -855,9 +988,10 @@ export default function AdminVariantsPage() {
               <button
                 type="button"
                 onClick={() => setEditTab("pricing")}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${editTab === "pricing"
-                    ? "border-[var(--color-secondary-600)] text-[var(--color-secondary-600)]"
-                    : "border-transparent text-[var(--color-neutral-500)] hover:text-[var(--color-neutral-800)]"
+                disabled={updateMutation.isPending}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${editTab === "pricing"
+                  ? "border-[var(--color-secondary-600)] text-[var(--color-secondary-600)]"
+                  : "border-transparent text-[var(--color-neutral-500)] hover:text-[var(--color-neutral-800)]"
                   }`}
               >
                 <Package className="h-4 w-4" />
@@ -867,9 +1001,10 @@ export default function AdminVariantsPage() {
               <button
                 type="button"
                 onClick={() => setEditTab("images")}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${editTab === "images"
-                    ? "border-[var(--color-secondary-600)] text-[var(--color-secondary-600)]"
-                    : "border-transparent text-[var(--color-neutral-500)] hover:text-[var(--color-neutral-800)]"
+                disabled={updateMutation.isPending}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${editTab === "images"
+                  ? "border-[var(--color-secondary-600)] text-[var(--color-secondary-600)]"
+                  : "border-transparent text-[var(--color-neutral-500)] hover:text-[var(--color-neutral-800)]"
                   }`}
               >
                 <ImageIcon className="h-4 w-4" />
@@ -948,8 +1083,12 @@ export default function AdminVariantsPage() {
           if (deleteTarget) {
             deleteMutation.mutate(deleteTarget, {
               onSuccess: () => {
+                toast.success("Item Deleted", "Product item removed successfully.");
                 setDeleteTarget(null);
                 refetch();
+              },
+              onError: (err: any) => {
+                toast.error("Delete Failed", err.message || "Could not delete item.");
               },
             });
           }
@@ -959,6 +1098,34 @@ export default function AdminVariantsPage() {
         confirmText="Delete"
         variant="destructive"
         isLoading={deleteMutation.isPending}
+      />
+
+      {/* BULK DELETE DIALOG */}
+      <ConfirmDialog
+        open={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        onConfirm={async () => {
+          const idsToDelete = selectedRows.map((v) => v.id);
+          if (idsToDelete.length === 0) return;
+          try {
+            await bulkDeleteMutation.mutateAsync(idsToDelete);
+            toast.success(
+              "Items Deleted",
+              `Successfully deleted ${idsToDelete.length} ${idsToDelete.length === 1 ? "item" : "items"}.`
+            );
+            setSelectedRowIds({});
+            setSelectedRows([]);
+            setIsBulkDeleteOpen(false);
+            refetch();
+          } catch (err: any) {
+            toast.error("Delete Failed", err.message || "Could not delete selected items.");
+          }
+        }}
+        title={`Delete ${selectedRows.length} Selected ${selectedRows.length === 1 ? "Item" : "Items"}`}
+        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "item" : "items"}${activeProductName ? ` belonging to "${activeProductName}"` : ""}? This will permanently remove these items, pricing, and inventories. This action cannot be undone.`}
+        confirmText={`Delete ${selectedRows.length} ${selectedRows.length === 1 ? "Item" : "Items"}`}
+        variant="destructive"
+        isLoading={bulkDeleteMutation.isPending}
       />
     </div>
   );

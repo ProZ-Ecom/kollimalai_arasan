@@ -29,6 +29,7 @@ import { useMainNavigation } from "@/hooks/use-main-navigation";
 import { useCustomerProfile } from "@/features/customers/hooks/use-customer-profile";
 import type { CustomerCategoryDto } from "@/features/customers/types/catalog.types";
 import { CategoryNavDropdown, resolveCategoryIcon } from "./CategoryNavDropdown";
+import { HeaderSearchBar } from "./HeaderSearchBar";
 
 /** Shared styling for the row-2 nav links so active/idle states stay in step. */
 function navLinkClass(isActive: boolean) {
@@ -184,17 +185,6 @@ export function Header() {
     isLoading: isCategoriesLoading,
   } = useMainNavigation();
 
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const handleSearchSubmit = React.useCallback(
-    (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      const q = searchTerm.trim();
-      router.push(q ? `/products?search=${encodeURIComponent(q)}` : "/products");
-    },
-    [router, searchTerm]
-  );
-
-
   const menuRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLDivElement>(null);
 
@@ -251,33 +241,8 @@ export function Header() {
             />
           </Link>
 
-          {/* Search */}
-          <form
-            role="search"
-            onSubmit={handleSearchSubmit}
-            className="flex-1 max-w-[620px] mx-auto"
-          >
-            <div className="relative">
-              <label htmlFor="site-search" className="sr-only">
-                Search products
-              </label>
-              <input
-                id="site-search"
-                type="search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search..."
-                className="w-full h-10 lg:h-11 rounded-full bg-white pl-5 pr-12 text-sm text-theme-text-primary placeholder:text-theme-text-muted shadow-sm ring-1 ring-transparent transition-shadow focus:outline-none focus:ring-2 focus:ring-white/70"
-              />
-              <button
-                type="submit"
-                aria-label="Search"
-                className="absolute right-1 top-1/2 -translate-y-1/2 grid place-items-center w-9 h-9 rounded-full text-theme-text-primary hover:bg-secondary-50 hover:text-secondary-600 transition-colors cursor-pointer"
-              >
-                <Search className="w-[18px] h-[18px]" strokeWidth={2} />
-              </button>
-            </div>
-          </form>
+          {/* Direct Interactive Search Bar with Live Inline Dropdown */}
+          <HeaderSearchBar />
 
           {/* Right cluster (desktop) */}
           <div className="hidden lg:flex items-center gap-5 shrink-0">
@@ -646,6 +611,23 @@ export function Header() {
             );
           }
 
+          if (item.text === "Search" || item.path === "/search") {
+            return (
+              <NavButton
+                key={item.id}
+                variant="bottom"
+                icon={item.icon}
+                text={item.text}
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  const searchInput = document.getElementById("site-search");
+                  searchInput?.focus();
+                }}
+                isActive={false}
+              />
+            );
+          }
+
           return (
             <NavButton
               key={item.id}
@@ -659,6 +641,7 @@ export function Header() {
           );
         })}
       </div>
+
     </header>
   );
 }

@@ -12,7 +12,15 @@ import {
   type ColumnFiltersState,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+  Check,
+  Minus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { SearchInput } from "@/components/ui/search-input";
@@ -31,6 +39,72 @@ interface DataTableProps<TData, TValue> {
   onPageChange?: (page: number) => void;
   className?: string;
   emptyMessage?: string;
+  enableSelection?: boolean;
+  selectedRowIds?: Record<string, boolean>;
+  onRowSelectionChange?: (
+    rowSelection: Record<string, boolean>,
+    selectedRows: TData[]
+  ) => void;
+  getRowId?: (row: TData, index: number) => string;
+}
+
+function TableHeaderCheckbox({ table }: { table: any }) {
+  const isAllSelected = table.getIsAllPageRowsSelected();
+  const isSomeSelected = table.getIsSomePageRowsSelected();
+
+  return (
+    <label className="inline-flex items-center justify-center cursor-pointer select-none">
+      <input
+        type="checkbox"
+        checked={isAllSelected}
+        onChange={(e) => table.toggleAllPageRowsSelected(e.target.checked)}
+        className="sr-only"
+        aria-label="Select all rows"
+      />
+      <div
+        className={cn(
+          "h-4 w-4 rounded border transition-all flex items-center justify-center cursor-pointer",
+          isAllSelected || isSomeSelected
+            ? "border-white bg-white text-secondary-700 shadow-xs"
+            : "border-white/60 bg-white/10 hover:border-white"
+        )}
+      >
+        {isAllSelected ? (
+          <Check className="h-3 w-3 stroke-[3.5] text-secondary-700" />
+        ) : isSomeSelected ? (
+          <Minus className="h-3 w-3 stroke-[3.5] text-secondary-700" />
+        ) : null}
+      </div>
+    </label>
+  );
+}
+
+function TableRowCheckbox({ row }: { row: any }) {
+  const isSelected = row.getIsSelected();
+
+  return (
+    <label className="inline-flex items-center justify-center cursor-pointer select-none">
+      <input
+        type="checkbox"
+        checked={isSelected}
+        disabled={!row.getCanSelect()}
+        onChange={(e) => row.toggleSelected(e.target.checked)}
+        className="sr-only"
+        aria-label="Select row"
+      />
+      <div
+        className={cn(
+          "h-4 w-4 rounded border transition-all flex items-center justify-center cursor-pointer",
+          isSelected
+            ? "border-secondary-600 bg-secondary-600 text-white shadow-xs"
+            : "border-neutral-300 bg-white hover:border-secondary-500",
+          !row.getCanSelect() && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        {isSelected && <Check className="h-3 w-3 stroke-[3.5] text-white" />}
+      </div>
+    </label>
+  );
 }
 
 function DataTable<TData, TValue>({
@@ -47,6 +121,10 @@ function DataTable<TData, TValue>({
   onPageChange,
   className,
   emptyMessage = "No results found.",
+  enableSelection = true,
+  selectedRowIds,
+  onRowSelectionChange,
+  getRowId,
 }: DataTableProps<TData, TValue>) {
   const [internalPageSize, setInternalPageSize] = React.useState<number>(
     controlledPageSize ?? 10
@@ -83,8 +161,41 @@ function DataTable<TData, TValue>({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
+  const [internalRowSelection, setInternalRowSelection] = React.useState<Record<string, boolean>>(
+    selectedRowIds ?? {}
+  );
   const [globalFilter, setGlobalFilter] = React.useState("");
+
+  React.useEffect(() => {
+    if (selectedRowIds !== undefined) {
+      setInternalRowSelection(selectedRowIds);
+    }
+  }, [selectedRowIds]);
+
+  const rowSelection = selectedRowIds ?? internalRowSelection;
+
+  const handleRowSelectionChange = (updaterOrValue: any) => {
+    const newSelection =
+      typeof updaterOrValue === "function"
+        ? updaterOrValue(rowSelection)
+        : updaterOrValue;
+    setInternalRowSelection(newSelection);
+    if (onRowSelectionChange) {
+      let selectedItems: TData[] = [];
+      if (getRowId) {
+        selectedItems = (data || []).filter((item, idx) => {
+          const id = getRowId(item, idx);
+          return Boolean(newSelection[id]);
+        });
+      } else {
+        const selectedIndices = Object.keys(newSelection).filter((k) => newSelection[k]);
+        selectedItems = selectedIndices
+          .map((idx) => paginatedData[Number(idx)] || data[Number(idx)])
+          .filter(Boolean);
+      }
+      onRowSelectionChange(newSelection, selectedItems);
+    }
+  };
 
   const isServerSide = totalItems !== undefined && totalItems > data.length;
   const paginatedData = React.useMemo(() => {
@@ -95,18 +206,33 @@ function DataTable<TData, TValue>({
     return data.slice(startIndex, startIndex + effectivePageSize);
   }, [data, isServerSide, effectivePage, effectivePageSize]);
 
+  const effectiveColumns = React.useMemo(() => {
+    if (enableSelection === false || columns.some((col) => col.id === "select")) {
+      return columns;
+    }
+    const selectColumn: ColumnDef<TData, unknown> = {
+      id: "select",
+      header: ({ table }) => <TableHeaderCheckbox table={table} />,
+      cell: ({ row }) => <TableRowCheckbox row={row} />,
+      enableSorting: false,
+      enableHiding: false,
+    };
+    return [selectColumn, ...columns];
+  }, [columns, enableSelection]);
+
   const table = useReactTable({
     data: paginatedData,
-    columns,
+    columns: effectiveColumns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: handleRowSelectionChange,
     onGlobalFilterChange: setGlobalFilter,
-    
+    enableRowSelection: enableSelection !== false,
+    getRowId: getRowId,
     state: {
       sorting,
       columnFilters,
@@ -130,9 +256,13 @@ function DataTable<TData, TValue>({
       ? Math.min(effectivePage * effectivePageSize, computedTotalItems)
       : 0;
 
-    
   return (
-    <div className={cn("w-full flex-1 flex flex-col justify-between rounded-2xl overflow-hidden min-h-[380px] border border-neutral-200", className)}>
+    <div
+      className={cn(
+        "w-full flex-1 flex flex-col justify-between rounded-2xl overflow-hidden min-h-[380px] border border-neutral-200",
+        className
+      )}
+    >
       {searchKey && (
         <div className="flex items-center gap-2 p-3 pb-0 flex-shrink-0">
           <SearchInput
@@ -154,35 +284,43 @@ function DataTable<TData, TValue>({
                     const isActions =
                       header.column.id.toLowerCase() === "actions" ||
                       header.id.toLowerCase() === "actions";
+                    const isSelect =
+                      header.column.id.toLowerCase() === "select" ||
+                      header.id.toLowerCase() === "select";
                     return (
                       <th
                         key={header.id}
                         className={cn(
-                          "h-14 px-4 text-left align-middle text-xs font-semibold tracking-wider whitespace-nowrap text-[var(--color-neutral-500)] uppercase sm:px-5 bg-[var(--color-neutral-50)] border-b border-gray-200 sticky top-0 z-10",
+                          "h-14 px-4 text-left align-middle text-xs font-bold tracking-wider whitespace-nowrap text-white uppercase sm:px-5 bg-[var(--color-secondary-600)] border-b border-[var(--color-secondary-700)] sticky top-0 z-10",
+                          isSelect &&
+                            "w-12 px-3 sm:px-4 text-center sticky top-0 left-0 z-30 bg-[var(--color-secondary-600)] border-r border-[var(--color-secondary-700)] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)]",
                           isActions &&
-                            "text-right sticky top-0 right-0 z-30 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.06)] border-l border-neutral-200/80 bg-[var(--color-neutral-50)]",
+                            "text-center sticky top-0 right-0 z-30 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.15)] border-l border-[var(--color-secondary-700)] bg-[var(--color-secondary-600)] text-white",
                           header.column.getCanSort() &&
-                            "cursor-pointer select-none hover:text-[var(--color-neutral-700)]"
+                            "cursor-pointer select-none hover:text-white/80"
                         )}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         <div
                           className={cn(
-                            "flex items-center gap-1",
-                            isActions && "justify-end"
+                            "flex items-center gap-1 text-white",
+                            isActions || isSelect ? "justify-center" : ""
                           )}
                         >
                           {header.isPlaceholder
                             ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
                           {header.column.getCanSort() && (
-                            <span className="text-gray-300">
+                            <span className="text-white/80">
                               {header.column.getIsSorted() === "asc" ? (
-                                <ChevronUp className="h-4 w-4" />
+                                <ChevronUp className="h-4 w-4 text-white" />
                               ) : header.column.getIsSorted() === "desc" ? (
-                                <ChevronDown className="h-4 w-4" />
+                                <ChevronDown className="h-4 w-4 text-white" />
                               ) : (
-                                <ChevronsUpDown className="h-4 w-4" />
+                                <ChevronsUpDown className="h-4 w-4 text-white/70" />
                               )}
                             </span>
                           )}
@@ -199,22 +337,41 @@ function DataTable<TData, TValue>({
                   <tr
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
-                    className="group transition-colors hover:bg-[var(--color-neutral-50)]"
+                    className={cn(
+                      "group transition-colors hover:bg-[var(--color-neutral-50)]",
+                      row.getIsSelected() && "bg-secondary-50/40 hover:bg-secondary-50/60"
+                    )}
                   >
                     {row.getVisibleCells().map((cell) => {
                       const isActions =
                         cell.column.id.toLowerCase() === "actions" ||
                         cell.id.toLowerCase().includes("actions");
+                      const isSelect =
+                        cell.column.id.toLowerCase() === "select" ||
+                        cell.id.toLowerCase() === "select";
                       return (
                         <td
                           key={cell.id}
                           className={cn(
                             "px-4 py-4 align-middle whitespace-nowrap sm:px-5 bg-white group-hover:bg-[var(--color-neutral-50)] transition-colors border-b border-gray-200",
+                            row.getIsSelected() &&
+                              "bg-secondary-50/40 group-hover:bg-secondary-50/60",
+                            isSelect &&
+                              "w-12 px-3 sm:px-4 text-center [&>div]:justify-center [&>div]:items-center sticky left-0 z-20 bg-white group-hover:bg-[var(--color-neutral-50)] border-r border-neutral-200/80 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.04)]",
+                            isSelect &&
+                              row.getIsSelected() &&
+                              "bg-secondary-50/80 group-hover:bg-secondary-50/90",
                             isActions &&
-                              "text-right [&>div]:justify-end sticky right-0 z-20 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.06)] border-l border-neutral-200/80 bg-white group-hover:bg-[var(--color-neutral-50)]"
+                              "text-center [&>div]:justify-center [&>div]:items-center sticky right-0 z-20 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.06)] border-l border-neutral-200/80 bg-white group-hover:bg-[var(--color-neutral-50)]",
+                            isActions &&
+                              row.getIsSelected() &&
+                              "bg-secondary-50/80 group-hover:bg-secondary-50/90"
                           )}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
                         </td>
                       );
                     })}
@@ -222,7 +379,10 @@ function DataTable<TData, TValue>({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={columns.length} className="h-24 text-center text-gray-500 bg-white border-b border-gray-200">
+                  <td
+                    colSpan={effectiveColumns.length}
+                    className="h-24 text-center text-gray-500 bg-white border-b border-gray-200"
+                  >
                     {emptyMessage}
                   </td>
                 </tr>
@@ -291,3 +451,4 @@ function DataTable<TData, TValue>({
 
 export { DataTable };
 export type { DataTableProps };
+

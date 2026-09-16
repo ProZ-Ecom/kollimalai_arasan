@@ -82,3 +82,10 @@ export const adminProductListSchema = z
 
 export type AdminProductListInput = z.infer<typeof adminProductListSchema>;
 
+export const bulkDeleteAdminProductsSchema = z.object({
+  uuids: z.array(z.string().min(1)).min(1, "At least one product UUID is required"),
+});
+
+export type BulkDeleteAdminProductsInput = z.infer<
+  typeof bulkDeleteAdminProductsSchema
+>;

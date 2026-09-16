@@ -18,11 +18,14 @@ import { useRouter } from "next/navigation";
 import {
   useCategories,
   useDeleteCategory,
+  useBulkDeleteCategories,
   useCreateCategory,
   useUpdateCategory,
 } from "@/features/categories/hooks";
 import { getImageUrl } from "@/lib/utils";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { toast } from "@/components/ui/Toast";
 import { AdminPageHeader, AdminContent } from "@/components/admin/AdminPageHeader";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
@@ -46,23 +49,27 @@ export default function AdminCategoriesPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryListItem | null>(null);
 
+  // Bulk Selection State
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<CategoryListItem[]>([]);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+
+  // Clear selections when filter/search/page changes
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, page, pageSize]);
+
   const { data, isLoading, error, refetch } = useCategories({
     page,
     pageSize,
     search: search || undefined,
   });
 
-
-
   const createMutation = useCreateCategory();
-
   const updateMutation = useUpdateCategory();
-
-  // const { data, isLoading, error, refetch } = useCategories({
-  //   search: search || undefined,
-  // });
-
   const deleteMutation = useDeleteCategory();
+  const bulkDeleteMutation = useBulkDeleteCategories();
 
   const categories = data?.success && data.data ? data.data : [];
 
@@ -145,7 +152,7 @@ export default function AdminCategoriesPage() {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex gap-2">
+        <div className="flex items-center justify-center gap-1.5">
           <Button
             variant="ghost"
             size="icon"
@@ -182,8 +189,8 @@ export default function AdminCategoriesPage() {
   const mostPopular =
     categories.length > 0
       ? categories.reduce((prev, current) =>
-          (current._count?.products || 0) > (prev._count?.products || 0) ? current : prev
-        )
+        (current._count?.products || 0) > (prev._count?.products || 0) ? current : prev
+      )
       : null;
 
   return (
@@ -194,7 +201,7 @@ export default function AdminCategoriesPage() {
         description="Manage your product categories"
       />
       <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden bg-transparent py-1 rounded-2xl">
+        <div className="flex h-full flex-col overflow-hidden  py-1 rounded-2xl">
           {/* Stats Cards */}
           {/* <div className="flex-shrink-0 flex gap-4 overflow-x-auto overscroll-x-contain pb-2">
             <StatsCard
@@ -246,6 +253,18 @@ export default function AdminCategoriesPage() {
 
           {/* Table Container */}
           <div className="mt-6 flex-1 min-h-0 overflow-hidden flex flex-col">
+            <BulkActionsBar
+              selectedCount={selectedRows.length}
+              entityName="category"
+              filterNotice={search ? `Filtered by "${search}"` : undefined}
+              onClearSelection={() => {
+                setSelectedRowIds({});
+                setSelectedRows([]);
+              }}
+              onDelete={() => setIsBulkDeleteOpen(true)}
+              isDeleting={bulkDeleteMutation.isPending}
+            />
+
             <DataTable
               columns={columns}
               data={categories}
@@ -259,6 +278,12 @@ export default function AdminCategoriesPage() {
                 setPageSize(newSize);
                 setPage(1);
               }}
+              selectedRowIds={selectedRowIds}
+              onRowSelectionChange={(newSelection, items) => {
+                setSelectedRowIds(newSelection);
+                setSelectedRows(items);
+              }}
+              getRowId={(row) => String(row.id)}
               className="bg-white"
             />
           </div>
@@ -271,15 +296,51 @@ export default function AdminCategoriesPage() {
         onConfirm={() => {
           if (deleteId) {
             deleteMutation.mutate(deleteId, {
-              onSuccess: () => setDeleteId(null),
+              onSuccess: () => {
+                toast.success("Category Deleted", "Category removed successfully.");
+                setDeleteId(null);
+              },
+              onError: (err: any) => {
+                toast.error("Delete Failed", err.message || "Could not delete category.");
+              },
             });
           }
         }}
         title="Delete Category"
-        description="Are you sure you want to delete this category? This action cannot be undone."
-        confirmText="Delete"
+        description="Are you sure you want to delete this category? Deleting this category will automatically deactivate and remove all associated products and items from both the admin dashboard and the customer storefront. This action cannot be undone."
+        confirmText="Delete Category"
         variant="destructive"
         isLoading={deleteMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        onConfirm={async () => {
+          const idsToDelete = selectedRows
+            .map((r: any) => r.uuid || r.id)
+            .filter((id): id is string | number => Boolean(id));
+          if (idsToDelete.length === 0) return;
+          try {
+            await bulkDeleteMutation.mutateAsync(idsToDelete);
+
+            toast.success(
+              "Categories Deleted",
+              `Successfully deleted ${idsToDelete.length} ${idsToDelete.length === 1 ? "category" : "categories"}.`
+            );
+            setSelectedRowIds({});
+            setSelectedRows([]);
+            setIsBulkDeleteOpen(false);
+            refetch();
+          } catch (err: any) {
+            toast.error("Delete Failed", err.message || "Could not delete selected categories.");
+          }
+        }}
+        title={`Delete ${selectedRows.length} Selected ${selectedRows.length === 1 ? "Category" : "Categories"}`}
+        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "category" : "categories"}${search ? ` matching "${search}"` : ""}? Deleting will automatically deactivate and remove all associated products and items from both the admin dashboard and storefront. This action cannot be undone.`}
+        confirmText={`Delete ${selectedRows.length} ${selectedRows.length === 1 ? "Category" : "Categories"}`}
+        variant="destructive"
+        isLoading={bulkDeleteMutation.isPending}
       />
 
       <FormModal

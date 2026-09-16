@@ -98,6 +98,7 @@ export interface AdminProductResponse {
   hsnCodeName: string | null;
   name: string;
   slug: string;
+  imageUrl?: string | null;
   status: boolean;
   isActive: boolean;
   createdAt: Date;

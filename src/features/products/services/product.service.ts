@@ -33,6 +33,7 @@ async function formatAdminProductResponse(
     updatedAt: Date;
     brand?: { id: bigint; uuid: string | null; name: string; isActive: boolean } | null;
     product_hsn_codes?: { id: bigint; uuid: string | null; code: string; description: string | null; is_active: boolean } | null;
+    images?: { image_url: string; isPrimary: boolean }[];
   },
   cachedCategory?: { uuid: string | null; name: string | null } | null
 ): Promise<AdminProductResponse> {
@@ -58,6 +59,8 @@ async function formatAdminProductResponse(
     product.product_hsn_codes?.code ||
     null;
 
+  const imageUrl = product.images?.[0]?.image_url || null;
+
   return {
     id: productUuid,
     categoryId: categoryUuid,
@@ -68,6 +71,7 @@ async function formatAdminProductResponse(
     hsnCodeName,
     name: product.name,
     slug: product.slug,
+    imageUrl,
     status: Boolean(product.status),
     isActive: Boolean(product.isActive),
     createdAt: product.createdAt,
@@ -388,6 +392,21 @@ export const productService = {
     return {
       success: true,
       message: "Product deleted successfully",
+    };
+  },
+
+  async bulkDeleteAdminProducts(uuids: string[], adminEmail?: string) {
+    if (!uuids || uuids.length === 0) {
+      throw ApiError.badRequest("At least one product ID is required");
+    }
+
+    const adminId = await getAdminInternalId(adminEmail);
+    const result = await productRepository.bulkSoftDeleteByUuids(uuids, adminId);
+
+    return {
+      success: true,
+      count: result.count,
+      message: `Successfully deleted ${result.count} products`,
     };
   },
 };

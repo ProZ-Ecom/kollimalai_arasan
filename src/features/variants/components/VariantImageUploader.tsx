@@ -39,6 +39,7 @@ interface VariantImageUploaderProps {
   isStepperMode?: boolean;
   onFinish?: () => void;
   onSkip?: () => void;
+  onBack?: () => void;
 }
 
 export function VariantImageUploader({
@@ -48,6 +49,7 @@ export function VariantImageUploader({
   isStepperMode = false,
   onFinish,
   onSkip,
+  onBack,
 }: VariantImageUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
@@ -471,25 +473,42 @@ export function VariantImageUploader({
       {/* Actions */}
       <div className="flex items-center justify-between pt-4 border-t border-[var(--color-neutral-200)]">
         {isStepperMode ? (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onSkip}
-              className="rounded-xl border-[var(--color-neutral-300)] text-[var(--color-neutral-700)]"
-            >
-              Skip for now
-            </Button>
+          <div className="flex items-center justify-between w-full">
+            {onBack ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onBack}
+                className="rounded-xl border-[var(--color-neutral-300)] text-[var(--color-neutral-700)] cursor-pointer"
+              >
+                Back
+              </Button>
+            ) : (
+              <div />
+            )}
 
-            <Button
-              type="button"
-              onClick={handleUploadAndSave}
-              isLoading={isUploading}
-              className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-6 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)]"
-            >
-              {pendingImages.length > 0 ? "Upload & Finish" : "Finish"}
-            </Button>
-          </>
+            <div className="flex items-center gap-2">
+              {onSkip && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onSkip}
+                  className="rounded-xl border-[var(--color-neutral-300)] text-[var(--color-neutral-700)] cursor-pointer"
+                >
+                  Skip for now
+                </Button>
+              )}
+
+              <Button
+                type="button"
+                onClick={handleUploadAndSave}
+                isLoading={isUploading}
+                className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-6 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] cursor-pointer"
+              >
+                {pendingImages.length > 0 ? "Upload & Finish" : "Finish"}
+              </Button>
+            </div>
+          </div>
         ) : (
           <div className="flex justify-end w-full">
             <Button

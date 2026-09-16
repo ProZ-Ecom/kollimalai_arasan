@@ -34,6 +34,10 @@ export const CUSTOMER_CATALOG_QUERY_KEYS = {
     [...CUSTOMER_CATALOG_QUERY_KEYS.all, "global-variants", params ?? {}] as const,
   banners: (position?: string) =>
     [...CUSTOMER_CATALOG_QUERY_KEYS.all, "banners", position ?? "all"] as const,
+  search: (query: string) =>
+    [...CUSTOMER_CATALOG_QUERY_KEYS.all, "search", query.trim().toLowerCase()] as const,
+  popularSearches: (limit?: number) =>
+    [...CUSTOMER_CATALOG_QUERY_KEYS.all, "popular-searches", limit ?? 10] as const,
 };
 
 /**
@@ -154,6 +158,8 @@ export function useCustomerGlobalVariants(
   return useQuery({
     queryKey: CUSTOMER_CATALOG_QUERY_KEYS.globalVariants(params),
     queryFn: () => customerCatalogApi.getAllVariants(params),
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60,
     ...options,
   });
 }
@@ -172,3 +178,39 @@ export function useCustomerBanners(
     ...options,
   });
 }
+
+/**
+ * Global search across categories, products, and variants
+ */
+export function useCustomerCatalogSearch(
+  query: string,
+  options?: { enabled?: boolean }
+) {
+  const trimmed = query.trim();
+  const shouldFetch = trimmed.length >= 2 && (options?.enabled ?? true);
+
+  return useQuery({
+    queryKey: CUSTOMER_CATALOG_QUERY_KEYS.search(trimmed),
+    queryFn: ({ signal }) => customerCatalogApi.searchCatalog(trimmed, signal),
+    enabled: shouldFetch,
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60, // 1 minute
+    ...options,
+  });
+}
+
+/**
+ * Fetch popular searches and popular categories (with new items fallback)
+ */
+export function useCustomerPopularSearches(
+  limit: number = 10,
+  options?: { enabled?: boolean }
+) {
+  return useQuery({
+    queryKey: CUSTOMER_CATALOG_QUERY_KEYS.popularSearches(limit),
+    queryFn: () => customerCatalogApi.getPopularSearches(limit),
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    ...options,
+  });
+}
+

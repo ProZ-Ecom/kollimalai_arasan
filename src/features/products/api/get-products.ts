@@ -34,8 +34,8 @@ export async function getAdminProducts(
   if (p?.categoryId) body.categoryId = String(p.categoryId);
   if (p?.brandId) body.brandId = String(p.brandId);
   if (p?.hsnCodeId) body.hsnCodeId = String(p.hsnCodeId);
-  if (p?.isFeatured !== undefined && p?.isFeatured !== null) {
-    body.isFeatured = Boolean(p.isFeatured);
+  if ((p as any)?.isFeatured !== undefined && (p as any)?.isFeatured !== null) {
+    body.isFeatured = Boolean((p as any).isFeatured);
   }
   if (p?.status !== undefined && p?.status !== null) {
     body.status = Boolean(p.status);
@@ -74,6 +74,13 @@ export async function updateAdminProduct(
 
 export async function deleteAdminProduct(uuid: string) {
   return apiClient.delete(`/api/admin/products/${uuid}`);
+}
+
+export async function bulkDeleteAdminProducts(uuids: string[]) {
+  return apiClient.post<{ success: boolean; count: number; message: string }>(
+    "/api/admin/products/bulk-delete",
+    { uuids }
+  );
 }
 
 // Product Images API

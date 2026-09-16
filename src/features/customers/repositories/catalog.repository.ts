@@ -23,6 +23,8 @@ import type {
   CustomerVariantImageDto,
   CustomerVariantUnitPriceDto,
   CustomerRelatedVariantDto,
+  CustomerPopularSearchResponse,
+  CustomerTrackSearchInput,
 } from "../types/catalog.types";
 
 /**
@@ -1258,5 +1260,355 @@ export const catalogRepository = {
     }
 
     return { data, meta: { page, limit, pageSize: limit, total, totalPages } };
+  },
+
+  // ----------------------------------------------------
+  // GLOBAL SEARCH METHOD
+  // ----------------------------------------------------
+  async globalSearch(query: string) {
+    const q = query.trim();
+    if (q.length < 2) {
+      return {
+        categories: [] as CustomerCategoryDto[],
+        products: [] as CustomerProductListItemDto[],
+        items: [] as CustomerVariantListItemDto[],
+        total: 0,
+      };
+    }
+
+    const [categories, products, variants] = await Promise.all([
+      db.productCategory.findMany({
+        where: {
+          isActive: true,
+          deleted_at: null,
+          status: true,
+          OR: [
+            { name: { contains: q } },
+            { description: { contains: q } },
+          ],
+        },
+        take: 4,
+        orderBy: { name: "asc" },
+        include: {
+          product_category_images: {
+            where: { is_active: true },
+            take: 1,
+          },
+        },
+      }),
+
+      db.product.findMany({
+        where: {
+          isActive: true,
+          deleted_at: null,
+          name: { contains: q },
+        },
+        take: 4,
+        orderBy: { name: "asc" },
+        include: {
+          brand: { select: { id: true, uuid: true, name: true } },
+          images: {
+            where: { is_active: true },
+            orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+            take: 1,
+          },
+          variants: {
+            where: {
+              isActive: true,
+              deleted_at: null,
+              variant_unit_prices: {
+                some: {
+                  deleted_at: null,
+                  isActive: true,
+                  base_price: { gt: 0 },
+                },
+              },
+            },
+            include: {
+              product_variant_images: {
+                where: { is_active: true },
+                orderBy: [{ is_primary: "desc" }, { sort_order: "asc" }],
+                take: 1,
+              },
+              variant_unit_prices: unitPriceListArgs,
+            },
+          },
+        },
+      }),
+
+      db.productVariant.findMany({
+        where: {
+          isActive: true,
+          deleted_at: null,
+          product: {
+            isActive: true,
+            deleted_at: null,
+          },
+          OR: [
+            { variant_name: { contains: q } },
+            { variant_unit_prices: { some: { sku: { contains: q }, isActive: true, deleted_at: null } } },
+            { product: { name: { contains: q } } },
+            { description: { contains: q } },
+            { short_description: { contains: q } },
+          ],
+        },
+        take: 6,
+        include: {
+          product: {
+            select: {
+              id: true,
+              uuid: true,
+              name: true,
+              images: {
+                where: { is_active: true },
+                orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+                take: 1,
+              },
+            },
+          },
+          product_variant_images: {
+            where: { is_active: true },
+            orderBy: [{ is_primary: "desc" }, { sort_order: "asc" }],
+            take: 1,
+          },
+          variant_unit_prices: unitPriceListArgs,
+        },
+      }),
+    ]);
+
+    const productCategoryIds = products
+      .map((p) => p.categoryId)
+      .filter((id): id is bigint => id !== null && id !== undefined);
+
+    const productCategories =
+      productCategoryIds.length > 0
+        ? await db.productCategory.findMany({
+            where: { id: { in: productCategoryIds }, isActive: true, deleted_at: null },
+            select: { id: true, uuid: true, name: true },
+          })
+        : [];
+
+    const categoryByIdMap = new Map<string, { id: string; name: string }>();
+    productCategories.forEach((cat) => {
+      categoryByIdMap.set(cat.id.toString(), {
+        id: cat.uuid || String(cat.id),
+        name: cat.name,
+      });
+    });
+
+    const mappedCategories: CustomerCategoryDto[] = categories.map((c) => ({
+      id: c.uuid || String(c.id),
+      name: c.name,
+      image: c.icon || c.product_category_images[0]?.image_url || null,
+    }));
+
+    const mappedProducts: CustomerProductListItemDto[] = products.map((p) => {
+      const allPrices = p.variants.flatMap((v) =>
+        (v.variant_unit_prices || []).map((up) => Number(up.base_price))
+      );
+
+      const minP = allPrices.length > 0 ? Math.min(...allPrices) : 0;
+      const maxP = allPrices.length > 0 ? Math.max(...allPrices) : 0;
+
+      let imgUrl: string | null = p.images[0]?.image_url ?? null;
+      if (!imgUrl && p.variants.length > 0) {
+        imgUrl = p.variants[0].product_variant_images[0]?.image_url ?? null;
+      }
+
+      const primaryVariant =
+        p.variants.find((v) => v.is_default) ?? p.variants[0] ?? null;
+
+      const variantWithPrices =
+        p.variants.find((v) => (v.variant_unit_prices || []).length > 0) ?? primaryVariant;
+
+      const unitPrices = (variantWithPrices?.variant_unit_prices || []).map((up) => {
+        const basePrice = Number(up.base_price);
+        const measurement = formatVariantMeasurement(up.product_units, up.unit_value ?? 0);
+        return {
+          id: up.uuid,
+          label: formatMeasurementLabel(measurement) || "Standard",
+          basePrice,
+          sellingPrice: computeSellingPrice(basePrice),
+        };
+      });
+
+      const cat = p.categoryId ? categoryByIdMap.get(p.categoryId.toString()) ?? null : null;
+
+      return {
+        id: p.uuid || String(p.id),
+        name: p.name,
+        description:
+          primaryVariant?.short_description || primaryVariant?.description || null,
+        brand: p.brand
+          ? {
+              id: p.brand.uuid || String(p.brand.id),
+              name: p.brand.name,
+            }
+          : null,
+        category: cat,
+        image: imgUrl,
+        minPrice: minP,
+        maxPrice: maxP,
+        unitPrices,
+      };
+    });
+
+    const mappedItems: CustomerVariantListItemDto[] = variants.map((v) =>
+      toVariantListItemDto(
+        v,
+        v.product ? v.product.uuid || String(v.product.id) : "",
+        v.product ? v.product.name : ""
+      )
+    );
+
+    const total = mappedCategories.length + mappedProducts.length + mappedItems.length;
+
+    return {
+      categories: mappedCategories,
+      products: mappedProducts,
+      items: mappedItems,
+      total,
+    };
+  },
+
+  async trackSearchVisit(params: CustomerTrackSearchInput): Promise<void> {
+    const cleanKeyword = params.keyword.trim();
+    if (!cleanKeyword) return;
+    try {
+      await db.search_history.create({
+        data: {
+          keyword: cleanKeyword,
+          session_id: `${params.type || "search"}:${params.entityId || ""}`,
+          results_count: params.resultsCount ?? 1,
+          is_active: true,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to record search visit:", err);
+    }
+  },
+
+  async getPopularSearchesAndCategories(limit: number = 10): Promise<CustomerPopularSearchResponse> {
+    // 1. Fetch top product / search keywords from search_history
+    const topKeywordsRaw = await db.$queryRaw<Array<{ keyword: string; count: bigint }>>`
+      SELECT keyword, COUNT(*) as count
+      FROM search_history
+      WHERE is_active = 1
+        AND (session_id IS NULL OR session_id LIKE 'product:%' OR session_id LIKE 'variant:%' OR session_id = 'search' OR session_id = '')
+      GROUP BY keyword
+      ORDER BY count DESC
+      LIMIT ${limit}
+    `;
+
+    const popularSearches = topKeywordsRaw.map((row) => ({
+      keyword: row.keyword,
+      count: Number(row.count),
+    }));
+
+    // If no data or fewer than 8-10, backfill with newly added products
+    if (popularSearches.length < limit) {
+      const existingKeywords = new Set(popularSearches.map((s) => s.keyword.toLowerCase()));
+      const remaining = limit - popularSearches.length;
+
+      const recentProducts = await db.product.findMany({
+        where: { isActive: true, deleted_at: null },
+        orderBy: { createdAt: "desc" },
+        take: remaining * 2,
+        select: { name: true },
+      });
+
+      for (const prod of recentProducts) {
+        if (!existingKeywords.has(prod.name.toLowerCase())) {
+          popularSearches.push({ keyword: prod.name, count: 0 });
+          existingKeywords.add(prod.name.toLowerCase());
+          if (popularSearches.length >= limit) break;
+        }
+      }
+    }
+
+    // 2. Fetch top categories from search_history
+    const topCategoriesRaw = await db.$queryRaw<Array<{ keyword: string; session_id: string; count: bigint }>>`
+      SELECT keyword, session_id, COUNT(*) as count
+      FROM search_history
+      WHERE is_active = 1 AND session_id LIKE 'category:%'
+      GROUP BY keyword, session_id
+      ORDER BY count DESC
+      LIMIT ${limit}
+    `;
+
+    const popularCategories: CustomerPopularSearchResponse["popularCategories"] = [];
+    const addedCatIds = new Set<string>();
+
+    for (const row of topCategoriesRaw) {
+      const catUuid = row.session_id.replace(/^category:/, "").trim();
+      const cat = await db.productCategory.findFirst({
+        where: {
+          OR: [
+            ...(catUuid ? [{ uuid: catUuid }] : []),
+            { name: row.keyword },
+          ],
+          isActive: true,
+          deleted_at: null,
+        },
+        include: {
+          product_category_images: {
+            where: { is_active: true },
+            take: 1,
+          },
+        },
+      });
+
+      if (cat && !addedCatIds.has(cat.uuid || String(cat.id))) {
+        const catId = cat.uuid || String(cat.id);
+        addedCatIds.add(catId);
+        popularCategories.push({
+          id: catId,
+          name: cat.name,
+          image: cat.icon || cat.product_category_images[0]?.image_url || null,
+          count: Number(row.count),
+        });
+      }
+    }
+
+    // If no data or fewer than 8-10, backfill with newly added categories
+    if (popularCategories.length < limit) {
+      const remaining = limit - popularCategories.length;
+      const recentCategories = await db.productCategory.findMany({
+        where: {
+          isActive: true,
+          deleted_at: null,
+          status: true,
+          ...(addedCatIds.size > 0
+            ? { uuid: { notIn: Array.from(addedCatIds) } }
+            : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        take: remaining,
+        include: {
+          product_category_images: {
+            where: { is_active: true },
+            take: 1,
+          },
+        },
+      });
+
+      for (const cat of recentCategories) {
+        const catId = cat.uuid || String(cat.id);
+        if (!addedCatIds.has(catId)) {
+          addedCatIds.add(catId);
+          popularCategories.push({
+            id: catId,
+            name: cat.name,
+            image: cat.icon || cat.product_category_images[0]?.image_url || null,
+            count: 0,
+          });
+        }
+      }
+    }
+
+    return {
+      popularSearches,
+      popularCategories,
+    };
   },
 };

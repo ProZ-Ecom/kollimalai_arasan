@@ -16,6 +16,7 @@ export {
   useUpdateVariant,
   useBulkEditVariants,
   useDeleteVariant,
+  useBulkDeleteVariants,
   useCreateVariantImages,
   useUpdateVariantImage,
   useSetPrimaryVariantImage,

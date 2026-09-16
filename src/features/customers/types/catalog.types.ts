@@ -149,3 +149,27 @@ export interface CustomerRelatedVariantDto {
   inStock: boolean;
   stockQuantity: number;
 }
+
+export interface CustomerPopularSearchItem {
+  keyword: string;
+  count: number;
+}
+
+export interface CustomerPopularCategoryItem {
+  id: string;
+  name: string;
+  image: string | null;
+  count: number;
+}
+
+export interface CustomerPopularSearchResponse {
+  popularSearches: CustomerPopularSearchItem[];
+  popularCategories: CustomerPopularCategoryItem[];
+}
+
+export interface CustomerTrackSearchInput {
+  keyword: string;
+  type?: "search" | "product" | "variant" | "category";
+  entityId?: string;
+  resultsCount?: number;
+}

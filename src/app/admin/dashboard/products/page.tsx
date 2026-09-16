@@ -6,6 +6,7 @@ import {
   useCreateProduct,
   useUpdateProduct,
   useDeleteProduct,
+  useBulkDeleteProducts,
   useCreateProductImages,
   useDeleteProductImage,
   useProductImages,
@@ -14,6 +15,8 @@ import { useCategories } from "@/features/categories/hooks";
 import { useBrands } from "@/features/brands/hooks";
 import { useHsnCodes } from "@/features/hsn-codes/hooks";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { toast } from "@/components/ui/Toast";
 import {
   AdminPageHeader,
   AdminContent,
@@ -27,10 +30,12 @@ import { FormModal } from "@/components/common/FormModal";
 import { SearchInput } from "@/components/ui/search-input";
 import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 import Link from "next/link";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import Image from "next/image";
+import { Plus, Pencil, Trash2, Package } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AdminProductResponse } from "@/features/products/types";
 import { ProductForm } from "@/features/products/components/ProductForm";
+import { getImageUrl } from "@/lib/utils";
 
 export default function AdminProductsPage() {
   const [search, setSearch] = useState("");
@@ -44,6 +49,17 @@ export default function AdminProductsPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] =
     useState<AdminProductResponse | null>(null);
+
+  // Bulk Selection State
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<AdminProductResponse[]>([]);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+
+  // Reset selection when filters or pagination change
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, selectedCategoryFilter, page, pageSize]);
 
   // Main Products Query (filtered by search and selected category)
   const { data, isLoading, error, refetch } = useAdminProducts({
@@ -68,6 +84,7 @@ export default function AdminProductsPage() {
   const createMutation = useCreateProduct();
   const updateMutation = useUpdateProduct();
   const deleteMutation = useDeleteProduct();
+  const bulkDeleteMutation = useBulkDeleteProducts();
   const createImagesMutation = useCreateProductImages();
   const deleteImageMutation = useDeleteProductImage();
 
@@ -125,6 +142,21 @@ export default function AdminProductsPage() {
     ];
   }, [categories]);
 
+  const activeCategoryName = useMemo(() => {
+    if (!selectedCategoryFilter) return null;
+    const match = categories.find(
+      (c: any) => String(c.uuid || c.id) === selectedCategoryFilter
+    );
+    return match?.name || null;
+  }, [selectedCategoryFilter, categories]);
+
+  const filterNotice = useMemo(() => {
+    const parts: string[] = [];
+    if (search.trim()) parts.push(`"${search.trim()}"`);
+    if (activeCategoryName) parts.push(`Category: ${activeCategoryName}`);
+    return parts.length > 0 ? `Filtered by ${parts.join(" & ")}` : undefined;
+  }, [search, activeCategoryName]);
+
   // Options for form dropdowns (used only when modal is open)
   const categoryOptions = useMemo(() => {
     return categories.map((c: any) => ({
@@ -150,6 +182,27 @@ export default function AdminProductsPage() {
   }, [hsnCodes]);
 
   const columns: ColumnDef<AdminProductResponse>[] = [
+    {
+      accessorKey: "imageUrl",
+      header: "Image",
+      cell: ({ row }) => {
+        const imageUrl = row.original.imageUrl;
+        return (
+          <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-xl border border-[var(--color-neutral-200)] bg-[var(--color-neutral-100)] flex items-center justify-center">
+            {imageUrl ? (
+              <Image
+                src={getImageUrl(imageUrl)}
+                alt={row.original.name}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <Package className="h-4 w-4 text-[var(--color-neutral-400)]" />
+            )}
+          </div>
+        );
+      },
+    },
     {
       accessorKey: "name",
       header: "Product Name",
@@ -198,7 +251,7 @@ export default function AdminProductsPage() {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-center gap-1.5">
           <Button
             variant="ghost"
             size="icon"
@@ -245,7 +298,7 @@ export default function AdminProductsPage() {
       />
 
       <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden bg-transparent py-1 rounded-2xl">
+        <div className="flex h-full flex-col overflow-hidden  py-1 rounded-2xl">
           <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
               <SearchInput
@@ -284,6 +337,18 @@ export default function AdminProductsPage() {
           </div>
 
           <div className="mt-6 flex-1 min-h-0 overflow-hidden flex flex-col">
+            <BulkActionsBar
+              selectedCount={selectedRows.length}
+              entityName="product"
+              filterNotice={filterNotice}
+              onClearSelection={() => {
+                setSelectedRowIds({});
+                setSelectedRows([]);
+              }}
+              onDelete={() => setIsBulkDeleteOpen(true)}
+              isDeleting={bulkDeleteMutation.isPending}
+            />
+
             <DataTable
               columns={columns}
               data={products}
@@ -297,6 +362,12 @@ export default function AdminProductsPage() {
                 setPageSize(newSize);
                 setPage(1);
               }}
+              selectedRowIds={selectedRowIds}
+              onRowSelectionChange={(newSelection, items) => {
+                setSelectedRowIds(newSelection);
+                setSelectedRows(items);
+              }}
+              getRowId={(row) => String(row.id)}
               className="bg-white"
             />
           </div>
@@ -323,7 +394,7 @@ export default function AdminProductsPage() {
               slug: formData.slug,
               categoryId: formData.categoryId,
               brandId: formData.brandId,
-              hsnCodeId: formData.hsnCodeId,
+              hsnCodeId: formData.hsnCodeId || null,
             };
 
             const created = await createMutation.mutateAsync(payload);
@@ -332,6 +403,7 @@ export default function AdminProductsPage() {
             if (formData.productImage && created?.data?.id) {
               await saveProductPrimaryImage(created.data.id, formData.productImage);
             }
+            refetch();
           }}
         />
       </FormModal>
@@ -370,7 +442,8 @@ export default function AdminProductsPage() {
                 slug: formData.slug,
                 categoryId: formData.categoryId,
                 brandId: formData.brandId,
-                hsnCodeId: formData.hsnCodeId,
+                hsnCodeId: formData.hsnCodeId || null,
+                productImage: formData.productImage || null,
               };
 
               await updateMutation.mutateAsync({
@@ -389,6 +462,15 @@ export default function AdminProductsPage() {
                   formData.productImage,
                   selectedProductImages
                 );
+              } else if (!formData.productImage && selectedProductPrimaryImage) {
+                await Promise.all(
+                  selectedProductImages.map((img) =>
+                    deleteImageMutation.mutateAsync({
+                      productUuid: selectedProduct.id,
+                      imageId: img.id,
+                    })
+                  )
+                );
               }
 
               setSelectedProduct(null);
@@ -405,15 +487,50 @@ export default function AdminProductsPage() {
         onConfirm={() => {
           if (deleteId) {
             deleteMutation.mutate(deleteId, {
-              onSuccess: () => setDeleteId(null),
+              onSuccess: () => {
+                toast.success("Product Deleted", "Product removed successfully.");
+                setDeleteId(null);
+                refetch();
+              },
+              onError: (err: any) => {
+                toast.error("Delete Failed", err.message || "Could not delete product.");
+              },
             });
           }
         }}
         title="Delete Product"
-        description="Are you sure you want to delete this product? This action cannot be undone."
-        confirmText="Delete"
+        description="Are you sure you want to delete this product? Deleting this product will automatically deactivate and remove all associated variants, unit prices, and inventory items from both the admin dashboard and the customer storefront. This action cannot be undone."
+        confirmText="Delete Product"
         variant="destructive"
         isLoading={deleteMutation.isPending}
+      />
+
+      {/* BULK DELETE DIALOG */}
+      <ConfirmDialog
+        open={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        onConfirm={async () => {
+          const uuidsToDelete = selectedRows.map((p) => p.id);
+          if (uuidsToDelete.length === 0) return;
+          try {
+            await bulkDeleteMutation.mutateAsync(uuidsToDelete);
+            toast.success(
+              "Products Deleted",
+              `Successfully deleted ${uuidsToDelete.length} ${uuidsToDelete.length === 1 ? "product" : "products"}.`
+            );
+            setSelectedRowIds({});
+            setSelectedRows([]);
+            setIsBulkDeleteOpen(false);
+            refetch();
+          } catch (err: any) {
+            toast.error("Delete Failed", err.message || "Could not delete selected products.");
+          }
+        }}
+        title={`Delete ${selectedRows.length} Selected ${selectedRows.length === 1 ? "Product" : "Products"}`}
+        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "product" : "products"}${activeCategoryName ? ` in category "${activeCategoryName}"` : ""}? Deleting will remove these products and all their variants and items. This action cannot be undone.`}
+        confirmText={`Delete ${selectedRows.length} ${selectedRows.length === 1 ? "Product" : "Products"}`}
+        variant="destructive"
+        isLoading={bulkDeleteMutation.isPending}
       />
     </div>
   );

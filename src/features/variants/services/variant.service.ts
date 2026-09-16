@@ -351,6 +351,21 @@ export const variantService = {
       message: "Variant deleted successfully",
     };
   },
+
+  async bulkDeleteAdminVariants(uuids: string[], adminEmail?: string) {
+    if (!uuids || uuids.length === 0) {
+      throw ApiError.badRequest("At least one item ID is required");
+    }
+
+    const adminId = await getAdminInternalId(adminEmail);
+    const result = await variantRepository.bulkSoftDeleteByUuids(uuids, adminId);
+
+    return {
+      success: true,
+      count: result.count,
+      message: `Successfully deleted ${result.count} items`,
+    };
+  },
 };
 
 function buildVariantUpdateData(
@@ -360,7 +375,7 @@ function buildVariantUpdateData(
   const updateData: Prisma.ProductVariantUncheckedUpdateInput = {};
 
   if (adminId) {
-    updateData.users_product_variants_updated_byTousers = { connect: { id: adminId } };
+    updateData.updated_by = adminId;
   }
   if (data.variantName !== undefined) {
     updateData.variant_name = data.variantName;

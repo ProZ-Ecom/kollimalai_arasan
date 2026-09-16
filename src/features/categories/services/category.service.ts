@@ -255,4 +255,23 @@ export const categoryService = {
       message: "Category deleted successfully",
     };
   },
+
+  async bulkDeleteAdminCategories(
+    identifiers: (string | number)[],
+    adminEmail?: string
+  ) {
+    if (!identifiers || identifiers.length === 0) {
+      throw ApiError.badRequest("At least one category ID is required");
+    }
+
+    const adminId = await getAdminInternalId(adminEmail);
+    const result = await categoryRepository.bulkSoftDelete(identifiers, adminId);
+
+    return {
+      success: true,
+      count: result.count,
+      message: `Successfully deleted ${result.count} categories`,
+    };
+  },
 };
+

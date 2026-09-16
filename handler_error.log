@@ -1,25 +1,33 @@
-ApiError: Order already has an active delivery assignment
-    at ApiError.conflict (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\src_07iv44x._.js:1790:16)
-    at Object.assignDelivery (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\src_20q8_1h._.js:921:163)
+PrismaClientKnownRequestError: 
+Invalid `prisma.productCategory.findMany()` invocation:
+
+
+The table `product_category_images` does not exist in the current database.
+    at vn.handleRequestError (D:\Projects\Kollimalai\.next\dev\server\chunks\src_generated_prisma_runtime_client_0snntis.js:8285:19)
+    at vn.handleAndLogRequestError (D:\Projects\Kollimalai\.next\dev\server\chunks\src_generated_prisma_runtime_client_0snntis.js:8251:18)
+    at vn.request (D:\Projects\Kollimalai\.next\dev\server\chunks\src_generated_prisma_runtime_client_0snntis.js:8232:18)
     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at async POST (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\src_20q8_1h._.js:27:24)
-    at async D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\src_07iv44x._.js:1944:20
-    at async AppRouteRouteModule.do (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:42791)
-    at async AppRouteRouteModule.handle (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:50709)
-    at async responseGenerator (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\node_modules_next_0ptdqbu._.js:5328:30)
-    at async AppRouteRouteModule.handleResponse (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:248823)
-    at async handleResponse (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\node_modules_next_0ptdqbu._.js:5400:32)
-    at async Module.handler (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\.next\dev\server\chunks\node_modules_next_0ptdqbu._.js:5520:9)
-    at async DevServer.renderToResponseWithComponentsImpl (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\base-server.js:1537:9)
-    at async DevServer.renderPageComponent (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\base-server.js:1589:24)
-    at async DevServer.renderToResponseImpl (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\base-server.js:1639:32)
-    at async DevServer.pipeImpl (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\base-server.js:1088:25)
-    at async NextNodeServer.handleCatchallRenderRequest (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\next-server.js:338:17)
-    at async DevServer.handleRequestImpl (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\base-server.js:979:17)
-    at async D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\dev\next-dev-server.js:426:20
-    at async Span.traceAsyncFn (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\trace\trace.js:164:20)
-    at async DevServer.handleRequest (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\dev\next-dev-server.js:422:24)
-    at async invokeRender (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\lib\router-server.js:306:21)
-    at async handleRequest (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\lib\router-server.js:508:24)
-    at async requestHandlerImpl (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\lib\router-server.js:565:13)
-    at async Server.requestListener (D:\Monisha\codes\e-com\Kollimalaiarasan\code\kollimalai-arasan\node_modules\next\dist\server\lib\start-server.js:225:13)
+    at async a (D:\Projects\Kollimalai\.next\dev\server\chunks\src_generated_prisma_runtime_client_0snntis.js:8974:25)
+    at async Promise.all (index 0)
+    at async Object.findCustomerCategories (D:\Projects\Kollimalai\.next\dev\server\chunks\src_features_11af15z._.js:291:37)
+    at async POST (D:\Projects\Kollimalai\.next\dev\server\chunks\src_02prf3-._.js:26:24)
+    at async D:\Projects\Kollimalai\.next\dev\server\chunks\src_02prf3-._.js:227:20
+    at async AppRouteRouteModule.do (D:\Projects\Kollimalai\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:42791)
+    at async AppRouteRouteModule.handle (D:\Projects\Kollimalai\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:50709)
+    at async responseGenerator (D:\Projects\Kollimalai\.next\dev\server\chunks\node_modules_next_1vvohw3._.js:5328:30)
+    at async AppRouteRouteModule.handleResponse (D:\Projects\Kollimalai\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:248823)
+    at async handleResponse (D:\Projects\Kollimalai\.next\dev\server\chunks\node_modules_next_1vvohw3._.js:5400:32)
+    at async Module.handler (D:\Projects\Kollimalai\.next\dev\server\chunks\node_modules_next_1vvohw3._.js:5520:9)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\Projects\Kollimalai\node_modules\next\dist\server\base-server.js:1537:9)
+    at async DevServer.renderPageComponent (D:\Projects\Kollimalai\node_modules\next\dist\server\base-server.js:1589:24)
+    at async DevServer.renderToResponseImpl (D:\Projects\Kollimalai\node_modules\next\dist\server\base-server.js:1639:32)
+    at async DevServer.pipeImpl (D:\Projects\Kollimalai\node_modules\next\dist\server\base-server.js:1088:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\Projects\Kollimalai\node_modules\next\dist\server\next-server.js:338:17)
+    at async DevServer.handleRequestImpl (D:\Projects\Kollimalai\node_modules\next\dist\server\base-server.js:979:17)
+    at async D:\Projects\Kollimalai\node_modules\next\dist\server\dev\next-dev-server.js:426:20
+    at async Span.traceAsyncFn (D:\Projects\Kollimalai\node_modules\next\dist\trace\trace.js:164:20)
+    at async DevServer.handleRequest (D:\Projects\Kollimalai\node_modules\next\dist\server\dev\next-dev-server.js:422:24)
+    at async invokeRender (D:\Projects\Kollimalai\node_modules\next\dist\server\lib\router-server.js:306:21)
+    at async handleRequest (D:\Projects\Kollimalai\node_modules\next\dist\server\lib\router-server.js:508:24)
+    at async requestHandlerImpl (D:\Projects\Kollimalai\node_modules\next\dist\server\lib\router-server.js:565:13)
+    at async Server.requestListener (D:\Projects\Kollimalai\node_modules\next\dist\server\lib\start-server.js:225:13)

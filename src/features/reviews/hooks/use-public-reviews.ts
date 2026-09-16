@@ -2,12 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/api-client";
-import type { PublicReviewItem, ReviewRatingSummary } from "../types/review.types";
+import type {
+  PublicReviewItem,
+  RatingSummary,
+  PublicReviewsResponse,
+} from "../types/review.types";
 
-export interface PublicReviewsResponse {
-  reviews: PublicReviewItem[];
-  ratingSummary: ReviewRatingSummary;
-}
+export type { PublicReviewsResponse };
 
 export function usePublicProductReviews(
   productIdOrSlug?: string | null,

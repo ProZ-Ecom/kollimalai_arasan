@@ -531,7 +531,7 @@ export function FilterSidebar({
             )}
 
             {/* Scrollable category list with expandable nested products */}
-            <div className="max-h-72 overflow-y-auto flex flex-col gap-2 pr-1.5 scrollbar-thin scrollbar-thumb-[#D4D4D4] scrollbar-track-transparent">
+            <div className="max-h-72 overflow-y-auto flex flex-col gap-2 pr-1.5 scrollbar-thin">
               {/* Option: All Snacks (only in multi-category mode) */}
               {!isSingleCategoryMode && !categorySearch && (
                 <button
@@ -839,7 +839,7 @@ export function FilterSidebar({
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden lg:block w-72 xl:w-80 shrink-0 bg-white border border-[#E5E5E5] rounded-2xl p-5 xl:p-6 shadow-xs sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-[#D4D4D4] scrollbar-track-transparent ${className}`}
+        className={`hidden lg:block w-72 xl:w-80 shrink-0 bg-white border border-[#E5E5E5] rounded-2xl p-5 xl:p-6 shadow-xs sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-thin ${className}`}
       >
         {sidebarContent}
       </aside>

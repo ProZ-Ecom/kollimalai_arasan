@@ -9,6 +9,7 @@ import type {
   CustomerGlobalVariantListInput,
   CustomerRelatedVariantsQueryInput,
 } from "../validations/catalog.schema";
+import type { CustomerTrackSearchInput } from "../types/catalog.types";
 
 export const catalogService = {
   // Brand Methods
@@ -107,5 +108,24 @@ export const catalogService = {
     const result = await catalogRepository.findCustomerGlobalVariants(params);
     await catalogOffers.decorateVariants(result.data);
     return result;
+  },
+
+  async globalSearch(query: string) {
+    const result = await catalogRepository.globalSearch(query);
+    if (result.products.length > 0) {
+      await catalogOffers.decorateProducts(result.products);
+    }
+    if (result.items.length > 0) {
+      await catalogOffers.decorateVariants(result.items);
+    }
+    return result;
+  },
+
+  async trackSearchVisit(params: CustomerTrackSearchInput) {
+    return catalogRepository.trackSearchVisit(params);
+  },
+
+  async getPopularSearchesAndCategories(limit: number = 10) {
+    return catalogRepository.getPopularSearchesAndCategories(limit);
   },
 };

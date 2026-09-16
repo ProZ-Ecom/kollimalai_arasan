@@ -167,6 +167,13 @@ export async function deleteAdminVariant(
   );
 }
 
+export async function bulkDeleteAdminVariants(uuids: string[]) {
+  return apiClient.post<{ success: boolean; count: number; message: string }>(
+    "/api/admin/variants/bulk-delete",
+    { uuids }
+  );
+}
+
 // Variant Images API
 export async function getAdminVariantImages(
   productUuid: string,

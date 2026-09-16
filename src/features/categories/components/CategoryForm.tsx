@@ -33,7 +33,7 @@ function CategoryForm({
   submitLabel = "Save Category",
 }: CategoryFormProps) {
   const methods = useForm<CategoryFormData>({
-    resolver: zodResolver(createCategorySchema),
+    resolver: zodResolver(createCategorySchema) as any,
     mode: "onChange",
     reValidateMode: "onChange",
     defaultValues: {
