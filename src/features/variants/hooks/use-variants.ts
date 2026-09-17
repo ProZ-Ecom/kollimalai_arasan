@@ -26,6 +26,7 @@ export function useCustomerVariants(params?: CustomerGlobalVariantListParams) {
     sortBy: params?.sortBy ?? "createdAt",
     sortOrder: params?.sortOrder ?? "desc",
     isActive: true,
+    onlyDefault: params?.onlyDefault,
   };
 
   return useQuery({

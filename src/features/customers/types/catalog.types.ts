@@ -80,6 +80,7 @@ export interface CustomerVariantListItemDto {
   primaryImage: string | null;
   outOfStock?: boolean;
   videoUrl: string | null;
+  isDefault?: boolean;
   // Full list of sellable pack sizes for this item - an item can have any
   // number of pack sizes, each independently priced. `sku`/`basePrice`/
   // `salePrice`/`measurement` above mirror the default (or first) entry here

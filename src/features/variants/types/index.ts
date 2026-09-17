@@ -24,6 +24,7 @@ export interface CustomerGlobalVariantListParams {
     | "createdAt"
     | "productName";
   sortOrder?: "asc" | "desc";
+  onlyDefault?: boolean;
 }
 
 export interface UnitOption {

@@ -27,7 +27,7 @@ export function SectionHeading({ title }: SectionHeadingProps) {
           {title}
         </h2>
 
-        <div className="flex items-center mt-1 w-full">
+        <div className="flex items-center mt-1 mb-9 w-full">
           <div className="flex-1 h-[2px] bg-[var(--neutral-900)]" />
 
           <Image

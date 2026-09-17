@@ -82,6 +82,7 @@ function toVariantListItemDto(
     short_description?: string | null;
     out_of_stock?: boolean;
     video_url?: string | null;
+    is_default?: boolean | null;
     variant_unit_prices?: VariantUnitPriceForDto[] | null;
     product_variant_images?: Array<{ image_url: string }> | null;
   },
@@ -125,6 +126,7 @@ function toVariantListItemDto(
     primaryImage: variant.product_variant_images?.[0]?.image_url ?? null,
     outOfStock: Boolean(variant.out_of_stock),
     videoUrl: variant.video_url ?? null,
+    isDefault: Boolean(variant.is_default),
     unitPrices,
   };
 }
@@ -833,6 +835,7 @@ export const catalogRepository = {
         isActive: true,
         deleted_at: null,
       },
+      ...(params.onlyDefault ? { is_default: true } : {}),
     };
 
     // Filter by Product UUIDs

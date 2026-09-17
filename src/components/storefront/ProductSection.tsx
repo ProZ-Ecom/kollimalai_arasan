@@ -50,6 +50,7 @@ export function ProductSection({
     pageSize: 20,
     sortBy: "createdAt",
     sortOrder: "desc",
+    onlyDefault: true,
   });
 
   const { wishlistedIds } = useWishlistedUnitPriceIds({ enabled: !!session });
@@ -58,7 +59,15 @@ export function ProductSection({
   const removeFromWishlist = useRemoveFromWishlist();
 
   const products: StorefrontProduct[] = React.useMemo(() => {
-    return (response?.data ?? []).map(mapVariantToStorefrontProduct);
+    const raw = (response?.data ?? []).map(mapVariantToStorefrontProduct);
+    const productMap = new Map<string, StorefrontProduct>();
+    for (const item of raw) {
+      const existing = productMap.get(item.productId);
+      if (!existing || (item.isDefault && !existing.isDefault)) {
+        productMap.set(item.productId, item);
+      }
+    }
+    return Array.from(productMap.values());
   }, [response]);
 
   const showNotification = (msg: string) => {
@@ -121,7 +130,7 @@ export function ProductSection({
                 aria-hidden="true"
                 width={14}
                 height={14}
-                className="invert"
+                className=""
               />
               <span className="header-font">
                 {showAll ? "Show Less" : "View All"}

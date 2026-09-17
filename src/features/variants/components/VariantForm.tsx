@@ -12,7 +12,7 @@ import { FormRichText } from "@/components/forms/form-rich-text";
 import { FormSelect } from "@/components/forms/form-select";
 import { FormCheckbox } from "@/components/forms/form-checkbox";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
-import { FormVideoUpload } from "@/components/forms/form-video-upload";
+import { FormVideoUrl } from "@/components/forms/form-video-url";
 
 // Item-level fields only. Unit + price combinations (sku, unit, base price)
 // are managed separately per (unit) via VariantUnitPriceList, since one item
@@ -391,12 +391,13 @@ function VariantForm({
           placeholder="Detailed item information and description"
         />
 
-        {/* Item Video (uploaded file, same as item images) */}
-        <FormVideoUpload
+        {/* Item Video URL */}
+        <FormVideoUrl
           name="videoUrl"
-          label="Item Video"
-          folder="variants"
-          aspectRatioClassName="aspect-video w-full max-h-80"
+          label="Item Video URL"
+          placeholder="https://www.youtube.com/watch?v=... or direct video URL"
+          description="Enter a YouTube, Vimeo, or direct video link for this item"
+          previewClassName="aspect-video w-full max-h-60"
         />
 
         <div className="flex justify-end pt-2">

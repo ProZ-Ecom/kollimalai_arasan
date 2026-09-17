@@ -168,6 +168,7 @@ export default function CategoryProductsPage({
     maxPrice: maxPrice < 1000 ? maxPrice : undefined,
     sortBy: activeSort.sortBy,
     sortOrder: activeSort.sortOrder,
+    onlyDefault: true,
   });
 
   const meta = variantsResponse?.meta;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -73,32 +73,124 @@ function ProductDetails({ product }: ProductDetailsProps) {
   const { data: session } = useSession();
 
   const variants = product.variants ?? [];
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
-    () => variants[0]?.id ?? null
-  );
+
+  // Flatten all pack size options across all variants of the product (e.g. 250g, 500g, 750g...)
+  const allPackOptions = useMemo(() => {
+    const options: Array<{
+      variantId: string;
+      unitPriceId: string;
+      label: string;
+      sellingPrice: number;
+      basePrice: number;
+      sku: string;
+      inStock: boolean;
+      isDefault: boolean;
+      variant: CustomerVariantListItemDto;
+    }> = [];
+    const seenUnitPriceIds = new Set<string>();
+
+    for (const v of variants) {
+      if (v.unitPrices && v.unitPrices.length > 0) {
+        for (const up of v.unitPrices) {
+          if (seenUnitPriceIds.has(up.id)) continue;
+          seenUnitPriceIds.add(up.id);
+          const label =
+            formatMeasurementLabel(up.measurement) ||
+            v.variantName ||
+            "Standard";
+          options.push({
+            variantId: v.id,
+            unitPriceId: up.id,
+            label,
+            sellingPrice: up.sellingPrice,
+            basePrice: up.basePrice,
+            sku: up.sku || v.sku || "",
+            inStock: !v.outOfStock,
+            isDefault: Boolean(up.isDefault || v.isDefault),
+            variant: v,
+          });
+        }
+      } else {
+        if (seenUnitPriceIds.has(v.id)) continue;
+        seenUnitPriceIds.add(v.id);
+        options.push({
+          variantId: v.id,
+          unitPriceId: v.id,
+          label: formatMeasurementLabel(v.measurement) || v.variantName || "Standard",
+          sellingPrice: v.salePrice || v.basePrice,
+          basePrice: v.basePrice,
+          sku: v.sku || "",
+          inStock: !v.outOfStock,
+          isDefault: Boolean(v.isDefault),
+          variant: v,
+        });
+      }
+    }
+
+    // Sort options by sellingPrice ascending (e.g. 250g, 500g, 750g...)
+    return options.sort((a, b) => a.sellingPrice - b.sellingPrice);
+  }, [variants]);
+
+  const defaultOption = useMemo(() => {
+    return allPackOptions.find((opt) => opt.isDefault) ?? allPackOptions[0] ?? null;
+  }, [allPackOptions]);
+
+  const [selectedUnitPriceId, setSelectedUnitPriceId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      const v = sp.get("variant");
+      if (v) {
+        const matching = allPackOptions.find((opt) => opt.variantId === v);
+        if (matching) return matching.unitPriceId;
+      }
+    }
+    return defaultOption?.unitPriceId ?? null;
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search);
       const v = sp.get("variant");
-      if (v && variants.some((varItem) => varItem.id === v)) {
-        setSelectedVariantId((prev) => (prev === v ? prev : v));
+      if (v) {
+        const matching = allPackOptions.find((opt) => opt.variantId === v);
+        if (matching && matching.unitPriceId !== selectedUnitPriceId) {
+          setSelectedUnitPriceId(matching.unitPriceId);
+          return;
+        }
       }
     }
-  }, [variants]);
+    if (!selectedUnitPriceId && defaultOption) {
+      setSelectedUnitPriceId(defaultOption.unitPriceId);
+    }
+  }, [allPackOptions, defaultOption, selectedUnitPriceId]);
 
-  const selectedVariant: CustomerVariantListItemDto | null =
-    variants.find((v) => v.id === selectedVariantId) ?? variants[0] ?? null;
+  const activeOption = useMemo(() => {
+    return (
+      allPackOptions.find((opt) => opt.unitPriceId === selectedUnitPriceId) ??
+      defaultOption ??
+      allPackOptions[0] ??
+      null
+    );
+  }, [allPackOptions, selectedUnitPriceId, defaultOption]);
+
+  const selectedVariant: CustomerVariantListItemDto | null = useMemo(() => {
+    if (activeOption) {
+      return activeOption.variant;
+    }
+    return variants[0] ?? null;
+  }, [activeOption, variants]);
+
+  const selectedUnitPrice = useMemo(() => {
+    if (!selectedVariant || !activeOption) return null;
+    return (
+      selectedVariant.unitPrices?.find((up) => up.id === activeOption.unitPriceId) ??
+      selectedVariant.unitPrices?.[0] ??
+      null
+    );
+  }, [selectedVariant, activeOption]);
 
   const { data: variantDetail } = useCustomerVariant(product.id, selectedVariant?.id ?? null);
   const { data: company } = useCustomerCompany();
-
-  const unitPrices = selectedVariant?.unitPrices ?? [];
-  const [selectedUnitPriceId, setSelectedUnitPriceId] = useState<string | null>(
-    unitPrices.find((u) => u.isDefault)?.id ?? unitPrices[0]?.id ?? null
-  );
-  const selectedUnitPrice =
-    unitPrices.find((u) => u.id === selectedUnitPriceId) ?? unitPrices[0] ?? null;
 
   const [quantity, setQuantity] = useState(1);
   const [shareCopied, setShareCopied] = useState(false);
@@ -114,16 +206,22 @@ function ProductDetails({ product }: ProductDetailsProps) {
     variantReviewsData?.reviews?.length ??
     0;
 
-  const handleSelectVariant = (variantId: string) => {
-    setSelectedVariantId(variantId);
-    const next = variants.find((v) => v.id === variantId);
-    const nextUnitPrices = next?.unitPrices ?? [];
-    setSelectedUnitPriceId(
-      nextUnitPrices.find((u) => u.isDefault)?.id ?? nextUnitPrices[0]?.id ?? null
-    );
+  const handleSelectPackOption = (option: { variantId: string; unitPriceId: string }) => {
+    setSelectedUnitPriceId(option.unitPriceId);
     setQuantity(1);
     if (typeof window !== "undefined") {
-      window.scrollTo({ top: 120, behavior: "smooth" });
+      const url = new URL(window.location.href);
+      url.searchParams.set("variant", option.variantId);
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
+
+  const selectedVariantId = selectedVariant?.id ?? null;
+
+  const handleSelectVariant = (variantId: string) => {
+    const matching = allPackOptions.find((opt) => opt.variantId === variantId);
+    if (matching) {
+      handleSelectPackOption(matching);
     }
   };
 
@@ -368,32 +466,31 @@ function ProductDetails({ product }: ProductDetailsProps) {
           </div>
 
           {/* Pack Size Selection (Figma Style) */}
-          {unitPrices.length > 0 && (
+          {allPackOptions.length > 0 && (
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs sm:text-sm font-bold tracking-wider text-neutral-900 uppercase font-sans">
                   CHOOSE PACK SIZE
                 </span>
-                {selectedUnitPrice && (
+                {activeOption && (
                   <span className="text-xs sm:text-sm text-[#007F06] font-semibold">
-                    Selected: {formatMeasurementLabel(selectedUnitPrice.measurement)}
+                    Selected: {activeOption.label}
                   </span>
                 )}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {unitPrices.map((unitPrice) => {
-                  const isSelected = selectedUnitPriceId === unitPrice.id;
-                  const measurementLabel = formatMeasurementLabel(unitPrice.measurement);
-                  const price = unitPrice.sellingPrice;
-                  const compare = unitPrice.basePrice;
+                {allPackOptions.map((opt) => {
+                  const isSelected = activeOption?.unitPriceId === opt.unitPriceId;
+                  const price = opt.sellingPrice;
+                  const compare = opt.basePrice;
                   const discount =
                     compare > price ? Math.round(((compare - price) / compare) * 100) : 0;
 
                   return (
                     <button
-                      key={unitPrice.id}
+                      key={opt.unitPriceId}
                       type="button"
-                      onClick={() => setSelectedUnitPriceId(unitPrice.id)}
+                      onClick={() => handleSelectPackOption(opt)}
                       className={`relative flex flex-col items-center justify-center p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer select-none ${
                         isSelected
                           ? "border-[#006B05] bg-[#006B05] text-white shadow-md scale-[1.02]"
@@ -407,7 +504,7 @@ function ProductDetails({ product }: ProductDetailsProps) {
                       )}
                       <div className="flex items-center gap-1 text-xs sm:text-sm font-bold">
                         {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                        <span>{measurementLabel}</span>
+                        <span>{opt.label}</span>
                       </div>
                       <span
                         className={`text-xs sm:text-sm mt-0.5 ${

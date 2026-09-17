@@ -106,6 +106,7 @@ export const customerGlobalVariantListSchema = z
       .optional()
       .default("createdAt"),
     sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+    onlyDefault: z.boolean().optional(),
   })
   .strict()
   .refine(

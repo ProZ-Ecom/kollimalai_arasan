@@ -44,6 +44,9 @@ export async function getCustomerVariants(
   if (params?.maxPrice !== undefined && params?.maxPrice !== null) {
     body.maxPrice = params.maxPrice;
   }
+  if (params?.onlyDefault !== undefined) {
+    body.onlyDefault = params.onlyDefault;
+  }
 
   const response = await apiClient.post<CustomerVariantListItemDto[]>(
     "/api/customer/variants",

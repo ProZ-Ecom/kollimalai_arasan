@@ -344,5 +344,6 @@ export interface StorefrontProduct {
   name: string;
   image: string;
   outOfStock?: boolean;
+  isDefault?: boolean;
   unitPrices: StorefrontUnitPrice[];
 }
