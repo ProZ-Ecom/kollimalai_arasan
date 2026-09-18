@@ -21,7 +21,7 @@ export interface CustomerProductCardProps {
 export function CustomerProductCard({ product }: CustomerProductCardProps) {
   const router = useRouter();
   const { data: session } = useSession();
-  const { wishlistedIds } = useWishlistedUnitPriceIds({ enabled: !!session });
+  const { wishlistedIds } = useWishlistedUnitPriceIds();
   const addToCart = useAddToCart();
   const addToWishlist = useAddToWishlist();
   const removeFromWishlist = useRemoveFromWishlist();
@@ -57,31 +57,42 @@ export function CustomerProductCard({ product }: CustomerProductCardProps) {
     : undefined;
 
   const requireLogin = () => {
+    toast.info("Please log in to add items to your cart");
     const returnUrl =
       typeof window !== "undefined" ? window.location.pathname : "/products";
     router.push(`/login?callbackUrl=${encodeURIComponent(returnUrl)}`);
   };
 
   const handleWishlistToggle = (variantId?: string) => {
-    if (!session) return requireLogin();
     const targetId = variantId || activeVariantId;
     if (!targetId) return;
 
     if (wishlistedIds.has(targetId)) {
       removeFromWishlist.mutate(targetId, {
         onSuccess: () => toast.success("Removed from wishlist", product.name),
-        onError: () => toast.error("Could not remove from wishlist"),
+        onError: (err: any) => {
+          if (err?.status === 401 || err?.message?.toLowerCase().includes("login")) {
+            requireLogin();
+            return;
+          }
+          toast.error(err?.message || "Could not remove from wishlist");
+        },
       });
     } else {
       addToWishlist.mutate(targetId, {
         onSuccess: () => toast.success("Added to wishlist", product.name),
-        onError: () => toast.error("Could not add to wishlist"),
+        onError: (err: any) => {
+          if (err?.status === 401 || err?.message?.toLowerCase().includes("login")) {
+            requireLogin();
+            return;
+          }
+          toast.error(err?.message || "Could not add to wishlist");
+        },
       });
     }
   };
 
   const handleAddToCart = (variantId?: string) => {
-    if (!session) return requireLogin();
     const targetId = variantId || activeVariantId;
     if (!targetId) return;
 
@@ -89,7 +100,13 @@ export function CustomerProductCard({ product }: CustomerProductCardProps) {
       { variantUnitPriceId: targetId, quantity: 1 },
       {
         onSuccess: () => toast.success("Added to cart", product.name),
-        onError: () => toast.error("Could not add item to cart"),
+        onError: (err: any) => {
+          if (err?.status === 401 || err?.message?.toLowerCase().includes("login")) {
+            requireLogin();
+            return;
+          }
+          toast.error(err?.message || "Could not add item to cart");
+        },
       }
     );
   };

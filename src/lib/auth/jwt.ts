@@ -51,7 +51,7 @@ export function generateAccessToken(payload: AccessTokenPayload): string {
       role: payload.role || "CUSTOMER",
     },
     getAccessSecret(),
-    { expiresIn: "15m" }
+    { expiresIn: "7d" }
   );
 }
 

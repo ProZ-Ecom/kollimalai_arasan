@@ -6,14 +6,13 @@ import type { UpdateCustomerProfileInput } from "../validations/customer-profile
 
 export const CUSTOMER_PROFILE_QUERY_KEY = ["customer", "profile"] as const;
 
-export function useCustomerProfile() {
-  const { status } = useSession();
-
-  return useQuery<CustomerProfileResponse>({
+export function useCustomerProfile(options?: { enabled?: boolean }) {
+  return useQuery<CustomerProfileResponse | null>({
     queryKey: CUSTOMER_PROFILE_QUERY_KEY,
     queryFn: () => customerProfileApi.getProfile(),
-    enabled: status === "authenticated",
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: false,
+    enabled: options?.enabled ?? true,
   });
 }
 

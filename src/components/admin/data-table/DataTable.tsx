@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -401,18 +402,18 @@ function DataTable<TData, TValue>({
             <span className="text-xs font-medium text-[var(--color-neutral-600)] whitespace-nowrap">
               Rows per page:
             </span>
-            <select
-              value={effectivePageSize}
-              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            <Select
+              value={String(effectivePageSize)}
+              onValueChange={(val) => handlePageSizeChange(Number(val))}
               aria-label="Rows per page"
-              className="h-8 rounded-lg border border-[var(--color-neutral-300)] bg-white px-2.5 py-1 text-xs font-semibold text-[var(--color-neutral-700)] shadow-xs transition-colors hover:border-[var(--color-neutral-400)] focus:border-secondary-600 focus:outline-hidden cursor-pointer"
-            >
-              {pageSizeOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
+              options={pageSizeOptions.map((opt) => ({
+                value: String(opt),
+                label: String(opt),
+              }))}
+              dropdownPosition="top"
+              size="sm"
+              className="w-18 h-8 font-semibold text-xs"
+            />
           </div>
         </div>
         <div className="flex items-center gap-2 self-end sm:self-auto">

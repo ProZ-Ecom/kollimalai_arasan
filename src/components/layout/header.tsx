@@ -46,23 +46,28 @@ function HeaderIconLink({
   href,
   label,
   badge,
+  showZero = false,
   children,
 }: {
   href: string;
   label: string;
   badge?: number;
+  showZero?: boolean;
   children: React.ReactNode;
 }) {
+  const hasBadge = typeof badge === "number" && (badge > 0 || showZero);
+  const displayCount = typeof badge === "number" ? badge : 0;
+
   return (
     <Link
       href={href}
-      aria-label={badge ? `${label} (${badge})` : label}
+      aria-label={hasBadge ? `${label} (${displayCount})` : label}
       className="relative grid place-items-center w-9 h-9 -m-1.5 rounded-full text-white transition-colors hover:bg-white/15"
     >
       {children}
-      {badge ? (
-        <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-theme-secondary text-theme-secondary-fg text-[10px] font-bold flex items-center justify-center leading-none">
-          {badge > 99 ? "99+" : badge}
+      {hasBadge ? (
+        <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-theme-secondary text-theme-secondary-fg text-[10px] font-bold flex items-center justify-center leading-none shadow-xs">
+          {displayCount > 99 ? "99+" : displayCount}
         </span>
       ) : null}
     </Link>
@@ -137,7 +142,8 @@ export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session, status } = useSession();
-  const isAuthenticated = status === "authenticated";
+  const { data: profile } = useCustomerProfile();
+  const isAuthenticated = status === "authenticated" || Boolean(profile);
   // `status` is "loading" until /api/auth/session resolves on every page load.
   // Treating that as logged-out would flash the Login button at signed-in users,
   // so the account cell renders a placeholder until the session is known.
@@ -149,11 +155,10 @@ export function Header() {
     const timer = setTimeout(() => setAuthGraceExpired(true), 1500);
     return () => clearTimeout(timer);
   }, [status]);
-  const isAuthLoading = status === "loading" && !authGraceExpired;
-  const userRole = session?.user?.role as string | undefined;
+  const isAuthLoading = status === "loading" && !authGraceExpired && !profile;
+  const userRole = (session?.user?.role || (profile as any)?.role) as string | undefined;
   const isAdminUser = userRole === ROLES.ADMIN || userRole === ROLES.STAFF;
   const accountHref = isAdminUser ? "/admin/dashboard" : "/profile";
-  const { data: profile } = useCustomerProfile();
 
   // Get user name and initials for authenticated header state
   const userName = profile?.name || session?.user?.name || "";
@@ -161,11 +166,12 @@ export function Header() {
     if (userName && userName.trim().length > 0) {
       return getInitials(userName) || "U";
     }
-    if (session?.user?.email) {
-      return session.user.email.slice(0, 2).toUpperCase();
+    const email = session?.user?.email || profile?.email;
+    if (email) {
+      return email.slice(0, 2).toUpperCase();
     }
     return "U";
-  }, [userName, session?.user?.email]);
+  }, [userName, session?.user?.email, profile?.email]);
 
   // Real-time badge counts from customer endpoints (only enabled when authenticated)
   const { data: wishlistCount = 0 } = useCustomerWishlistCount();
@@ -299,6 +305,7 @@ export function Header() {
               href={isAuthenticated ? "/cart" : "/login?callbackUrl=/cart"}
               label="Cart"
               badge={cartCount}
+              showZero
             >
               <ShoppingBag className="w-[21px] h-[21px]" strokeWidth={1.75} />
             </HeaderIconLink>

@@ -22,14 +22,12 @@ export function useCustomerCart(options?: { enabled?: boolean }) {
 }
 
 export function useCustomerCartCount(options?: { enabled?: boolean }) {
-  const { status } = useSession();
-  const isAuthenticated = status === "authenticated";
-
   return useQuery({
     queryKey: [...CUSTOMER_CART_QUERY_KEY, "count"],
     queryFn: () => customerCartApi.getCartCount(),
-    staleTime: 0,
-    enabled: isAuthenticated && (options?.enabled ?? true),
+    staleTime: 1000 * 30,
+    retry: false,
+    enabled: options?.enabled ?? true,
   });
 }
 

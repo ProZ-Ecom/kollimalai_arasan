@@ -19,14 +19,12 @@ export function useCustomerWishlist(options?: { enabled?: boolean }) {
 }
 
 export function useCustomerWishlistCount(options?: { enabled?: boolean }) {
-  const { status } = useSession();
-  const isAuthenticated = status === "authenticated";
-
   return useQuery({
     queryKey: [...CUSTOMER_WISHLIST_QUERY_KEY, "count"],
     queryFn: () => customerWishlistApi.getWishlistCount(),
-    staleTime: 0,
-    enabled: isAuthenticated && (options?.enabled ?? true),
+    staleTime: 1000 * 30,
+    retry: false,
+    enabled: options?.enabled ?? true,
   });
 }
 

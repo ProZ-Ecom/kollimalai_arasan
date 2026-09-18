@@ -5,7 +5,8 @@ import { apiError, apiValidationError, apiFromError } from "./api-response";
 import { ApiError } from "./api-error";
 import { handlePrismaError } from "./api-error";
 import { auth } from "@/lib/auth/config";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { verifyAccessToken, verifyRefreshToken, generateAccessToken } from "@/lib/auth/jwt";
+import { userRepository } from "@/features/users/repositories/user.repository";
 import type { Session } from "next-auth";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
@@ -106,10 +107,51 @@ export function createApiHandler(
                 role: payload.role || "CUSTOMER",
                 status: "active",
               },
-              expires: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+              expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             } as unknown as Session;
           } catch {
-            return apiError("Session expired. Please log in again.", 401);
+            // Token expired or invalid; try refresh_token fallback below
+          }
+        }
+
+        // If access token was missing or expired, attempt refresh using refresh_token cookie
+        if (!session?.user && cookieStore) {
+          const refreshToken = cookieStore.get("refresh_token")?.value;
+          if (refreshToken) {
+            try {
+              const refreshPayload = verifyRefreshToken(refreshToken);
+              const user = await userRepository.findById(refreshPayload.userId);
+              if (user && (user.status === "active" || user.is_active)) {
+                const userUuid = user.uuid || user.id.toString();
+                const userRole = user.roleName || user.role?.name || "CUSTOMER";
+
+                const newAccessToken = generateAccessToken({
+                  userId: userUuid,
+                  email: user.email ?? "",
+                  role: userRole,
+                });
+
+                cookieStore.set("access_token", newAccessToken, {
+                  httpOnly: true,
+                  secure: process.env.NODE_ENV === "production",
+                  sameSite: "lax",
+                  path: "/",
+                  maxAge: 7 * 24 * 60 * 60,
+                });
+
+                session = {
+                  user: {
+                    id: userUuid,
+                    email: user.email,
+                    role: userRole,
+                    status: "active",
+                  },
+                  expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                } as unknown as Session;
+              }
+            } catch {
+              // Refresh token is also invalid or expired
+            }
           }
         }
       }

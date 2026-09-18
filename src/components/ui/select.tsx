@@ -22,6 +22,9 @@ export interface SelectProps
   rightIcon?: React.ReactNode;
   size?: "sm" | "md" | "lg";
   variant?: "default" | "warm" | "ghost";
+  dropdownPosition?: "top" | "bottom" | "auto";
+  contentClassName?: string;
+  wrapperClassName?: string;
 }
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
@@ -43,6 +46,9 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       rightIcon,
       size = "md",
       variant = "default",
+      dropdownPosition = "bottom",
+      contentClassName,
+      wrapperClassName,
       ...props
     },
     ref
@@ -160,7 +166,11 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const effectiveRightIcon = rightIcon || icon;
 
     return (
-      <div className="w-full relative" ref={containerRef} onKeyDown={handleKeyDown}>
+      <div
+        className={cn("w-full relative", wrapperClassName)}
+        ref={containerRef}
+        onKeyDown={handleKeyDown}
+      >
         {/* Hidden Native Select for Form Libraries (e.g. react-hook-form) */}
         <select
           ref={(node) => {
@@ -219,14 +229,12 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             <span
               className={cn(
                 "truncate",
-                !selectedOption || selectedOption.value === ""
+                !selectedOption
                   ? "text-theme-text-muted font-normal"
-                  : "text-theme-text-primary"
+                  : "text-theme-text-primary font-medium"
               )}
             >
-              {selectedOption && selectedOption.value !== ""
-                ? selectedOption.label
-                : placeholder}
+              {selectedOption ? selectedOption.label : placeholder}
             </span>
           </div>
 
@@ -246,7 +254,11 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {/* Custom Dropdown List - Scrollable and Contained */}
         {isOpen && (
           <div
-            className="absolute left-0 right-0 top-full z-[60] mt-1.5 overflow-hidden rounded-xl border border-theme-border bg-theme-surface shadow-lg animate-in zoom-in-95 duration-150 min-w-[160px]"
+            className={cn(
+              "absolute left-0 right-0 z-[60] overflow-hidden rounded-xl border border-theme-border bg-theme-surface shadow-lg animate-in zoom-in-95 duration-150 min-w-[140px]",
+              dropdownPosition === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5",
+              contentClassName
+            )}
             role="listbox"
           >
             {/* Search Input for Long Lists (>= 7 options) */}

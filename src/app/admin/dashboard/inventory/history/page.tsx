@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
+import { Select } from "@/components/ui/select";
 import {
   AdminPageHeader,
   AdminContent,
@@ -112,25 +113,28 @@ export default function InventoryHistoryPage() {
           </div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-semibold text-neutral-600 whitespace-nowrap">Filter by type:</label>
-            <select
-              className="h-10 rounded-xl border border-neutral-300 bg-white px-3 text-xs text-neutral-700 focus:border-secondary-600 focus:outline-none cursor-pointer"
+            <Select
+              wrapperClassName="w-44"
+              size="sm"
+              className="h-10 rounded-xl text-xs"
               value={params.type ?? ""}
-              onChange={(e) =>
+              onValueChange={(val) =>
                 setParams((prev) => ({
                   ...prev,
-                  type: e.target.value || undefined,
+                  type: val || undefined,
                   page: 1,
                 }))
               }
-            >
-              <option value="">All Types</option>
-              <option value="PURCHASE">Purchase</option>
-              <option value="SALE">Sale</option>
-              <option value="RETURN">Return</option>
-              <option value="ADJUSTMENT">Adjustment</option>
-              <option value="DAMAGE">Damage</option>
-              <option value="TRANSFER">Transfer</option>
-            </select>
+              options={[
+                { value: "", label: "All Types" },
+                { value: "PURCHASE", label: "Purchase" },
+                { value: "SALE", label: "Sale" },
+                { value: "RETURN", label: "Return" },
+                { value: "ADJUSTMENT", label: "Adjustment" },
+                { value: "DAMAGE", label: "Damage" },
+                { value: "TRANSFER", label: "Transfer" },
+              ]}
+            />
           </div>
 
           {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} />}

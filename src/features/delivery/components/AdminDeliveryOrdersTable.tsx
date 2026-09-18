@@ -13,6 +13,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 import { formatDateTime, formatPrice } from "@/lib/utils";
 import { useAdminDeliveryOrders, useAdminDeliveryStaff } from "../hooks";
 import { DeliveryStatusBadge, AssignmentStatusBadge } from "./DeliveryStatusBadge";
@@ -234,38 +235,43 @@ export function AdminDeliveryOrdersTable() {
             className="w-full sm:w-64"
           />
 
-          <select
+          <Select
             value={selectedDeliveryStatus}
-            onChange={(e) => {
-              setSelectedDeliveryStatus(e.target.value);
+            onValueChange={(val) => {
+              setSelectedDeliveryStatus(val);
               setPage(1);
             }}
-            className="h-10 rounded-xl border border-neutral-300 bg-white px-3 text-xs text-neutral-700 focus:border-secondary-600 focus:outline-none focus:ring-2 focus:ring-secondary-600/10 cursor-pointer"
-          >
-            <option value="">All Shipment Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="picked_up">Picked Up</option>
-            <option value="in_transit">In Transit</option>
-            <option value="out_for_delivery">Out for Delivery</option>
-            <option value="delivered">Delivered</option>
-            <option value="failed">Failed</option>
-          </select>
+            size="sm"
+            wrapperClassName="w-full sm:w-48"
+            className="h-10 rounded-xl"
+            options={[
+              { value: "", label: "All Shipment Statuses" },
+              { value: "pending", label: "Pending" },
+              { value: "picked_up", label: "Picked Up" },
+              { value: "in_transit", label: "In Transit" },
+              { value: "out_for_delivery", label: "Out for Delivery" },
+              { value: "delivered", label: "Delivered" },
+              { value: "failed", label: "Failed" },
+            ]}
+          />
 
-          <select
+          <Select
             value={selectedStaffId}
-            onChange={(e) => {
-              setSelectedStaffId(e.target.value);
+            onValueChange={(val) => {
+              setSelectedStaffId(val);
               setPage(1);
             }}
-            className="h-10 rounded-xl border border-neutral-300 bg-white px-3 text-xs text-neutral-700 focus:border-secondary-600 focus:outline-none focus:ring-2 focus:ring-secondary-600/10 cursor-pointer"
-          >
-            <option value="">All Delivery Staff</option>
-            {staffList.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.phone || "Staff"})
-              </option>
-            ))}
-          </select>
+            size="sm"
+            wrapperClassName="w-full sm:w-48"
+            className="h-10 rounded-xl"
+            options={[
+              { value: "", label: "All Delivery Staff" },
+              ...staffList.map((s) => ({
+                value: s.id,
+                label: `${s.name} (${s.phone || "Staff"})`,
+              })),
+            ]}
+          />
         </div>
 
         <Button

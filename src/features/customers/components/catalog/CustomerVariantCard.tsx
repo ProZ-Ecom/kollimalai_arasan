@@ -22,7 +22,7 @@ export interface CustomerVariantCardProps {
 export function CustomerVariantCard({ variant }: CustomerVariantCardProps) {
   const router = useRouter();
   const { data: session } = useSession();
-  const { wishlistedIds } = useWishlistedUnitPriceIds({ enabled: !!session });
+  const { wishlistedIds } = useWishlistedUnitPriceIds();
   const addToCart = useAddToCart();
   const addToWishlist = useAddToWishlist();
   const removeFromWishlist = useRemoveFromWishlist();
@@ -60,39 +60,64 @@ export function CustomerVariantCard({ variant }: CustomerVariantCardProps) {
   const isWishlisted = Boolean(activeUnitPriceId && wishlistedIds.has(activeUnitPriceId));
 
   const requireLogin = () => {
+    toast.info("Please log in to add items to your cart");
     const returnUrl =
       typeof window !== "undefined" ? window.location.pathname : "/products";
     router.push(`/login?callbackUrl=${encodeURIComponent(returnUrl)}`);
   };
 
   const handleWishlistToggle = (unitPriceId?: string) => {
-    if (!session) return requireLogin();
-    const targetId = unitPriceId || activeUnitPriceId;
+    const targetId = unitPriceId || activeUnitPriceId || defaultUnit?.id || packVariants[0]?.id;
     if (!targetId) return;
 
     if (wishlistedIds.has(targetId)) {
       removeFromWishlist.mutate(targetId, {
         onSuccess: () => toast.success("Removed from wishlist", variant.variantName),
-        onError: () => toast.error("Could not remove from wishlist"),
+        onError: (err: any) => {
+          if (err?.status === 401 || err?.message?.toLowerCase().includes("login")) {
+            toast.info("Please log in to manage your wishlist");
+            requireLogin();
+            return;
+          }
+          toast.error(err?.message || "Could not remove from wishlist");
+        },
       });
     } else {
       addToWishlist.mutate(targetId, {
         onSuccess: () => toast.success("Added to wishlist", variant.variantName),
-        onError: () => toast.error("Could not add to wishlist"),
+        onError: (err: any) => {
+          if (err?.status === 401 || err?.message?.toLowerCase().includes("login")) {
+            toast.info("Please log in to manage your wishlist");
+            requireLogin();
+            return;
+          }
+          toast.error(err?.message || "Could not add to wishlist");
+        },
       });
     }
   };
 
   const handleAddToCart = (unitPriceId?: string) => {
-    if (!session) return requireLogin();
-    const targetId = unitPriceId || activeUnitPriceId;
-    if (!targetId) return;
+    const targetId = unitPriceId || activeUnitPriceId || defaultUnit?.id || packVariants[0]?.id;
 
     addToCart.mutate(
-      { variantUnitPriceId: targetId, quantity: 1 },
       {
-        onSuccess: () => toast.success("Added to cart", variant.variantName),
-        onError: () => toast.error("Could not add item to cart"),
+        variantUnitPriceId: targetId || undefined,
+        variantId: variant.id,
+        quantity: 1,
+      },
+      {
+        onSuccess: () =>
+          toast.success("Added to cart", variant.variantName || variant.productName),
+        onError: (err: any) => {
+          if (err?.status === 401 || err?.message?.toLowerCase().includes("login")) {
+            toast.info("Please log in to add items to your cart");
+            requireLogin();
+            return;
+          }
+          const message = err?.message || "Could not add item to cart";
+          toast.error(message);
+        },
       }
     );
   };

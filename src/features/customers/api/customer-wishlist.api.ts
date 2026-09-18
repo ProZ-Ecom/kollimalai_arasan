@@ -21,10 +21,14 @@ export const customerWishlistApi = {
    * Postman: GET /api/customer/wishlist/count
    */
   async getWishlistCount(): Promise<number> {
-    const response = await apiClient.get<{ count: number }>(
-      "/api/customer/wishlist/count"
-    );
-    return response.data?.count ?? 0;
+    try {
+      const response = await apiClient.get<{ count: number }>(
+        "/api/customer/wishlist/count"
+      );
+      return response.data?.count ?? 0;
+    } catch {
+      return 0;
+    }
   },
 
   /**

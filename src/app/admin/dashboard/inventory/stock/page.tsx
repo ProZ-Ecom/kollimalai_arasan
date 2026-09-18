@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -229,33 +230,40 @@ export default function InventoryStockPage() {
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium">Inventory Item <span className="text-red-500">*</span></label>
-            <select
-              className="w-full border rounded-md p-2"
-              {...adjustForm.register("inventoryId", { valueAsNumber: true })}
-            >
-              <option value={0} disabled>
-                Select item
-              </option>
-              {inventoryData?.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.productName}
-                  {item.variantName ? ` - ${item.variantName}` : ""}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={String(adjustForm.watch("inventoryId") || "")}
+              onValueChange={(val) =>
+                adjustForm.setValue("inventoryId", Number(val), {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
+              placeholder="Select item"
+              size="sm"
+              className="h-10 rounded-lg text-sm"
+              options={(inventoryData ?? []).map((item) => ({
+                value: String(item.id),
+                label: `${item.productName}${item.variantName ? ` - ${item.variantName}` : ""}`,
+              }))}
+            />
           </div>
           <div>
             <label className="text-sm font-medium">Type <span className="text-red-500">*</span></label>
-            <select
-              className="w-full border rounded-md p-2"
-              {...adjustForm.register("type")}
-            >
-              {transactionTypes.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={adjustForm.watch("type")}
+              onValueChange={(val) =>
+                adjustForm.setValue("type", val as InventoryTransactionType, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
+              size="sm"
+              className="h-10 rounded-lg text-sm"
+              options={transactionTypes.map((t) => ({
+                value: t.value,
+                label: t.label,
+              }))}
+            />
           </div>
           <div>
             <label className="text-sm font-medium">

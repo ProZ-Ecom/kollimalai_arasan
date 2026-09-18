@@ -111,14 +111,13 @@ export default auth(async (req) => {
   }
 
   if ((pathname === "/login" || pathname === "/register") && isAuthenticated) {
-    const url = req.nextUrl.clone();
-    url.search = "";
     if (userRole === "ADMIN" || userRole === "STAFF") {
+      const url = req.nextUrl.clone();
+      url.search = "";
       url.pathname = "/admin/dashboard";
-    } else {
-      url.pathname = "/";
+      return applyCookies(NextResponse.redirect(url));
     }
-    return applyCookies(NextResponse.redirect(url));
+    // Allow customers to access login/register freely
   }
 
   return applyCookies(NextResponse.next());

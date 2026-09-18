@@ -25,7 +25,10 @@ export function useAddToCart() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cartKeys.all });
       queryClient.invalidateQueries({ queryKey: ["customer", "cart"] });
+      queryClient.invalidateQueries({ queryKey: ["customer", "cart", "count"] });
       queryClient.invalidateQueries({ queryKey: ["customer", "wishlist"] });
+      queryClient.invalidateQueries({ queryKey: ["customer", "wishlist", "count"] });
+      queryClient.invalidateQueries({ queryKey: ["customer", "profile"] });
       queryClient.invalidateQueries({ queryKey: ["wishlist"] });
     },
   });

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Plus, Pencil, Trash2, Star, Loader2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useUnits } from "@/features/units/hooks";
 import type { AdminUnitResponse } from "@/features/units/types";
@@ -261,18 +262,16 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
                   <label className="block text-xs font-semibold text-neutral-800 mb-1.5">
                     Unit <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <Select
                     value={form.unitId}
-                    onChange={(e) => setForm((f) => ({ ...f, unitId: e.target.value }))}
-                    className="w-full h-10 px-3 rounded-lg border border-neutral-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-secondary-600/20 focus:border-secondary-600"
-                  >
-                    <option value="">Select unit</option>
-                    {units.map((u: AdminUnitResponse) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} ({u.code})
-                      </option>
-                    ))}
-                  </select>
+                    onValueChange={(val) => setForm((f) => ({ ...f, unitId: val }))}
+                    placeholder="Select unit"
+                    className="h-10 rounded-lg text-sm"
+                    options={units.map((u: AdminUnitResponse) => ({
+                      value: u.id,
+                      label: `${u.name} (${u.code})`,
+                    }))}
+                  />
                   <p className="text-[11px] text-neutral-400 mt-1">
                     What is it measured in — Grams, Kilograms, Millilitres, or just a count.
                   </p>

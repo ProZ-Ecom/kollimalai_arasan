@@ -11,6 +11,7 @@ import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormModal } from "@/components/common/FormModal";
 import { Plus, Pencil, Trash2 } from "lucide-react";
@@ -45,6 +46,7 @@ export default function AdminBlogsPage() {
     register,
     handleSubmit,
     watch,
+    setValue,
     reset,
     formState: { errors },
   } = useForm<CreateBlogSchemaInput>({
@@ -284,14 +286,22 @@ export default function AdminBlogsPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              {...register("status")}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-            >
-              <option value="DRAFT">Draft</option>
-              <option value="PUBLISHED">Published</option>
-              <option value="ARCHIVED">Archived</option>
-            </select>
+            <Select
+              value={watch("status")}
+              onValueChange={(val) =>
+                setValue("status", val as "DRAFT" | "PUBLISHED" | "ARCHIVED", {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
+              size="sm"
+              className="h-10 rounded-lg text-sm"
+              options={[
+                { value: "DRAFT", label: "Draft" },
+                { value: "PUBLISHED", label: "Published" },
+                { value: "ARCHIVED", label: "Archived" },
+              ]}
+            />
           </div>
 
           <div>

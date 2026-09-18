@@ -65,27 +65,45 @@ export function LowestPrice() {
   };
 
   const handleAddToCart = (product: StorefrontProduct, unitPriceId?: string) => {
-    if (!session) return requireLogin();
     if (!unitPriceId) return;
     addToCart.mutate(
       { variantUnitPriceId: unitPriceId, quantity: 1 },
       {
         onSuccess: () => showNotification(`Added ${product.name} to cart`),
-        onError: () => showNotification("Could not add item to cart"),
+        onError: (err: any) => {
+          if (err?.status === 401 || err?.message?.toLowerCase().includes("login")) {
+            requireLogin();
+            return;
+          }
+          showNotification("Could not add item to cart");
+        },
       }
     );
   };
 
   const handleWishlistToggle = (product: StorefrontProduct, unitPriceId?: string) => {
-    if (!session) return requireLogin();
     if (!unitPriceId) return;
     if (wishlistedIds.has(unitPriceId)) {
       removeFromWishlist.mutate(unitPriceId, {
         onSuccess: () => showNotification(`Removed ${product.name} from wishlist`),
+        onError: (err: any) => {
+          if (err?.status === 401 || err?.message?.toLowerCase().includes("login")) {
+            requireLogin();
+            return;
+          }
+          showNotification("Could not remove item from wishlist");
+        },
       });
     } else {
       addToWishlist.mutate(unitPriceId, {
         onSuccess: () => showNotification(`Added ${product.name} to wishlist`),
+        onError: (err: any) => {
+          if (err?.status === 401 || err?.message?.toLowerCase().includes("login")) {
+            requireLogin();
+            return;
+          }
+          showNotification("Could not add item to wishlist");
+        },
       });
     }
   };
