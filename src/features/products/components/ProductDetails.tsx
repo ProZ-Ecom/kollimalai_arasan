@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ProductGallery } from "./ProductGallery";
 import { ProductVariantSelector } from "./ProductVariantSelector";
-import { getImageUrl, cn } from "@/lib/utils";
+import { getImageUrl } from "@/lib/utils";
 import { formatMeasurementLabel } from "@/features/variants/utils/measurement.util";
 import { useCustomerVariant } from "@/features/customers/hooks/use-customer-catalog";
 import { useCustomerCompany } from "@/features/customers/hooks/use-customer-company";
@@ -72,7 +72,7 @@ function ProductDetails({ product }: ProductDetailsProps) {
   const router = useRouter();
   const { data: session } = useSession();
 
-  const variants = product.variants ?? [];
+  const variants = useMemo(() => product.variants ?? [], [product.variants]);
 
   // Flatten all pack size options across all variants of the product (e.g. 250g, 500g, 750g...)
   const allPackOptions = useMemo(() => {
@@ -154,6 +154,7 @@ function ProductDetails({ product }: ProductDetailsProps) {
       if (v) {
         const matching = allPackOptions.find((opt) => opt.variantId === v);
         if (matching && matching.unitPriceId !== selectedUnitPriceId) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setSelectedUnitPriceId(matching.unitPriceId);
           return;
         }
@@ -238,28 +239,74 @@ function ProductDetails({ product }: ProductDetailsProps) {
     !!selectedUnitPrice &&
     !!wishlist?.items.some((i) => i.variantUnitPriceId === selectedUnitPrice.id);
 
-  const variantImages = variantDetail?.id === selectedVariant?.id ? variantDetail?.images ?? [] : [];
+  const variantImages = useMemo(() => {
+    return variantDetail?.id === selectedVariant?.id ? variantDetail?.images ?? [] : [];
+  }, [variantDetail?.id, variantDetail?.images, selectedVariant?.id]);
 
-  const galleryImages =
-    variantImages.length > 0
-      ? [...variantImages]
-          .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.sortOrder - b.sortOrder)
-          .map((img) => ({
-            id: img.id,
-            url: getImageUrl(img.imageUrl),
-            altText: selectedVariant?.variantName || product.name,
-          }))
-      : selectedVariant?.primaryImage
-        ? [
-            {
-              id: selectedVariant.id,
-              url: getImageUrl(selectedVariant.primaryImage),
-              altText: selectedVariant.variantName || product.name,
-            },
-          ]
-        : product.image
-          ? [{ id: product.id, url: getImageUrl(product.image), altText: product.name }]
-          : [];
+  const galleryImages = useMemo(() => {
+    const list: Array<{ id: string; url: string; altText?: string | null }> = [];
+    const seenUrls = new Set<string>();
+
+    const addImage = (id: string, rawUrl: string | null | undefined, alt?: string | null) => {
+      if (!rawUrl) return;
+      const formattedUrl = getImageUrl(rawUrl);
+      if (!formattedUrl || seenUrls.has(formattedUrl)) return;
+      seenUrls.add(formattedUrl);
+      list.push({
+        id: String(id),
+        url: formattedUrl,
+        altText: alt || selectedVariant?.variantName || product.name,
+      });
+    };
+
+    // 1. Current selected variant's uploaded images
+    if (variantImages.length > 0) {
+      const sorted = [...variantImages].sort(
+        (a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.sortOrder - b.sortOrder
+      );
+      for (const img of sorted) {
+        addImage(img.id, img.imageUrl);
+      }
+    }
+
+    // 2. Current selected variant's primary image
+    if (selectedVariant?.primaryImage) {
+      addImage(selectedVariant.id, selectedVariant.primaryImage);
+    }
+
+    // 3. Product-level images
+    if (product.images && product.images.length > 0) {
+      const sorted = [...product.images].sort(
+        (a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.sortOrder - b.sortOrder
+      );
+      for (const img of sorted) {
+        addImage(img.id, img.imageUrl);
+      }
+    }
+
+    // 4. Product primary image
+    if (product.image) {
+      addImage(product.id, product.image);
+    }
+
+    // 5. Other variants' primary images (so customer can see all packaging & varieties)
+    for (const v of variants) {
+      if (v.primaryImage) {
+        addImage(v.id, v.primaryImage, v.variantName);
+      }
+    }
+
+    return list;
+  }, [variantImages, selectedVariant, product.id, product.images, product.image, product.name, variants]);
+
+  const activeVideoUrl = useMemo(() => {
+    return (
+      selectedVariant?.videoUrl ||
+      variantDetail?.videoUrl ||
+      variants.find((v) => Boolean(v.videoUrl))?.videoUrl ||
+      null
+    );
+  }, [selectedVariant?.videoUrl, variantDetail?.videoUrl, variants]);
 
   const handleAddToCart = () => {
     if (!session) {
@@ -341,9 +388,11 @@ function ProductDetails({ product }: ProductDetailsProps) {
         <div className="md:col-span-6 md:sticky md:top-24">
           <ProductGallery
             images={galleryImages}
-            videoUrl={selectedVariant?.videoUrl}
+            videoUrl={activeVideoUrl}
             productName={selectedVariant?.variantName || product.name}
             isInStock={isInStock}
+            isWishlisted={isInWishlist}
+            onWishlistToggle={handleWishlistToggle}
           />
         </div>
 

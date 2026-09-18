@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -112,6 +112,28 @@ export default function CheckoutPage() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isVerifyingPayment] = useState(false); // kept for UI compat
   const [pendingOrder] = useState<null>(null); // no longer used (redirect flow)
+
+  // Reset in-flight payment loading state when user returns to this page (BFCache / browser Back button)
+  useEffect(() => {
+    const handleReset = () => {
+      setIsProcessingPayment(false);
+    };
+
+    window.addEventListener("pageshow", handleReset);
+    window.addEventListener("focus", handleReset);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setIsProcessingPayment(false);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pageshow", handleReset);
+      window.removeEventListener("focus", handleReset);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
 
   // Add Address Modal state
@@ -579,20 +601,18 @@ export default function CheckoutPage() {
                         <div
                           key={addr.id}
                           onClick={() => setSelectedAddressId(addr.id)}
-                          className={`relative rounded-xl border p-4 cursor-pointer transition-all ${
-                            isSelected
-                              ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
-                              : "border-theme-border bg-theme-surface hover:border-theme-border-accent hover:bg-theme-surface-warm"
-                          }`}
+                          className={`relative rounded-xl border p-4 cursor-pointer transition-all ${isSelected
+                            ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
+                            : "border-theme-border bg-theme-surface hover:border-theme-border-accent hover:bg-theme-surface-warm"
+                            }`}
                         >
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2">
                               <span
-                                className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
-                                  isSelected
-                                    ? "border-theme-primary bg-theme-primary text-white"
-                                    : "border-theme-border-input bg-white"
-                                }`}
+                                className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${isSelected
+                                  ? "border-theme-primary bg-theme-primary text-white"
+                                  : "border-theme-border-input bg-white"
+                                  }`}
                               >
                                 {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
                               </span>
@@ -668,11 +688,10 @@ export default function CheckoutPage() {
                         handleAddressFieldChange("fullName", e.target.value)
                       }
                       onBlur={() => handleAddressFieldBlur("fullName")}
-                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
-                        touchedAddressFields.fullName && addressFieldErrors.fullName
-                          ? "border-red-500 bg-red-50/20 focus:border-red-500"
-                          : "border-theme-border-input focus:border-theme-primary"
-                      }`}
+                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${touchedAddressFields.fullName && addressFieldErrors.fullName
+                        ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                        : "border-theme-border-input focus:border-theme-primary"
+                        }`}
                     />
                     {touchedAddressFields.fullName && addressFieldErrors.fullName && (
                       <p className="mt-1 text-xs text-red-500 font-medium">
@@ -695,11 +714,10 @@ export default function CheckoutPage() {
                         handleAddressFieldChange("phone", e.target.value)
                       }
                       onBlur={() => handleAddressFieldBlur("phone")}
-                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
-                        touchedAddressFields.phone && addressFieldErrors.phone
-                          ? "border-red-500 bg-red-50/20 focus:border-red-500"
-                          : "border-theme-border-input focus:border-theme-primary"
-                      }`}
+                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${touchedAddressFields.phone && addressFieldErrors.phone
+                        ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                        : "border-theme-border-input focus:border-theme-primary"
+                        }`}
                     />
                     {touchedAddressFields.phone && addressFieldErrors.phone && (
                       <p className="mt-1 text-xs text-red-500 font-medium">
@@ -720,11 +738,10 @@ export default function CheckoutPage() {
                         handleAddressFieldChange("addressLine1", e.target.value)
                       }
                       onBlur={() => handleAddressFieldBlur("addressLine1")}
-                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
-                        touchedAddressFields.addressLine1 && addressFieldErrors.addressLine1
-                          ? "border-red-500 bg-red-50/20 focus:border-red-500"
-                          : "border-theme-border-input focus:border-theme-primary"
-                      }`}
+                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${touchedAddressFields.addressLine1 && addressFieldErrors.addressLine1
+                        ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                        : "border-theme-border-input focus:border-theme-primary"
+                        }`}
                     />
                     {touchedAddressFields.addressLine1 && addressFieldErrors.addressLine1 && (
                       <p className="mt-1 text-xs text-red-500 font-medium">
@@ -745,11 +762,10 @@ export default function CheckoutPage() {
                         handleAddressFieldChange("city", e.target.value)
                       }
                       onBlur={() => handleAddressFieldBlur("city")}
-                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
-                        touchedAddressFields.city && addressFieldErrors.city
-                          ? "border-red-500 bg-red-50/20 focus:border-red-500"
-                          : "border-theme-border-input focus:border-theme-primary"
-                      }`}
+                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${touchedAddressFields.city && addressFieldErrors.city
+                        ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                        : "border-theme-border-input focus:border-theme-primary"
+                        }`}
                     />
                     {touchedAddressFields.city && addressFieldErrors.city && (
                       <p className="mt-1 text-xs text-red-500 font-medium">
@@ -772,11 +788,10 @@ export default function CheckoutPage() {
                         handleAddressFieldChange("pincode", e.target.value)
                       }
                       onBlur={() => handleAddressFieldBlur("pincode")}
-                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
-                        touchedAddressFields.pincode && addressFieldErrors.pincode
-                          ? "border-red-500 bg-red-50/20 focus:border-red-500"
-                          : "border-theme-border-input focus:border-theme-primary"
-                      }`}
+                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${touchedAddressFields.pincode && addressFieldErrors.pincode
+                        ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                        : "border-theme-border-input focus:border-theme-primary"
+                        }`}
                     />
                     {touchedAddressFields.pincode && addressFieldErrors.pincode && (
                       <p className="mt-1 text-xs text-red-500 font-medium">
@@ -832,11 +847,10 @@ export default function CheckoutPage() {
               {/* Standard */}
               <div
                 onClick={() => setDeliveryMethod("standard")}
-                className={`rounded-xl border p-4 cursor-pointer transition-all ${
-                  deliveryMethod === "standard"
-                    ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
-                    : "border-theme-border bg-theme-surface hover:border-theme-border-accent"
-                }`}
+                className={`rounded-xl border p-4 cursor-pointer transition-all ${deliveryMethod === "standard"
+                  ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
+                  : "border-theme-border bg-theme-surface hover:border-theme-border-accent"
+                  }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-bold text-theme-text-primary">
@@ -860,11 +874,10 @@ export default function CheckoutPage() {
               {/* Express */}
               <div
                 onClick={() => setDeliveryMethod("express")}
-                className={`rounded-xl border p-4 cursor-pointer transition-all ${
-                  deliveryMethod === "express"
-                    ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
-                    : "border-theme-border bg-theme-surface hover:border-theme-border-accent"
-                }`}
+                className={`rounded-xl border p-4 cursor-pointer transition-all ${deliveryMethod === "express"
+                  ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
+                  : "border-theme-border bg-theme-surface hover:border-theme-border-accent"
+                  }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
@@ -909,11 +922,10 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => setPaymentMethod("CARD")}
-                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[64px] ${
-                  paymentMethod === "CARD" || paymentMethod === "UPI"
-                    ? "border-theme-primary bg-theme-surface-alt font-bold text-theme-primary shadow-xs ring-1 ring-theme-primary"
-                    : "border-theme-border bg-theme-surface text-theme-text-subtle hover:bg-theme-surface-warm"
-                }`}
+                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[64px] ${paymentMethod === "CARD" || paymentMethod === "UPI"
+                  ? "border-theme-primary bg-theme-surface-alt font-bold text-theme-primary shadow-xs ring-1 ring-theme-primary"
+                  : "border-theme-border bg-theme-surface text-theme-text-subtle hover:bg-theme-surface-warm"
+                  }`}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <CreditCard className="h-4 w-4 text-theme-primary" />
@@ -925,11 +937,10 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => setPaymentMethod("COD")}
-                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[64px] ${
-                  paymentMethod === "COD"
-                    ? "border-theme-primary bg-theme-surface-alt font-bold text-theme-primary shadow-xs ring-1 ring-theme-primary"
-                    : "border-theme-border bg-theme-surface text-theme-text-subtle hover:bg-theme-surface-warm"
-                }`}
+                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[64px] ${paymentMethod === "COD"
+                  ? "border-theme-primary bg-theme-surface-alt font-bold text-theme-primary shadow-xs ring-1 ring-theme-primary"
+                  : "border-theme-border bg-theme-surface text-theme-text-subtle hover:bg-theme-surface-warm"
+                  }`}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <Truck className="h-4 w-4 text-theme-secondary" />
@@ -939,8 +950,8 @@ export default function CheckoutPage() {
               </button>
             </div>
 
-            {/* Payment Details Container */}
-            {(paymentMethod === "CARD" || paymentMethod === "UPI") && (
+
+            {/* {(paymentMethod === "CARD" || paymentMethod === "UPI") && (
               <div className="rounded-xl border border-theme-border-subtle bg-theme-surface-alt/60 p-4 sm:p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -956,7 +967,6 @@ export default function CheckoutPage() {
                   </span>
                 </div>
 
-                {/* Badges of accepted methods */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                   <div className="rounded-lg bg-white border border-theme-border/80 px-2.5 py-2 text-center shadow-2xs">
                     <span className="text-[11px] font-bold text-theme-text-primary block">UPI</span>
@@ -983,7 +993,7 @@ export default function CheckoutPage() {
                   </span>
                 </div>
               </div>
-            )}
+            )} */}
 
             {paymentMethod === "COD" && (
               <div className="rounded-xl border border-theme-border-subtle bg-theme-surface-alt/60 p-4 sm:p-5 space-y-2">

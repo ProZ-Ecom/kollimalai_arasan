@@ -112,6 +112,7 @@ export interface CustomerProductDetailDto {
     name: string;
   } | null;
   image: string | null;
+  images?: CustomerVariantImageDto[];
   variants: CustomerVariantListItemDto[];
 }
 
