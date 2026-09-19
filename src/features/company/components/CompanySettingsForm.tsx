@@ -235,7 +235,7 @@ export function CompanySettingsForm() {
               required
               value={formData.companyName || ""}
               onChange={(e) => handleInputChange("companyName", e.target.value)}
-              placeholder="e.g. Rithanya Food Products and Exports"
+              placeholder="e.g. Kollimalai Arasan Spices and Natural Products"
             />
           </div>
 

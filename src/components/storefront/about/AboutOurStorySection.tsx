@@ -80,7 +80,7 @@ export function AboutOurStorySection() {
 
             {/* Description */}
             <p className="text-about-body text-sm sm:text-base leading-relaxed mb-8">
-              Rithanya Food Products and Exports was established in 2021 in Namakkal, Tamil Nadu, with a vision to deliver quality food products with a traditional touch, exceptional taste, and a strong focus on health and customer satisfaction.
+              Kollimalai Arasan was established in 2021 in Namakkal, Tamil Nadu, with a vision to deliver pure, farm-fresh spices directly from Kolli Hills—specializing in premium Spices: Black pepper, cardamom, cloves, and traditional natural products with uncompromised quality.
             </p>
 
             {/* 2x2 Fact Cards Grid */}

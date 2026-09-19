@@ -18,19 +18,19 @@ export function AboutHeroSection() {
           <div className="lg:col-span-6 flex flex-col items-start text-left">
             {/* Pill Badge */}
             <div className="inline-flex items-center px-4 py-1.5 rounded-full border border-about-hero-badge-border bg-about-hero-badge-bg backdrop-blur-xs text-about-hero-gold text-[11px] sm:text-xs tracking-widest uppercase font-semibold mb-6">
-              RITHANYA FOOD PRODUCTS & EXPORTS
+              KOLLIMALAI ARASAN SPICES & NATURAL PRODUCTS
             </div>
 
             {/* Main Title */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl text-white font-bold leading-[1.1] tracking-tight">
               Tradition in
               <br />
-              <span className="italic text-about-hero-gold-text">Every Bite</span>
+              <span className="italic text-about-hero-gold-text">Every Harvest</span>
             </h1>
 
             {/* Subtext */}
             <p className="text-about-hero-subtext text-sm sm:text-base leading-relaxed max-w-md mt-6 mb-8 font-light">
-              Authentic South Indian flavours, crafted with care and made for today&apos;s generation.
+              Pure Kolli Hills spices and natural products: Black pepper, cardamom, cloves, and authentic farm produce.
             </p>
 
             {/* Action Buttons */}
@@ -83,7 +83,7 @@ export function AboutHeroSection() {
         {/* Bottom Strip */}
         <div className="border-t border-about-hero-border pt-6 mt-12 sm:mt-16 flex flex-col sm:flex-row items-center justify-between gap-4 text-about-hero-subtext text-xs tracking-widest uppercase">
           <span className="font-medium tracking-widest text-center sm:text-left">
-            AUTHENTIC • THOUGHTFUL • DELICIOUS
+            AUTHENTIC • PURE • NATURAL
           </span>
 
           <a

@@ -167,8 +167,8 @@ export const contacts = [
     id: 3,
     icon: ICONS.mail,
     title: "Mail",
-    value: "rithanyafoods@gmail.com",
-    link: "mailto:rithanyafoods@gmail.com",
+    value: "contact@kollimalaiarasan.com",
+    link: "mailto:contact@kollimalaiarasan.com",
   },
 ];
 
@@ -184,7 +184,7 @@ export const footerSocialIcons: FooterSocialIcon[] = [
   { id: 1, icon: ICONS.facebook, name: "facebook", href: "#" },
   { id: 2, icon: ICONS.instagram, name: "instagram", href: "#" },
   { id: 3, icon: ICONS.youtube, name: "youtube", href: "#" },
-  { id: 4, icon: ICONS.whatsapp1, name: "whatsapp", href: "#" },
+  { id: 4, icon: ICONS.whatsapp1, name: "whatsapp", href: "https://wa.me/918667380899" },
 ];
 
 export const readyToAssist = [

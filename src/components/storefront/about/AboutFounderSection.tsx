@@ -11,23 +11,23 @@ export function AboutFounderSection() {
           <div className="lg:col-span-7 flex flex-col items-start text-left">
             {/* Eyebrow */}
             <span className="text-xs font-bold tracking-widest text-about-eyebrow uppercase mb-3 block">
-              THE WOMAN BEHIND THE VISION
+              THE VISION BEHIND KOLLIMALAI ARASAN
             </span>
 
             {/* Heading */}
             <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-bold text-about-heading leading-[1.2] tracking-tight mb-6">
-              From academician to food
+              From academician to natural
               <br className="hidden sm:inline" />
-              {" "}entrepreneur
+              {" "}spices entrepreneur
             </h2>
 
             {/* Paragraphs */}
             <div className="space-y-4 text-about-body text-sm sm:text-base leading-relaxed mb-8 max-w-xl">
               <p>
-                With 17 years of experience in academics, Dr. Anita&apos;s passion for food processing inspired her to transform her career from an academician to an industrialist.
+                With 17 years of experience in academics, Dr. Anita&apos;s passion for authentic hill farming and natural spice cultivation inspired her to transform her career from an academician to an agri-entrepreneur.
               </p>
               <p>
-                Her vision, dedication and entrepreneurial spirit laid the foundation for Rithanya Food Products and Exports. Today, that same spirit guides every recipe, every ingredient and every relationship we build.
+                Her vision, dedication and entrepreneurial spirit laid the foundation for Kollimalai Arasan. Today, that same dedication guides every harvest, bringing you pure, unadulterated Kolli Hills spices—Black pepper, cardamom, cloves, and traditional natural products directly from farm to table.
               </p>
             </div>
 
@@ -38,7 +38,7 @@ export function AboutFounderSection() {
                   Dr. S. Anita, Ph.D.
                 </h4>
                 <p className="text-[10px] sm:text-[11px] tracking-wider uppercase font-semibold text-neutral-500 mt-0.5">
-                  PROPRIETOR — RITHANYA FOOD PRODUCTS AND EXPORTS
+                  PROPRIETOR — KOLLIMALAI ARASAN
                 </p>
               </div>
 
@@ -57,7 +57,7 @@ export function AboutFounderSection() {
                 <div className="w-full h-[380px] sm:h-[430px] rounded-t-full relative overflow-hidden shadow-inner bg-neutral-100">
                   {/* <Image
                     src="/images/Aboutus_founder_img.jpg"
-                    alt="Kollimalai Arasan - Tradition in Every Bite"
+                    alt="Kollimalai Arasan - Pure Spices & Natural Products"
                     fill
                     className="object-cover object-center"
                     sizes="(max-width: 768px) 100vw, 400px"
@@ -73,7 +73,7 @@ export function AboutFounderSection() {
                   <Quote />
                 </span>
                 <p className="italic text-xs sm:text-sm text-neutral-200/95 leading-relaxed font-normal">
-                  "Passion, dedication and tradition become the foundation of Rithanya Food Products and Exports."
+                  &ldquo;Passion, dedication and tradition become the foundation of Kollimalai Arasan. Delivering authentic Kolli Hills Spices: Black pepper, cardamom, cloves, and pure natural harvests.&rdquo;
                 </p>
               </div>
             </div>
