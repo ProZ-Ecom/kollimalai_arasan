@@ -571,7 +571,7 @@ export const catalogRepository = {
       category: categoryDto,
       image: imgUrl,
       images: (product.images || []).map((img) => ({
-        id: img.uuid || String(img.id),
+        id: String(img.id),
         imageUrl: img.image_url,
         sortOrder: img.sortOrder,
         isPrimary: Boolean(img.isPrimary),
