@@ -501,10 +501,10 @@ export const catalogRepository = {
     };
   },
 
-  async findCustomerProductByUuid(uuid: string): Promise<CustomerProductDetailDto | null> {
+  async findCustomerProductByUuid(identifier: string): Promise<CustomerProductDetailDto | null> {
     const product = await db.product.findFirst({
       where: {
-        uuid,
+        OR: [{ uuid: identifier }, { slug: identifier }],
         isActive: true,
         deleted_at: null,
       },

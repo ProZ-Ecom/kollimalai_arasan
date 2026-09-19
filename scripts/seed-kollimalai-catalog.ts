@@ -1,716 +1,428 @@
 import "dotenv/config";
 import crypto from "crypto";
-import { PrismaClient, product_units_type } from "../src/generated/prisma/client.js";
-import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import mysql from "mysql2/promise";
 
-function createClient() {
-  const databaseUrl = process.env.DATABASE_URL || "mysql://root:root@localhost:3306/kollimalai";
-  const url = new URL(databaseUrl);
-  const adapter = new PrismaMariaDb({
-    host: url.hostname === "localhost" ? "127.0.0.1" : url.hostname,
-    port: Number(url.port || 3306),
-    user: decodeURIComponent(url.username),
-    password: decodeURIComponent(url.password),
-    database: url.pathname.slice(1),
-    connectionLimit: 10,
-    allowPublicKeyRetrieval: true,
-  });
-  return new PrismaClient({ adapter });
-}
-
-const db = createClient();
-
-// Product images fallback mapping for realistic visuals
-const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
-  "spices-whole-spices": "/categoryLogos/flavors_logo.svg",
-  "spice-powders": "/categoryLogos/flavors_logo.svg",
-  "traditional-rice": "/categoryLogos/traditional_logo.svg",
-  "millets": "/categoryLogos/traditional_logo.svg",
-  "cold-pressed-oils": "/categoryLogos/flavors_logo.svg",
-  "honey": "/categoryLogos/sweet_logo.svg",
-  "herbal-products": "/categoryLogos/traditional_logo.svg",
-  "herbal-powders": "/categoryLogos/traditional_logo.svg",
-  "herbal-oils-thailam": "/categoryLogos/traditional_logo.svg",
-  "traditional-snacks": "/snacksLogos/kai_murukku.svg",
-  "traditional-sweets": "/snacksLogos/laddu.svg",
-  "pickles": "/categoryLogos/flavors_logo.svg",
-  "tea-coffee": "/categoryLogos/flavors_logo.svg",
-  "organic-soaps": "/categoryLogos/traditional_logo.svg",
-  "nuts-seeds-dry-fruits": "/categoryLogos/bites_logo.svg",
-};
-
-const SPECIFIC_PRODUCT_IMAGES: Record<string, string> = {
-  "thinai-millet-murukku": "/snacksLogos/thenkuzhal_murukku.svg",
-  "ragi-murukku": "/snacksLogos/kai_murukku.svg",
-  "kolli-hills-millet-mixture": "/snacksLogos/mixture.svg",
-  "thinai-laddu": "/snacksLogos/laddu.svg",
-  "ragi-laddu": "/snacksLogos/laddu.svg",
-  "palm-jaggery-sesame-laddu": "/snacksLogos/laddu.svg",
-  "kolli-hills-black-pepper": "/uploads/products/26c23dea-2cab-41b7-a48f-8d3babee6337.jpg",
-  "black-kavuni-rice": "/uploads/products/43515392-eb49-4c0b-8cee-5fe6b5f0aadf.jpg",
-  "groundnut-oil": "/uploads/products/437740ff-858e-4e1b-8591-729b2bdd22fa.jpg",
-  "pure-kolli-hills-forest-honey": "/uploads/products/5c214a2c-3f3a-4881-92ff-c34a37f360d8.jpg",
-  "mudakathan-herbal-mix": "/uploads/products/77d3b292-f97a-484d-bed3-fd1f12e25c48.jpg",
-  "moringa-powder": "/uploads/products/7b3d0c03-cf37-4aa1-8214-6cd1d284b764.png",
-  "mudavattukkal-thailam": "/uploads/products/7b62afe4-9262-4a52-8ffe-bf633675fcb1.jpg",
-  "amla-pickle": "/uploads/products/cdf70fad-6ecd-42f4-a482-dce7fe12c94c.jpg",
-  "kolli-hills-herbal-tea": "/uploads/products/f553ba69-8f93-4d81-8ad9-a124ed48a2ec.jpg",
-  "neem-soap": "/uploads/products/7e076a3a-b817-4231-8ca6-431f10c21d2c.webp",
-  "groundnut": "/uploads/products/8d560599-5351-45e9-878a-24270dcd6067.png",
-};
-
-interface VariantDef {
-  name: string;
-  sku: string;
-  unitCode: string;
+interface PackSizeDef {
+  unitCode: "g" | "kg" | "ml" | "L" | "pcs";
   unitVal: number;
+  sku: string;
   price: number;
-  isDefault: boolean;
+  isDefault?: boolean;
 }
 
-interface ProductDef {
+interface ItemDef {
   name: string;
   slug: string;
+  shortDescription: string;
   description: string;
-  variants: VariantDef[];
+  image: string;
+  packSizes: PackSizeDef[];
 }
 
 interface CategoryDef {
-  category: {
-    name: string;
-    slug: string;
-    description: string;
-    icon: string;
-  };
-  products: ProductDef[];
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;
+  items: ItemDef[];
 }
 
-const CATALOG_DATA: CategoryDef[] = [
-  // 1. Spices & Whole Spices (4 products)
+const CATALOG: CategoryDef[] = [
+  // 1. Spices & Whole Spices
   {
-    category: {
-      name: "Spices & Whole Spices",
-      slug: "spices-whole-spices",
-      description: "Authentic, freshly harvested aromatic whole spices from the pristine slopes of Kolli Hills.",
-      icon: "/categoryLogos/flavors_logo.svg",
-    },
-    products: [
+    name: "Spices & Whole Spices",
+    slug: "spices-whole-spices",
+    description: "Authentic, sun-dried, aromatic whole spices cultivated naturally in the mist-covered valleys of Kolli Hills.",
+    icon: "/categoryLogos/flavors_logo.svg",
+    items: [
       {
         name: "Kolli Hills Black Pepper",
         slug: "kolli-hills-black-pepper",
-        description: "Geographically renowned pungent, bold, aromatic black pepper grown naturally at Kolli Hills high altitude.",
-        variants: [
-          { name: "100g Pack", sku: "SP-KHP-100G", unitCode: "g", unitVal: 100, price: 130, isDefault: true },
-          { name: "250g Pack", sku: "SP-KHP-250G", unitCode: "g", unitVal: 250, price: 310, isDefault: false },
+        shortDescription: "GI-renowned pungent, bold, aromatic black pepper grown at 1,300m altitude in Kolli Hills.",
+        description: "Harvested directly from tribal agro-forests in Kolli Hills, our whole black pepper boasts high piperine content, robust pungency, and intense essential oils. Sun-dried naturally without polishing or artificial preservatives.",
+        image: "/uploads/products/26c23dea-2cab-41b7-a48f-8d3babee6337.jpg",
+        packSizes: [
+          { unitCode: "g", unitVal: 100, sku: "SP-KHP-100G", price: 130, isDefault: true },
+          { unitCode: "g", unitVal: 250, sku: "SP-KHP-250G", price: 310 },
+          { unitCode: "g", unitVal: 500, sku: "SP-KHP-500G", price: 590 },
+          { unitCode: "kg", unitVal: 1, sku: "SP-KHP-1KG", price: 1120 },
         ],
       },
       {
-        name: "Cardamom",
-        slug: "cardamom",
-        description: "Handpicked premium green cardamom pods with intense floral aroma and sweet essential oils.",
-        variants: [
-          { name: "50g Pack", sku: "SP-CRD-50G", unitCode: "g", unitVal: 50, price: 210, isDefault: true },
-          { name: "100g Pack", sku: "SP-CRD-100G", unitCode: "g", unitVal: 100, price: 399, isDefault: false },
+        name: "Kolli Hills Green Cardamom",
+        slug: "kolli-hills-green-cardamom",
+        shortDescription: "Handpicked premium green cardamom pods with intense floral fragrance and sweet essential oils.",
+        description: "Naturally shade-grown under the dense canopies of Kolli Hills. Selected for full, plump green pods (8mm+) packed with aromatic oil seeds. Perfect for culinary delicacies and therapeutic herbal teas.",
+        image: "/categoryLogos/flavors_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 50, sku: "SP-CRD-50G", price: 210, isDefault: true },
+          { unitCode: "g", unitVal: 100, sku: "SP-CRD-100G", price: 399 },
+          { unitCode: "g", unitVal: 250, sku: "SP-CRD-250G", price: 950 },
         ],
       },
       {
-        name: "Cloves",
-        slug: "cloves",
-        description: "Whole aromatic dried clove buds rich in natural eugenol and distinct warm fragrance.",
-        variants: [
-          { name: "50g Pack", sku: "SP-CLV-50G", unitCode: "g", unitVal: 50, price: 110, isDefault: true },
-          { name: "100g Pack", sku: "SP-CLV-100G", unitCode: "g", unitVal: 100, price: 210, isDefault: false },
+        name: "Kolli Hills Whole Cloves",
+        slug: "kolli-hills-whole-cloves",
+        shortDescription: "Whole aromatic dried clove buds rich in natural eugenol and distinct warm fragrance.",
+        description: "Hand-picked flower buds harvested from high-elevation clove trees in Kolli Hills. Unprocessed, unbroken heads retain maximum eugenol content and soothing aroma for cooking and dental wellness.",
+        image: "/categoryLogos/flavors_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 50, sku: "SP-CLV-50G", price: 110, isDefault: true },
+          { unitCode: "g", unitVal: 100, sku: "SP-CLV-100G", price: 210 },
+          { unitCode: "g", unitVal: 250, sku: "SP-CLV-250G", price: 490 },
         ],
       },
       {
-        name: "Cinnamon",
-        slug: "cinnamon",
-        description: "Organic sweet aromatic Ceylon-style cinnamon bark harvested naturally and dried under shade.",
-        variants: [
-          { name: "50g Pack", sku: "SP-CIN-50G", unitCode: "g", unitVal: 50, price: 95, isDefault: true },
-          { name: "100g Pack", sku: "SP-CIN-100G", unitCode: "g", unitVal: 100, price: 180, isDefault: false },
+        name: "Kolli Hills Cinnamon Bark",
+        slug: "kolli-hills-cinnamon-bark",
+        shortDescription: "Organic sweet aromatic Ceylon-style cinnamon bark dried naturally under shaded breeze.",
+        description: "Thin, fragrant quills peeled from forest cinnamon trees in Kolli Hills. Delivers a subtle sweet warmth with zero cassia adulteration, loaded with potent cinnamaldehyde antioxidants.",
+        image: "/categoryLogos/flavors_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 50, sku: "SP-CIN-50G", price: 95, isDefault: true },
+          { unitCode: "g", unitVal: 100, sku: "SP-CIN-100G", price: 180 },
+          { unitCode: "g", unitVal: 250, sku: "SP-CIN-250G", price: 420 },
+        ],
+      },
+      {
+        name: "Kolli Hills Star Anise",
+        slug: "kolli-hills-star-anise",
+        shortDescription: "Whole star anise pods with eight radiating carpels rich in liquorice aroma and shikimic acid.",
+        description: "Exotic whole star pods cured under mountain breezes. Enhances curries, biryanis, and herbal broths with its complex sweet-licorice fragrance.",
+        image: "/categoryLogos/flavors_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 50, sku: "SP-STA-50G", price: 85, isDefault: true },
+          { unitCode: "g", unitVal: 100, sku: "SP-STA-100G", price: 160 },
+        ],
+      },
+      {
+        name: "Kolli Hills Whole Nutmeg & Mace",
+        slug: "kolli-hills-whole-nutmeg-mace",
+        shortDescription: "Pure whole nutmeg seeds and delicate lacy scarlet mace (Jathipathri) freshly harvested.",
+        description: "Dual aromatic bounty from hill spice groves: whole nutmeg in shell preserves natural oils, paired with golden mace blades for luxurious aroma in both savory and sweet recipes.",
+        image: "/categoryLogos/flavors_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 50, sku: "SP-NTM-50G", price: 120, isDefault: true },
+          { unitCode: "g", unitVal: 100, sku: "SP-NTM-100G", price: 230 },
         ],
       },
     ],
   },
 
-  // 2. Spice Powders (4 products)
+  // 2. Pure Spice Powders
   {
-    category: {
-      name: "Spice Powders",
-      slug: "spice-powders",
-      description: "Stone-ground, pure, unadulterated traditional spice powders with rich natural flavor and aroma.",
-      icon: "/categoryLogos/flavors_logo.svg",
-    },
-    products: [
+    name: "Spice Powders",
+    slug: "spice-powders",
+    description: "Stone-ground, pure, unadulterated traditional spice powders with rich natural flavor and aroma.",
+    icon: "/categoryLogos/flavors_logo.svg",
+    items: [
       {
-        name: "Black Pepper Powder",
-        slug: "black-pepper-powder",
-        description: "Freshly ground Kolli Hills black pepper powder with zero fillers, packed for maximum flavor freshness.",
-        variants: [
-          { name: "100g Pouch", sku: "SP-BPP-100G", unitCode: "g", unitVal: 100, price: 140, isDefault: true },
-          { name: "250g Pouch", sku: "SP-BPP-250G", unitCode: "g", unitVal: 250, price: 330, isDefault: false },
+        name: "Kolli Hills Black Pepper Powder",
+        slug: "kolli-hills-black-pepper-powder",
+        shortDescription: "Freshly stone-ground black pepper powder with zero fillers, packed for maximum aroma.",
+        description: "Coarsely ground from Kolli Hills bold black peppercorns. Unleashes fiery heat and distinct citrus undertones for seasoning, soups, and traditional rasam.",
+        image: "/uploads/products/26c23dea-2cab-41b7-a48f-8d3babee6337.jpg",
+        packSizes: [
+          { unitCode: "g", unitVal: 100, sku: "SP-BPP-100G", price: 140, isDefault: true },
+          { unitCode: "g", unitVal: 250, sku: "SP-BPP-250G", price: 330 },
+          { unitCode: "g", unitVal: 500, sku: "SP-BPP-500G", price: 620 },
         ],
       },
       {
-        name: "Turmeric Powder",
-        slug: "turmeric-powder",
-        description: "High-curcumin organic turmeric rhizomes carefully cleaned, sun-dried, and finely ground.",
-        variants: [
-          { name: "100g Pouch", sku: "SP-TUR-100G", unitCode: "g", unitVal: 100, price: 55, isDefault: true },
-          { name: "250g Pouch", sku: "SP-TUR-250G", unitCode: "g", unitVal: 250, price: 130, isDefault: false },
+        name: "Pure Curcumin Turmeric Powder",
+        slug: "pure-curcumin-turmeric-powder",
+        shortDescription: "High-curcumin organic turmeric rhizomes carefully cleaned, sun-dried, and finely ground.",
+        description: "Bright golden yellow powder with over 4.5% natural curcumin. Earthy, warm, and deeply medicinal, ideal for daily golden milk and authentic heritage cooking.",
+        image: "/categoryLogos/flavors_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 100, sku: "SP-TUR-100G", price: 55, isDefault: true },
+          { unitCode: "g", unitVal: 250, sku: "SP-TUR-250G", price: 130 },
+          { unitCode: "g", unitVal: 500, sku: "SP-TUR-500G", price: 240 },
         ],
       },
       {
-        name: "Coriander Powder",
-        slug: "coriander-powder",
-        description: "Fragrant roasted coriander seeds slowly ground to retain delicate citrus and herbal aromas.",
-        variants: [
-          { name: "100g Pouch", sku: "SP-COR-100G", unitCode: "g", unitVal: 100, price: 50, isDefault: true },
-          { name: "250g Pouch", sku: "SP-COR-250G", unitCode: "g", unitVal: 250, price: 115, isDefault: false },
+        name: "Roasted Coriander Powder",
+        slug: "roasted-coriander-powder",
+        shortDescription: "Fragrant roasted coriander seeds slowly ground to retain delicate citrus and herbal aromas.",
+        description: "Carefully roasted native coriander seeds ground into a fine aromatic powder that elevates gravies, curries, and vegetable sautés.",
+        image: "/categoryLogos/flavors_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 100, sku: "SP-COR-100G", price: 50, isDefault: true },
+          { unitCode: "g", unitVal: 250, sku: "SP-COR-250G", price: 115 },
+          { unitCode: "g", unitVal: 500, sku: "SP-COR-500G", price: 220 },
         ],
       },
       {
-        name: "Chilli Powder",
-        slug: "chilli-powder",
-        description: "Sun-cured country red chillies ground to give vibrant natural red hue and balanced fiery heat.",
-        variants: [
-          { name: "100g Pouch", sku: "SP-CHL-100G", unitCode: "g", unitVal: 100, price: 65, isDefault: true },
-          { name: "250g Pouch", sku: "SP-CHL-250G", unitCode: "g", unitVal: 250, price: 155, isDefault: false },
+        name: "Country Red Chilli Powder",
+        slug: "country-red-chilli-powder",
+        shortDescription: "Sun-cured native red chillies ground to give vibrant natural red hue and balanced fiery heat.",
+        description: "100% natural dried chillies ground without synthetic colors or oils. Delivers genuine countryside warmth and appetite-whetting brightness.",
+        image: "/categoryLogos/flavors_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 100, sku: "SP-CHL-100G", price: 65, isDefault: true },
+          { unitCode: "g", unitVal: 250, sku: "SP-CHL-250G", price: 155 },
+          { unitCode: "g", unitVal: 500, sku: "SP-CHL-500G", price: 290 },
         ],
       },
     ],
   },
 
-  // 3. Traditional Rice (4 products)
+  // 3. Pure Hill Honey
   {
-    category: {
-      name: "Traditional Rice",
-      slug: "traditional-rice",
-      description: "Indigenous, unpolished heritage rice grains packed with vitamins, natural iron, and complex nutrients.",
-      icon: "/categoryLogos/traditional_logo.svg",
-    },
-    products: [
-      {
-        name: "Black Kavuni Rice",
-        slug: "black-kavuni-rice",
-        description: "Ancient royal heirloom black rice with high anthocyanin antioxidants, sweet aroma, and nutty bite.",
-        variants: [
-          { name: "500g Pack", sku: "TR-BKR-500G", unitCode: "g", unitVal: 500, price: 140, isDefault: true },
-          { name: "1kg Pack", sku: "TR-BKR-1KG", unitCode: "kg", unitVal: 1, price: 270, isDefault: false },
-        ],
-      },
-      {
-        name: "Thooyamalli Rice",
-        slug: "thooyamalli-rice",
-        description: "Pure white jasmine rice traditionally praised for strengthening nerves, immunity, and youthful vitality.",
-        variants: [
-          { name: "500g Pack", sku: "TR-TYM-500G", unitCode: "g", unitVal: 500, price: 90, isDefault: true },
-          { name: "1kg Pack", sku: "TR-TYM-1KG", unitCode: "kg", unitVal: 1, price: 175, isDefault: false },
-        ],
-      },
-      {
-        name: "Mapillai Samba Rice",
-        slug: "mapillai-samba-rice",
-        description: "Legendary bridegroom traditional red rice recognized for physical endurance, stamina, and zinc minerals.",
-        variants: [
-          { name: "500g Pack", sku: "TR-MPS-500G", unitCode: "g", unitVal: 500, price: 95, isDefault: true },
-          { name: "1kg Pack", sku: "TR-MPS-1KG", unitCode: "kg", unitVal: 1, price: 185, isDefault: false },
-        ],
-      },
-      {
-        name: "Seeraga Samba Rice",
-        slug: "seeraga-samba-rice",
-        description: "Aromatic small-grain cumin-sized samba rice that forms the gold standard of authentic Dindigul biryani.",
-        variants: [
-          { name: "500g Pack", sku: "TR-SGS-500G", unitCode: "g", unitVal: 500, price: 110, isDefault: true },
-          { name: "1kg Pack", sku: "TR-SGS-1KG", unitCode: "kg", unitVal: 1, price: 215, isDefault: false },
-        ],
-      },
-    ],
-  },
-
-  // 4. Millets (4 products)
-  {
-    category: {
-      name: "Millets",
-      slug: "millets",
-      description: "Gluten-free, diabetic-friendly ancient supergrains naturally cultivated without chemical pesticides.",
-      icon: "/categoryLogos/traditional_logo.svg",
-    },
-    products: [
-      {
-        name: "Foxtail Millet",
-        slug: "foxtail-millet",
-        description: "Thinai millet loaded with protein, B-vitamins, and dietary fiber that promotes steady energy.",
-        variants: [
-          { name: "500g Pack", sku: "ML-FXT-500G", unitCode: "g", unitVal: 500, price: 75, isDefault: true },
-          { name: "1kg Pack", sku: "ML-FXT-1KG", unitCode: "kg", unitVal: 1, price: 145, isDefault: false },
-        ],
-      },
-      {
-        name: "Kodo Millet",
-        slug: "kodo-millet",
-        description: "Varagu millet rich in polyphenols and antioxidants, ideal for diabetic-safe upma and daily meals.",
-        variants: [
-          { name: "500g Pack", sku: "ML-KOD-500G", unitCode: "g", unitVal: 500, price: 75, isDefault: true },
-          { name: "1kg Pack", sku: "ML-KOD-1KG", unitCode: "kg", unitVal: 1, price: 145, isDefault: false },
-        ],
-      },
-      {
-        name: "Little Millet",
-        slug: "little-millet",
-        description: "Samai millet with light, fast-cooking grains that support metabolism, digestion, and weight goals.",
-        variants: [
-          { name: "500g Pack", sku: "ML-LTL-500G", unitCode: "g", unitVal: 500, price: 70, isDefault: true },
-          { name: "1kg Pack", sku: "ML-LTL-1KG", unitCode: "kg", unitVal: 1, price: 135, isDefault: false },
-        ],
-      },
-      {
-        name: "Finger Millet",
-        slug: "finger-millet",
-        description: "Whole Ragi grains loaded with bio-available calcium, essential for healthy bones from toddlers to elders.",
-        variants: [
-          { name: "500g Pack", sku: "ML-FNG-500G", unitCode: "g", unitVal: 500, price: 60, isDefault: true },
-          { name: "1kg Pack", sku: "ML-FNG-1KG", unitCode: "kg", unitVal: 1, price: 115, isDefault: false },
-        ],
-      },
-    ],
-  },
-
-  // 5. Cold Pressed Oils (4 products)
-  {
-    category: {
-      name: "Cold Pressed Oils",
-      slug: "cold-pressed-oils",
-      description: "Mara Chekku wood-pressed virgin oils extracted at low temperatures to lock in original nutrients.",
-      icon: "/categoryLogos/flavors_logo.svg",
-    },
-    products: [
-      {
-        name: "Groundnut Oil",
-        slug: "groundnut-oil",
-        description: "Traditional wood-pressed peanut oil with rich nutty fragrance and high smoking point for deep frying.",
-        variants: [
-          { name: "500ml Bottle", sku: "OL-GND-500ML", unitCode: "ml", unitVal: 500, price: 195, isDefault: true },
-          { name: "1 Litre Bottle", sku: "OL-GND-1L", unitCode: "L", unitVal: 1, price: 380, isDefault: false },
-        ],
-      },
-      {
-        name: "Gingelly Oil",
-        slug: "gingelly-oil",
-        description: "Pure sesame oil extracted with natural palm jaggery, traditionally prized for cooling and delicious flavor.",
-        variants: [
-          { name: "500ml Bottle", sku: "OL-GNG-500ML", unitCode: "ml", unitVal: 500, price: 240, isDefault: true },
-          { name: "1 Litre Bottle", sku: "OL-GNG-1L", unitCode: "L", unitVal: 1, price: 470, isDefault: false },
-        ],
-      },
-      {
-        name: "Coconut Oil",
-        slug: "coconut-oil",
-        description: "Unrefined virgin wood-pressed coconut oil extracted from sun-dried copra, great for cooking and hair care.",
-        variants: [
-          { name: "500ml Bottle", sku: "OL-CCN-500ML", unitCode: "ml", unitVal: 500, price: 210, isDefault: true },
-          { name: "1 Litre Bottle", sku: "OL-CCN-1L", unitCode: "L", unitVal: 1, price: 410, isDefault: false },
-        ],
-      },
-      {
-        name: "Castor Oil",
-        slug: "castor-oil",
-        description: "Pure cold-pressed unrefined castor oil revered for digestive detox, thick hair growth, and eye soothing.",
-        variants: [
-          { name: "200ml Bottle", sku: "OL-CST-200ML", unitCode: "ml", unitVal: 200, price: 130, isDefault: true },
-          { name: "500ml Bottle", sku: "OL-CST-500ML", unitCode: "ml", unitVal: 500, price: 290, isDefault: false },
-        ],
-      },
-    ],
-  },
-
-  // 6. Honey (3 products)
-  {
-    category: {
-      name: "Honey",
-      slug: "honey",
-      description: "100% pure raw unprocessed forest honey sourced ethically from natural cliff and tree hives.",
-      icon: "/categoryLogos/sweet_logo.svg",
-    },
-    products: [
+    name: "Pure Hill Honey",
+    slug: "pure-hill-honey",
+    description: "Raw, unpasteurized, single-origin wild forest honey gathered from the deep cliffs and flora of Kolli Hills.",
+    icon: "/categoryLogos/sweet_logo.svg",
+    items: [
       {
         name: "Pure Kolli Hills Forest Honey",
         slug: "pure-kolli-hills-forest-honey",
-        description: "Raw wild mountain honey collected by tribal communities from medicinal forest flowers of Kolli Hills.",
-        variants: [
-          { name: "250g Glass Jar", sku: "HN-PKH-250G", unitCode: "g", unitVal: 250, price: 220, isDefault: true },
-          { name: "500g Glass Jar", sku: "HN-PKH-500G", unitCode: "g", unitVal: 500, price: 420, isDefault: false },
+        shortDescription: "Raw multifloral wild honey collected by indigenous tribes from pristine hill forests.",
+        description: "Extracted without boiling or micro-filtration, retaining natural bee pollen, enzymes, and mineral goodness. Rich amber color with complex botanical tasting notes.",
+        image: "/uploads/products/5c214a2c-3f3a-4881-92ff-c34a37f360d8.jpg",
+        packSizes: [
+          { unitCode: "g", unitVal: 250, sku: "HN-WLD-250G", price: 250, isDefault: true },
+          { unitCode: "g", unitVal: 500, sku: "HN-WLD-500G", price: 480 },
+          { unitCode: "kg", unitVal: 1, sku: "HN-WLD-1KG", price: 920 },
         ],
       },
       {
-        name: "Wild Honey",
-        slug: "wild-honey",
-        description: "Multi-floral amber nectar packed with live enzymes, propolis, and unadulterated forest goodness.",
-        variants: [
-          { name: "250g Glass Jar", sku: "HN-WLD-250G", unitCode: "g", unitVal: 250, price: 195, isDefault: true },
-          { name: "500g Glass Jar", sku: "HN-WLD-500G", unitCode: "g", unitVal: 500, price: 380, isDefault: false },
-        ],
-      },
-      {
-        name: "Herbal Honey",
-        slug: "herbal-honey",
-        description: "Pure raw honey infused with potent medicinal herbs including Tulsi, Ginger, Pippali, and Licorice.",
-        variants: [
-          { name: "250g Glass Jar", sku: "HN-HRB-250G", unitCode: "g", unitVal: 250, price: 240, isDefault: true },
-          { name: "500g Glass Jar", sku: "HN-HRB-500G", unitCode: "g", unitVal: 500, price: 460, isDefault: false },
+        name: "Dammer Bee Honey (Kombu Theen)",
+        slug: "dammer-bee-honey-kombu-theen",
+        shortDescription: "Rare stingless bee medicinal honey treasured in Siddha and Ayurveda for pediatric wellness.",
+        description: "Known locally as Kombu Theen / Siru Theen, produced by tiny stingless bees from miniature medicinal blossoms. Distinctive tangy-sweet flavor, high antibiotic properties, and exceptional medicinal value.",
+        image: "/uploads/products/5c214a2c-3f3a-4881-92ff-c34a37f360d8.jpg",
+        packSizes: [
+          { unitCode: "g", unitVal: 100, sku: "HN-DMR-100G", price: 320, isDefault: true },
+          { unitCode: "g", unitVal: 250, sku: "HN-DMR-250G", price: 750 },
         ],
       },
     ],
   },
 
-  // 7. Herbal Products (3 products)
+  // 4. Traditional Heritage Rice
   {
-    category: {
-      name: "Herbal Products",
-      slug: "herbal-products",
-      description: "Time-tested Siddha and Ayurvedic botanical formulations crafted for natural daily health.",
-      icon: "/categoryLogos/traditional_logo.svg",
-    },
-    products: [
+    name: "Traditional Rice",
+    slug: "traditional-rice",
+    description: "Indigenous, unpolished heritage rice grains packed with vitamins, natural iron, and complex nutrients.",
+    icon: "/categoryLogos/traditional_logo.svg",
+    items: [
       {
-        name: "Mudakathan Herbal Mix",
-        slug: "mudakathan-herbal-mix",
-        description: "Balloon vine herbal mix traditionally used for joint flexibility, knee comfort, and reducing stiffness.",
-        variants: [
-          { name: "100g Pack", sku: "HP-MDK-100G", unitCode: "g", unitVal: 100, price: 110, isDefault: true },
-          { name: "200g Pack", sku: "HP-MDK-200G", unitCode: "g", unitVal: 200, price: 210, isDefault: false },
+        name: "Black Kavuni Rice",
+        slug: "black-kavuni-rice",
+        shortDescription: "Ancient royal heirloom black rice with high anthocyanin antioxidants, sweet aroma, and nutty bite.",
+        description: "Known as the Emperor's rice, Black Kavuni has highest levels of natural anthocyanins among all grains. Ideal for nutritious sweet porridge, puttu, and nourishing breakfast puddings.",
+        image: "/uploads/products/43515392-eb49-4c0b-8cee-5fe6b5f0aadf.jpg",
+        packSizes: [
+          { unitCode: "g", unitVal: 500, sku: "TR-BKR-500G", price: 140, isDefault: true },
+          { unitCode: "kg", unitVal: 1, sku: "TR-BKR-1KG", price: 270 },
+          { unitCode: "kg", unitVal: 2, sku: "TR-BKR-2KG", price: 520 },
         ],
       },
       {
-        name: "Kolli Hills Herbal Soup Mix",
-        slug: "kolli-hills-herbal-soup-mix",
-        description: "Invigorating medicinal soup mix prepared with Kolli Hills roots, black pepper, and immunity herbs.",
-        variants: [
-          { name: "100g Pack", sku: "HP-SPM-100G", unitCode: "g", unitVal: 100, price: 125, isDefault: true },
-          { name: "200g Pack", sku: "HP-SPM-200G", unitCode: "g", unitVal: 200, price: 240, isDefault: false },
+        name: "Mappillai Samba Rice",
+        slug: "mappillai-samba-rice",
+        shortDescription: "Robust iron-rich red heritage rice that boosts stamina, hemoglobin, and gut vitality.",
+        description: "The legendary Bridegroom rice cultivated in native red soil. High in fiber, low glycemic index, and packed with bio-available zinc and iron.",
+        image: "/uploads/products/43515392-eb49-4c0b-8cee-5fe6b5f0aadf.jpg",
+        packSizes: [
+          { unitCode: "g", unitVal: 500, sku: "TR-MPS-500G", price: 95, isDefault: true },
+          { unitCode: "kg", unitVal: 1, sku: "TR-MPS-1KG", price: 180 },
+          { unitCode: "kg", unitVal: 2, sku: "TR-MPS-2KG", price: 350 },
         ],
       },
       {
-        name: "Avaram Herbal Mix",
-        slug: "avaram-herbal-mix",
-        description: "Dried Senna auriculata (Avarampoo) blossoms blended to balance blood sugar and clear the complexion.",
-        variants: [
-          { name: "100g Pack", sku: "HP-AVR-100G", unitCode: "g", unitVal: 100, price: 95, isDefault: true },
-          { name: "200g Pack", sku: "HP-AVR-200G", unitCode: "g", unitVal: 200, price: 180, isDefault: false },
+        name: "Poongar Rice",
+        slug: "poongar-rice",
+        shortDescription: "Traditional reddish-brown healing rice renowned for women's hormonal balance and maternal health.",
+        description: "Unpolished, mineral-dense heritage paddy variety that aids maternal wellness, postpartum recovery, and wholesome daily meals.",
+        image: "/uploads/products/43515392-eb49-4c0b-8cee-5fe6b5f0aadf.jpg",
+        packSizes: [
+          { unitCode: "g", unitVal: 500, sku: "TR-PNG-500G", price: 95, isDefault: true },
+          { unitCode: "kg", unitVal: 1, sku: "TR-PNG-1KG", price: 180 },
         ],
       },
     ],
   },
 
-  // 8. Herbal Powders (3 products)
+  // 5. Natural Hill Millets
   {
-    category: {
-      name: "Herbal Powders",
-      slug: "herbal-powders",
-      description: "100% natural shade-dried medicinal leaf and fruit powders for holistic daily wellness.",
-      icon: "/categoryLogos/traditional_logo.svg",
-    },
-    products: [
+    name: "Natural Millets",
+    slug: "natural-millets",
+    description: "Climate-resilient, mineral-loaded gluten-free grains cultivated in Kolli Hills terraces.",
+    icon: "/categoryLogos/traditional_logo.svg",
+    items: [
       {
-        name: "Moringa Powder",
-        slug: "moringa-powder",
-        description: "Nutrient-dense drumstick leaf superfood powder loaded with natural iron, calcium, and plant protein.",
-        variants: [
-          { name: "100g Pouch", sku: "HB-MOR-100G", unitCode: "g", unitVal: 100, price: 85, isDefault: true },
-          { name: "250g Pouch", sku: "HB-MOR-250G", unitCode: "g", unitVal: 250, price: 195, isDefault: false },
+        name: "Kolli Hills Thinai (Foxtail Millet)",
+        slug: "kolli-hills-thinai-foxtail-millet",
+        shortDescription: "Ancient high-protein golden grain famous for strength, energy, and nervous system health.",
+        description: "Thinai has been grown on Kolli Hills slopes since Sangam literature times. Rich in copper, cardiac-friendly fiber, and complex carbohydrates.",
+        image: "/categoryLogos/traditional_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 500, sku: "ML-THN-500G", price: 80, isDefault: true },
+          { unitCode: "kg", unitVal: 1, sku: "ML-THN-1KG", price: 155 },
         ],
       },
       {
-        name: "Neem Leaf Powder",
-        slug: "neem-leaf-powder",
-        description: "Pure shade-dried organic neem leaf powder for natural blood purification, oral care, and skin detox.",
-        variants: [
-          { name: "100g Pouch", sku: "HB-NEM-100G", unitCode: "g", unitVal: 100, price: 75, isDefault: true },
-          { name: "250g Pouch", sku: "HB-NEM-250G", unitCode: "g", unitVal: 250, price: 170, isDefault: false },
-        ],
-      },
-      {
-        name: "Amla Powder",
-        slug: "amla-powder",
-        description: "Dried Indian gooseberry powder bursting with natural vitamin C for immunity, glowing skin, and strong hair.",
-        variants: [
-          { name: "100g Pouch", sku: "HB-AML-100G", unitCode: "g", unitVal: 100, price: 90, isDefault: true },
-          { name: "250g Pouch", sku: "HB-AML-250G", unitCode: "g", unitVal: 250, price: 210, isDefault: false },
+        name: "Varagu (Kodo Millet)",
+        slug: "varagu-kodo-millet",
+        shortDescription: "Diabetic-friendly wholesome millet with abundant polyphenols and dietary fiber.",
+        description: "Cleaned and unpolished Kodo millet grains that cook fluffy like table rice while regulating postprandial glucose and gut microbiome.",
+        image: "/categoryLogos/traditional_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 500, sku: "ML-VRG-500G", price: 80, isDefault: true },
+          { unitCode: "kg", unitVal: 1, sku: "ML-VRG-1KG", price: 155 },
         ],
       },
     ],
   },
 
-  // 9. Herbal Oils & Thailam (3 products)
+  // 6. Cold-Pressed Oils (Wood-Pressed / Marachekku)
   {
-    category: {
-      name: "Herbal Oils & Thailam",
-      slug: "herbal-oils-thailam",
-      description: "Traditional herbal oil preparations formulated with authentic hill herbs and sesame base.",
-      icon: "/categoryLogos/traditional_logo.svg",
-    },
-    products: [
+    name: "Cold-Pressed Oils",
+    slug: "cold-pressed-oils",
+    description: "Pure, virgin wood-pressed (Marachekku) oils extracted without heat or chemical refining.",
+    icon: "/categoryLogos/flavors_logo.svg",
+    items: [
       {
-        name: "Mudavattukkal Thailam",
-        slug: "mudavattukkal-thailam",
-        description: "Specialized Kolli Hills medicinal fern root thailam prepared for joint, cartilage, and knee stiffness comfort.",
-        variants: [
-          { name: "100ml Bottle", sku: "TH-MVT-100ML", unitCode: "ml", unitVal: 100, price: 230, isDefault: true },
-          { name: "200ml Bottle", sku: "TH-MVT-200ML", unitCode: "ml", unitVal: 200, price: 440, isDefault: false },
+        name: "Wood-Pressed Groundnut Oil",
+        slug: "wood-pressed-groundnut-oil",
+        shortDescription: "Cold-pressed from sun-dried native groundnuts with rich nutty aroma and high smoke point.",
+        description: "Traditional wooden churner extraction ensures zero friction heat, retaining natural vitamin E, resveratrol antioxidants, and appetizing golden clarity.",
+        image: "/uploads/products/437740ff-858e-4e1b-8591-729b2bdd22fa.jpg",
+        packSizes: [
+          { unitCode: "ml", unitVal: 500, sku: "OL-GND-500ML", price: 180, isDefault: true },
+          { unitCode: "L", unitVal: 1, sku: "OL-GND-1L", price: 340 },
+          { unitCode: "L", unitVal: 5, sku: "OL-GND-5L", price: 1650 },
         ],
       },
       {
-        name: "Herbal Hair Oil",
-        slug: "herbal-hair-oil",
-        description: "Bhringraj, Amla, Curry Leaves, and Hibiscus infused cold-pressed coconut oil for dense hair growth.",
-        variants: [
-          { name: "100ml Bottle", sku: "TH-HHO-100ML", unitCode: "ml", unitVal: 100, price: 160, isDefault: true },
-          { name: "200ml Bottle", sku: "TH-HHO-200ML", unitCode: "ml", unitVal: 200, price: 300, isDefault: false },
+        name: "Cold-Pressed Sesame / Gingelly Oil",
+        slug: "cold-pressed-sesame-gingelly-oil",
+        shortDescription: "Artisanal sesame oil crushed with palm jaggery in traditional Vaagai wooden chekku.",
+        description: "Natural black sesame seeds slowly crushed with original Karupatti. Unmatched cooling properties, ideal for cooking, idli podi, and Ayurvedic oil baths.",
+        image: "/uploads/products/437740ff-858e-4e1b-8591-729b2bdd22fa.jpg",
+        packSizes: [
+          { unitCode: "ml", unitVal: 500, sku: "OL-SSM-500ML", price: 240, isDefault: true },
+          { unitCode: "L", unitVal: 1, sku: "OL-SSM-1L", price: 460 },
         ],
       },
       {
-        name: "Herbal Pain Relief Oil",
-        slug: "herbal-pain-relief-oil",
-        description: "Fast-absorbing herbal liniment for soothing muscular strain, backache, neck stiffness, and physical fatigue.",
-        variants: [
-          { name: "100ml Bottle", sku: "TH-PRO-100ML", unitCode: "ml", unitVal: 100, price: 180, isDefault: true },
-          { name: "200ml Bottle", sku: "TH-PRO-200ML", unitCode: "ml", unitVal: 200, price: 340, isDefault: false },
+        name: "Pure Wood-Pressed Coconut Oil",
+        slug: "pure-wood-pressed-coconut-oil",
+        shortDescription: "Sulphur-free copra cold-pressed for pristine aroma, pure lauric acid, and culinary versatility.",
+        description: "Sun-dried natural coconut copras crushed in wood expellers. Delightful sweet tropical aroma for everyday cooking, baby massage, and hair care.",
+        image: "/uploads/products/437740ff-858e-4e1b-8591-729b2bdd22fa.jpg",
+        packSizes: [
+          { unitCode: "ml", unitVal: 500, sku: "OL-CCN-500ML", price: 190, isDefault: true },
+          { unitCode: "L", unitVal: 1, sku: "OL-CCN-1L", price: 360 },
         ],
       },
     ],
   },
 
-  // 10. Traditional Snacks (3 products)
+  // 7. Herbal & Wellness Products
   {
-    category: {
-      name: "Traditional Snacks",
-      slug: "traditional-snacks",
-      description: "Crispy, homemade, preservative-free South Indian delicacies cooked with cold-pressed oils.",
-      icon: "/categoryLogos/traditional_logo.svg",
-    },
-    products: [
+    name: "Herbal & Wellness",
+    slug: "herbal-wellness",
+    description: "Therapeutic herbs, medicinal tubers, and restorative botanicals native to the Kolli mountain range.",
+    icon: "/categoryLogos/traditional_logo.svg",
+    items: [
       {
-        name: "Thinai Millet Murukku",
-        slug: "thinai-millet-murukku",
-        description: "Golden crunchy spiral murukku crafted from foxtail millet flour, fragrant sesame, and gentle spices.",
-        variants: [
-          { name: "200g Pack", sku: "SN-TMM-200G", unitCode: "g", unitVal: 200, price: 85, isDefault: true },
-          { name: "400g Pack", sku: "SN-TMM-400G", unitCode: "g", unitVal: 400, price: 160, isDefault: false },
+        name: "Mudavattukkal Kizhanghu Soup Mix",
+        slug: "mudavattukkal-kizhanghu-soup-mix",
+        shortDescription: "Rare medicinal fern tuber from Kolli Hills rocks, celebrated for joint flexibility and bone strength.",
+        description: "Also called Drynaria quercifolia / Aatukkal Kizhanghu. High-altitude rock tuber processed into an instant restorative soup powder with native pepper and cumin.",
+        image: "/uploads/products/77d3b292-f97a-484d-bed3-fd1f12e25c48.jpg",
+        packSizes: [
+          { unitCode: "g", unitVal: 100, sku: "HB-MVT-100G", price: 190, isDefault: true },
+          { unitCode: "g", unitVal: 250, sku: "HB-MVT-250G", price: 450 },
         ],
       },
       {
-        name: "Ragi Murukku",
-        slug: "ragi-murukku",
-        description: "Wholesome finger millet savoury snack spiced with cumin and ajwain for guilt-free evening tea-time.",
-        variants: [
-          { name: "200g Pack", sku: "SN-RGM-200G", unitCode: "g", unitVal: 200, price: 85, isDefault: true },
-          { name: "400g Pack", sku: "SN-RGM-400G", unitCode: "g", unitVal: 400, price: 160, isDefault: false },
+        name: "Organic Moringa Leaf Powder",
+        slug: "organic-moringa-leaf-powder",
+        shortDescription: "Shade-dried drumstick leaves rich in bioavailable iron, vitamins A & C, and plant amino acids.",
+        description: "Fresh tender moringa leaves washed, dried under shade, and micro-pulverized. A nutrient-dense green superfood powder for smoothies, rotis, and soups.",
+        image: "/uploads/products/7b3d0c03-cf37-4aa1-8214-6cd1d284b764.png",
+        packSizes: [
+          { unitCode: "g", unitVal: 100, sku: "HB-MOR-100G", price: 85, isDefault: true },
+          { unitCode: "g", unitVal: 250, sku: "HB-MOR-250G", price: 195 },
         ],
       },
       {
-        name: "Kolli Hills Millet Mixture",
-        slug: "kolli-hills-millet-mixture",
-        description: "Spicy savoury mixture with roasted peanuts, curry leaves, cashews, and crispy millet sev ribbons.",
-        variants: [
-          { name: "200g Pack", sku: "SN-KMM-200G", unitCode: "g", unitVal: 200, price: 95, isDefault: true },
-          { name: "400g Pack", sku: "SN-KMM-400G", unitCode: "g", unitVal: 400, price: 180, isDefault: false },
+        name: "Mudavattukkal Joint Relief Thailam",
+        slug: "mudavattukkal-joint-relief-thailam",
+        shortDescription: "Traditional Siddha herbal oil infused with Mudavattukkal tuber, camphor, and sesame oil.",
+        description: "Slow-boiled medicated oil formulation that penetrates deep into sore joints, knees, and lumbar muscles to soothe inflammation and stiffness.",
+        image: "/uploads/products/7b62afe4-9262-4a52-8ffe-bf633675fcb1.jpg",
+        packSizes: [
+          { unitCode: "ml", unitVal: 100, sku: "TH-MVT-100ML", price: 230, isDefault: true },
+          { unitCode: "ml", unitVal: 200, sku: "TH-MVT-200ML", price: 440 },
         ],
       },
     ],
   },
 
-  // 11. Traditional Sweets (3 products)
+  // 8. Hill Tea & Coffee
   {
-    category: {
-      name: "Traditional Sweets",
-      slug: "traditional-sweets",
-      description: "Mouth-watering South Indian sweets sweetened naturally with pure palm jaggery and desi cow ghee.",
-      icon: "/categoryLogos/sweet_logo.svg",
-    },
-    products: [
+    name: "Hill Tea & Coffee",
+    slug: "hill-tea-coffee",
+    description: "High-altitude hand-plucked tea leaves and shade-grown coffee berries from mist-laden peaks.",
+    icon: "/categoryLogos/flavors_logo.svg",
+    items: [
       {
-        name: "Thinai Laddu",
-        slug: "thinai-laddu",
-        description: "Nutritious foxtail millet laddus blended with pure palm jaggery, cardamom, and roasted cashews.",
-        variants: [
-          { name: "250g Box", sku: "SW-TNL-250G", unitCode: "g", unitVal: 250, price: 140, isDefault: true },
-          { name: "500g Box", sku: "SW-TNL-500G", unitCode: "g", unitVal: 500, price: 270, isDefault: false },
-        ],
-      },
-      {
-        name: "Ragi Laddu",
-        slug: "ragi-laddu",
-        description: "Wholesome finger millet laddus rolled with country jaggery, crushed peanuts, and fragrant cow ghee.",
-        variants: [
-          { name: "250g Box", sku: "SW-RGL-250G", unitCode: "g", unitVal: 250, price: 135, isDefault: true },
-          { name: "500g Box", sku: "SW-RGL-500G", unitCode: "g", unitVal: 500, price: 260, isDefault: false },
-        ],
-      },
-      {
-        name: "Palm Jaggery Sesame Laddu",
-        slug: "palm-jaggery-sesame-laddu",
-        description: "Traditional Ellu Urundai made with toasted black sesame seeds and dark nutrient-rich palm jaggery.",
-        variants: [
-          { name: "250g Box", sku: "SW-ESL-250G", unitCode: "g", unitVal: 250, price: 150, isDefault: true },
-          { name: "500g Box", sku: "SW-ESL-500G", unitCode: "g", unitVal: 500, price: 290, isDefault: false },
-        ],
-      },
-    ],
-  },
-
-  // 12. Pickles (3 products)
-  {
-    category: {
-      name: "Pickles",
-      slug: "pickles",
-      description: "Sun-cured traditional spicy South Indian pickles preserved in pure cold-pressed gingelly oil.",
-      icon: "/categoryLogos/flavors_logo.svg",
-    },
-    products: [
-      {
-        name: "Amla Pickle",
-        slug: "amla-pickle",
-        description: "Whole wild gooseberries cured with rock salt, fenugreek, and mustard in unrefined sesame oil.",
-        variants: [
-          { name: "250g Glass Jar", sku: "PK-AML-250G", unitCode: "g", unitVal: 250, price: 110, isDefault: true },
-          { name: "500g Glass Jar", sku: "PK-AML-500G", unitCode: "g", unitVal: 500, price: 210, isDefault: false },
-        ],
-      },
-      {
-        name: "Mango Pickle",
-        slug: "mango-pickle",
-        description: "Tender raw country mango chunks seasoned with roasted spices and authentic spicy gingelly dressing.",
-        variants: [
-          { name: "250g Glass Jar", sku: "PK-MNG-250G", unitCode: "g", unitVal: 250, price: 105, isDefault: true },
-          { name: "500g Glass Jar", sku: "PK-MNG-500G", unitCode: "g", unitVal: 500, price: 200, isDefault: false },
-        ],
-      },
-      {
-        name: "Garlic Pickle",
-        slug: "garlic-pickle",
-        description: "Whole peeled hill garlic cloves steeped in tangy tamarind and spicy gingelly oil marinade.",
-        variants: [
-          { name: "250g Glass Jar", sku: "PK-GRL-250G", unitCode: "g", unitVal: 250, price: 125, isDefault: true },
-          { name: "500g Glass Jar", sku: "PK-GRL-500G", unitCode: "g", unitVal: 500, price: 240, isDefault: false },
-        ],
-      },
-    ],
-  },
-
-  // 13. Tea & Coffee (3 products)
-  {
-    category: {
-      name: "Tea & Coffee",
-      slug: "tea-coffee",
-      description: "High-altitude aromatic tea leaves and roasted coffee beans grown in the cool mists of Kolli Hills.",
-      icon: "/categoryLogos/flavors_logo.svg",
-    },
-    products: [
-      {
-        name: "Kolli Hills Herbal Tea",
-        slug: "kolli-hills-herbal-tea",
-        description: "Caffeine-free refreshing infusion of lemon grass, holy basil, ginger, and wild aromatic herbs.",
-        variants: [
-          { name: "100g Pouch", sku: "TC-KHT-100G", unitCode: "g", unitVal: 100, price: 130, isDefault: true },
-          { name: "250g Pouch", sku: "TC-KHT-250G", unitCode: "g", unitVal: 250, price: 295, isDefault: false },
+        name: "Kolli Hills Herbal Spiced Tea",
+        slug: "kolli-hills-herbal-spiced-tea",
+        shortDescription: "Hand-blended loose leaf tea enriched with whole cardamom, dried ginger, and hill cinnamon.",
+        description: "Invigorating mountain blend that pairs premium orthodox tea leaves with Kolli Hills whole spices. Comforting, immunity-strengthening, and deeply aromatic.",
+        image: "/uploads/products/f553ba69-8f93-4d81-8ad9-a124ed48a2ec.jpg",
+        packSizes: [
+          { unitCode: "g", unitVal: 100, sku: "TC-HST-100G", price: 130, isDefault: true },
+          { unitCode: "g", unitVal: 250, sku: "TC-HST-250G", price: 295 },
         ],
       },
       {
         name: "Kolli Hills Green Tea",
         slug: "kolli-hills-green-tea",
-        description: "Whole-leaf organic green tea loaded with natural catechins and refreshing grassy vegetal notes.",
-        variants: [
-          { name: "100g Pouch", sku: "TC-KGT-100G", unitCode: "g", unitVal: 100, price: 140, isDefault: true },
-          { name: "250g Pouch", sku: "TC-KGT-250G", unitCode: "g", unitVal: 250, price: 320, isDefault: false },
-        ],
-      },
-      {
-        name: "Filter Coffee",
-        slug: "filter-coffee",
-        description: "Authentic 80:20 plantation coffee and chicory blend roasted for an aromatic, velvety South Indian brew.",
-        variants: [
-          { name: "200g Pouch", sku: "TC-FCF-200G", unitCode: "g", unitVal: 200, price: 160, isDefault: true },
-          { name: "500g Pouch", sku: "TC-FCF-500G", unitCode: "g", unitVal: 500, price: 370, isDefault: false },
+        shortDescription: "Non-fermented tender two leaves and a bud, high in catechins and natural antioxidants.",
+        description: "Grown at high altitudes where slow plant growth concentrates delicate catechins and epigallocatechin gallate (EGCG) without bitter aftertaste.",
+        image: "/uploads/products/f553ba69-8f93-4d81-8ad9-a124ed48a2ec.jpg",
+        packSizes: [
+          { unitCode: "g", unitVal: 100, sku: "TC-KGT-100G", price: 140, isDefault: true },
+          { unitCode: "g", unitVal: 250, sku: "TC-KGT-250G", price: 320 },
         ],
       },
     ],
   },
 
-  // 14. Organic Soaps (3 products)
+  // 9. Natural Mountain Sweeteners
   {
-    category: {
-      name: "Organic Soaps",
-      slug: "organic-soaps",
-      description: "Cold-process handmade herbal bathing bars formulated with virgin coconut oil and active botanicals.",
-      icon: "/categoryLogos/traditional_logo.svg",
-    },
-    products: [
+    name: "Natural Sweeteners",
+    slug: "natural-sweeteners",
+    description: "Traditional unrefined natural sweeteners made from palmyra sap without chemical bleaching.",
+    icon: "/categoryLogos/sweet_logo.svg",
+    items: [
       {
-        name: "Neem Soap",
-        slug: "neem-soap",
-        description: "Antibacterial cold-process soap bar infused with pure neem leaf extract and therapeutic essential oils.",
-        variants: [
-          { name: "75g Single Bar", sku: "SB-NEM-75G", unitCode: "g", unitVal: 75, price: 70, isDefault: true },
-          { name: "125g Twin Pack", sku: "SB-NEM-125G", unitCode: "g", unitVal: 125, price: 130, isDefault: false },
+        name: "Pure Organic Palm Jaggery (Karupatti)",
+        slug: "pure-organic-palm-jaggery-karupatti",
+        shortDescription: "Authentic dark palmyra jaggery enriched with natural iron, potassium, and minerals.",
+        description: "Handcrafted by traditional artisans boiling fresh sweet neera sap. Free from calcium carbonate additives or synthetic colors. The quintessential Tamil sweetener for coffee, medicinal kashayams, and treats.",
+        image: "/categoryLogos/sweet_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 500, sku: "SW-KRP-500G", price: 175, isDefault: true },
+          { unitCode: "kg", unitVal: 1, sku: "SW-KRP-1KG", price: 340 },
         ],
       },
       {
-        name: "Kuppaimeni Soap",
-        slug: "kuppaimeni-soap",
-        description: "Traditional Acalypha indica herbal soap revered for soothing acne, skin blemishes, and irritation.",
-        variants: [
-          { name: "75g Single Bar", sku: "SB-KPM-75G", unitCode: "g", unitVal: 75, price: 75, isDefault: true },
-          { name: "125g Twin Pack", sku: "SB-KPM-125G", unitCode: "g", unitVal: 125, price: 140, isDefault: false },
-        ],
-      },
-      {
-        name: "Turmeric Soap",
-        slug: "turmeric-soap",
-        description: "Gentle brightening organic bath bar made with wild Kasturi Manjal and skin-softening coconut butter.",
-        variants: [
-          { name: "75g Single Bar", sku: "SB-TRM-75G", unitCode: "g", unitVal: 75, price: 75, isDefault: true },
-          { name: "125g Twin Pack", sku: "SB-TRM-125G", unitCode: "g", unitVal: 125, price: 140, isDefault: false },
-        ],
-      },
-    ],
-  },
-
-  // 15. Nuts, Seeds & Dry Fruits (3 products)
-  {
-    category: {
-      name: "Nuts, Seeds & Dry Fruits",
-      slug: "nuts-seeds-dry-fruits",
-      description: "Nutrient-dense raw seeds and country nuts packed with healthy fats, protein, and natural crunch.",
-      icon: "/categoryLogos/bites_logo.svg",
-    },
-    products: [
-      {
-        name: "Groundnut",
-        slug: "groundnut",
-        description: "Native small-kernel red skin raw peanuts fresh from rural rainfed agricultural harvests.",
-        variants: [
-          { name: "250g Pack", sku: "NS-GND-250G", unitCode: "g", unitVal: 250, price: 85, isDefault: true },
-          { name: "500g Pack", sku: "NS-GND-500G", unitCode: "g", unitVal: 500, price: 160, isDefault: false },
-        ],
-      },
-      {
-        name: "Flax Seeds",
-        slug: "flax-seeds",
-        description: "Raw brown flax seeds packed with omega-3 fatty acids, lignans, and gentle digestive fiber.",
-        variants: [
-          { name: "250g Pack", sku: "NS-FLX-250G", unitCode: "g", unitVal: 250, price: 95, isDefault: true },
-          { name: "500g Pack", sku: "NS-FLX-500G", unitCode: "g", unitVal: 500, price: 180, isDefault: false },
-        ],
-      },
-      {
-        name: "Sesame Seeds",
-        slug: "sesame-seeds",
-        description: "Unpolished natural black and brown sesame seeds loaded with minerals, zinc, and bio-available calcium.",
-        variants: [
-          { name: "250g Pack", sku: "NS-SSM-250G", unitCode: "g", unitVal: 250, price: 110, isDefault: true },
-          { name: "500g Pack", sku: "NS-SSM-500G", unitCode: "g", unitVal: 500, price: 210, isDefault: false },
+        name: "Pure Palm Candy (Panakarkandu)",
+        slug: "pure-palm-candy-panakarkandu",
+        shortDescription: "Slow-crystallized natural palm sugar crystals treasured for throat soothing and respiratory calm.",
+        description: "Naturally formed sugar crystals made from aged palmyra toddy sap. A beloved traditional remedy dissolved in warm turmeric milk for cough relief.",
+        image: "/categoryLogos/sweet_logo.svg",
+        packSizes: [
+          { unitCode: "g", unitVal: 250, sku: "SW-PNK-250G", price: 160, isDefault: true },
+          { unitCode: "g", unitVal: 500, sku: "SW-PNK-500G", price: 310 },
         ],
       },
     ],
@@ -718,262 +430,140 @@ const CATALOG_DATA: CategoryDef[] = [
 ];
 
 async function main() {
-  console.log("🌱 Starting Kollimalai catalog seeding...");
-  console.log(`Plan: 15 Categories | 50 Products | 100 Variants\n`);
+  const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+  console.log("Connected to MySQL database.");
 
-  // 1. Ensure Brand
-  const brand = await db.productBrand.upsert({
-    where: { slug: "kollimalai-arasan" },
-    update: {
-      name: "Kollimalai Arasan",
-      description: "Authentic, traditional organic snacks, spices, oils, and heritage foods from Kolli Hills.",
-      status: true,
-      isActive: true,
-    },
-    create: {
-      uuid: crypto.randomUUID(),
-      name: "Kollimalai Arasan",
-      slug: "kollimalai-arasan",
-      description: "Authentic, traditional organic snacks, spices, oils, and heritage foods from Kolli Hills.",
-      status: true,
-      isActive: true,
-    },
-  });
-  console.log(`✓ Brand: "${brand.name}" (ID: ${brand.id})`);
-
-  // 2. Ensure Units
-  const unitsToSeed = [
-    { code: "g", name: "Gram", type: product_units_type.weight, factor: 0.001, sort: 1 },
-    { code: "kg", name: "Kilogram", type: product_units_type.weight, factor: 1.0, sort: 2 },
-    { code: "ml", name: "Millilitre", type: product_units_type.volume, factor: 0.001, sort: 3 },
-    { code: "L", name: "Litre", type: product_units_type.volume, factor: 1.0, sort: 4 },
-    { code: "pcs", name: "Piece", type: product_units_type.count, factor: 1.0, sort: 5 },
-  ];
-
-  const unitMap = new Map<string, bigint>();
-  for (const u of unitsToSeed) {
-    const unitRecord = await db.product_units.upsert({
-      where: { code: u.code },
-      update: { name: u.name, type: u.type, is_active: true, status: true },
-      create: {
-        uuid: crypto.randomUUID(),
-        name: u.name,
-        code: u.code,
-        type: u.type,
-        conversion_factor: u.factor,
-        sort_order: u.sort,
-        is_active: true,
-        status: true,
-      },
-    });
-    unitMap.set(u.code, unitRecord.id);
+  // 1. Resolve Brand
+  const [brands]: any = await conn.execute("SELECT id FROM product_brands WHERE slug = 'kollimalai-arasan' LIMIT 1");
+  let brandId: number;
+  if (brands.length === 0) {
+    const [res]: any = await conn.execute(
+      "INSERT INTO product_brands (name, slug, description, is_active, status, created_at, updated_at) VALUES (?, ?, ?, 1, 1, NOW(), NOW())",
+      ["Kollimalai Arasan", "kollimalai-arasan", "Premium spices and natural products from Kolli Hills"]
+    );
+    brandId = res.insertId;
+  } else {
+    brandId = brands[0].id;
   }
-  console.log(`✓ Standard Units verified: [${Array.from(unitMap.keys()).join(", ")}]`);
+  console.log("Brand ID:", brandId);
+
+  // 2. Resolve Units
+  const [units]: any = await conn.execute("SELECT id, code FROM product_units");
+  const unitMap = new Map<string, number>();
+  for (const u of units) {
+    unitMap.set(u.code, u.id);
+  }
+  console.log("Loaded units:", Array.from(unitMap.entries()));
+
+  // 3. Clear existing catalog cleanly
+  console.log("\nCleaning old catalog data...");
+  await conn.execute("DELETE FROM cart_items");
+  await conn.execute("DELETE FROM wishlist_items");
+  await conn.execute("DELETE FROM order_items");
+  await conn.execute("DELETE FROM inventories");
+  await conn.execute("DELETE FROM variant_unit_prices");
+  await conn.execute("DELETE FROM product_variant_images");
+  await conn.execute("DELETE FROM product_variants");
+  await conn.execute("DELETE FROM product_images");
+  await conn.execute("DELETE FROM products");
+  await conn.execute("DELETE FROM product_categories");
+  console.log("Old catalog tables cleared.");
 
   let totalCategories = 0;
   let totalProducts = 0;
   let totalVariants = 0;
+  let totalUnitPrices = 0;
 
-  // 3. Iterate and seed Categories, Products, and Variants
-  for (let cIdx = 0; cIdx < CATALOG_DATA.length; cIdx++) {
-    const catDef = CATALOG_DATA[cIdx];
-    const category = await db.productCategory.upsert({
-      where: { slug: catDef.category.slug },
-      update: {
-        name: catDef.category.name,
-        description: catDef.category.description,
-        icon: catDef.category.icon,
-        sortOrder: cIdx + 1,
-        status: true,
-        isActive: true,
-      },
-      create: {
-        uuid: crypto.randomUUID(),
-        name: catDef.category.name,
-        slug: catDef.category.slug,
-        description: catDef.category.description,
-        icon: catDef.category.icon,
-        sortOrder: cIdx + 1,
-        status: true,
-        isActive: true,
-      },
-    });
+  // 4. Insert Categories, Products, Variants, and Multiple UnitPrices per Variant
+  for (const cat of CATALOG) {
+    const [catRes]: any = await conn.execute(
+      `INSERT INTO product_categories 
+        (uuid, name, slug, description, icon, is_active, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 1, 1, NOW(), NOW())`,
+      [crypto.randomUUID(), cat.name, cat.slug, cat.description, cat.icon]
+    );
+    const categoryId = catRes.insertId;
     totalCategories++;
+    console.log(`\n📁 Category: ${cat.name} (id: ${categoryId})`);
 
-    // Ensure category image
-    const existingCatImg = await db.product_category_images.findFirst({
-      where: { category_id: category.id },
-    });
-    if (!existingCatImg) {
-      await db.product_category_images.create({
-        data: {
-          uuid: crypto.randomUUID(),
-          category_id: category.id,
-          image_url: catDef.category.icon,
-          alt_text: catDef.category.name,
-          sort_order: 1,
-          status: true,
-          is_active: true,
-        },
-      });
-    }
-
-    console.log(`\n[${totalCategories}/15] Category: ${category.name}`);
-
-    for (const prodDef of catDef.products) {
-      const defaultVariant = prodDef.variants.find((v) => v.isDefault) || prodDef.variants[0];
-      const prodImgUrl =
-        SPECIFIC_PRODUCT_IMAGES[prodDef.slug] ||
-        CATEGORY_DEFAULT_IMAGES[catDef.category.slug] ||
-        "/categoryLogos/traditional_logo.svg";
-
-      const product = await db.product.upsert({
-        where: { slug: prodDef.slug },
-        update: {
-          name: prodDef.name,
-          categoryId: category.id,
-          brandId: brand.id,
-          base_price: defaultVariant.price,
-          sale_price: defaultVariant.price,
-          status: true,
-          isActive: true,
-        },
-        create: {
-          uuid: crypto.randomUUID(),
-          name: prodDef.name,
-          slug: prodDef.slug,
-          sku: defaultVariant.sku,
-          categoryId: category.id,
-          brandId: brand.id,
-          base_price: defaultVariant.price,
-          sale_price: defaultVariant.price,
-          status: true,
-          isActive: true,
-        },
-      });
+    for (const item of cat.items) {
+      // Tier 1: Product
+      const defaultPack = item.packSizes.find((p) => p.isDefault) || item.packSizes[0];
+      const [prodRes]: any = await conn.execute(
+        `INSERT INTO products 
+          (uuid, name, slug, category_id, brand_id, base_price, is_active, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 1, 1, NOW(), NOW())`,
+        [crypto.randomUUID(), item.name, item.slug, categoryId, brandId, defaultPack.price]
+      );
+      const productId = prodRes.insertId;
       totalProducts++;
 
-      // Upsert Product Image
-      const existingProdImg = await db.productImage.findFirst({
-        where: { productId: product.id },
-      });
-      if (!existingProdImg) {
-        await db.productImage.create({
-          data: {
-            productId: product.id,
-            image_url: prodImgUrl,
-            altText: product.name,
-            isPrimary: true,
-            sortOrder: 1,
-            is_active: true,
-          },
-        });
+      // Product Image
+      await conn.execute(
+        `INSERT INTO product_images
+          (product_id, image_url, alt_text, is_primary, sort_order, is_active, created_at, updated_at)
+         VALUES (?, ?, ?, 1, 1, 1, NOW(), NOW())`,
+        [productId, item.image, item.name]
+      );
+
+      // Tier 2: ProductVariant (The Item itself)
+      const variantUuid = crypto.randomUUID();
+      const [varRes]: any = await conn.execute(
+        `INSERT INTO product_variants
+          (uuid, product_id, variant_name, slug, short_description, description, is_default, is_featured, is_active, out_of_stock, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 1, 1, 1, 0, NOW(), NOW())`,
+        [variantUuid, productId, item.name, item.slug, item.shortDescription, item.description]
+      );
+      const variantId = varRes.insertId;
+      totalVariants++;
+
+      // Variant Image
+      await conn.execute(
+        `INSERT INTO product_variant_images
+          (uuid, variant_id, image_url, sort_order, is_primary, status, is_active, created_at, updated_at)
+         VALUES (?, ?, ?, 1, 1, 1, 1, NOW(), NOW())`,
+        [crypto.randomUUID(), variantId, item.image]
+      );
+
+      console.log(`  📦 Item (Variant): ${item.name}`);
+
+      // Tier 3: Multiple Pack Sizes under this single Variant!
+      for (const pack of item.packSizes) {
+        const unitId = unitMap.get(pack.unitCode) || 1;
+        const isDefault = pack.isDefault ? 1 : 0;
+        const unitPriceUuid = crypto.randomUUID();
+
+        const [upRes]: any = await conn.execute(
+          `INSERT INTO variant_unit_prices
+            (uuid, variant_id, unit_id, unit_value, sku, base_price, is_default, is_active, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+          [unitPriceUuid, variantId, unitId, pack.unitVal, pack.sku, pack.price, isDefault]
+        );
+        const unitPriceId = upRes.insertId;
+        totalUnitPrices++;
+
+        // Inventory for this pack size
+        await conn.execute(
+          `INSERT INTO inventories
+            (variant_unit_price_id, quantity_available, quantity_reserved, reorder_level, warehouse_location, is_active, created_at, updated_at)
+           VALUES (?, 150, 0, 10, 'Kolli Hills Central Depot', 1, NOW(), NOW())`,
+          [unitPriceId]
+        );
+
+        console.log(`     └─ Pack Size: ${pack.unitVal}${pack.unitCode} @ ₹${pack.price} (SKU: ${pack.sku})${isDefault ? ' [DEFAULT]' : ''}`);
       }
-
-      // Seed Variants
-      for (const varDef of prodDef.variants) {
-        const variantSlug = `${prodDef.slug}-${varDef.sku.toLowerCase()}`;
-        const unitId = unitMap.get(varDef.unitCode) || unitMap.get("g")!;
-
-        const variant = await db.productVariant.upsert({
-          where: { slug: variantSlug },
-          update: {
-            variant_name: varDef.name,
-            short_description: prodDef.description,
-            description: prodDef.description,
-            is_default: varDef.isDefault,
-            isActive: true,
-            out_of_stock: false,
-          },
-          create: {
-            uuid: crypto.randomUUID(),
-            productId: product.id,
-            variant_name: varDef.name,
-            slug: variantSlug,
-            short_description: prodDef.description,
-            description: prodDef.description,
-            is_default: varDef.isDefault,
-            is_featured: varDef.isDefault,
-            isActive: true,
-            out_of_stock: false,
-          },
-        });
-        totalVariants++;
-
-        // Ensure Variant Image
-        const existingVarImg = await db.product_variant_images.findFirst({
-          where: { variant_id: variant.id },
-        });
-        if (!existingVarImg) {
-          await db.product_variant_images.create({
-            data: {
-              uuid: crypto.randomUUID(),
-              variant_id: variant.id,
-              image_url: prodImgUrl,
-              sort_order: 1,
-              is_primary: true,
-              status: true,
-              is_active: true,
-            },
-          });
-        }
-
-        // Upsert Variant Unit Price
-        const unitPrice = await db.variantUnitPrice.upsert({
-          where: { sku: varDef.sku },
-          update: {
-            variant_id: variant.id,
-            unit_id: unitId,
-            unit_value: varDef.unitVal,
-            base_price: varDef.price,
-            is_default: varDef.isDefault,
-            isActive: true,
-          },
-          create: {
-            uuid: crypto.randomUUID(),
-            variant_id: variant.id,
-            unit_id: unitId,
-            unit_value: varDef.unitVal,
-            sku: varDef.sku,
-            base_price: varDef.price,
-            is_default: varDef.isDefault,
-            isActive: true,
-          },
-        });
-
-        // Upsert Inventory
-        await db.inventory.upsert({
-          where: { variantUnitPriceId: unitPrice.id },
-          update: {
-            quantity_available: 150,
-            quantity_reserved: 0,
-            reorderLevel: 10,
-            warehouse_location: "Kolli Hills Central Depot",
-            is_active: true,
-          },
-          create: {
-            variantUnitPriceId: unitPrice.id,
-            quantity_available: 150,
-            quantity_reserved: 0,
-            reorderLevel: 10,
-            warehouse_location: "Kolli Hills Central Depot",
-            is_active: true,
-          },
-        });
-      }
-
-      console.log(`   + Product: ${product.name} (2 variants: ${prodDef.variants.map((v) => v.name).join(", ")})`);
     }
   }
 
   console.log("\n========================================================");
-  console.log("🎉 Seed Completed Successfully!");
-  console.log(`   • Categories Created/Verified : ${totalCategories}`);
-  console.log(`   • Products Created/Verified   : ${totalProducts}`);
-  console.log(`   • Variants Created/Verified   : ${totalVariants}`);
+  console.log("🎉 3-Tier Kolli Hills Catalog Seed Completed Successfully!");
+  console.log(`   • Categories Seeded : ${totalCategories}`);
+  console.log(`   • Products Seeded   : ${totalProducts}`);
+  console.log(`   • Variants (Items)  : ${totalVariants}`);
+  console.log(`   • Pack Sizes (Prices): ${totalUnitPrices}`);
   console.log("========================================================\n");
 
-  process.exit(0);
+  await conn.end();
 }
 
 main().catch((err) => {

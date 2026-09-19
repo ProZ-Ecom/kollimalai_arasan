@@ -87,7 +87,7 @@ export default function ShopAllPage() {
   const pageTitle = useMemo(() => {
     if (selectedCategoryIds.length === 1 && currentCategory?.name) return currentCategory.name;
     if (selectedCategoryIds.length > 1) return `${selectedCategoryIds.length} Categories Selected`;
-    return "Shop All Snacks";
+    return "Shop All Products";
   }, [currentCategory, selectedCategoryIds]);
 
   // Find active sort config

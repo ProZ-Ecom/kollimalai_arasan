@@ -11,8 +11,8 @@ export const GET = createApiHandler({
       throw ApiError.badRequest("Product UUID is required");
     }
 
-    const validUuid = uuidParamSchema.parse(productUuid);
-    const product = await catalogService.getProductByUuid(validUuid);
+    const identifier = (productUuid as string).trim();
+    const product = await catalogService.getProductByUuid(identifier);
 
     return apiSuccess(product, "Product fetched successfully", 200);
   },
