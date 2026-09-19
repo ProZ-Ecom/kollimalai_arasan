@@ -305,7 +305,7 @@ function CreateCampaignContent() {
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 max-w-9xl  pb-16">
       {/* Header */}
       <AdminPageHeader
         title="Create WhatsApp Campaign"
@@ -333,22 +333,20 @@ function CreateCampaignContent() {
               <React.Fragment key={s.num}>
                 <button
                   onClick={() => setCurrentStep(s.num)}
-                  className={`flex items-center gap-3 p-2 rounded-xl transition-all cursor-pointer ${
-                    isCurrent
-                      ? "text-secondary-600 font-semibold"
-                      : isDone
+                  className={`flex items-center gap-3 p-2 rounded-xl transition-all cursor-pointer ${isCurrent
+                    ? "text-secondary-600 font-semibold"
+                    : isDone
                       ? "text-neutral-700"
                       : "text-neutral-400"
-                  }`}
+                    }`}
                 >
                   <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold transition-colors ${
-                      isCurrent
-                        ? "bg-secondary-600 text-white shadow-xs"
-                        : isDone
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold transition-colors ${isCurrent
+                      ? "bg-secondary-600 text-white shadow-xs"
+                      : isDone
                         ? "bg-secondary-100 text-secondary-700"
                         : "bg-neutral-100 text-neutral-400"
-                    }`}
+                      }`}
                   >
                     {isDone ? <Check className="w-4 h-4 stroke-[3]" /> : s.num}
                   </div>
@@ -359,9 +357,8 @@ function CreateCampaignContent() {
                 </button>
                 {idx < steps.length - 1 && (
                   <div
-                    className={`flex-1 h-0.5 mx-2 rounded transition-colors ${
-                      currentStep > s.num ? "bg-secondary-600" : "bg-neutral-200"
-                    }`}
+                    className={`flex-1 h-0.5 mx-2 rounded transition-colors ${currentStep > s.num ? "bg-secondary-600" : "bg-neutral-200"
+                      }`}
                   />
                 )}
               </React.Fragment>
@@ -486,11 +483,10 @@ function CreateCampaignContent() {
               <button
                 key={f.id}
                 onClick={() => setCustomerFilter(f.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                  customerFilter === f.id
-                    ? "bg-secondary-600 text-white shadow-xs"
-                    : "bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200"
-                }`}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${customerFilter === f.id
+                  ? "bg-secondary-600 text-white shadow-xs"
+                  : "bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200"
+                  }`}
               >
                 {f.label}
               </button>
@@ -570,11 +566,10 @@ function CreateCampaignContent() {
                       <tr
                         key={c.id}
                         onClick={() => toggleCustomer(c.id)}
-                        className={`cursor-pointer transition-colors ${
-                          isSelected
-                            ? "bg-secondary-50/40"
-                            : "hover:bg-neutral-50/60"
-                        }`}
+                        className={`cursor-pointer transition-colors ${isSelected
+                          ? "bg-secondary-50/40"
+                          : "hover:bg-neutral-50/60"
+                          }`}
                       >
                         <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-center">
@@ -832,8 +827,8 @@ function CreateCampaignContent() {
                   <p className="text-xs whitespace-pre-wrap leading-relaxed">
                     {message
                       ? message
-                          .replace(/{{customer_name}}/g, "Priya")
-                          .replace(/{{store_name}}/g, "Rithu Snacks")
+                        .replace(/{{customer_name}}/g, "Priya")
+                        .replace(/{{store_name}}/g, "Rithu Snacks")
                       : "Start typing your message to preview how customers will see it on their phones..."}
                   </p>
 
@@ -920,11 +915,10 @@ function CreateCampaignContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div
                 onClick={() => setScheduleMode("NOW")}
-                className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                  scheduleMode === "NOW"
-                    ? "border-secondary-600 bg-secondary-50/40 ring-2 ring-secondary-600/20"
-                    : "border-neutral-200 hover:bg-neutral-50"
-                }`}
+                className={`p-4 rounded-xl border cursor-pointer transition-all ${scheduleMode === "NOW"
+                  ? "border-secondary-600 bg-secondary-50/40 ring-2 ring-secondary-600/20"
+                  : "border-neutral-200 hover:bg-neutral-50"
+                  }`}
               >
                 <Radio
                   name="scheduleMode"
@@ -938,11 +932,10 @@ function CreateCampaignContent() {
 
               <div
                 onClick={() => setScheduleMode("SCHEDULED")}
-                className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                  scheduleMode === "SCHEDULED"
-                    ? "border-secondary-600 bg-secondary-50/40 ring-2 ring-secondary-600/20"
-                    : "border-neutral-200 hover:bg-neutral-50"
-                }`}
+                className={`p-4 rounded-xl border cursor-pointer transition-all ${scheduleMode === "SCHEDULED"
+                  ? "border-secondary-600 bg-secondary-50/40 ring-2 ring-secondary-600/20"
+                  : "border-neutral-200 hover:bg-neutral-50"
+                  }`}
               >
                 <Radio
                   name="scheduleMode"

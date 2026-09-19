@@ -134,7 +134,7 @@ export default function WhatsAppReportsPage() {
   }, [campaignDetail, logStatusFilter, logSearchQuery]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 max-w-9xl  pb-16">
       {/* Header */}
       <AdminPageHeader
         title="WhatsApp Campaign Reports & Delivery Logs"
@@ -275,17 +275,16 @@ export default function WhatsAppReportsPage() {
                       </td>
                       <td className="p-4">
                         <span
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ${
-                            c.status === "COMPLETED"
-                              ? "bg-success-50 text-success-700 border-success-200"
-                              : c.status === "RUNNING"
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ${c.status === "COMPLETED"
+                            ? "bg-success-50 text-success-700 border-success-200"
+                            : c.status === "RUNNING"
                               ? "bg-blue-50 text-blue-700 border-blue-200 animate-pulse"
                               : c.status === "PAUSED"
-                              ? "bg-amber-50 text-amber-700 border-amber-200"
-                              : c.status === "SCHEDULED"
-                              ? "bg-purple-50 text-purple-700 border-purple-200"
-                              : "bg-neutral-100 text-neutral-600 border-neutral-200"
-                          }`}
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : c.status === "SCHEDULED"
+                                  ? "bg-purple-50 text-purple-700 border-purple-200"
+                                  : "bg-neutral-100 text-neutral-600 border-neutral-200"
+                            }`}
                         >
                           {c.status}
                         </span>
@@ -396,11 +395,10 @@ export default function WhatsAppReportsPage() {
                   <button
                     key={st}
                     onClick={() => setLogStatusFilter(st)}
-                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
-                      logStatusFilter === st
-                        ? "bg-secondary-600 text-white shadow-xs"
-                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200/80"
-                    }`}
+                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${logStatusFilter === st
+                      ? "bg-secondary-600 text-white shadow-xs"
+                      : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200/80"
+                      }`}
                   >
                     {st}
                   </button>
@@ -458,10 +456,10 @@ export default function WhatsAppReportsPage() {
                         <td className="p-3 text-neutral-500 text-[11px]">
                           {r.sent_at
                             ? new Date(r.sent_at).toLocaleTimeString("en-IN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                              })
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            })
                             : "—"}
                         </td>
                         <td className="p-3 text-neutral-600 text-[11px]">

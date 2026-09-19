@@ -131,7 +131,7 @@ export default function WhatsAppTemplatesPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 max-w-9xl mx pb-16">
       {/* Header */}
       <AdminPageHeader
         title="WhatsApp Message Templates"
@@ -156,11 +156,10 @@ export default function WhatsAppTemplatesPage() {
           <button
             key={c.id}
             onClick={() => setActiveCategory(c.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeCategory === c.id
-                ? "bg-secondary-600 text-white shadow-xs"
-                : "bg-white text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 border border-neutral-200/80 shadow-xs"
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${activeCategory === c.id
+              ? "bg-secondary-600 text-white shadow-xs"
+              : "bg-white text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 border border-neutral-200/80 shadow-xs"
+              }`}
           >
             {c.label}
           </button>
@@ -201,15 +200,14 @@ export default function WhatsAppTemplatesPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <span
-                    className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold tracking-wider uppercase border ${
-                      t.category === "FESTIVAL"
-                        ? "bg-primary-50 text-primary-800 border-primary-200/80"
-                        : t.category === "OFFER"
+                    className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold tracking-wider uppercase border ${t.category === "FESTIVAL"
+                      ? "bg-primary-50 text-primary-800 border-primary-200/80"
+                      : t.category === "OFFER"
                         ? "bg-secondary-50 text-secondary-700 border-secondary-200/80"
                         : t.category === "PROMOTION"
-                        ? "bg-blue-50 text-blue-700 border-blue-200/80"
-                        : "bg-neutral-100 text-neutral-700 border-neutral-200"
-                    }`}
+                          ? "bg-blue-50 text-blue-700 border-blue-200/80"
+                          : "bg-neutral-100 text-neutral-700 border-neutral-200"
+                      }`}
                   >
                     {t.category}
                   </span>
