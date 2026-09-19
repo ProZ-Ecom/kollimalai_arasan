@@ -58,7 +58,7 @@ export function AboutHeroSection() {
             <div className="relative w-full max-w-lg lg:max-w-none mx-auto">
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-about-hero-border aspect-[4/3] w-full">
                 <Image
-                  src="/images/Aboutus_hero_img1.jpg"
+                  src="/images/kolli_spices_hero.jpg"
                   alt="Kollimalai Arasan - Pure Spices: Black pepper, cardamom, cloves"
                   fill
                   className="object-cover"
