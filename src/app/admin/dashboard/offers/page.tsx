@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Calendar, Eye, Pencil, Plus, Power, Tag, Trash2 } from "lucide-react";
+import { Calendar, Eye, Pencil, Plus, Power, Tag, Trash2, X } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,6 @@ import { SearchInput } from "@/components/ui/search-input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ErrorState } from "@/components/ui/error-state";
 import { toast } from "@/components/ui/Toast";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/forms/label";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { AdminContent, AdminPageHeader } from "@/components/admin/AdminPageHeader";
@@ -408,17 +406,57 @@ export default function AdminOffersPage() {
         <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-transparent py-1">
           {/* Filters */}
           <div className="flex-shrink-0 space-y-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <SearchInput
                 placeholder="Search offers by name or code..."
                 value={filters.search}
                 onSearch={(value) => setFilter("search", value)}
                 className="w-full max-w-md"
               />
-              {hasActiveFilters && <ClearFiltersButton onClick={clearFilters} />}
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Aligned Date Range Picker */}
+                <div className="flex items-center h-11 bg-white border border-[var(--color-neutral-300)] rounded-xl px-3.5 shadow-2xs gap-2">
+                  <Calendar className="h-4 w-4 text-[var(--color-neutral-400)] shrink-0" />
+                  <span className="text-xs font-semibold text-[var(--color-neutral-600)] shrink-0">From</span>
+                  <input
+                    id="offer-from"
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => setFilter("startDate", e.target.value)}
+                    className="bg-transparent text-xs text-[var(--color-neutral-800)] font-medium outline-none cursor-pointer"
+                    title="Valid from date"
+                  />
+                  <span className="text-xs text-[var(--color-neutral-300)] font-bold">|</span>
+                  <span className="text-xs font-semibold text-[var(--color-neutral-600)] shrink-0">To</span>
+                  <input
+                    id="offer-to"
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => setFilter("endDate", e.target.value)}
+                    className="bg-transparent text-xs text-[var(--color-neutral-800)] font-medium outline-none cursor-pointer"
+                    title="Valid to date"
+                  />
+                  {(filters.startDate || filters.endDate) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilters((prev) => ({ ...prev, startDate: "", endDate: "" }));
+                        setPage(1);
+                      }}
+                      className="ml-1 text-[var(--color-neutral-400)] hover:text-[var(--color-neutral-700)] p-0.5 rounded cursor-pointer"
+                      title="Clear date range"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {hasActiveFilters && <ClearFiltersButton onClick={clearFilters} />}
+              </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
               <Select
                 value={filters.level}
                 options={[{ value: "", label: "All levels" }, ...OFFER_LEVEL_OPTIONS]}
@@ -470,32 +508,6 @@ export default function AdminOffersPage() {
                 className="h-11 rounded-xl"
                 onValueChange={(value) => setFilter("productId", value)}
               />
-              <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <Label htmlFor="offer-from" className="text-[11px] text-neutral-500">
-                    From
-                  </Label>
-                  <Input
-                    id="offer-from"
-                    type="date"
-                    value={filters.startDate}
-                    onChange={(e) => setFilter("startDate", e.target.value)}
-                    className="h-11 rounded-xl"
-                  />
-                </div>
-                <div className="flex-1">
-                  <Label htmlFor="offer-to" className="text-[11px] text-neutral-500">
-                    To
-                  </Label>
-                  <Input
-                    id="offer-to"
-                    type="date"
-                    value={filters.endDate}
-                    onChange={(e) => setFilter("endDate", e.target.value)}
-                    className="h-11 rounded-xl"
-                  />
-                </div>
-              </div>
             </div>
           </div>
 
