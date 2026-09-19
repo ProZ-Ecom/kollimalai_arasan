@@ -280,10 +280,12 @@ export default function CheckoutPage() {
   // Pricing calculations
   const items = cart?.items || [];
   const subtotal = Number(cart?.subtotal || 0);
-  const isFreeDelivery = subtotal >= 499;
+  const discount = Number(cart?.totalDiscount ?? cart?.totalSavings ?? 0);
+  const payableBeforeShipping = Math.max(0, subtotal - discount);
+  const isFreeDelivery = payableBeforeShipping >= 499;
   const shippingCharge =
     deliveryMethod === "express" ? 99 : isFreeDelivery ? 0 : 49;
-  const grandTotal = subtotal + shippingCharge;
+  const grandTotal = payableBeforeShipping + shippingCharge;
 
   // Authentication gate
   if (authStatus === "loading" || (cartLoading && !cart) || addressesLoading) {
@@ -332,12 +334,12 @@ export default function CheckoutPage() {
           Your Cart is Empty
         </h1>
         <p className="text-theme-text-subtle mb-6 text-sm max-w-md mx-auto">
-          Explore our handcrafted traditional South Indian snacks and sweets to
+          Explore our authentic Kolli Hills spices, herbs, and natural hill produce to
           proceed with your order.
         </p>
         <Link href="/products">
           <Button className="min-h-[44px] px-6 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white font-semibold shadow-sm">
-            Browse Authentic Snacks
+            Browse Authentic Products
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </Link>
@@ -1079,6 +1081,15 @@ export default function CheckoutPage() {
                     {formatPrice(subtotal)}
                   </span>
                 </div>
+
+                {discount > 0 && (
+                  <div className="flex justify-between text-theme-status-del-fg font-medium">
+                    <span>Special Discount</span>
+                    <span className="font-semibold">
+                      -{formatPrice(discount)}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex justify-between text-theme-text-subtle items-center">
                   <span>Shipping & Handling</span>

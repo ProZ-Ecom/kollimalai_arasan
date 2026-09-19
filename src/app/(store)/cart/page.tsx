@@ -137,18 +137,31 @@ export default function CartPage() {
       items.reduce((sum: number, it: any) => {
         const qty = Math.max(1, Number(it.quantity || 1));
         const price = Number(
-          it.price ?? it.currentPrice ?? it.priceAtAdd ?? it.salePrice ?? 0
+          it.basePrice ?? it.price ?? it.currentPrice ?? it.priceAtAdd ?? 0
         );
-        return sum + (it.itemTotal ? Number(it.itemTotal) : price * qty);
+        return sum + (it.originalItemTotal ? Number(it.originalItemTotal) : price * qty);
       }, 0)
   );
 
+  const discount = Number(
+    cart?.totalDiscount ??
+      cart?.totalSavings ??
+      items.reduce((sum: number, it: any) => sum + Number(it.discountAmount || 0), 0)
+  );
+
+  const payableBeforeShipping = Math.max(0, subtotal - discount);
+  const freeShippingThreshold = 500;
+  const isFreeDelivery =
+    payableBeforeShipping >= freeShippingThreshold || payableBeforeShipping === 0;
+  const shippingCharge = isFreeDelivery ? 0 : 40;
+  const grandTotal = payableBeforeShipping + shippingCharge;
+
   const summary = {
     subtotal,
-    discount: 0,
+    discount,
     tax: 0,
-    shippingCharge: subtotal >= 500 || subtotal === 0 ? 0 : 40,
-    grandTotal: subtotal + (subtotal >= 500 || subtotal === 0 ? 0 : 40),
+    shippingCharge,
+    grandTotal,
     totalItems: totalItemsCount,
   };
 
@@ -180,7 +193,7 @@ export default function CartPage() {
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-theme-text-subtle hover:text-theme-primary transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Snacks
+            Back to Products
           </Link>
         </div>
         <CartEmpty />
@@ -205,7 +218,7 @@ export default function CartPage() {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-theme-text-subtle">
-            Freshly prepared traditional South Indian delicacies ready for doorstep delivery.
+            Authentic spices, wellness essentials, and natural hill produce from Kolli Hills.
           </p>
         </div>
 
@@ -215,7 +228,7 @@ export default function CartPage() {
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-theme-primary hover:text-theme-primary-hover bg-theme-surface border border-theme-border px-3.5 py-2 rounded-xl transition-all hover:bg-theme-surface-alt"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Add More Snacks
+            Continue Shopping
           </Link>
 
           <Button

@@ -24,13 +24,15 @@ function CartSummary({
 }: CartSummaryProps) {
   const freeShippingThreshold = 500;
   const subtotal = Number(summary.subtotal || 0);
+  const discount = Number(summary.discount || 0);
+  const effectiveSubtotal = Math.max(0, subtotal - discount);
   const remainingForFreeShipping = Math.max(
     0,
-    freeShippingThreshold - subtotal
+    freeShippingThreshold - effectiveSubtotal
   );
   const progressPercent = Math.min(
     100,
-    Math.round((subtotal / freeShippingThreshold) * 100)
+    Math.round((effectiveSubtotal / freeShippingThreshold) * 100)
   );
 
   return (
@@ -141,7 +143,7 @@ function CartSummary({
         <div className="pt-2 space-y-2 border-t border-theme-border-subtle">
           <div className="flex items-center gap-2 text-xs text-theme-text-subtle">
             <ShieldCheck className="h-4 w-4 text-theme-status-del-fg shrink-0" />
-            <span>100% Authentic Homemade Snacks</span>
+            <span>100% Authentic Kolli Hills Spices & Natural Products</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-theme-text-subtle">
             <Lock className="h-4 w-4 text-theme-status-out-fg shrink-0" />

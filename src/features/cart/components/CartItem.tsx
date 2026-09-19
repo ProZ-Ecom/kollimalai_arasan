@@ -65,7 +65,7 @@ function CartItem({
       ? item.productName
       : typeof item.product?.name === "string"
       ? item.product.name
-      : "Traditional Snack";
+      : "Kolli Hills Product";
 
   const variantName =
     typeof item.variantName === "string"
