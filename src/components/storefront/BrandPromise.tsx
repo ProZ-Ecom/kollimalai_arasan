@@ -16,9 +16,9 @@ const PROMISES = [
   {
     id: 2,
     icon: ICONS.badge,
-    title: "Authentic Taste",
+    title: "Authentic Purity",
     description:
-      "Our process keeps the taste, smell, and color just right—so they stay fresh for longer.",
+      "Our traditional process preserves the natural aroma, potency, and rich color—so they stay fresh for longer.",
   },
   {
     id: 3,

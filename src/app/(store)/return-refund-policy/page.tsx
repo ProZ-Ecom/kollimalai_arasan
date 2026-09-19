@@ -5,7 +5,7 @@ import { RotateCcw } from "lucide-react";
 export const metadata: Metadata = {
   title: "Return & Refund Policy | Kollimalai Arasan",
   description:
-    "Learn about Kollimalai Arasan return, replacement, cancellation, and refund policies for traditional and food product orders.",
+    "Learn about Kollimalai Arasan return, replacement, cancellation, and refund policies for spices and natural product orders.",
 };
 
 export default function ReturnRefundPolicyPage() {
@@ -18,7 +18,7 @@ export default function ReturnRefundPolicyPage() {
       {/* Intro */}
       <section className="space-y-4">
         <p className="text-base sm:text-lg text-neutral-800 leading-relaxed font-medium">
-          At <strong className="text-neutral-900 font-semibold">Kollimalai Arasan</strong>, we want you to receive your order in good condition and as expected. Because our products are traditional organic and food items, returns and refunds may be subject to specific conditions relating to product safety, hygiene, freshness, and applicable law.
+          At <strong className="text-neutral-900 font-semibold">Kollimalai Arasan</strong>, we want you to receive your order in good condition and as expected. Because our products are natural spices, herbs, and agricultural produce, returns and refunds may be subject to specific conditions relating to product safety, hygiene, freshness, and applicable law.
         </p>
         <p className="text-neutral-700 leading-relaxed">
           Please read this policy carefully before placing an order.
@@ -31,7 +31,7 @@ export default function ReturnRefundPolicyPage() {
           1. General Return Policy
         </h2>
         <p className="text-neutral-700 leading-relaxed">
-          Due to the nature of food and snack products, we generally do not accept returns of products that have been opened, consumed, used, or handled in a manner that affects product safety or hygiene.
+          Due to the consumable nature of spices and natural products, we generally do not accept returns of products that have been opened, consumed, used, or handled in a manner that affects product safety or hygiene.
         </p>
         <p className="text-neutral-700 leading-relaxed">
           A return, replacement, or refund may be considered in eligible situations such as:

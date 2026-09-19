@@ -9,7 +9,7 @@ import { InfoCard } from "./cards/InfoCard";
 export function Pledge() {
   return (
     <Section>
-      <SectionHeading title="our wholesome food pledge" />
+      <SectionHeading title="our pure & natural pledge" />
 
       <div
         className="

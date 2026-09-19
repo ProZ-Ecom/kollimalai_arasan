@@ -37,11 +37,10 @@ export function TasteTradition() {
                 Filling every home with
               </p>
               <h2 className="text-white font-extrabold text-3xl sm:text-4xl lg:text-5xl uppercase tracking-tight mt-1">
-                Taste &amp; Tradition
+                Purity &amp; Tradition
               </h2>
               <p className="mt-3 max-w-md text-[var(--neutral-900)] font-medium text-sm sm:text-base">
-                Every Box Carries Warmth, Care, and Tradition that brightens
-                your celebration.
+                Every pack carries pure Kolli Hills spices and natural harvests that enrich your kitchen and well-being.
               </p>
             </div>
           </div>

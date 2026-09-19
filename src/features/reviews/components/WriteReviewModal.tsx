@@ -38,9 +38,9 @@ function getPackSizeLabel(pack: CustomerVariantUnitPriceDto): string {
 const RATING_DESCRIPTIONS: Record<number, { label: string; text: string }> = {
   1: { label: "Disappointed", text: "Poor quality or not as expected" },
   2: { label: "Not Satisfied", text: "Could have been much better" },
-  3: { label: "Average", text: "Decent taste, met basic expectations" },
-  4: { label: "Very Good", text: "Really tasty, fresh, and enjoyable" },
-  5: { label: "Loved it!", text: "Outstanding crunch, authentic aroma, exceptional quality!" },
+  3: { label: "Average", text: "Decent quality, met basic expectations" },
+  4: { label: "Very Good", text: "Rich aroma, fresh, and high quality" },
+  5: { label: "Loved it!", text: "Authentic Kolli Hills aroma, pure and exceptional quality!" },
 };
 
 export function WriteReviewModal({
@@ -105,7 +105,7 @@ export function WriteReviewModal({
 
   if (!isOpen) return null;
 
-  const targetName = variantName || productName || "Authentic Snack";
+  const targetName = variantName || productName || "Natural Spices";
   const activeRating = hoverRating !== null ? hoverRating : rating;
   const ratingInfo = RATING_DESCRIPTIONS[activeRating] || RATING_DESCRIPTIONS[5];
 
@@ -168,7 +168,7 @@ export function WriteReviewModal({
               Customer Feedback
             </span>
             <h3 className="font-serif text-2xl font-bold text-[#2B1B17] tracking-tight">
-              Review This Snack
+              Review This Product
             </h3>
             <p className="text-xs sm:text-sm text-stone-600 mt-1 truncate">
               {targetName}
@@ -199,7 +199,7 @@ export function WriteReviewModal({
                   Sign In to Share Your Review
                 </h4>
                 <p className="text-xs sm:text-sm text-stone-600 max-w-sm mx-auto leading-relaxed">
-                  Join our community of authentic South Indian snack connoisseurs. It only takes a few seconds to sign in!
+                  Join our community of natural products and spices enthusiasts. It only takes a few seconds to sign in!
                 </p>
               </div>
               <button
@@ -360,7 +360,7 @@ export function WriteReviewModal({
                   maxLength={2000}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="What made this snack special? Tell us about the crunch, freshness, spices, or how your family enjoyed it..."
+                  placeholder="What made this product special? Tell us about the aroma, purity, freshness, or how your family enjoyed it..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white text-sm text-[#2B1B17] placeholder:text-stone-400 focus:outline-hidden focus:border-[#7A2224] focus:ring-2 focus:ring-[#7A2224]/15 transition-all resize-none leading-relaxed"
                 />
               </div>

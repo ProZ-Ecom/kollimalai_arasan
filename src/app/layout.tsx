@@ -14,8 +14,8 @@ const hanken = Hanken_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Kollimalai Arasan - Premium Snacks",
-  description: "Premium snacks delivered to your doorstep. Quality you can taste.",
+  title: "Kollimalai Arasan - Pure Spices & Natural Products",
+  description: "Authentic Kolli Hills spices and natural products: Black pepper, cardamom, cloves, and traditional harvest delivered to your doorstep.",
 };
 
 export default function RootLayout({

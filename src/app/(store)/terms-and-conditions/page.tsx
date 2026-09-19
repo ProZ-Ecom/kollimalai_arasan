@@ -32,7 +32,7 @@ export default function TermsAndConditionsPage() {
           1. About Kollimalai Arasan
         </h2>
         <p className="text-neutral-700 leading-relaxed">
-          Kollimalai Arasan is an online platform through which customers can browse, select, and purchase traditional food, spices, and organic products from Kolli Hills.
+          Kollimalai Arasan is an online platform through which customers can browse, select, and purchase pure spices, herbs, and natural products from Kolli Hills.
         </p>
         <p className="text-neutral-700 leading-relaxed">
           The terms &quot;Kollimalai Arasan&quot;, &quot;we&quot;, &quot;us&quot;, and &quot;our&quot; refer to Kollimalai Arasan. The terms &quot;you&quot;, &quot;your&quot;, and &quot;customer&quot; refer to the person accessing the website or placing an order.

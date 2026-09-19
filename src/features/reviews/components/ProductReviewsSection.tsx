@@ -57,7 +57,7 @@ export function ProductReviewsSection({
   const avgRating = data?.ratingSummary?.averageRating ?? 0;
   const totalCount = data?.ratingSummary?.totalReviews ?? reviews.length;
 
-  const targetTitle = variantName || productName || "Authentic Snack";
+  const targetTitle = variantName || productName || "Natural Spices";
 
   return (
     <section id="reviews-section" className="w-full bg-[#FAFAFA] py-16 sm:py-20 my-8 rounded-3xl border border-[#F5F5F5]">
@@ -73,7 +73,7 @@ export function ProductReviewsSection({
           <p className="text-sm sm:text-base text-neutral-600 mt-2.5 leading-relaxed">
             Reviews for{" "}
             <strong className="text-[#101010] font-bold">{targetTitle}</strong>{" "}
-            from genuine sweet lovers and festive patrons
+            from genuine customers and home chefs
           </p>
 
           {/* Social Proof Rating Pill (Only if reviews exist) */}
@@ -108,7 +108,7 @@ export function ProductReviewsSection({
             </div>
             <h3 className="font-serif text-lg font-bold text-[#101010]">No Reviews Yet</h3>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1.5 leading-relaxed">
-              Be the first to taste <strong className="text-neutral-700">{targetTitle}</strong> and share your thoughts with fellow food connoisseurs!
+              Be the first to experience <strong className="text-neutral-700">{targetTitle}</strong> and share your thoughts with fellow spice enthusiasts!
             </p>
           </div>
         ) : (

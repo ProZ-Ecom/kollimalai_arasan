@@ -59,7 +59,7 @@ export function AboutHeroSection() {
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-about-hero-border aspect-[4/3] w-full">
                 <Image
                   src="/images/Aboutus_hero_img1.jpg"
-                  alt="Tradition in Every Bite"
+                  alt="Kollimalai Arasan - Pure Spices: Black pepper, cardamom, cloves"
                   fill
                   className="object-cover"
                   priority

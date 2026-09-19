@@ -224,7 +224,7 @@ export function ProductVariantSelector({
                 <SnackCard
                   id={variant.id}
                   name={variant.variantName}
-                  subtitle={categoryName || productName || "Authentic Snack"}
+                  subtitle={categoryName || productName || "Pure Natural Harvest"}
                   image={variant.primaryImage || resolveSnackFallbackImage(variant.variantName)}
                   href={`/products/${variant.productId || variant.id}?variant=${variant.id}`}
                   variants={cardVariants}

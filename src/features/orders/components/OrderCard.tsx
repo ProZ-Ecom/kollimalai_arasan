@@ -145,7 +145,7 @@ export function OrderCard({ order }: OrderCardProps) {
               item.variant?.product_variant_images?.[0]?.image_url ||
               item.product?.images?.[0]?.image_url ||
               null;
-            const productName = item.productName || item.product_name_snapshot || "Snack Item";
+            const productName = item.productName || item.product_name_snapshot || "Product Item";
             const variantName = item.variantName || item.variant_snapshot || "";
             const quantity = item.quantity || 1;
             const unitPrice = item.unitPrice || item.unit_price;

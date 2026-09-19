@@ -17,16 +17,16 @@ function CartEmpty() {
       </div>
 
       <h2 className="text-2xl font-bold text-theme-text-primary mb-2">
-        Your Snack Box is Empty
+        Your Cart is Empty
       </h2>
       <p className="text-sm text-theme-text-subtle mb-8 max-w-md leading-relaxed">
-        You haven&apos;t added any traditional South Indian snacks to your cart yet.
-        Explore our authentic crunchy banana chips, kai murukku, mixture, and more!
+        You haven&apos;t added any natural products or spices to your cart yet.
+        Explore our authentic Kolli Hills black pepper, cardamom, cloves, and traditional natural harvests!
       </p>
 
       <Link href="/products">
         <Button className="h-11 px-6 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-fg font-bold text-sm shadow-xs transition-all flex items-center gap-2 cursor-pointer">
-          <span>Explore Authentic Snacks</span>
+          <span>Explore Pure Spices &amp; Products</span>
           <ArrowRight className="h-4 w-4" />
         </Button>
       </Link>

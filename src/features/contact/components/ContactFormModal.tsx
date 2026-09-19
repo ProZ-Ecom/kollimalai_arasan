@@ -399,7 +399,7 @@ export function ContactFormModal({ open, onClose }: ContactFormModalProps) {
                     <input
                       id="contact-subject"
                       type="text"
-                      placeholder="e.g. Order Inquiry / Bulk Snacks"
+                      placeholder="e.g. Order Inquiry / Bulk Spices & Natural Products"
                       value={formData.subject}
                       onChange={(e) => handleChange("subject", e.target.value)}
                       disabled={submitContactMutation.isPending}

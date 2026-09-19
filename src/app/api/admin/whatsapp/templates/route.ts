@@ -19,13 +19,13 @@ const INITIAL_TEMPLATES = [
     name: "Weekend Flash Sale",
     category: "OFFER",
     message:
-      "Hello {{customer_name}}! ⚡\n\nWeekend snack cravings? We've got you covered!\n\nBuy any 2 signature snack packs and get *1 FREE* this Saturday & Sunday only. Don't miss out! 😋",
+      "Hello {{customer_name}}! ⚡\n\nStock up on pure Kolli Hills natural spices!\n\nBuy any 2 signature spice packs (Black pepper, Cardamom, Cloves) and get *10% OFF* this weekend only. Don't miss out! 🌿",
   },
   {
     name: "New Product Launch",
     category: "PROMOTION",
     message:
-      "Exciting news {{customer_name}}! 🌟\n\nWe just launched our all-new crunchy *Pepper Murukku* & *Millet Ribbon Pakoda*!\n\nBe among the first to taste them with an introductory 15% discount. Taste the tradition! ❤️",
+      "Exciting news {{customer_name}}! 🌟\n\nWe just launched our freshly harvested Kolli Hills *Wild Forest Black Pepper* & *Green Cardamom*!\n\nBe among the first to order with an introductory 15% discount. Experience pure tradition! 🌿",
   },
 ];
 

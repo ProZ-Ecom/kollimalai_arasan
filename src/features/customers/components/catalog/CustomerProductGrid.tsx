@@ -44,7 +44,7 @@ export function CustomerProductGrid({
           <Sparkles className="h-7 w-7 text-theme-secondary" />
         </div>
         <h3 className="text-lg font-bold text-theme-text-primary mb-1">
-          No snacks matched your search
+          No products matched your search
         </h3>
         <p className="text-sm text-theme-text-subtle mb-6">
           Try clearing your active filters or searching for something else.
