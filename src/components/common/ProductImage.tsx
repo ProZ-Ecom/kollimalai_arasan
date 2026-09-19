@@ -106,7 +106,7 @@ export function SnackFallbackIllustration({
 
         {/* Brand signature & label */}
         <span className="font-serif font-bold text-sm md:text-base tracking-wide text-[#007F06]">
-          Rithu&apos;s Snacks
+          Kollimalai Arasan
         </span>
         <span className="text-[11px] md:text-xs text-[#007F06]/70 font-medium mt-0.5 line-clamp-1">
           {title || "Fresh & Handcrafted"}
@@ -227,7 +227,7 @@ export function ProductImage({
           {fill ? (
             <Image
               src={src!}
-              alt={alt || "Rithu Snack Product"}
+              alt={alt || "Kollimalai Arasan Product"}
               fill
               sizes={sizes}
               priority={priority}
@@ -242,7 +242,7 @@ export function ProductImage({
           ) : (
             <Image
               src={src!}
-              alt={alt || "Rithu Snack Product"}
+              alt={alt || "Kollimalai Arasan Product"}
               width={width || 400}
               height={height || 400}
               sizes={sizes}

@@ -178,7 +178,7 @@ function ForgotPasswordVerifyOtpForm() {
         <div className="mb-6 flex justify-center">
           <Image
             src="/logo.svg"
-            alt="Rithu Snacks"
+            alt="Kollimalai Arasan"
             width={64}
             height={64}
             className="h-12 w-12 sm:h-14 sm:w-14"

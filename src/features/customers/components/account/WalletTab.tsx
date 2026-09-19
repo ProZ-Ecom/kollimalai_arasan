@@ -48,7 +48,7 @@ export function WalletTab({
   const nextTierTarget = 5000;
   const progressPercent = Math.min(100, Math.round((totalSpend / nextTierTarget) * 100));
 
-  const referralCode = profile?.referralCode || "RITHU10";
+  const referralCode = profile?.referralCode || "KOLLI10";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralCode);

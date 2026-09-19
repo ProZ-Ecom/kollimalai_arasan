@@ -90,7 +90,7 @@ export const companyService = {
     } else {
       updatedCompany = await companyRepository.createCompany(
         {
-          companyName: "Rithu Snacks",
+          companyName: "Kollimalai Arasan",
           logo: newLogoPath,
         },
         adminId

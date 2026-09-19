@@ -65,7 +65,7 @@ export const UPLOAD_PATHS = {
   COMPANY: "uploads/company",
 } as const;
 
-export const COOKIE_NAME = "rithu-snacks.session-token";
+export const COOKIE_NAME = "kollimalai-arasan.session-token";
 
 export const API_SUCCESS_MESSAGES = {
   CREATED: "Created successfully",

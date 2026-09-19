@@ -9,7 +9,7 @@ async function main() {
   const port = Number(url.port || 3306);
   const user = decodeURIComponent(url.username || 'root');
   const password = decodeURIComponent(url.password || '');
-  const database = url.pathname.slice(1) || 'rithusnack_new';
+  const database = url.pathname.slice(1) || 'kollimalai';
 
   const c = await mariadb.createConnection({
     host,

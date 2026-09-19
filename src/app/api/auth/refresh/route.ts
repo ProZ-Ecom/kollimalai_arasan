@@ -22,22 +22,30 @@ export const POST = createApiHandler(
       }
 
       if (!refreshToken) {
+        cookieStore.delete("access_token");
+        cookieStore.delete("refresh_token");
         throw ApiError.unauthorized("Refresh token is required");
       }
 
-      const result = await authService.refreshAccessToken(refreshToken);
+      try {
+        const result = await authService.refreshAccessToken(refreshToken);
 
-      if (result.accessToken) {
-        cookieStore.set("access_token", result.accessToken, {
-          httpOnly: true,
-          secure: IS_PROD,
-          sameSite: "lax",
-          path: "/",
-          maxAge: 7 * 24 * 60 * 60, // 7 days
-        });
+        if (result.accessToken) {
+          cookieStore.set("access_token", result.accessToken, {
+            httpOnly: true,
+            secure: IS_PROD,
+            sameSite: "lax",
+            path: "/",
+            maxAge: 7 * 24 * 60 * 60, // 7 days
+          });
+        }
+
+        return apiSuccess(null, "Access token refreshed successfully");
+      } catch (err) {
+        cookieStore.delete("access_token");
+        cookieStore.delete("refresh_token");
+        throw err;
       }
-
-      return apiSuccess(null, "Access token refreshed successfully");
     },
   },
   {

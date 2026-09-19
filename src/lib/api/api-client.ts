@@ -170,15 +170,16 @@ async function fetchApi<T>(
       typeof window !== "undefined" &&
       pathRequiresAuth(window.location.pathname)
     ) {
-      const isAdminEndpoint = endpoint.startsWith("/api/admin/");
-      const loginPath = isAdminEndpoint ? "/admin/login" : "/login";
+      const isOnAdmin = window.location.pathname.startsWith("/admin");
+      const isAdminEndpoint =
+        endpoint.startsWith("/api/admin/") ||
+        endpoint.startsWith("/api/dashboard");
+      const loginPath = isOnAdmin || isAdminEndpoint ? "/admin/login" : "/login";
       if (!window.location.pathname.startsWith(loginPath)) {
         const callbackUrl = encodeURIComponent(
           window.location.pathname + window.location.search
         );
-        window.location.href = isAdminEndpoint
-          ? loginPath
-          : `${loginPath}?callbackUrl=${callbackUrl}`;
+        window.location.href = `${loginPath}?from=unauthorized&callbackUrl=${callbackUrl}`;
       }
     }
   }

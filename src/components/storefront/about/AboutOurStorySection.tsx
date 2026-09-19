@@ -22,7 +22,7 @@ export function AboutOurStorySection() {
       id: "brand",
       icon: Award,
       label: "BRAND",
-      value: "Rithu's Snacks",
+      value: "Kollimalai Arasan",
     },
     {
       id: "range",
@@ -42,7 +42,7 @@ export function AboutOurStorySection() {
               <div className="relative rounded-3xl overflow-hidden shadow-xl aspect-square sm:aspect-[4/3] lg:aspect-square w-full">
                 <Image
                   src="/images/Aboutus_ourstory_img1.jpg"
-                  alt="Our Story - Rithu's Snacks"
+                  alt="Our Story - Kollimalai Arasan"
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 50vw"

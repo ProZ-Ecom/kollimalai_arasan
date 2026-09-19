@@ -1,6 +1,6 @@
 # WhatsApp Integration Architecture & Rules (`whatsapp.md`)
 
-This document defines the complete architecture, engineering standards, safety rules, and implementation blueprints for the **100% Free WhatsApp Integration** in Rithu Snacks using the admin's personal WhatsApp number.
+This document defines the complete architecture, engineering standards, safety rules, and implementation blueprints for the **100% Free WhatsApp Integration** in Kollimalai Arasan using the admin's personal WhatsApp number.
 
 ---
 
@@ -25,7 +25,7 @@ This document defines the complete architecture, engineering standards, safety r
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                 Rithu Snacks Admin Browser                  │
+│              Kollimalai Arasan Admin Browser                │
 │  - Sidebar: "WhatsApp" Button (Above Settings)              │
 │  - Page: /admin/dashboard/whatsapp                          │
 │    ├── Live Status (Disconnected / Pairing / Connected)    │
@@ -152,7 +152,7 @@ The page layout consists of 3 synchronized panels:
 ## 5. Directory & File Structure
 
 ```
-rithu-snacks/
+kollimalai-arasan/
 ├── auth_baileys/                                # WhatsApp session credentials (.gitignore)
 ├── src/
 │   ├── components/
@@ -197,13 +197,13 @@ rithu-snacks/
 ```ts
 export const WHATSAPP_TEMPLATES = {
   ORDER_CONFIRMED: (orderId: string, customerName: string, amount: number) =>
-    `Namaste ${customerName}! 🙏\n\nYour Rithu Snacks order *#${orderId}* for *₹${amount}* has been confirmed and is being freshly prepared! 🥨✨\n\nWe will notify you once it is dispatched.\n\nThank you for choosing Rithu Snacks!`,
+    `Namaste ${customerName}! 🙏\n\nYour Kollimalai Arasan order *#${orderId}* for *₹${amount}* has been confirmed and is being freshly prepared! 🌿✨\n\nWe will notify you once it is dispatched.\n\nThank you for choosing Kollimalai Arasan!`,
 
   OUT_FOR_DELIVERY: (orderId: string, customerName: string) =>
-    `Hello ${customerName}! 🚚\n\nGreat news! Your Rithu Snacks order *#${orderId}* is out for delivery. Our delivery partner will reach you shortly.\n\nEnjoy your fresh snacks! 😋`,
+    `Hello ${customerName}! 🚚\n\nGreat news! Your Kollimalai Arasan order *#${orderId}* is out for delivery. Our delivery partner will reach you shortly.\n\nEnjoy your authentic products! 😋`,
 
   ORDER_DELIVERED: (orderId: string, customerName: string) =>
-    `Dear ${customerName}, your Rithu Snacks order *#${orderId}* has been delivered successfully! 🎉\n\nWe hope you love every bite! If you have any feedback, please reply to this message. Have a delicious day! ❤️`,
+    `Dear ${customerName}, your Kollimalai Arasan order *#${orderId}* has been delivered successfully! 🎉\n\nWe hope you love every product! If you have any feedback, please reply to this message. Have a wonderful day! ❤️`,
 };
 ```
 

@@ -13,7 +13,7 @@ async function run() {
   const port = Number(url.port || 3306);
   const user = decodeURIComponent(url.username || 'root');
   const password = decodeURIComponent(url.password || '');
-  const database = url.pathname.slice(1) || 'rithusnack_new';
+  const database = url.pathname.slice(1) || 'kollimalai';
 
   console.log(`Connecting to MySQL server at ${host}:${port}...`);
   const rootConn = await mariadb.createConnection({

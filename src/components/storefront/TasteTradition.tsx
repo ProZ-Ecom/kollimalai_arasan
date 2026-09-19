@@ -25,7 +25,7 @@ export function TasteTradition() {
             <div className="shrink-0 mx-auto sm:mx-0">
               <Image
                 src={LOGOS.logo}
-                alt="Snack4us - Rithu's"
+                alt="Kollimalai Arasan"
                 width={144}
                 height={144}
                 className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl shadow-lg"

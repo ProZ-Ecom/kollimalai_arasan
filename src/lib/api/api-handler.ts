@@ -151,6 +151,8 @@ export function createApiHandler(
               }
             } catch {
               // Refresh token is also invalid or expired
+              cookieStore.delete("access_token");
+              cookieStore.delete("refresh_token");
             }
           }
         }

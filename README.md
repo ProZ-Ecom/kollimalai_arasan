@@ -28,7 +28,7 @@ A reusable, scalable, and production-ready full-stack e-commerce application bui
 
 ```bash
 git clone <repo-url>
-cd rithu-snacks
+cd kollimalai-arasan
 npm install
 ```
 
@@ -41,7 +41,7 @@ cp .env.example .env
 Edit `.env` with your database credentials:
 
 ```env
-DATABASE_URL="mysql://root:password@localhost:3306/rithu_snacks"
+DATABASE_URL="mysql://root:password@localhost:3306/kollimalai"
 AUTH_SECRET="your-secret-key-here"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NEXTAUTH_URL="http://localhost:3000"
@@ -51,7 +51,7 @@ NEXTAUTH_URL="http://localhost:3000"
 
 ```bash
 # Create the database
-mysql -u root -p -e "CREATE DATABASE rithu_snacks"
+mysql -u root -p -e "CREATE DATABASE kollimalai"
 
 # Generate Prisma client
 npm run db:generate
@@ -73,10 +73,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Login Credentials (from seed)
 
-| Role     | Email                  | Password    |
-|----------|------------------------|-------------|
-| Admin    | admin@rithusnacks.com  | admin123    |
-| Customer | customer@example.com   | customer123|
+| Role     | Email                          | Password     |
+|----------|--------------------------------|--------------|
+| Admin    | admin@kollimalaiarasan.com     | admin123     |
+| Customer | customer@kollimalaiarasan.com  | customer123  |
 
 ## Project Structure
 

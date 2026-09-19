@@ -7,13 +7,13 @@ const INITIAL_TEMPLATES = [
     name: "Diwali 20% Special Offer",
     category: "FESTIVAL",
     message:
-      "Namaste {{customer_name}}! 🪔✨\n\nCelebrate Diwali with freshly crafted snacks from *Rithu Snacks*! ❤️\n\nEnjoy an exclusive *20% OFF* on all sweets and mixture packs using coupon code *DIWALI20* at checkout.\n\nOrder fresh today: rithusnacks.com 🥨",
+      "Namaste {{customer_name}}! 🪔✨\n\nCelebrate Diwali with pure & traditional products from *Kollimalai Arasan*! ❤️\n\nEnjoy an exclusive *20% OFF* on all items using coupon code *DIWALI20* at checkout.\n\nOrder fresh today: kollimalaiarasan.com 🌿",
   },
   {
     name: "Pongal Festive Combo",
     category: "FESTIVAL",
     message:
-      "Iniya Pongal Nalvazhthukkal {{customer_name}}! 🌾🪁\n\nTreat your family and friends to Rithu Snacks authentic handmade savouries & sweets.\n\nSpecial Pongal gift boxes available now with free delivery on orders above ₹499! 🎁",
+      "Iniya Pongal Nalvazhthukkal {{customer_name}}! 🌾🪁\n\nTreat your family and friends to Kollimalai Arasan authentic organic products from Kolli Hills.\n\nSpecial Pongal gift boxes available now with free delivery on orders above ₹499! 🎁",
   },
   {
     name: "Weekend Flash Sale",

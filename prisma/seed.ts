@@ -1,6 +1,6 @@
 import "dotenv/config";
 import crypto from "crypto";
-import { PrismaClient } from "../src/generated/prisma/client.js";
+import { PrismaClient, product_units_type } from "../src/generated/prisma/client.js";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import bcrypt from "bcryptjs";
 
@@ -11,26 +11,26 @@ function createClient() {
   }
   const url = new URL(databaseUrl);
   const adapter = new PrismaMariaDb({
-  host: url.hostname,
-  port: Number(url.port || 3306),
-  user: decodeURIComponent(url.username),
-  password: decodeURIComponent(url.password),
-  database: url.pathname.slice(1),
-  connectionLimit: 5,
-  allowPublicKeyRetrieval: true,
-});
+    host: url.hostname === "localhost" ? "127.0.0.1" : url.hostname,
+    port: Number(url.port || 3306),
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    database: url.pathname.slice(1),
+    connectionLimit: 5,
+    allowPublicKeyRetrieval: true,
+  });
   return new PrismaClient({ adapter });
 }
 
 const prisma = createClient();
 
 async function main() {
-  console.log("Seeding database...");
+  console.log("Seeding clean deployment database for Kollimalai Arasan...\n");
 
   const adminPassword = await bcrypt.hash("admin123", 12);
   const customerPassword = await bcrypt.hash("customer123", 12);
 
-  // Helper to upsert role by slug
+  // 1. Roles
   const getOrCreateRole = async (name: string, slug: string, description: string) => {
     let role = await prisma.role.findFirst({ where: { slug } });
     if (!role) {
@@ -45,8 +45,9 @@ async function main() {
   const staffRole = await getOrCreateRole("STAFF", "staff", "Staff member with limited access");
   const customerRole = await getOrCreateRole("CUSTOMER", "customer", "Regular customer");
 
-  console.log("Roles created");
+  console.log("✓ Roles verified (ADMIN, STAFF, CUSTOMER)");
 
+  // 2. Permissions & Admin Role Permissions
   const permissions = [
     { name: "PRODUCT_VIEW", slug: "product-view", module: "PRODUCT" },
     { name: "PRODUCT_CREATE", slug: "product-create", module: "PRODUCT" },
@@ -77,50 +78,109 @@ async function main() {
     }
   }
 
-  console.log("Permissions created and assigned to admin role");
+  console.log("✓ Permissions created and assigned to Admin role");
 
-  let adminUser = await prisma.user.findFirst({ where: { email: "admin@rithusnacks.com" } });
+  // 3. Admin User
+  let adminUser = await prisma.user.findFirst({ where: { email: "admin@kollimalaiarasan.com" } });
   if (!adminUser) {
     adminUser = await prisma.user.create({
       data: {
         uuid: crypto.randomUUID(),
         name: "Admin",
-        email: "admin@rithusnacks.com",
+        email: "admin@kollimalaiarasan.com",
         password_hash: adminPassword,
         role: { connect: { id: adminRole.id } },
         status: "active",
         email_verified_at: new Date(),
       },
     });
-  } else if (!adminUser.uuid) {
+    console.log("✓ Created Admin user: admin@kollimalaiarasan.com");
+  } else {
     await prisma.user.update({
       where: { id: adminUser.id },
-      data: { uuid: crypto.randomUUID() },
+      data: {
+        uuid: adminUser.uuid || crypto.randomUUID(),
+        password_hash: adminPassword,
+        status: "active",
+      },
     });
+    console.log("✓ Verified Admin user: admin@kollimalaiarasan.com");
   }
 
-  let customerUser = await prisma.user.findFirst({ where: { email: "customer@example.com" } });
+  // 4. Customer User
+  let customerUser = await prisma.user.findFirst({ where: { email: "customer@kollimalaiarasan.com" } });
   if (!customerUser) {
     customerUser = await prisma.user.create({
       data: {
         uuid: crypto.randomUUID(),
-        name: "John Customer",
-        email: "customer@example.com",
+        name: "Customer",
+        email: "customer@kollimalaiarasan.com",
         password_hash: customerPassword,
         role: { connect: { id: customerRole.id } },
         status: "active",
         email_verified_at: new Date(),
       },
     });
-  } else if (!customerUser.uuid) {
+    console.log("✓ Created Customer user: customer@kollimalaiarasan.com");
+  } else {
     await prisma.user.update({
       where: { id: customerUser.id },
-      data: { uuid: crypto.randomUUID() },
+      data: {
+        uuid: customerUser.uuid || crypto.randomUUID(),
+        password_hash: customerPassword,
+        status: "active",
+      },
     });
+    console.log("✓ Verified Customer user: customer@kollimalaiarasan.com");
   }
 
-  console.log("Users created/updated with UUIDs");
+  // 5. Default Brand
+  const brand = await prisma.productBrand.upsert({
+    where: { slug: "kollimalai-arasan" },
+    update: {
+      name: "Kollimalai Arasan",
+      status: true,
+      isActive: true,
+    },
+    create: {
+      uuid: crypto.randomUUID(),
+      name: "Kollimalai Arasan",
+      slug: "kollimalai-arasan",
+      description: "Authentic, traditional organic snacks, spices, oils, and heritage foods from Kolli Hills.",
+      status: true,
+      isActive: true,
+    },
+  });
+  console.log(`✓ Brand verified: "${brand.name}"`);
 
+  // 6. Standard Measurement Units
+  const unitsToSeed = [
+    { code: "g", name: "Gram", type: product_units_type.weight, factor: 0.001, sort: 1 },
+    { code: "kg", name: "Kilogram", type: product_units_type.weight, factor: 1.0, sort: 2 },
+    { code: "ml", name: "Millilitre", type: product_units_type.volume, factor: 0.001, sort: 3 },
+    { code: "L", name: "Litre", type: product_units_type.volume, factor: 1.0, sort: 4 },
+    { code: "pcs", name: "Piece", type: product_units_type.count, factor: 1.0, sort: 5 },
+  ];
+
+  for (const u of unitsToSeed) {
+    await prisma.product_units.upsert({
+      where: { code: u.code },
+      update: { name: u.name, type: u.type, is_active: true, status: true },
+      create: {
+        uuid: crypto.randomUUID(),
+        name: u.name,
+        code: u.code,
+        type: u.type,
+        conversion_factor: u.factor,
+        sort_order: u.sort,
+        is_active: true,
+        status: true,
+      },
+    });
+  }
+  console.log("✓ Standard units verified (g, kg, ml, L, pcs)");
+
+  // 7. Banner Positions
   const defaultBannerPositions = [
     { name: "Home Hero Banner", slug: "home-hero", page: "home" },
     { name: "Home Offer Banner", slug: "home-offer", page: "home" },
@@ -145,16 +205,19 @@ async function main() {
       });
     }
   }
-  console.log("Default banner positions created/verified");
+  console.log("✓ Banner positions verified (home-hero, home-offer, home-popup-offer, home-reels)");
 
-  console.log("\n--- Seed Complete ---");
-  console.log("Admin Login: admin@rithusnacks.com / admin123");
-  console.log("Customer Login: customer@example.com / customer123");
+  console.log("\n=========================================");
+  console.log("🎉 Clean Deployment Database Ready!");
+  console.log("=========================================");
+  console.log("Admin User    : admin@kollimalaiarasan.com / admin123");
+  console.log("Customer User : customer@kollimalaiarasan.com / customer123");
+  console.log("=========================================\n");
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("❌ Seed Error:", e);
     process.exit(1);
   })
   .finally(async () => {

@@ -57,7 +57,7 @@ export function AboutFounderSection() {
                 <div className="w-full h-[380px] sm:h-[430px] rounded-t-full relative overflow-hidden shadow-inner bg-neutral-100">
                   {/* <Image
                     src="/images/Aboutus_founder_img.jpg"
-                    alt="Rithu Snacks - Tradition in Every Bite"
+                    alt="Kollimalai Arasan - Tradition in Every Bite"
                     fill
                     className="object-cover object-center"
                     sizes="(max-width: 768px) 100vw, 400px"

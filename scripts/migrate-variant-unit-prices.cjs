@@ -10,7 +10,7 @@ async function run() {
   const port = Number(url.port || 3306);
   const user = decodeURIComponent(url.username || 'root');
   const password = decodeURIComponent(url.password || '');
-  const database = url.pathname.slice(1) || 'rithusnack_new';
+  const database = url.pathname.slice(1) || 'kollimalai';
 
   console.log(`Connecting to ${host}:${port}/${database}...`);
   const conn = await mariadb.createConnection({

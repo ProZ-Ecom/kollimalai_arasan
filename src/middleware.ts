@@ -73,6 +73,16 @@ export default auth(async (req) => {
     }
 
     if (pathname === "/admin/login") {
+      if (
+        req.nextUrl.searchParams.get("from") === "unauthorized" ||
+        req.nextUrl.searchParams.has("force")
+      ) {
+        const response = NextResponse.next();
+        response.cookies.delete("access_token");
+        response.cookies.delete("refresh_token");
+        return response;
+      }
+
       if (isAuthenticated && (userRole === "ADMIN" || userRole === "STAFF")) {
         const url = req.nextUrl.clone();
         url.pathname = "/admin/dashboard";
@@ -111,6 +121,12 @@ export default auth(async (req) => {
   }
 
   if ((pathname === "/login" || pathname === "/register") && isAuthenticated) {
+    if (req.nextUrl.searchParams.get("from") === "unauthorized") {
+      const response = NextResponse.next();
+      response.cookies.delete("access_token");
+      response.cookies.delete("refresh_token");
+      return response;
+    }
     if (userRole === "ADMIN" || userRole === "STAFF") {
       const url = req.nextUrl.clone();
       url.search = "";

@@ -11,7 +11,7 @@ import type { UpdateCustomerProfileInput } from "../validations/customer-profile
 
 function generateReferralCode(uuidOrId?: string): string {
   const rand = crypto.randomUUID().replace(/-/g, "").toUpperCase().slice(0, 6);
-  const prefix = uuidOrId ? uuidOrId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 4) : "RITHU";
+  const prefix = uuidOrId ? uuidOrId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 4) : "KOLLI";
   return `REF${prefix}${rand}`.slice(0, 15);
 }
 

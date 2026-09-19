@@ -702,7 +702,7 @@ function CreateCampaignContent() {
                 rows={8}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder={`Namaste {{customer_name}}! 🪔\n\nCelebrate this festive season with freshly prepared snacks from Rithu Snacks! Use coupon *FESTIVE20* for 20% OFF today.`}
+                placeholder={`Namaste {{customer_name}}! 🪔\n\nCelebrate this festive season with pure & traditional products from Kollimalai Arasan! Use coupon *FESTIVE20* for 20% OFF today.`}
               />
             </div>
 
@@ -795,10 +795,10 @@ function CreateCampaignContent() {
               {/* WhatsApp Mockup Header */}
               <div className="bg-[#075E54] text-white px-4 py-3 flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-emerald-700 border border-emerald-400 flex items-center justify-center font-bold text-sm">
-                  RS
+                  KA
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold truncate leading-tight">Rithu Snacks</h4>
+                  <h4 className="text-sm font-semibold truncate leading-tight">Kollimalai Arasan</h4>
                   <p className="text-[11px] text-emerald-200 truncate">Official Admin Account</p>
                 </div>
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -828,7 +828,7 @@ function CreateCampaignContent() {
                     {message
                       ? message
                         .replace(/{{customer_name}}/g, "Priya")
-                        .replace(/{{store_name}}/g, "Rithu Snacks")
+                        .replace(/{{store_name}}/g, "Kollimalai Arasan")
                       : "Start typing your message to preview how customers will see it on their phones..."}
                   </p>
 

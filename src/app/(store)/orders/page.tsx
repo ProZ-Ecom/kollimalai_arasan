@@ -140,7 +140,7 @@ function OrdersContent() {
                   )}
                 </div>
                 <p className="mt-1 text-xs text-secondary-700 max-w-xl leading-relaxed">
-                  Thank you for ordering with Rithu Snacks. We have received your payment and our kitchen has started packing your authentic snacks.
+                  Thank you for ordering with Kollimalai Arasan. We have received your payment and our team has started packing your authentic products.
                 </p>
               </div>
             </div>
@@ -264,7 +264,7 @@ function OrdersContent() {
               ? "Check your order reference number or clear the search to view all orders."
               : statusFilter !== "all"
               ? `You do not have any orders currently marked as ${statusFilter.replace(/_/g, " ")}.`
-              : "When you place an order for our freshly made snacks, it will appear right here with live tracking."}
+              : "When you place an order for our authentic Kolli Hills products, it will appear right here with live tracking."}
           </p>
 
           {searchQuery || statusFilter !== "all" ? (
@@ -282,7 +282,7 @@ function OrdersContent() {
             <Link href="/products">
               <Button className="min-h-[44px] rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white font-bold text-xs px-6">
                 <Sparkles className="mr-2 h-4 w-4" />
-                Explore Authentic Snacks
+                Explore Authentic Products
               </Button>
             </Link>
           )}

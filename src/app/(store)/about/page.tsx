@@ -6,9 +6,9 @@ import {
 } from "@/components/storefront/about";
 
 export const metadata: Metadata = {
-  title: "About Us - Rithu's Snacks | Tradition in Every Bite",
+  title: "About Us - Kollimalai Arasan | Tradition & Purity from Kolli Hills",
   description:
-    "Learn about Rithanya Food Products and Exports, established in 2021 in Namakkal, Tamil Nadu, delivering authentic South Indian snacks crafted with tradition and care.",
+    "Learn about Kollimalai Arasan, bringing you authentic, pure, and traditional organic products directly from the pristine hills of Kolli Hills, Tamil Nadu.",
 };
 
 export default function AboutPage() {

@@ -1,10 +1,10 @@
-# Rithu Snacks — WhatsApp Integration & Campaign System
+# Kollimalai Arasan — WhatsApp Integration & Campaign System
 ## Complete Technical Architecture & Team Guide
 
 ---
 
 ### Executive Summary
-We have engineered a **100% Free WhatsApp Communication & Campaign System** for Rithu Snacks. Instead of paying recurring monthly subscriptions to third-party service providers (like Twilio, Gallabox, or Wati) or paying per-conversation fees to the Meta Cloud API, our platform connects directly to WhatsApp Web through the admin's existing business phone number via QR code authentication ("Linked Devices").
+We have engineered a **100% Free WhatsApp Communication & Campaign System** for Kollimalai Arasan. Instead of paying recurring monthly subscriptions to third-party service providers (like Twilio, Gallabox, or Wati) or paying per-conversation fees to the Meta Cloud API, our platform connects directly to WhatsApp Web through the admin's existing business phone number via QR code authentication ("Linked Devices").
 
 ---
 
@@ -125,7 +125,7 @@ The Campaign Creator (`/admin/dashboard/whatsapp/campaigns/create`) is structure
 3. **Step 3: Message & Banner Composer**
    - Message textarea with variable substitution support:
      - `{{customer_name}}` $\rightarrow$ Dynamically replaced per recipient with their actual name.
-     - `{{store_name}}` $\rightarrow$ Replaced with "Rithu Snacks".
+     - `{{store_name}}` $\rightarrow$ Replaced with "Kollimalai Arasan".
    - Optional promotional banner image upload.
    - **Live Interactive Phone Mockup:** Real-time preview rendering an accurate WhatsApp chat bubble with timestamps and double-check marks.
 4. **Step 4: Scheduling & Launch**

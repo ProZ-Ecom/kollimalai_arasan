@@ -3,9 +3,9 @@ import { PolicyLayout } from "@/components/storefront/policy/PolicyLayout";
 import { Lock } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Rithu Snacks",
+  title: "Privacy Policy | Kollimalai Arasan",
   description:
-    "Learn how Rithu Snacks collects, uses, protects, and manages customer information.",
+    "Learn how Kollimalai Arasan collects, uses, protects, and manages customer information.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -18,13 +18,13 @@ export default function PrivacyPolicyPage() {
       {/* Intro */}
       <section className="space-y-4">
         <p className="text-base sm:text-lg text-neutral-800 leading-relaxed font-medium">
-          At <strong className="text-neutral-900 font-semibold">Rithu Snacks</strong>, we respect your privacy and are committed to protecting the personal information you provide when using our website, application, products, and services.
+          At <strong className="text-neutral-900 font-semibold">Kollimalai Arasan</strong>, we respect your privacy and are committed to protecting the personal information you provide when using our website, application, products, and services.
         </p>
         <p className="text-neutral-700 leading-relaxed">
           This Privacy Policy explains what information we collect, how we use it, how we share it, and the choices available to you.
         </p>
         <p className="text-neutral-700 leading-relaxed">
-          By using the Rithu Snacks website or services, you acknowledge the practices described in this Privacy Policy.
+          By using the Kollimalai Arasan website or services, you acknowledge the practices described in this Privacy Policy.
         </p>
       </section>
 
@@ -311,7 +311,7 @@ export default function PrivacyPolicyPage() {
           If you have questions, concerns, requests, or complaints regarding this Privacy Policy or the handling of your personal information, please contact:
         </p>
         <div className="rounded-xl border border-[var(--theme-border,#EBE0D0)] bg-[var(--theme-surface-alt,#FCF7EE)] p-5 mt-4 space-y-2">
-          <p className="font-semibold text-neutral-900">Rithu Snacks</p>
+          <p className="font-semibold text-neutral-900">Kollimalai Arasan</p>
           <p className="text-sm text-neutral-700">
             <strong>Email:</strong> [Insert privacy/support email]
           </p>

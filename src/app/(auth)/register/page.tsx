@@ -185,7 +185,7 @@ function RegisterForm() {
         </div>
       }
       title="Create Account"
-      subtitle="Welcome to Rithu&apos;s Snacks"
+      subtitle="Welcome to Kollimalai Arasan"
       bottomContent={
         <div className="text-sm text-neutral-600">
           Already have an account?{" "}

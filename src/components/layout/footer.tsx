@@ -139,7 +139,7 @@ export function Footer() {
 
   const mapsUrl = React.useMemo(() => {
     if (!company?.address && !company?.city) {
-      return "https://www.google.com/maps/place/RITHU'S+SNACKS/@11.1971509,78.1334803,13.77z/data=!4m6!3m5!1s0x3babcf3326ff1e47:0xafbe7c7cb1da0dd4!8m2!3d11.1995895!4d78.1815903!16s%2Fg%2F11vlt_cxvy?entry=ttu";
+      return "https://www.google.com/maps/search/?api=1&query=Kolli+Hills+Tamil+Nadu";
     }
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formattedLocation)}`;
   }, [company, formattedLocation]);

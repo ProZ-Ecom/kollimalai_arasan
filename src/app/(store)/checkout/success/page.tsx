@@ -83,8 +83,8 @@ function SuccessContent() {
           Order Placed Successfully!
         </h1>
         <p className="mt-1.5 text-xs sm:text-sm text-theme-text-subtle max-w-md mx-auto">
-          Thank you for choosing Rithu Snacks. Your order has been confirmed and
-          our kitchen is preparing your authentic delicacies.
+          Thank you for choosing Kollimalai Arasan. Your order has been confirmed and
+          is being freshly prepared and packed.
         </p>
       </div>
 
