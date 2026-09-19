@@ -168,6 +168,9 @@ export interface OfferBreakdown {
   level: OfferLevel;
   type: OfferType;
   value: number;
+  buyQuantity?: number | null;
+  getQuantity?: number | null;
+  minQuantity?: number;
   terms: string | null;
   startsAt: string | null;
   endsAt: string | null;

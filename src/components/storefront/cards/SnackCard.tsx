@@ -30,6 +30,8 @@ export interface SnackCardProps {
   href?: string;
   /** Explicit discount percentage (e.g. 10 for "10% OFF") */
   discountPercent?: number | null;
+  /** Explicit badge text to display (e.g. "BUY 3 GET 1 FREE", "10% OFF", "SPECIAL OFFER") */
+  badgeText?: string | null;
   /** List of pack size variants (e.g. 50g, 100g) */
   variants?: SnackCardVariant[];
   /** Currently selected variant ID (uncontrolled if omitted) */
@@ -83,6 +85,7 @@ export function SnackCard({
   image,
   href,
   discountPercent: explicitDiscount,
+  badgeText,
   variants = [],
   selectedVariantId: controlledSelectedVariantId,
   onVariantChange,
@@ -175,10 +178,10 @@ export function SnackCard({
           />
         </Link>
 
-        {/* Discount Badge (Top-Left) using global danger color */}
-        {discount > 0 && (
+        {/* Discount / Offer Badge (Top-Left) using global danger color */}
+        {(badgeText || discount > 0) && (
           <div className="absolute top-2.5 left-2.5 z-10 bg-[var(--danger-base)] text-white font-extrabold text-[11px] sm:text-xs px-2 py-0.5 uppercase tracking-wider rounded-[2px] shadow-xs pointer-events-none">
-            {discount}% OFF
+            {badgeText || `${discount}% OFF`}
           </div>
         )}
 

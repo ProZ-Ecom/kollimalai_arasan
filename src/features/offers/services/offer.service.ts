@@ -22,10 +22,30 @@ async function getAdminInternalId(email?: string): Promise<bigint | null> {
   return BigInt(user.internalId || user.id);
 }
 
-function parseDate(value: Date | string, field: string): Date {
+function parseStartDate(value: Date | string, field = "Start date"): Date {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    const date = new Date(`${value.trim()}T00:00:00.000`);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) {
     throw ApiError.badRequest(`${field} is not a valid date`);
+  }
+  return date;
+}
+
+function parseEndDate(value: Date | string, field = "End date"): Date {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    const date = new Date(`${value.trim()}T23:59:59.999`);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw ApiError.badRequest(`${field} is not a valid date`);
+  }
+  // If the date passed has no time component (midnight), extend it to end of day
+  if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0) {
+    date.setUTCHours(23, 59, 59, 999);
   }
   return date;
 }
@@ -148,8 +168,8 @@ export const offerService = {
 
   async createOffer(data: SaveOfferInput, adminEmail?: string): Promise<OfferListItem> {
     const actorId = await getAdminInternalId(adminEmail);
-    const startsAt = parseDate(data.startsAt, "Start date");
-    const endsAt = parseDate(data.endsAt, "End date");
+    const startsAt = parseStartDate(data.startsAt, "Start date");
+    const endsAt = parseEndDate(data.endsAt, "End date");
 
     if (endsAt.getTime() < startsAt.getTime()) {
       throw ApiError.badRequest("End date cannot be before the start date");
@@ -220,12 +240,12 @@ export const offerService = {
     const type = data.type ?? existing.type;
     const value = data.value ?? existing.value;
     const startsAt = data.startsAt
-      ? parseDate(data.startsAt, "Start date")
+      ? parseStartDate(data.startsAt, "Start date")
       : existing.startsAt
         ? new Date(existing.startsAt)
         : new Date();
     const endsAt = data.endsAt
-      ? parseDate(data.endsAt, "End date")
+      ? parseEndDate(data.endsAt, "End date")
       : existing.endsAt
         ? new Date(existing.endsAt)
         : startsAt;

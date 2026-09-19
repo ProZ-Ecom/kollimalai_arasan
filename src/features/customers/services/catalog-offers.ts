@@ -38,7 +38,7 @@ async function applyOffers(rows: PricedUnitPrice[]): Promise<void> {
 
   for (const row of priceable) {
     const result = pricing.get(row.id);
-    if (!result || !result.offerApplied) {
+    if (!result) {
       row.sellingPrice = row.basePrice;
       row.offer = null;
       row.discountAmount = 0;

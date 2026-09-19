@@ -41,6 +41,9 @@ export function toOfferBreakdown(offer: ApplicableOffer): OfferBreakdown {
     level: offer.level,
     type: offer.type,
     value: offer.value,
+    buyQuantity: offer.buyQuantity,
+    getQuantity: offer.getQuantity,
+    minQuantity: offer.minQuantity,
     terms: offer.terms,
     startsAt: offer.startsAt ? offer.startsAt.toISOString() : null,
     endsAt: offer.endsAt ? offer.endsAt.toISOString() : null,
@@ -216,6 +219,7 @@ export function priceLine(
   const best = selectBestOffer(offers, line, context);
 
   if (!best) {
+    const promoOffer = offers.find((o) => isOfferLive(o, context.now ?? new Date()));
     return {
       itemId: line.itemId,
       quantity,
@@ -226,7 +230,7 @@ export function priceLine(
       discountAmount: 0,
       discountPercent: 0,
       offerApplied: false,
-      offer: null,
+      offer: promoOffer ? toOfferBreakdown(promoOffer) : null,
       freeQuantity: 0,
     };
   }

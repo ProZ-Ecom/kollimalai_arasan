@@ -59,6 +59,54 @@ export function CustomerVariantCard({ variant }: CustomerVariantCardProps) {
   const activeUnitPriceId = selectedUnitPriceId || packVariants[0]?.id;
   const isWishlisted = Boolean(activeUnitPriceId && wishlistedIds.has(activeUnitPriceId));
 
+  const activeUnitPrice = React.useMemo(() => {
+    return (
+      variant.unitPrices?.find((u) => u.id === activeUnitPriceId) ||
+      defaultUnit ||
+      variant.unitPrices?.[0]
+    );
+  }, [variant.unitPrices, activeUnitPriceId, defaultUnit]);
+
+  const offerBadge = React.useMemo(() => {
+    const up =
+      activeUnitPrice ||
+      variant.unitPrices?.find((u) => (u.discountPercent && u.discountPercent > 0) || u.offer);
+    if (!up) return null;
+
+    if (up.discountPercent && up.discountPercent > 0) {
+      return `${Math.round(up.discountPercent)}% OFF`;
+    }
+
+    if (up.basePrice > up.sellingPrice) {
+      const pct = Math.round(((up.basePrice - up.sellingPrice) / up.basePrice) * 100);
+      if (pct > 0) return `${pct}% OFF`;
+    }
+
+    const offer = up.offer;
+    if (offer) {
+      if (offer.type === "percentage" && offer.value > 0) {
+        return `${Math.round(offer.value)}% OFF`;
+      }
+      if (offer.type === "flat" && offer.value > 0) {
+        return `₹${Math.round(offer.value)} OFF`;
+      }
+      if (offer.type === "bxgy") {
+        const b = offer.buyQuantity;
+        const g = offer.getQuantity;
+        if (b && g) return `BUY ${b} GET ${g} FREE`;
+        return "BUY & GET FREE";
+      }
+      if (offer.type === "special_price") {
+        return "SPECIAL PRICE";
+      }
+      if (offer.name) {
+        return offer.name.toUpperCase();
+      }
+    }
+
+    return null;
+  }, [activeUnitPrice, variant.unitPrices]);
+
   const requireLogin = () => {
     toast.info("Please log in to add items to your cart");
     const returnUrl =
@@ -140,6 +188,8 @@ export function CustomerVariantCard({ variant }: CustomerVariantCardProps) {
       fallbackPrice={variant.salePrice || variant.basePrice}
       selectedVariantId={activeUnitPriceId}
       onVariantChange={setSelectedUnitPriceId}
+      badgeText={offerBadge}
+      discountPercent={activeUnitPrice?.discountPercent}
       isWishlisted={isWishlisted}
       onWishlistToggle={handleWishlistToggle}
       onAddToCart={handleAddToCart}
