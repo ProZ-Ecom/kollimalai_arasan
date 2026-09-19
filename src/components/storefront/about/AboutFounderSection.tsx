@@ -56,8 +56,8 @@ export function AboutFounderSection() {
                 {/* Inner Arch Body with Image */}
                 <div className="w-full h-[380px] sm:h-[430px] rounded-t-full relative overflow-hidden shadow-inner bg-neutral-100">
                   <Image
-                    src="/images/Aboutus_founder_img.jpg"
-                    alt="Dr. S. Anita, Ph.D. - Founder of Kollimalai Arasan"
+                    src="/images/kolli_spices_founder.jpg"
+                    alt="Kollimalai Arasan - Pure Spices: Black pepper, cardamom, cloves"
                     fill
                     className="object-cover object-center"
                     sizes="(max-width: 768px) 100vw, 400px"
