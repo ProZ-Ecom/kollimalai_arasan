@@ -1,17 +1,21 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(db),
+  trustHost: true,
+  secret:
+    process.env.AUTH_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    "kollimalai-arasan@2026",
   session: {
     strategy: "jwt",
   },
   pages: {
-    signIn: "/admin/login",
+    signIn: "/login",
+    error: "/login",
   },
   providers: [
     Credentials({
@@ -85,10 +89,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        session.user.phone = (token.phone as string | null) ?? null;
-        session.user.status = token.status as string;
+        const sessionUser = session.user as any;
+        sessionUser.id = token.id as string;
+        sessionUser.role = token.role as string;
+        sessionUser.phone = (token.phone as string | null) ?? null;
+        sessionUser.status = token.status as string;
       }
       return session;
     },

@@ -41,11 +41,15 @@ function LoginForm() {
       {
         onSuccess: async () => {
           // Sync NextAuth session and redirect
-          await signIn("credentials", {
-            email: data.email.trim(),
-            password: data.password,
-            redirect: false,
-          });
+          try {
+            await signIn("credentials", {
+              email: data.email.trim(),
+              password: data.password,
+              redirect: false,
+            });
+          } catch {
+            // Cookie auth is primary
+          }
           router.push(callbackUrl);
           router.refresh();
         },
