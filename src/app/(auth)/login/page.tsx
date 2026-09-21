@@ -39,7 +39,7 @@ function LoginForm() {
         password: data.password,
       },
       {
-        onSuccess: async () => {
+        onSuccess: async (response) => {
           // Sync NextAuth session and redirect
           try {
             await signIn("credentials", {
@@ -50,7 +50,13 @@ function LoginForm() {
           } catch {
             // Cookie auth is primary
           }
-          router.push(callbackUrl);
+
+          const userRole = response?.data?.user?.role;
+          if ((userRole === "ADMIN" || userRole === "STAFF") && callbackUrl === "/") {
+            router.push("/admin/dashboard");
+          } else {
+            router.push(callbackUrl);
+          }
           router.refresh();
         },
       }
