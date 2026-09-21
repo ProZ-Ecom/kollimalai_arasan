@@ -23,7 +23,6 @@ const roleDetailInclude = Prisma.validator<Prisma.RoleInclude>()({
         select: {
           id: true,
           name: true,
-          description: true,
           module: true,
         },
       },
@@ -54,13 +53,15 @@ export const roleRepository = {
   },
 
   async findByName(name: string) {
-    return db.role.findUnique({ where: { name } });
+    return db.role.findFirst({ where: { name } });
   },
 
   async create(data: { name: string; description?: string; permissionIds?: number[] }) {
+    const slug = data.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     return db.role.create({
       data: {
         name: data.name,
+        slug,
         description: data.description,
         rolePermissions: data.permissionIds?.length
           ? {
@@ -128,12 +129,17 @@ export const permissionRepository = {
   },
 
   async findByName(name: string) {
-    return db.permission.findUnique({ where: { name } });
+    return db.permission.findFirst({ where: { name } });
   },
 
   async create(data: { name: string; description?: string; module: string }) {
+    const slug = data.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     return db.permission.create({
-      data,
+      data: {
+        name: data.name,
+        slug,
+        module: data.module,
+      },
     });
   },
 
@@ -143,7 +149,10 @@ export const permissionRepository = {
   ) {
     return db.permission.update({
       where: { id },
-      data,
+      data: {
+        ...(data.name ? { name: data.name } : {}),
+        ...(data.module ? { module: data.module } : {}),
+      },
     });
   },
 

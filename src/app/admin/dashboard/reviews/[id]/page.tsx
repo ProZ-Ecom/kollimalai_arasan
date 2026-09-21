@@ -371,7 +371,7 @@ export default function ReviewDetailPage({ params }: ReviewDetailPageProps) {
         description="This will permanently delete this review from the system. This action cannot be undone."
         confirmText="Yes, Delete"
         cancelText="Cancel"
-        variant="danger"
+        variant="destructive"
         isLoading={deleteMutation.isPending}
       />
     </div>

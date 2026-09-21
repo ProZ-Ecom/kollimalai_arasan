@@ -52,7 +52,7 @@ export async function getAdminBulkOrderDetail(
     `/api/admin/bulk-orders/${encodeURIComponent(cleanUuid)}`
   );
 
-  return response.data;
+  return response.data!;
 }
 
 /**
@@ -70,5 +70,5 @@ export async function updateBulkOrderStatus(
     { status, comment }
   );
 
-  return response.data;
+  return response.data!;
 }

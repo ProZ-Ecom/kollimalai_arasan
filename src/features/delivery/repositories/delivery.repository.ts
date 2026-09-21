@@ -623,4 +623,57 @@ export const deliveryRepository = {
       };
     });
   },
+
+  async markFailedTransaction(
+    shipmentId: bigint,
+    orderId: bigint,
+    staffInternalId: bigint,
+    reason: string,
+    note?: string
+  ) {
+    return db.$transaction(async (tx) => {
+      const updatedShipment = await tx.shipments.update({
+        where: { id: shipmentId },
+        data: {
+          status: "failed",
+          updated_by: staffInternalId,
+        },
+      });
+
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          updated_by: staffInternalId,
+        },
+      });
+
+      const failureNote = note ? `${reason}: ${note}` : reason;
+
+      await tx.order_status_history.create({
+        data: {
+          order_id: orderId,
+          status: updatedOrder.order_status,
+          note: `Delivery attempt failed - ${failureNote}`,
+          changed_by: staffInternalId,
+          created_by: staffInternalId,
+          updated_by: staffInternalId,
+        },
+      });
+
+      await tx.shipment_tracking.create({
+        data: {
+          shipment_id: shipmentId,
+          status: "failed",
+          note: failureNote,
+          created_by: staffInternalId,
+          updated_by: staffInternalId,
+        },
+      });
+
+      return {
+        shipment: updatedShipment,
+        order: updatedOrder,
+      };
+    });
+  },
 };

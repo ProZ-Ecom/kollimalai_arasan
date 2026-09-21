@@ -74,9 +74,15 @@ export const bannerPositionListQuerySchema = z
   })
   .strict();
 
-export type BannerPositionListQueryInput = z.infer<
-  typeof bannerPositionListQuerySchema
->;
+export type BannerPositionListQueryInput = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  pageName?: string;
+  isActive?: boolean;
+  sortBy?: "createdAt" | "name" | "slug" | "page" | "updatedAt";
+  sortOrder?: "asc" | "desc";
+};
 
 export const bannerPositionUuidParamSchema = z
   .object({

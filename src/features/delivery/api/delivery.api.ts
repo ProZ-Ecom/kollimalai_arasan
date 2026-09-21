@@ -11,6 +11,7 @@ import type {
 import type {
   StaffDeliveryListInput,
   MarkDeliveredInput,
+  MarkFailedInput,
   AdminDeliveryOrdersListInput,
   AdminDeliveryStaffListInput,
   AssignDeliveryInput,
@@ -161,6 +162,26 @@ export async function markDelivered(
 
   if (!response.data) {
     throw new Error(response.message || "Failed to mark delivery as delivered");
+  }
+
+  return response.data;
+}
+
+/**
+ * Mark delivery as failed with reason.
+ * Postman: POST /api/staff/deliveries/:uuid/failed
+ */
+export async function markFailed(
+  uuid: string,
+  input?: MarkFailedInput
+): Promise<DeliveryTransitionResult> {
+  const response = await apiClient.post<DeliveryTransitionResult>(
+    `/api/staff/deliveries/${encodeURIComponent(uuid)}/failed`,
+    input ?? {}
+  );
+
+  if (!response.data) {
+    throw new Error(response.message || "Failed to mark delivery as failed");
   }
 
   return response.data;

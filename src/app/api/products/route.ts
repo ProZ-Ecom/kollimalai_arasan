@@ -23,8 +23,9 @@ export const GET = createApiHandler(
 export const POST = createApiHandler(
   {
     POST: async (_request, context) => {
-      const body = context.body as ReturnType<typeof createProductSchema.parse>;
-      const product = await productService.createProduct(body);
+      const body = context.body as any;
+      const adminEmail = context.session?.user?.email ?? undefined;
+      const product = await productService.createAdminProduct(body, adminEmail);
       return apiCreated(product, "Product created successfully");
     },
   },

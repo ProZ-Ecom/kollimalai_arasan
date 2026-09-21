@@ -108,8 +108,8 @@ export interface SaveOfferInput {
   maxDiscountAmount?: number | null;
   priority?: number;
   terms?: string | null;
-  startsAt: Date;
-  endsAt: Date;
+  startsAt: Date | string;
+  endsAt: Date | string;
   isActive?: boolean;
   /** Product UUIDs - required (and only used) when `level` is `product`. */
   productIds?: string[];

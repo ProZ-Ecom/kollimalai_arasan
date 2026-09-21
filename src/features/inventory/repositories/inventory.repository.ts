@@ -1,5 +1,6 @@
 import { db } from "@/lib/db/prisma";
-import { Prisma, InventoryTransactionType } from "@/generated/prisma";
+import { Prisma } from "@/generated/prisma";
+import type { InventoryTransactionType } from "../types";
 
 interface FindAllParams {
   page?: number;
@@ -15,6 +16,20 @@ interface FindTransactionsParams {
   type?: InventoryTransactionType;
 }
 
+const inventoryInclude = {
+  variant_unit_price: {
+    include: {
+      variant: {
+        include: {
+          product: {
+            select: { id: true, name: true, slug: true },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
 export const inventoryRepository = {
   async findAll(params: FindAllParams) {
     const { page = 1, limit = 10, search, lowStock, outOfStock } = params;
@@ -23,30 +38,27 @@ export const inventoryRepository = {
     const where: Prisma.InventoryWhereInput = {};
 
     if (search) {
-      where.product = {
-        name: { contains: search },
+      where.variant_unit_price = {
+        variant: {
+          product: {
+            name: { contains: search },
+          },
+        },
       };
     }
 
     if (lowStock) {
-      where.quantity = { gt: 0 };
+      where.quantity_available = { gt: 0 };
     }
 
     if (outOfStock) {
-      where.quantity = 0;
+      where.quantity_available = 0;
     }
 
     const [data, total] = await Promise.all([
       db.inventory.findMany({
         where,
-        include: {
-          product: {
-            select: { name: true, slug: true },
-          },
-          variant: {
-            select: { name: true },
-          },
-        },
+        include: inventoryInclude,
         skip,
         take: limit,
         orderBy: { updatedAt: "desc" },
@@ -60,32 +72,37 @@ export const inventoryRepository = {
   async findById(id: number) {
     return db.inventory.findUnique({
       where: { id },
-      include: {
-        product: {
-          select: { name: true, slug: true },
-        },
-        variant: {
-          select: { name: true },
-        },
-      },
+      include: inventoryInclude,
     });
   },
 
   async findByProductAndVariant(productId: number, variantId?: number) {
     return db.inventory.findFirst({
       where: {
-        productId,
-        variantId: variantId ?? null,
+        variant_unit_price: {
+          variant: {
+            productId,
+            ...(variantId ? { id: variantId } : {}),
+          },
+        },
       },
+      include: inventoryInclude,
     });
   },
 
   async create(data: Prisma.InventoryCreateInput) {
-    return db.inventory.create({ data });
+    return db.inventory.create({
+      data,
+      include: inventoryInclude,
+    });
   },
 
   async update(id: number, data: Prisma.InventoryUpdateInput) {
-    return db.inventory.update({ where: { id }, data });
+    return db.inventory.update({
+      where: { id },
+      data,
+      include: inventoryInclude,
+    });
   },
 
   async findTransactionsByInventoryId(
@@ -95,19 +112,34 @@ export const inventoryRepository = {
     const { page = 1, limit = 20, type } = params;
     const skip = (page - 1) * limit;
 
-    const where: Prisma.InventoryTransactionWhereInput = { inventoryId };
+    const inventory = await db.inventory.findUnique({
+      where: { id: inventoryId },
+      select: { variantUnitPriceId: true },
+    });
+
+    if (!inventory) {
+      return { data: [], total: 0 };
+    }
+
+    const where: Prisma.InventoryTransactionWhereInput = {
+      variant_unit_price_id: inventory.variantUnitPriceId,
+    };
 
     if (type) {
-      where.type = type;
+      where.type = type as any;
     }
 
     const [data, total] = await Promise.all([
       db.inventoryTransaction.findMany({
         where,
         include: {
-          inventory: {
+          variant_unit_price: {
             include: {
-              product: { select: { name: true } },
+              variant: {
+                include: {
+                  product: { select: { name: true } },
+                },
+              },
             },
           },
         },

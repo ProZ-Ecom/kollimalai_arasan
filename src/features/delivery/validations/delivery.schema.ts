@@ -49,7 +49,7 @@ export const adminDeliveryOrdersListSchema = z
   })
   .strict();
 
-export type AdminDeliveryOrdersListInput = z.infer<
+export type AdminDeliveryOrdersListInput = z.input<
   typeof adminDeliveryOrdersListSchema
 >;
 
@@ -71,7 +71,7 @@ export const adminDeliveryStaffListSchema = z
   })
   .strict();
 
-export type AdminDeliveryStaffListInput = z.infer<
+export type AdminDeliveryStaffListInput = z.input<
   typeof adminDeliveryStaffListSchema
 >;
 

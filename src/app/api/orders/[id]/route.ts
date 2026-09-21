@@ -6,9 +6,9 @@ export const GET = createApiHandler(
   {
     GET: async (_request, context) => {
       try {
-        const userId = parseInt((context.session?.user as { id?: string })?.id ?? "0");
+        const userId = (context.session?.user as { id?: string })?.id ?? "";
         if (!userId) return apiFromError(new Error("Unauthorized"));
-        const id = parseInt(context.params?.id ?? "0", 10);
+        const id = context.params?.id ?? "";
         const order = await orderService.getOrder(userId, id);
         return apiSuccess(order, "Order fetched successfully");
       } catch (error) {

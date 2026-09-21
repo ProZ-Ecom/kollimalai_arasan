@@ -33,7 +33,7 @@ export function MarkFailedModal({
     markFailed.mutate(
       {
         uuid: shipmentId,
-        data: { note: note.trim() },
+        data: { reason: note.trim(), note: note.trim() },
       },
       {
         onSuccess: () => {

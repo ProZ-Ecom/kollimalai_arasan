@@ -27,17 +27,15 @@ export const blogService = {
       throw ApiError.conflict("A blog with this slug already exists");
     }
 
+    const isPublished = data.status === "PUBLISHED";
     return blogRepository.create({
       title: data.title,
       slug,
       content: data.content,
-      excerpt: data.excerpt ?? undefined,
-      image: data.image ?? undefined,
-      author: { connect: { id: data.authorId ?? 1 } },
-      status: (data.status as "DRAFT" | "PUBLISHED" | "ARCHIVED") ?? "DRAFT",
-      metaTitle: data.metaTitle ?? undefined,
-      metaDescription: data.metaDescription ?? undefined,
-      publishedAt: data.status === "PUBLISHED" ? new Date() : null,
+      featured_image: data.image ?? undefined,
+      author: data.authorId ? { connect: { id: data.authorId } } : undefined,
+      is_published: isPublished,
+      publishedAt: isPublished ? new Date() : null,
     });
   },
 
@@ -60,15 +58,15 @@ export const blogService = {
     if (data.title !== undefined) updateData.title = data.title;
     updateData.slug = slug;
     if (data.content !== undefined) updateData.content = data.content;
-    if (data.excerpt !== undefined) updateData.excerpt = data.excerpt;
-    if (data.image !== undefined) updateData.image = data.image;
-    if (data.authorId !== undefined) updateData.authorId = data.authorId;
-    if (data.metaTitle !== undefined) updateData.metaTitle = data.metaTitle;
-    if (data.metaDescription !== undefined) updateData.metaDescription = data.metaDescription;
+    if (data.image !== undefined) updateData.featured_image = data.image;
+    if (data.authorId !== undefined) {
+      updateData.author = { connect: { id: data.authorId } };
+    }
 
     if (data.status !== undefined) {
-      updateData.status = data.status;
-      if (data.status === "PUBLISHED" && existing.status !== "PUBLISHED") {
+      const isPublished = data.status === "PUBLISHED";
+      updateData.is_published = isPublished;
+      if (isPublished && !existing.is_published) {
         updateData.publishedAt = new Date();
       }
     }

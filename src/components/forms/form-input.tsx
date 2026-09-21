@@ -13,7 +13,9 @@ export function formatSlug(val: string): string {
     .replace(/[^A-Z0-9_]/g, "");
 }
 
-interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface FormInputProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
+  size?: "sm" | "md" | "lg";
   name: string;
   label?: string;
   description?: string;

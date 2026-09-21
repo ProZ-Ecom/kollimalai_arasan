@@ -7,19 +7,23 @@ import type {
 } from "../types";
 
 function toAddressItem(address: Record<string, unknown>): AddressItem {
+  const fullName = (address.full_name as string) || "";
+  const [firstName = "", ...rest] = fullName.split(" ");
+  const lastName = rest.join(" ");
+
   return {
-    id: address.id as number,
-    userId: address.userId as number,
-    firstName: address.firstName as string,
-    lastName: address.lastName as string,
-    phone: address.phone as string,
-    addressLine1: address.addressLine1 as string,
-    addressLine2: (address.addressLine2 as string | null) ?? null,
-    city: address.city as string,
-    state: address.state as string,
-    postalCode: address.postalCode as string,
-    country: address.country as string,
-    isDefault: address.isDefault as boolean,
+    id: Number(address.id),
+    userId: Number(address.userId),
+    firstName: (address.firstName as string) || firstName,
+    lastName: (address.lastName as string) || lastName,
+    phone: (address.phone as string) || "",
+    addressLine1: (address.address_line1 as string) || (address.addressLine1 as string) || "",
+    addressLine2: (address.address_line2 as string | null) ?? (address.addressLine2 as string | null) ?? null,
+    city: (address.city as string) || "",
+    state: (address.state as string) || "",
+    postalCode: (address.pincode as string) || (address.postalCode as string) || "",
+    country: (address.country as string) || "India",
+    isDefault: Boolean(address.isDefault),
     createdAt: address.createdAt as Date,
     updatedAt: address.updatedAt as Date,
   };
@@ -43,9 +47,8 @@ export const addressService = {
 
   async createAddress(userId: number, input: CreateAddressInput) {
     const count = await addressRepository.countByUser(userId);
-
     if (count >= 10) {
-      throw ApiError.badRequest("Maximum of 10 addresses allowed per account");
+      throw ApiError.badRequest("Maximum 10 addresses allowed per user");
     }
 
     const makeDefault = input.isDefault || count === 0;
@@ -54,15 +57,15 @@ export const addressService = {
       await addressRepository.clearDefault(userId);
     }
 
+    const fullName = `${input.firstName} ${input.lastName ?? ""}`.trim();
     const address = await addressRepository.create(userId, {
-      firstName: input.firstName,
-      lastName: input.lastName ?? "",
+      full_name: fullName,
       phone: input.phone,
-      addressLine1: input.addressLine1,
-      addressLine2: input.addressLine2 ?? undefined,
+      address_line1: input.addressLine1,
+      address_line2: input.addressLine2 ?? undefined,
       city: input.city,
       state: input.state,
-      postalCode: input.postalCode,
+      pincode: input.postalCode,
       country: input.country ?? "India",
       isDefault: makeDefault,
     });
@@ -81,14 +84,17 @@ export const addressService = {
     }
 
     const data: Record<string, unknown> = {};
-    if (input.firstName !== undefined) data.firstName = input.firstName;
-    if (input.lastName !== undefined) data.lastName = input.lastName;
+    if (input.firstName !== undefined || input.lastName !== undefined) {
+      const first = input.firstName ?? "";
+      const last = input.lastName ?? "";
+      data.full_name = `${first} ${last}`.trim();
+    }
     if (input.phone !== undefined) data.phone = input.phone;
-    if (input.addressLine1 !== undefined) data.addressLine1 = input.addressLine1;
-    if (input.addressLine2 !== undefined) data.addressLine2 = input.addressLine2;
+    if (input.addressLine1 !== undefined) data.address_line1 = input.addressLine1;
+    if (input.addressLine2 !== undefined) data.address_line2 = input.addressLine2;
     if (input.city !== undefined) data.city = input.city;
     if (input.state !== undefined) data.state = input.state;
-    if (input.postalCode !== undefined) data.postalCode = input.postalCode;
+    if (input.postalCode !== undefined) data.pincode = input.postalCode;
     if (input.country !== undefined) data.country = input.country;
     if (input.isDefault !== undefined) data.isDefault = input.isDefault;
 
@@ -116,7 +122,7 @@ export const addressService = {
     if (existing.isDefault) {
       const remaining = await addressRepository.findAllByUser(userId);
       if (remaining.length > 0) {
-        await addressRepository.setDefault(remaining[0].id, userId);
+        await addressRepository.setDefault(Number(remaining[0].id), userId);
       }
     }
 

@@ -581,4 +581,27 @@ export const orderService = {
       total: pricing.total + deliveryCharge,
     };
   },
+
+  async getOrder(sessionUserId: string | number, idOrUuid: string | number): Promise<OrderDetailResponse> {
+    return this.getCustomerOrderByUuid(String(sessionUserId), String(idOrUuid));
+  },
+
+  async getOrderByNumber(orderNumber: string): Promise<OrderDetailResponse | null> {
+    const order = await db.order.findFirst({
+      where: { orderNumber, is_active: true },
+      select: { uuid: true },
+    });
+    if (!order?.uuid) return null;
+    return this.getAdminOrderByUuid(order.uuid);
+  },
+
+  async cancelOrder(
+    sessionUserId: string | number,
+    idOrUuid: string | number,
+    reason?: string
+  ): Promise<OrderDetailResponse> {
+    return this.cancelCustomerOrder(String(sessionUserId), String(idOrUuid), {
+      note: reason,
+    });
+  },
 };
