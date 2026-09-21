@@ -488,6 +488,7 @@ export function Header() {
                                         alt={cat.name}
                                         width={18}
                                         height={18}
+                                        unoptimized
                                         className="w-4 h-4 object-contain"
                                       />
                                     </div>

@@ -445,9 +445,9 @@ export const catalogRepository = {
           primaryVariant?.short_description || primaryVariant?.description || null,
         brand: p.brand
           ? {
-              id: p.brand.uuid || String(p.brand.id),
-              name: p.brand.name,
-            }
+            id: p.brand.uuid || String(p.brand.id),
+            name: p.brand.name,
+          }
           : null,
         category: null,
         image: imgUrl,
@@ -564,9 +564,9 @@ export const catalogRepository = {
         primaryVariant?.description || primaryVariant?.short_description || null,
       brand: product.brand
         ? {
-            id: product.brand.uuid || String(product.brand.id),
-            name: product.brand.name,
-          }
+          id: product.brand.uuid || String(product.brand.id),
+          name: product.brand.name,
+        }
         : null,
       category: categoryDto,
       image: imgUrl,
@@ -635,9 +635,9 @@ export const catalogRepository = {
 
     const categories = categoryIds.length
       ? await db.productCategory.findMany({
-          where: { id: { in: categoryIds } },
-          select: { id: true, uuid: true, name: true },
-        })
+        where: { id: { in: categoryIds } },
+        select: { id: true, uuid: true, name: true },
+      })
       : [];
     const catMap = new Map(categories.map((c) => [c.id.toString(), c]));
 
@@ -1198,14 +1198,14 @@ export const catalogRepository = {
 
     const pageCategories = pageCategoryIds.length
       ? await db.productCategory.findMany({
-          where: { id: { in: pageCategoryIds } },
-          select: {
-            id: true,
-            uuid: true,
-            name: true,
-            parent: { select: { id: true, uuid: true, name: true } },
-          },
-        })
+        where: { id: { in: pageCategoryIds } },
+        select: {
+          id: true,
+          uuid: true,
+          name: true,
+          parent: { select: { id: true, uuid: true, name: true } },
+        },
+      })
       : [];
     const categoryMap = new Map(pageCategories.map((c) => [c.id.toString(), c]));
     const variantMap = new Map(variants.map((v) => [v.id.toString(), v]));
@@ -1392,9 +1392,9 @@ export const catalogRepository = {
     const productCategories =
       productCategoryIds.length > 0
         ? await db.productCategory.findMany({
-            where: { id: { in: productCategoryIds }, isActive: true, deleted_at: null },
-            select: { id: true, uuid: true, name: true },
-          })
+          where: { id: { in: productCategoryIds }, isActive: true, deleted_at: null },
+          select: { id: true, uuid: true, name: true },
+        })
         : [];
 
     const categoryByIdMap = new Map<string, { id: string; name: string }>();
@@ -1450,9 +1450,9 @@ export const catalogRepository = {
           primaryVariant?.short_description || primaryVariant?.description || null,
         brand: p.brand
           ? {
-              id: p.brand.uuid || String(p.brand.id),
-              name: p.brand.name,
-            }
+            id: p.brand.uuid || String(p.brand.id),
+            name: p.brand.name,
+          }
           : null,
         category: cat,
         image: imgUrl,

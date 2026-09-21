@@ -12,8 +12,13 @@ export const POST = createApiHandler(
       const body = context.body as BulkDeleteAdminVariantsInput;
       const adminEmail = context.session?.user?.email ?? undefined;
 
+      const rawItems = [...(body.uuids ?? []), ...(body.ids ?? [])];
+      const validUuids = rawItems.filter(
+        (item): item is string => typeof item === "string" && item.trim().length > 0
+      );
+
       const result = await variantService.bulkDeleteAdminVariants(
-        body.ids,
+        validUuids,
         adminEmail
       );
 

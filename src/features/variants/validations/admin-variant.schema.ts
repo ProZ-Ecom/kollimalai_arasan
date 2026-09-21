@@ -243,9 +243,19 @@ export type VariantPriceHistoryQueryInput = z.infer<
   typeof variantPriceHistoryQuerySchema
 >;
 
-export const bulkDeleteAdminVariantsSchema = z.object({
-  uuids: z.array(z.string().min(1)).min(1, "At least one variant UUID is required"),
-});
+export const bulkDeleteAdminVariantsSchema = z
+  .object({
+    ids: z.array(z.string()).optional(),
+    uuids: z.array(z.string()).optional(),
+  })
+  .refine(
+    (data) =>
+      (Array.isArray(data.ids) && data.ids.length > 0) ||
+      (Array.isArray(data.uuids) && data.uuids.length > 0),
+    {
+      message: "At least one variant ID or UUID is required",
+    }
+  );
 
 export type BulkDeleteAdminVariantsInput = z.infer<
   typeof bulkDeleteAdminVariantsSchema

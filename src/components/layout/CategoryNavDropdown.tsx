@@ -27,7 +27,25 @@ export function resolveCategoryIcon(category: CustomerCategoryDto): string {
     return getImageUrl(category.image);
   }
   const normalizedName = category.name.trim().toLowerCase();
-  return fallbackCategoryLogos[normalizedName] || CATEGORYLOGOS.traditional;
+  if (fallbackCategoryLogos[normalizedName]) {
+    return fallbackCategoryLogos[normalizedName];
+  }
+  if (normalizedName.includes("spice") || normalizedName.includes("masala") || normalizedName.includes("flavor") || normalizedName.includes("flavour")) {
+    return CATEGORYLOGOS.flavourSpices;
+  }
+  if (normalizedName.includes("sweet") || normalizedName.includes("dessert") || normalizedName.includes("halwa")) {
+    return CATEGORYLOGOS.sweet;
+  }
+  if (normalizedName.includes("bakery") || normalizedName.includes("cake") || normalizedName.includes("biscuit") || normalizedName.includes("cookie")) {
+    return CATEGORYLOGOS.bakery;
+  }
+  if (normalizedName.includes("chip") || normalizedName.includes("crisp")) {
+    return CATEGORYLOGOS.chips;
+  }
+  if (normalizedName.includes("bite") || normalizedName.includes("nut") || normalizedName.includes("fruit") || normalizedName.includes("healthy") || normalizedName.includes("millet") || normalizedName.includes("pulse")) {
+    return CATEGORYLOGOS.bites;
+  }
+  return CATEGORYLOGOS.traditional;
 }
 
 export interface CategoryNavDropdownProps {
@@ -131,6 +149,7 @@ export function CategoryNavDropdown({
               alt="dropdown icon"
               width={12}
               height={12}
+              unoptimized
               className={`transition-transform duration-300 ${
                 isOpen ? "rotate-180" : "group-hover:rotate-180"
               }`}
@@ -216,6 +235,7 @@ export function CategoryNavDropdown({
                             alt={category.name}
                             width={28}
                             height={28}
+                            unoptimized
                             className="w-6 h-6 object-contain"
                           />
                         </div>
