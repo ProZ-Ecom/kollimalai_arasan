@@ -283,7 +283,7 @@ function SidebarBrand({ collapsed }: { collapsed?: boolean }) {
       {!collapsed && (
         <span className="flex flex-col">
           <span className="font-hanken text-secondary-600 text-base font-bold">
-            {APP_NAME} Admin
+            {APP_NAME}
           </span>
           <span className="text-xs text-neutral-500">Enterprise management</span>
         </span>
