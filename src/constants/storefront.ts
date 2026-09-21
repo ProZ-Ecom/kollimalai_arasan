@@ -160,8 +160,8 @@ export const contacts = [
     id: 2,
     icon: ICONS.whatsapp,
     title: "WhatsApp",
-    value: "+91 74181 88950",
-    link: "https://wa.me/917418188950",
+    value: "+91 73388 80950",
+    link: "https://wa.me/917338880950",
   },
   {
     id: 3,
@@ -184,7 +184,7 @@ export const footerSocialIcons: FooterSocialIcon[] = [
   { id: 1, icon: ICONS.facebook, name: "facebook", href: "https://www.facebook.com/share/18fDBEXh18/" },
   { id: 2, icon: ICONS.instagram, name: "instagram", href: "#" },
   { id: 3, icon: ICONS.youtube, name: "youtube", href: "https://youtube.com/@kollimalaiarasan?si=CMvlWG_zegPDyt5O" },
-  { id: 4, icon: ICONS.whatsapp1, name: "whatsapp", href: "https://wa.me/917418188950" },
+  { id: 4, icon: ICONS.whatsapp1, name: "whatsapp", href: "https://wa.me/917338880950" },
 ];
 
 export const readyToAssist = [

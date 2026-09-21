@@ -63,14 +63,11 @@ export function Footer() {
     const cleanCallNumber = callDigits.length === 10 ? `91${callDigits}` : callDigits;
     const callLink = cleanCallNumber ? `tel:+${cleanCallNumber}` : "tel:+917418188950";
 
-    // 2. WhatsApp (uses phonenumber field value as specified)
-    const defaultWaVal = defaultContacts[1]?.value || "+91 7418188950";
-    const waValue = formatPhoneDisplay(phone, defaultWaVal);
-    const waDigits = (phone || defaultWaVal).replace(/\D/g, "");
-    const cleanWaNumber = waDigits.length === 10 ? `91${waDigits}` : waDigits;
-    const waLink = cleanWaNumber
-      ? `https://wa.me/${cleanWaNumber}`
-      : "https://wa.me/917418188950";
+    // 2. WhatsApp
+    const defaultWaVal = defaultContacts[1]?.value || "+91 73388 80950";
+    const waValue = defaultWaVal;
+    const cleanWaNumber = "917338880950";
+    const waLink = `https://wa.me/${cleanWaNumber}`;
 
     // 3. Mail
     const companyEmail = company?.email?.trim();
@@ -107,8 +104,8 @@ export function Footer() {
 
   // WhatsApp Link for Social Links
   const waLink = React.useMemo(() => {
-    return dynamicContacts.find((c) => c.id === 2)?.link || "https://wa.me/917418188950";
-  }, [dynamicContacts]);
+    return "https://wa.me/917338880950";
+  }, []);
 
   // Company Name
   const companyName =
@@ -120,7 +117,7 @@ export function Footer() {
   // Formatted Location Address
   const formattedLocation = React.useMemo(() => {
     if (!company) {
-      return "Kollimalai Arasan, Thuraiyur Road, N Kosavampatti, Namakkal 637002";
+      return "18/41, MGR Nagar, Sakkarai Patti, Valavanthi Nadu, Semmedu Post, Kolli Hills Tk, Namakkal District - 637411";
     }
 
     const parts: string[] = [];
@@ -136,7 +133,7 @@ export function Footer() {
     }
 
     if (parts.length === 0) {
-      return "Kollimalai Arasan, Thuraiyur Road, N Kosavampatti, Namakkal 637002";
+      return "18/41, MGR Nagar, Sakkarai Patti, Valavanthi Nadu, Semmedu Post, Kolli Hills Tk, Namakkal District - 637411";
     }
 
     return parts.join(", ");

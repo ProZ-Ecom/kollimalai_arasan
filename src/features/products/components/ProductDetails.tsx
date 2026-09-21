@@ -362,9 +362,9 @@ function ProductDetails({ product }: ProductDetailsProps) {
     }
   };
 
-  const waDigitsRaw = (company?.phone || "7418188950").replace(/\D/g, "");
-  const waNumber = waDigitsRaw.length === 10 ? `91${waDigitsRaw}` : waDigitsRaw;
-  const waDisplay = `+${waNumber.length > 10 ? `${waNumber.slice(0, 2)} ${waNumber.slice(2)}` : waNumber}`;
+  const waDigitsRaw = "7338880950";
+  const waNumber = `91${waDigitsRaw}`;
+  const waDisplay = "+91 73388 80950";
   const waMessage = encodeURIComponent(
     `Hi, I'd like to order ${product.name}${
       selectedVariant?.variantName ? ` - ${selectedVariant.variantName}` : ""

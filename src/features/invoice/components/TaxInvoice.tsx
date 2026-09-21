@@ -30,11 +30,14 @@ function PartyAddress({
 }
 
 /** Used until a logo is uploaded in Company Settings. */
-const FALLBACK_LOGO = "/logo.svg";
+const FALLBACK_LOGO = "/logos/logo.svg";
 
 export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
   const { seller, buyer, sameState } = invoice;
-  const logoSrc = seller.logo ? getImageUrl(seller.logo) : FALLBACK_LOGO;
+  const logoSrc =
+    seller.logo && !seller.logo.includes("snack")
+      ? getImageUrl(seller.logo)
+      : FALLBACK_LOGO;
 
   return (
     <div className="ti-page">
@@ -101,7 +104,7 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
                     <td>
                       <span className="ti-label">Dated</span>
                       <span className="ti-value">
-                        {formatDate(invoice.invoiceDate, { locale: "en-GB", dateOptions: { day: "2-digit", month: "short", year: "numeric" } })}
+                        {formatDate(invoice.invoiceDate, { style: "medium" })}
                       </span>
                     </td>
                   </tr>
@@ -169,13 +172,19 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
               <tr>
                 <td />
                 <td className="r">CGST</td>
-                <td colSpan={4} />
+                <td />
+                <td />
+                <td />
+                <td />
                 <td className="r">{money(invoice.totalCgst)}</td>
               </tr>
               <tr>
                 <td />
                 <td className="r">SGST</td>
-                <td colSpan={4} />
+                <td />
+                <td />
+                <td />
+                <td />
                 <td className="r">{money(invoice.totalSgst)}</td>
               </tr>
             </>
@@ -183,7 +192,10 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
             <tr>
               <td />
               <td className="r">IGST</td>
-              <td colSpan={4} />
+              <td />
+              <td />
+              <td />
+              <td />
               <td className="r">{money(invoice.totalIgst)}</td>
             </tr>
           )}
@@ -192,7 +204,10 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
             <tr>
               <td />
               <td className="r">Delivery Charges</td>
-              <td colSpan={4} />
+              <td />
+              <td />
+              <td />
+              <td />
               <td className="r">{money(invoice.deliveryCharge)}</td>
             </tr>
           )}
@@ -201,13 +216,22 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
             <tr>
               <td />
               <td className="r">Round Off</td>
-              <td colSpan={4} />
+              <td />
+              <td />
+              <td />
+              <td />
               <td className="r">{money(invoice.roundOff)}</td>
             </tr>
           )}
 
           <tr className="ti-spacer">
-            <td colSpan={7} />
+            <td />
+            <td />
+            <td />
+            <td />
+            <td />
+            <td />
+            <td />
           </tr>
 
           <tr className="ti-total">
@@ -215,7 +239,8 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
             <td className="r">Total</td>
             <td />
             <td className="c">{invoice.totalQuantity} Nos</td>
-            <td colSpan={2} />
+            <td />
+            <td />
             <td className="r">&#8377; {money(invoice.invoiceValue)}</td>
           </tr>
         </tbody>
