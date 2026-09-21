@@ -593,7 +593,7 @@ export default function AdminVariantsPage() {
                 className="bg-white"
               />
             ) : (
-              <div className="flex-1 min-h-0 overflow-y-auto flex flex-col justify-between pr-1 pb-4">
+              <div className="flex-1 min-h-0 overflow-y-auto flex flex-col justify-between px-1 pt-2.5 pb-6">
                 {variants.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-neutral-200">
                     <Package className="h-12 w-12 text-neutral-300 mb-3" />

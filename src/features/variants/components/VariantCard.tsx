@@ -90,7 +90,7 @@ export function VariantCard({
     : resolveFallbackImage(variant.productName || variant.variantName);
 
   return (
-    <div className="group relative flex flex-col justify-between rounded-2xl border border-[var(--color-neutral-200)] bg-white p-3 sm:p-4 shadow-xs transition-all duration-300 hover:border-[var(--color-secondary-600)] hover:shadow-xl hover:-translate-y-1">
+    <div className="group relative flex flex-col justify-between rounded-2xl border border-[var(--color-neutral-200)] bg-white p-3 sm:p-4 shadow-xs transition-all duration-300 hover:border-[var(--color-secondary-600)] hover:shadow-xl hover:-translate-y-1 hover:z-10">
       {/* Top Media Container */}
       <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-cream-100 border border-cream-border">
         {displayImage ? (
