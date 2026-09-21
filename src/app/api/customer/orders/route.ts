@@ -31,6 +31,11 @@ export const POST = createApiHandler(
         throw ApiError.unauthorized("Authentication required");
       }
 
+      const userRole = (context.session?.user as any)?.role;
+      if (userRole === "ADMIN" || userRole === "STAFF") {
+        throw ApiError.forbidden("You are admin kindly comes with customer login");
+      }
+
       const body = context.body as CustomerCreateOrderInput;
       const order = await orderService.createCustomerOrder(sessionUserId, body);
       return apiCreated(order, "Order placed successfully");

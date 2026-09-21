@@ -24,11 +24,7 @@ export const POST = createApiHandler(
     POST: async (_request, context) => {
       const body = context.body as CreateOfferSchemaOutput;
       const offer = await offerService.createOffer(
-        {
-          ...body,
-          startsAt: new Date(body.startsAt),
-          endsAt: new Date(body.endsAt),
-        },
+        body,
         context.session?.user?.email ?? undefined
       );
       return apiCreated(offer, "Offer created successfully");

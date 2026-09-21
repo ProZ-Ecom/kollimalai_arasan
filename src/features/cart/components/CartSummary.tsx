@@ -6,21 +6,24 @@ import {
   Truck,
   Sparkles,
   Lock,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, cn } from "@/lib/utils";
 import type { CartSummary as CartSummaryType } from "../types";
 
 interface CartSummaryProps {
   summary: CartSummaryType;
   onCheckout?: () => void;
   isCheckingOut?: boolean;
+  isAdminUser?: boolean;
 }
 
 function CartSummary({
   summary,
   onCheckout,
   isCheckingOut = false,
+  isAdminUser = false,
 }: CartSummaryProps) {
   const freeShippingThreshold = 500;
   const subtotal = Number(summary.subtotal || 0);
@@ -124,18 +127,40 @@ function CartSummary({
           </div>
         </div>
 
+        {/* Admin Warning Banner */}
+        {isAdminUser && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-amber-900 text-xs font-medium space-y-1">
+            <div className="flex items-center gap-1.5 font-bold text-amber-800 text-xs sm:text-sm">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+              <span>Admin Account Detected</span>
+            </div>
+            <p className="text-amber-800 leading-relaxed">
+              You are admin kindly comes with customer login to place orders.
+            </p>
+          </div>
+        )}
+
         {/* Checkout CTA */}
         {onCheckout && (
           <Button
             type="button"
-            className="w-full h-12 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-fg font-bold text-sm shadow-sm transition-all hover:shadow-md cursor-pointer flex items-center justify-center gap-2"
-            onClick={onCheckout}
-            disabled={isCheckingOut || summary.totalItems === 0}
+            className={cn(
+              "w-full h-12 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-2",
+              isAdminUser
+                ? "bg-neutral-200 text-neutral-500 cursor-not-allowed border border-neutral-300 shadow-none hover:bg-neutral-200"
+                : "bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-fg hover:shadow-md cursor-pointer"
+            )}
+            onClick={isAdminUser ? undefined : onCheckout}
+            disabled={isAdminUser || isCheckingOut || summary.totalItems === 0}
           >
             <span>
-              {isCheckingOut ? "Preparing Order..." : "Proceed to Checkout"}
+              {isAdminUser
+                ? "Checkout Disabled for Admin"
+                : isCheckingOut
+                ? "Preparing Order..."
+                : "Proceed to Checkout"}
             </span>
-            <ArrowRight className="h-4 w-4" />
+            {!isAdminUser && <ArrowRight className="h-4 w-4" />}
           </Button>
         )}
 

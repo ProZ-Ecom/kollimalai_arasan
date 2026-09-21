@@ -22,30 +22,36 @@ async function getAdminInternalId(email?: string): Promise<bigint | null> {
   return BigInt(user.internalId || user.id);
 }
 
-function parseStartDate(value: Date | string, field = "Start date"): Date {
+function parseStartsAt(value: Date | string): Date {
+  let date: Date;
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
-    const date = new Date(`${value.trim()}T00:00:00.000`);
-    if (!Number.isNaN(date.getTime())) return date;
+    date = new Date(`${value.trim()}T00:00:00.000Z`);
+  } else {
+    date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
   }
-  const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) {
-    throw ApiError.badRequest(`${field} is not a valid date`);
+    throw ApiError.badRequest("Start date is not a valid date");
   }
   return date;
 }
 
-function parseEndDate(value: Date | string, field = "End date"): Date {
+function parseEndsAt(value: Date | string): Date {
+  let date: Date;
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
-    const date = new Date(`${value.trim()}T23:59:59.999`);
-    if (!Number.isNaN(date.getTime())) return date;
-  }
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    throw ApiError.badRequest(`${field} is not a valid date`);
-  }
-  // If the date passed has no time component (midnight), extend it to end of day
-  if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0) {
-    date.setUTCHours(23, 59, 59, 999);
+    date = new Date(`${value.trim()}T23:59:59.000Z`);
+  } else {
+    date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw ApiError.badRequest("End date is not a valid date");
+    }
+    // Default same-day / midnight 00:00:00 end dates to end-of-day 23:59:59
+    if (
+      date.getUTCHours() === 0 &&
+      date.getUTCMinutes() === 0 &&
+      date.getUTCSeconds() === 0
+    ) {
+      date.setUTCHours(23, 59, 59, 0);
+    }
   }
   return date;
 }
@@ -168,11 +174,22 @@ export const offerService = {
 
   async createOffer(data: SaveOfferInput, adminEmail?: string): Promise<OfferListItem> {
     const actorId = await getAdminInternalId(adminEmail);
-    const startsAt = parseStartDate(data.startsAt, "Start date");
-    const endsAt = parseEndDate(data.endsAt, "End date");
+    const startsAt = parseStartsAt(data.startsAt);
+    const endsAt = parseEndsAt(data.endsAt);
 
     if (endsAt.getTime() < startsAt.getTime()) {
       throw ApiError.badRequest("End date cannot be before the start date");
+    }
+
+    if (
+      data.minCartValue != null &&
+      data.maxDiscountAmount != null &&
+      data.minCartValue > 0 &&
+      data.maxDiscountAmount > data.minCartValue
+    ) {
+      throw ApiError.badRequest(
+        "Maximum discount cannot be greater than the minimum cart value"
+      );
     }
 
     await assertCodeIsFree(data.code);
@@ -239,16 +256,34 @@ export const offerService = {
     const level = data.level ?? existing.level;
     const type = data.type ?? existing.type;
     const value = data.value ?? existing.value;
+    const minCartValue =
+      data.minCartValue !== undefined ? data.minCartValue : existing.minCartValue;
+    const maxDiscountAmount =
+      data.maxDiscountAmount !== undefined
+        ? data.maxDiscountAmount
+        : existing.maxDiscountAmount;
+
+    if (
+      minCartValue != null &&
+      maxDiscountAmount != null &&
+      minCartValue > 0 &&
+      maxDiscountAmount > minCartValue
+    ) {
+      throw ApiError.badRequest(
+        "Maximum discount cannot be greater than the minimum cart value"
+      );
+    }
+
     const startsAt = data.startsAt
-      ? parseStartDate(data.startsAt, "Start date")
+      ? parseStartsAt(data.startsAt)
       : existing.startsAt
         ? new Date(existing.startsAt)
         : new Date();
     const endsAt = data.endsAt
-      ? parseEndDate(data.endsAt, "End date")
+      ? parseEndsAt(data.endsAt)
       : existing.endsAt
         ? new Date(existing.endsAt)
-        : startsAt;
+        : parseEndsAt(startsAt);
 
     if (endsAt.getTime() < startsAt.getTime()) {
       throw ApiError.badRequest("End date cannot be before the start date");

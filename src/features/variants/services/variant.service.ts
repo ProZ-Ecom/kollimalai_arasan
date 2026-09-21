@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { db } from "@/lib/db/prisma";
 import { ApiError } from "@/lib/api/api-error";
 import { variantRepository } from "../repositories/variant.repository";
 import { productRepository } from "@/features/products/repositories/product.repository";
@@ -108,7 +109,11 @@ function formatAdminVariantResponse(
   const primaryImgObj =
     variant.product_variant_images?.find((img) => img.is_primary) ??
     variant.product_variant_images?.[0];
-  const primaryImage = primaryImgObj ? primaryImgObj.image_url : null;
+  const fallbackProductImg =
+    (variant.product as any)?.images?.find((img: any) => img.isPrimary)?.image_url ??
+    (variant.product as any)?.images?.[0]?.image_url ??
+    null;
+  const primaryImage = primaryImgObj ? primaryImgObj.image_url : fallbackProductImg;
 
   const unitPrices = (variant.variant_unit_prices || []).map((up) =>
     formatUnitPriceResponse(variantUuid, up)
@@ -182,6 +187,12 @@ export const variantService = {
 
     // 3. Create Variant (item-level only; unit/price combos are managed
     // separately via variantUnitPriceService)
+    const existingVariantsCount = await db.productVariant.count({
+      where: { productId: product.id, deleted_at: null },
+    });
+    const isFirstVariant = existingVariantsCount === 0;
+    const isDefault = (data as any).isDefault !== undefined ? (data as any).isDefault : isFirstVariant;
+
     const variant = await variantRepository.create({
       uuid: crypto.randomUUID(),
       productId: product.id,
@@ -191,6 +202,7 @@ export const variantService = {
       description: data.description ?? null,
       video_url: data.videoUrl || null,
       is_featured: data.isFeatured ?? false,
+      is_default: isDefault,
       isActive: data.isActive !== undefined ? data.isActive : true,
       out_of_stock: data.outOfStock !== undefined ? data.outOfStock : false,
       created_by: adminId,
@@ -279,6 +291,23 @@ export const variantService = {
     }
 
     const adminId = await getAdminInternalId(adminEmail);
+
+    if (data.isActive === true) {
+      const activePriceCount = await db.variantUnitPrice.count({
+        where: {
+          variant_id: existing.id,
+          deleted_at: null,
+          isActive: true,
+          base_price: { gt: 0 },
+        },
+      });
+      if (activePriceCount === 0) {
+        throw ApiError.badRequest(
+          "Cannot activate item without price details. Please add at least one unit price first."
+        );
+      }
+    }
+
     const updateData = buildVariantUpdateData(data, adminId);
 
     if (data.slug !== undefined) {
@@ -309,6 +338,23 @@ export const variantService = {
     }
 
     const adminId = await getAdminInternalId(adminEmail);
+
+    if (data.isActive === true) {
+      const activePriceCount = await db.variantUnitPrice.count({
+        where: {
+          variant_id: existing.id,
+          deleted_at: null,
+          isActive: true,
+          base_price: { gt: 0 },
+        },
+      });
+      if (activePriceCount === 0) {
+        throw ApiError.badRequest(
+          "Cannot activate item without price details. Please add at least one unit price first."
+        );
+      }
+    }
+
     const updateData = buildVariantUpdateData(data, adminId);
 
     if (data.slug !== undefined) {

@@ -66,6 +66,7 @@ export const customerVariantListSchema = z
     search: z.string().trim().optional(),
     minPrice: z.number().min(0, "minPrice cannot be negative").optional().nullable(),
     maxPrice: z.number().min(0, "maxPrice cannot be negative").optional().nullable(),
+    inStock: z.boolean().optional(),
     sortBy: z
       .enum(["variantName", "salePrice", "basePrice", "createdAt"])
       .optional()
@@ -101,6 +102,7 @@ export const customerGlobalVariantListSchema = z
     categoryIds: z.array(z.string().trim().regex(uuidRegex, "Invalid category UUID")).optional(),
     minPrice: z.number().min(0, "minPrice cannot be negative").optional().nullable(),
     maxPrice: z.number().min(0, "maxPrice cannot be negative").optional().nullable(),
+    inStock: z.boolean().optional(),
     sortBy: z
       .enum(["variantName", "salePrice", "basePrice", "createdAt", "productName"])
       .optional()

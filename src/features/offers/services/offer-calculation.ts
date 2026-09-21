@@ -23,7 +23,18 @@ export function computeOfferStatus(
   now: Date = new Date()
 ): OfferComputedStatus {
   if (!offer.isActive) return "inactive";
-  if (offer.endsAt && offer.endsAt.getTime() < now.getTime()) return "expired";
+
+  let effectiveEndsAt = offer.endsAt;
+  if (
+    effectiveEndsAt &&
+    effectiveEndsAt.getUTCHours() === 0 &&
+    effectiveEndsAt.getUTCMinutes() === 0 &&
+    effectiveEndsAt.getUTCSeconds() === 0
+  ) {
+    effectiveEndsAt = new Date(effectiveEndsAt.getTime() + (24 * 60 * 60 * 1000 - 1));
+  }
+
+  if (effectiveEndsAt && effectiveEndsAt.getTime() < now.getTime()) return "expired";
   if (offer.startsAt && offer.startsAt.getTime() > now.getTime()) return "scheduled";
   return "active";
 }
@@ -219,7 +230,6 @@ export function priceLine(
   const best = selectBestOffer(offers, line, context);
 
   if (!best) {
-    const promoOffer = offers.find((o) => isOfferLive(o, context.now ?? new Date()));
     return {
       itemId: line.itemId,
       quantity,
@@ -230,7 +240,7 @@ export function priceLine(
       discountAmount: 0,
       discountPercent: 0,
       offerApplied: false,
-      offer: promoOffer ? toOfferBreakdown(promoOffer) : null,
+      offer: null,
       freeQuantity: 0,
     };
   }

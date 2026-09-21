@@ -23,11 +23,7 @@ export const PUT = createApiHandler(
       const body = context.body as UpdateOfferSchemaOutput;
       const offer = await offerService.updateOffer(
         id,
-        {
-          ...body,
-          startsAt: body.startsAt ? new Date(body.startsAt) : undefined,
-          endsAt: body.endsAt ? new Date(body.endsAt) : undefined,
-        },
+        body,
         context.session?.user?.email ?? undefined
       );
       return apiSuccess(offer, "Offer updated successfully");

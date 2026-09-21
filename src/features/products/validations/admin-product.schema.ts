@@ -9,8 +9,10 @@ export const createAdminProductSchema = z
       .string({ message: "Brand ID is required" })
       .uuid("Invalid Brand UUID format"),
     hsnCodeId: z
-      .string({ message: "HSN Code ID is required" })
-      .uuid("Invalid HSN Code UUID format"),
+      .preprocess(
+        (val) => (val === "" || val === undefined || val === null ? null : val),
+        z.string().uuid("Invalid HSN Code UUID format").nullable().optional()
+      ),
     name: z
       .string({ message: "Product name is required" })
       .trim()
@@ -21,6 +23,8 @@ export const createAdminProductSchema = z
       .trim()
       .min(1, "Product code cannot be empty")
       .max(220, "Product code cannot exceed 220 characters"),
+    productImage: z.string().optional().nullable(),
+    imageUrl: z.string().optional().nullable(),
   })
   .strict();
 

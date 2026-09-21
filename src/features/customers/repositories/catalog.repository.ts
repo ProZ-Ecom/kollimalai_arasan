@@ -87,7 +87,8 @@ function toVariantListItemDto(
     product_variant_images?: Array<{ image_url: string }> | null;
   },
   productUuid: string,
-  productName: string
+  productName: string,
+  fallbackProductImg?: string | null
 ): CustomerVariantListItemDto {
   const defaultUnitPrice = pickDefaultUnitPrice(variant.variant_unit_prices);
 
@@ -123,7 +124,10 @@ function toVariantListItemDto(
     salePrice: defaultUnitPrice
       ? computeSellingPrice(Number(defaultUnitPrice.base_price))
       : 0,
-    primaryImage: variant.product_variant_images?.[0]?.image_url ?? null,
+    primaryImage:
+      variant.product_variant_images?.[0]?.image_url ??
+      fallbackProductImg ??
+      null,
     outOfStock: Boolean(variant.out_of_stock),
     videoUrl: variant.video_url ?? null,
     isDefault: Boolean(variant.is_default),
@@ -799,7 +803,16 @@ export const catalogRepository = {
       },
       include: {
         product: {
-          select: { id: true, uuid: true, name: true },
+          select: {
+            id: true,
+            uuid: true,
+            name: true,
+            images: {
+              where: { is_active: true },
+              orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+              take: 1,
+            },
+          },
         },
         product_variant_images: {
           where: { is_active: true },
@@ -811,6 +824,7 @@ export const catalogRepository = {
 
     if (!variant || !variant.product) return null;
 
+    const fallbackProductImg = variant.product.images?.[0]?.image_url ?? null;
     const images: CustomerVariantImageDto[] = variant.product_variant_images.map((img) => ({
       id: img.uuid || String(img.id),
       imageUrl: img.image_url,
@@ -821,7 +835,8 @@ export const catalogRepository = {
     const listItem = toVariantListItemDto(
       variant,
       variant.product.uuid || String(variant.product.id),
-      variant.product.name
+      variant.product.name,
+      fallbackProductImg
     );
 
     return {
@@ -844,10 +859,17 @@ export const catalogRepository = {
       ...(params.onlyDefault ? { is_default: true } : {}),
     };
 
-    // Filter by Product UUIDs
+    // Filter by Product UUIDs or Slugs
     if (params.productIds && params.productIds.length > 0) {
       const matchingProducts = await db.product.findMany({
-        where: { uuid: { in: params.productIds }, isActive: true, deleted_at: null },
+        where: {
+          OR: [
+            { uuid: { in: params.productIds } },
+            { slug: { in: params.productIds } },
+          ],
+          isActive: true,
+          deleted_at: null,
+        },
         select: { id: true },
       });
       const pIds = matchingProducts.map((p) => p.id);
@@ -889,24 +911,25 @@ export const catalogRepository = {
       ];
     }
 
-    // Price range filter
-    const minP = params.minPrice ?? undefined;
-    const maxP = params.maxPrice ?? undefined;
-    if ((minP !== undefined && minP !== null) || (maxP !== undefined && maxP !== null)) {
-      const minVal = minP ?? 0;
-      const maxVal = maxP ?? Number.MAX_SAFE_INTEGER;
+    // Price range filter - enforce active unit price with base_price > 0
+    const minP = params.minPrice ? Math.max(params.minPrice, 0.01) : 0.01;
+    const maxP = params.maxPrice ?? Number.MAX_SAFE_INTEGER;
 
-      const priceCondition: Prisma.ProductVariantWhereInput = {
-        variant_unit_prices: {
-          some: { deleted_at: null, isActive: true, base_price: { gte: minVal, lte: maxVal } },
-        },
-      };
+    const priceCondition: Prisma.ProductVariantWhereInput = {
+      variant_unit_prices: {
+        some: { deleted_at: null, isActive: true, base_price: { gte: minP, lte: maxP } },
+      },
+    };
 
-      if (where.OR) {
-        where.AND = [priceCondition];
-      } else {
-        Object.assign(where, priceCondition);
-      }
+    if (where.OR) {
+      where.AND = [priceCondition];
+    } else {
+      Object.assign(where, priceCondition);
+    }
+
+    // In Stock / Out of Stock filter
+    if (params.inStock !== undefined) {
+      where.out_of_stock = !params.inStock;
     }
 
     // Sorting
@@ -928,7 +951,16 @@ export const catalogRepository = {
         ...(isPriceSort ? {} : { skip: (page - 1) * pageSize, take: pageSize }),
         include: {
           product: {
-            select: { id: true, uuid: true, name: true },
+            select: {
+              id: true,
+              uuid: true,
+              name: true,
+              images: {
+                where: { is_active: true },
+                orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+                take: 1,
+              },
+            },
           },
           product_variant_images: {
             where: { is_active: true },
@@ -945,7 +977,8 @@ export const catalogRepository = {
       toVariantListItemDto(
         v,
         v.product ? v.product.uuid || String(v.product.id) : "",
-        v.product ? v.product.name : ""
+        v.product ? v.product.name : "",
+        v.product?.images?.[0]?.image_url ?? null
       )
     );
 
