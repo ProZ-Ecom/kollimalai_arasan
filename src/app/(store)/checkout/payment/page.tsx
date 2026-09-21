@@ -8,6 +8,7 @@ import {
   Loader2,
   MapPin,
   ShoppingBag,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,9 @@ import { PAYMENT_METHOD_OPTIONS } from "@/features/orders/constants";
 export default function CheckoutPaymentPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+
+  const userRole = (session?.user as any)?.role?.toUpperCase();
+  const isAdminUser = userRole === "ADMIN" || userRole === "STAFF";
 
   const { data: cart, isLoading: cartLoading } = useCart();
   const { data: addresses, isLoading: addressesLoading } = useAddresses();
@@ -66,10 +70,11 @@ export default function CheckoutPaymentPage() {
   }
 
   const handlePlaceOrder = () => {
-    if (!checkout.addressId) return;
+    if (isAdminUser || !checkout.addressId) return;
     placeOrder.mutate(
       {
         addressId: checkout.addressId,
+        shippingAddressId: String(checkout.addressId),
         deliveryMethod: checkout.deliveryMethod,
         couponCode: checkout.couponCode ?? undefined,
         paymentMethod: checkout.paymentMethod,
@@ -93,6 +98,20 @@ export default function CheckoutPaymentPage() {
           Back
         </Button>
       </div>
+
+      {isAdminUser && (
+        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:p-5 text-amber-950 flex items-start gap-3 shadow-xs">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-amber-900">
+              You are admin kindly comes with customer login
+            </h3>
+            <p className="text-xs sm:text-sm text-amber-800 mt-1 leading-relaxed">
+              Admin accounts cannot execute payments or book orders. Please log in with a customer account to continue.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
@@ -180,8 +199,16 @@ export default function CheckoutPaymentPage() {
                 <LoadingState size="sm" text="Calculating totals..." />
               ) : summary ? (
                 <OrderTotals
-                  totals={summary.totals}
-                  couponLabel={summary.coupon?.code ?? null}
+                  totals={
+                    summary.totals ?? {
+                      subtotal: summary.subtotal,
+                      taxAmount: summary.taxAmount ?? 0,
+                      shippingAmount: summary.shippingCharge ?? summary.deliveryCharge ?? 0,
+                      discountAmount: summary.discountAmount ?? summary.discount ?? 0,
+                      totalAmount: summary.totalAmount ?? summary.total ?? summary.subtotal,
+                    }
+                  }
+                  couponLabel={summary.coupon?.code ?? summary.couponCode ?? null}
                 />
               ) : (
                 <ErrorState
@@ -196,13 +223,15 @@ export default function CheckoutPaymentPage() {
                 size="lg"
                 onClick={handlePlaceOrder}
                 disabled={
-                  !checkout.addressId || summaryLoading || placeOrder.isPending
+                  isAdminUser || !checkout.addressId || summaryLoading || placeOrder.isPending
                 }
               >
                 {placeOrder.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                {checkout.paymentMethod === "CASH_ON_DELIVERY"
+                {isAdminUser
+                  ? "Payment Disabled for Admin"
+                  : checkout.paymentMethod === "CASH_ON_DELIVERY"
                   ? "Place Order (Cash on Delivery)"
                   : `Pay ${checkout.paymentMethod.replace(/_/g, " ")}`}
               </Button>

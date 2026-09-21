@@ -165,9 +165,14 @@ export interface GetOrdersResult {
 }
 
 export interface PlaceOrderInput {
-  shippingAddressId: string;
+  shippingAddressId?: string;
+  addressId?: number | string | null;
   billingAddressId?: string;
+  deliveryMethod?: string;
+  couponCode?: string | null;
+  paymentMethod?: string;
   notes?: string;
+  paymentDetails?: Record<string, any>;
 }
 
 export interface UpdateOrderStatusInput {
@@ -177,12 +182,19 @@ export interface UpdateOrderStatusInput {
 
 export interface CheckoutSummary {
   subtotal: number;
-  discountAmount: number;
-  taxAmount: number;
-  shippingCharge: number;
-  totalAmount: number;
+  discountAmount?: number;
+  taxAmount?: number;
+  shippingCharge?: number;
+  totalAmount?: number;
+  deliveryCharge?: number;
+  discount?: number;
+  totalSavings?: number;
+  total?: number;
   couponCode?: string | null;
   appliedCoupon?: unknown;
+  items?: (OrderItemResponse | OrderItemDisplay)[];
+  totals?: OrderTotals;
+  coupon?: { code: string; discount?: number } | null;
 }
 
 export interface AdminOrdersListParams {

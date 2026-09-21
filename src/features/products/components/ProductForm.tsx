@@ -29,8 +29,9 @@ const productFormSchema = z.object({
     .optional(),
   hsnCodeId: z
     .string()
-    .min(1, "Please select an HSN code"),
-  productImage: z.string().optional(),
+    .optional()
+    .nullable(),
+  productImage: z.string().optional().nullable(),
 });
 
 export type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -181,11 +182,17 @@ function ProductForm({
       ...formData,
       brandId: finalBrandId,
       slug: finalSlug,
+      hsnCodeId: formData.hsnCodeId ? formData.hsnCodeId : null,
     });
   };
 
   const categoryOptions = categories;
-  const hsnCodeOptions = hsnCodes;
+  const hsnCodeOptions = useMemo(() => {
+    return [
+      { value: "", label: "None / Not Applicable" },
+      ...hsnCodes,
+    ];
+  }, [hsnCodes]);
 
   return (
     <FormProvider {...methods}>
@@ -198,7 +205,7 @@ function ProductForm({
           <FormInput
             name="name"
             label="Product Name"
-            placeholder="e.g. Banana Chips"
+            placeholder="e.g. Kollimalai Black Pepper, Seeraga Samba Rice"
             required
           />
 
@@ -251,11 +258,10 @@ function ProductForm({
           </div>
 
           <div
-            className={`flex items-stretch rounded-lg border transition-all ${
-              extraSlugError || methods.formState.errors.slug
+            className={`flex items-stretch rounded-lg border transition-all ${extraSlugError || methods.formState.errors.slug
                 ? "border-red-500 ring-2 ring-red-500/10"
                 : "border-neutral-200 focus-within:border-secondary-600 focus-within:ring-2 focus-within:ring-secondary-600/20"
-            } bg-white overflow-hidden`}
+              } bg-white overflow-hidden`}
           >
             {/* Non-editable Category Code prefix */}
             <div
@@ -318,9 +324,9 @@ function ProductForm({
           <FormSelect
             name="hsnCodeId"
             label="HSN Code"
-            placeholder="Select HSN code"
+            placeholder={hsnCodes.length > 0 ? "Select HSN code" : "None / No HSN codes available"}
             options={hsnCodeOptions}
-            required
+            description="Optional: Harmonized System of Nomenclature code for GST"
           />
         </div>
 

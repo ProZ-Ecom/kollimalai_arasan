@@ -19,6 +19,7 @@ import {
   Sparkles,
   Lock,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   X,
   Phone,
@@ -26,7 +27,7 @@ import {
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, cn } from "@/lib/utils";
 import { formatMeasurementLabel } from "@/features/variants/utils/measurement.util";
 import { useCustomerCart } from "@/features/customers/hooks/use-customer-cart";
 import { useQueryClient } from "@tanstack/react-query";
@@ -89,6 +90,9 @@ export default function CheckoutPage() {
   const queryClient = useQueryClient();
   const { data: session, status: authStatus } = useSession();
   const { isOrderPlaced, setIsOrderPlaced } = useCheckout();
+
+  const userRole = (session?.user as any)?.role?.toUpperCase();
+  const isAdminUser = userRole === "ADMIN" || userRole === "STAFF";
 
   // Customer Module TanStack Query hooks
   const { data: cart, isLoading: cartLoading } = useCustomerCart();
@@ -409,6 +413,11 @@ export default function CheckoutPage() {
 
   // Launch redirect-based Razorpay payment
   const launchRedirectPayment = async (targetAddressId?: string) => {
+    if (isAdminUser) {
+      setCheckoutError("You are admin kindly comes with customer login");
+      return;
+    }
+
     setIsProcessingPayment(true);
     setCheckoutError(null);
 
@@ -440,6 +449,11 @@ export default function CheckoutPage() {
   // Place Order Handler
   const handlePlaceOrder = async () => {
     setCheckoutError(null);
+
+    if (isAdminUser) {
+      setCheckoutError("You are admin kindly comes with customer login");
+      return;
+    }
 
     if (!effectiveAddressId) {
       setCheckoutError("Please select or add a delivery address to proceed.");
@@ -532,6 +546,21 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Admin Warning Banner */}
+      {isAdminUser && (
+        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:p-5 text-amber-950 flex items-start gap-3 shadow-xs">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-amber-900">
+              You are admin kindly comes with customer login
+            </h3>
+            <p className="text-xs sm:text-sm text-amber-800 mt-1 leading-relaxed">
+              Admin accounts can browse products, add items to cart, and test shopping cart features, but cannot place orders or execute payments. Please sign in with a customer account to purchase.
+            </p>
+          </div>
+        </div>
+      )}
 
       {checkoutError && (
         <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex items-start gap-3">
@@ -1115,19 +1144,32 @@ export default function CheckoutPage() {
               </div>
 
               {/* Place Order CTA Button */}
+              {isAdminUser && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-900 text-xs font-medium mb-3">
+                  <span className="font-bold">Notice:</span> You are admin kindly comes with customer login to book orders.
+                </div>
+              )}
               <Button
                 type="button"
                 onClick={handlePlaceOrder}
                 disabled={
+                  isAdminUser ||
                   createOrderMutation.isPending ||
                   isProcessingPayment ||
                   isVerifyingPayment ||
                   addressesLoading ||
                   !effectiveAddressId
                 }
-                className="w-full min-h-[48px] rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white font-bold text-sm shadow-md transition-all disabled:opacity-50"
+                className={cn(
+                  "w-full min-h-[48px] rounded-xl font-bold text-sm shadow-md transition-all",
+                  isAdminUser
+                    ? "bg-neutral-200 text-neutral-500 cursor-not-allowed border border-neutral-300 shadow-none hover:bg-neutral-200"
+                    : "bg-theme-primary hover:bg-theme-primary-hover text-white disabled:opacity-50"
+                )}
               >
-                {isVerifyingPayment ? (
+                {isAdminUser ? (
+                  "Booking Disabled for Admin"
+                ) : isVerifyingPayment ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Verifying Payment...
@@ -1160,7 +1202,7 @@ export default function CheckoutPage() {
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                   256-bit Bank-Grade Encryption by Razorpay
                 </p>
-                <p>Handcrafted South Indian delicacies delivered fresh to your door.</p>
+                <p>Pure hill spices, traditional rice & forest honey from Kolli Hills delivered to your door.</p>
               </div>
 
             </div>

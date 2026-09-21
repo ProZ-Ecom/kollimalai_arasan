@@ -72,6 +72,7 @@ export function useDeleteVariant() {
       productUuid: string;
       variantUuid: string;
     }) => deleteAdminVariant(productUuid, variantUuid),
+    meta: { skipToast: true },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: variantKeys.all });
     },
@@ -83,6 +84,7 @@ export function useBulkDeleteVariants() {
 
   return useMutation({
     mutationFn: (ids: string[]) => bulkDeleteAdminVariants(ids),
+    meta: { skipToast: true },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: variantKeys.all });
       queryClient.invalidateQueries({ queryKey: ["admin", "variants"] });

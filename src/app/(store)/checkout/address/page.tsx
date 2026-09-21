@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ArrowLeft, ArrowRight, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/common/FormModal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -26,6 +26,9 @@ export default function CheckoutAddressPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const checkout = useCheckout();
+
+  const userRole = (session?.user as any)?.role?.toUpperCase();
+  const isAdminUser = userRole === "ADMIN" || userRole === "STAFF";
 
   const { data: addresses, isLoading, error, refetch } = useAddresses();
   const createAddress = useCreateAddress();
@@ -101,6 +104,20 @@ export default function CheckoutAddressPage() {
         </Button>
       </div>
 
+      {isAdminUser && (
+        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:p-5 text-amber-950 flex items-start gap-3 shadow-xs">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-amber-900">
+              You are admin kindly comes with customer login
+            </h3>
+            <p className="text-xs sm:text-sm text-amber-800 mt-1 leading-relaxed">
+              Admin accounts cannot place orders or execute payments. Please log in with a customer account to purchase.
+            </p>
+          </div>
+        </div>
+      )}
+
       <AddressList
         addresses={addresses ?? []}
         selectable
@@ -119,12 +136,15 @@ export default function CheckoutAddressPage() {
           {checkout.addressId ? "Address selected" : "No address selected yet"}
         </p>
         <Button
-          onClick={() => router.push("/checkout")}
-          disabled={!checkout.addressId}
+          onClick={() => {
+            if (isAdminUser) return;
+            router.push("/checkout");
+          }}
+          disabled={isAdminUser || !checkout.addressId}
           size="lg"
         >
-          Proceed to Checkout
-          <ArrowRight className="ml-2 h-4 w-4" />
+          {isAdminUser ? "Disabled for Admin" : "Proceed to Checkout"}
+          {!isAdminUser && <ArrowRight className="ml-2 h-4 w-4" />}
         </Button>
       </div>
 

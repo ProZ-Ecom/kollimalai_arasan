@@ -44,6 +44,15 @@ type ToastInput =
       duration?: number;
     };
 
+function cleanToastMessage(text?: string): string {
+  if (!text) return "";
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[.,!?:;]+$/, "") // remove trailing punctuation
+    .replace(/\s+/g, " ");
+}
+
 function showToast(toastData: ToastInput) {
   if (typeof window === "undefined") return;
 
@@ -55,7 +64,7 @@ function showToast(toastData: ToastInput) {
       : toastData.variant;
 
   // Deduplicate based on message content to prevent dual toasts from MutationCache & components
-  const content = (toastData.description || toastData.title || "").trim().toLowerCase();
+  const content = cleanToastMessage(toastData.description || toastData.title);
   const dedupeKey = `${variant}:${content}`;
   const now = Date.now();
   const lastShown = recentToasts.get(dedupeKey);
@@ -101,12 +110,18 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<Toast[]>([]);
 
   const addToast = React.useCallback((newToast: Omit<Toast, "id">) => {
-    const newContent = (newToast.description || newToast.title || "").trim().toLowerCase();
+    const newContent = cleanToastMessage(newToast.description || newToast.title);
 
     setToasts((prev) => {
       const alreadyActive = prev.some((t) => {
-        const existingContent = (t.description || t.title || "").trim().toLowerCase();
-        return t.variant === newToast.variant && existingContent === newContent;
+        const existingContent = cleanToastMessage(t.description || t.title);
+        return (
+          t.variant === newToast.variant &&
+          (existingContent === newContent ||
+            (existingContent &&
+              newContent &&
+              (existingContent.includes(newContent) || newContent.includes(existingContent))))
+        );
       });
       if (alreadyActive) {
         return prev;
@@ -154,8 +169,8 @@ const toastVariantStyles: Record<
   { progressTrack: string; progressBar: string }
 > = {
   success: {
-    progressTrack: "bg-cream-border",
-    progressBar: "bg-neutral-900",
+    progressTrack: "bg-emerald-100",
+    progressBar: "bg-emerald-600",
   },
   error: {
     progressTrack: "bg-error-100",
@@ -173,7 +188,7 @@ const toastVariantStyles: Record<
 
 const toastIcons: Record<ToastVariant, React.ReactNode> = {
   success: (
-    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-white">
+    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xs">
       <Check className="h-3 w-3 stroke-[3]" />
     </div>
   ),
@@ -235,7 +250,11 @@ function ToastContainer({ toasts, removeToast }: ToastContainerProps) {
               role="alert"
               className={cn(
                 "pointer-events-auto relative w-full rounded-xl sm:rounded-2xl bg-white p-4 pb-4.5 shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-neutral-100/90 overflow-hidden transition-all",
-                "animate-in slide-in-from-top-2 fade-in duration-200"
+                "animate-in slide-in-from-top-2 fade-in duration-200",
+                t.variant === "success" && "border-l-4 border-l-emerald-600 border-neutral-200/80 shadow-[0_8px_30px_rgba(16,185,129,0.08)]",
+                t.variant === "error" && "border-l-4 border-l-error-600 border-neutral-200/80",
+                t.variant === "warning" && "border-l-4 border-l-amber-500 border-neutral-200/80",
+                t.variant === "info" && "border-l-4 border-l-secondary-600 border-neutral-200/80"
               )}
             >
               <div className="flex items-start gap-3">

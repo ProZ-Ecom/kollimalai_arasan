@@ -55,7 +55,7 @@ function buildDefaults(offer?: OfferListItem | null): CreateOfferSchemaInput {
       code: "",
       level: "product",
       type: "percentage",
-      value: 0,
+      value: "" as unknown as number,
       buyQuantity: null,
       getQuantity: null,
       minQuantity: 1,
@@ -134,6 +134,11 @@ export function OfferForm({
   const startsAt = (useWatch({ control, name: "startsAt" }) ?? "") as string;
   const endsAt = (useWatch({ control, name: "endsAt" }) ?? "") as string;
   const isActive = Boolean(useWatch({ control, name: "isActive" }));
+
+  // When offer type changes, clear/revalidate dependent fields
+  React.useEffect(() => {
+    methods.trigger(["value", "buyQuantity", "getQuantity", "maxDiscountAmount"]);
+  }, [type, methods]);
 
   // The picker's own Category/Product dropdowns are navigation, not offer
   // data, so they are local state rather than form fields.
@@ -295,7 +300,8 @@ export function OfferForm({
               name="value"
               type="number"
               step="0.01"
-              min={0}
+              min={0.01}
+              max={type === "percentage" ? 100 : 99999999.99}
               label={offerValueFieldLabel(type)}
               required
               placeholder={type === "percentage" ? "e.g. 15" : "e.g. 50"}

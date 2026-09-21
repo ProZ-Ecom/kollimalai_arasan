@@ -45,6 +45,7 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: (uuid: string) => deleteAdminProduct(uuid),
+    meta: { skipToast: true },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: productKeys.all });
     },
@@ -56,6 +57,7 @@ export function useBulkDeleteProducts() {
 
   return useMutation({
     mutationFn: (uuids: string[]) => bulkDeleteAdminProducts(uuids),
+    meta: { skipToast: true },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: productKeys.all });
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });

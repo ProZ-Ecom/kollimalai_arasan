@@ -35,6 +35,7 @@ import {
 import { useAdminProduct, useProductImages, useCreateProductImages, useDeleteProductImage } from "@/features/products/hooks";
 import {
   useVariants,
+  useVariantUnitPrices,
   useCreateVariant,
   useUpdateVariant,
   useDeleteVariant,
@@ -219,6 +220,13 @@ export default function AdminProductDetailsPage() {
       console.error("Failed to upload product image", err);
     }
   };
+
+  // Unit prices for newly created variant in modal
+  const { data: newlyCreatedPrices = [] } = useVariantUnitPrices(
+    canonicalProductId || null,
+    newlyCreatedVariant?.id || null
+  );
+  const hasNewlyCreatedPrices = newlyCreatedPrices.length > 0;
 
   // Selection State
   const [selectedVariants, setSelectedVariants] = React.useState<Record<string, boolean>>({});
@@ -1164,9 +1172,14 @@ export default function AdminProductDetailsPage() {
           submitLabel="Save Changes"
           onSubmit={async (formData: ProductFormValues) => {
             try {
+              const payload = {
+                ...formData,
+                hsnCodeId: formData.hsnCodeId || null,
+                productImage: formData.productImage || null,
+              };
               await updateProductMutation.mutateAsync({
                 uuid: canonicalProductId,
-                data: formData as any,
+                data: payload as any,
               });
               setIsEditProductOpen(false);
 
@@ -1231,17 +1244,40 @@ export default function AdminProductDetailsPage() {
               productUuid={canonicalProductId}
               variantUuid={newlyCreatedVariant.id}
             />
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                onClick={() => {
-                  setIsAddVariantOpen(false);
-                  setNewlyCreatedVariant(null);
-                }}
-                className="h-10 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)]"
-              >
-                Done
-              </Button>
+            <div className="flex justify-end gap-2">
+              {!hasNewlyCreatedPrices ? (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsAddVariantOpen(false);
+                    setNewlyCreatedVariant(null);
+                  }}
+                  className="h-10 rounded-xl bg-neutral-100 text-neutral-800 border border-neutral-300 hover:bg-neutral-200 px-5 text-sm font-semibold cursor-pointer"
+                >
+                  Skip for now & Close
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await updateVariantMutation.mutateAsync({
+                        productUuid: canonicalProductId,
+                        variantUuid: newlyCreatedVariant.id,
+                        data: { isActive: true },
+                      });
+                      toast.success("Item Activated", "Item is now active and will appear on the storefront.");
+                    } catch (e) {
+                      console.error("Failed to activate variant:", e);
+                    }
+                    setIsAddVariantOpen(false);
+                    setNewlyCreatedVariant(null);
+                  }}
+                  className="h-10 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] cursor-pointer"
+                >
+                  Save & Activate
+                </Button>
+              )}
             </div>
           </div>
         )}

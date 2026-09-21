@@ -1,5 +1,6 @@
 import { createApiHandler } from "@/lib/api/api-handler";
 import { apiSuccess, apiCreated, apiFromError } from "@/lib/api/api-response";
+import { ApiError } from "@/lib/api/api-error";
 import { orderService } from "@/features/orders/services/order.service";
 import {
   getOrdersQuerySchema,
@@ -40,6 +41,10 @@ export const POST = createApiHandler(
   {
     POST: async (_request, context) => {
       try {
+        const userRole = (context.session?.user as any)?.role;
+        if (userRole === "ADMIN" || userRole === "STAFF") {
+          throw ApiError.forbidden("You are admin kindly comes with customer login");
+        }
         const userId = getUserId(context);
         const body = context.body as PlaceOrderSchemaInput;
         const order = await orderService.placeOrder(userId, body);

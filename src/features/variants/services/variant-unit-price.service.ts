@@ -102,7 +102,13 @@ export const variantUnitPriceService = {
       throw ApiError.conflict("This item already has a price for that unit and measurement");
     }
 
-    if (data.isDefault) {
+    const existingPricesCount = await db.variantUnitPrice.count({
+      where: { variant_id: variant.id, deleted_at: null },
+    });
+    const isFirstPrice = existingPricesCount === 0;
+    const isDefault = data.isDefault !== undefined ? data.isDefault : isFirstPrice;
+
+    if (isDefault) {
       await variantUnitPriceRepository.unsetDefaultForVariant(variant.id);
     }
 
@@ -113,7 +119,7 @@ export const variantUnitPriceService = {
       unit_value: data.unitValue,
       sku: data.sku,
       base_price: data.basePrice,
-      is_default: data.isDefault ?? false,
+      is_default: isDefault,
       isActive: data.isActive !== undefined ? data.isActive : true,
       created_by: adminId,
       updated_by: adminId,
@@ -309,11 +315,48 @@ export const variantUnitPriceService = {
       unitPrice.id
     );
 
+    const chartData: PriceHistoryChartItem[] = [];
+    const normalizedPeriod = (period || "1y").toLowerCase();
+
+    if (normalizedPeriod === "30d" || normalizedPeriod === "1m") {
+      const dayIntervals = [29, 24, 19, 14, 9, 4, 0];
+      for (const daysAgo of dayIntervals) {
+        const d = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        const dateKey = `${year}-${month}-${day}`;
+        const endOfTargetDay = new Date(year, d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+        const historiesUpToDate = histories.filter(
+          (h) => new Date(h.changed_at) <= endOfTargetDay
+        );
+
+        let price = currentBasePrice;
+        if (historiesUpToDate.length > 0) {
+          const latestRecord = historiesUpToDate[historiesUpToDate.length - 1];
+          price =
+            latestRecord.new_base_price !== null
+              ? Number(latestRecord.new_base_price)
+              : currentBasePrice;
+        } else if (histories.length > 0) {
+          const earliestRecord = histories[0];
+          price =
+            earliestRecord.old_base_price !== null
+              ? Number(earliestRecord.old_base_price)
+              : currentBasePrice;
+        }
+
+        chartData.push({ month: dateKey, price });
+      }
+
+      return chartData;
+    }
+
     let monthsCount = 12;
-    if (period === "1m") monthsCount = 1;
-    else if (period === "3m") monthsCount = 3;
-    else if (period === "6m") monthsCount = 6;
-    else if (period === "1y") monthsCount = 12;
+    if (normalizedPeriod === "6m") monthsCount = 6;
+    else if (normalizedPeriod === "3m") monthsCount = 3;
+    else if (normalizedPeriod === "1y") monthsCount = 12;
 
     const now = new Date();
     const monthsList: string[] = [];
@@ -324,8 +367,6 @@ export const variantUnitPriceService = {
       const month = String(d.getUTCMonth() + 1).padStart(2, "0");
       monthsList.push(`${year}-${month}`);
     }
-
-    const chartData: PriceHistoryChartItem[] = [];
 
     for (const monthStr of monthsList) {
       const [yearStr, monthNumStr] = monthStr.split("-");

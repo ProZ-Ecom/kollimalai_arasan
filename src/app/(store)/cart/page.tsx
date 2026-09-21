@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   RefreshCw,
   AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CartItem } from "@/features/cart/components/CartItem";
@@ -76,6 +77,9 @@ export default function CartPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+  const userRole = (session?.user as any)?.role?.toUpperCase();
+  const isAdminUser = userRole === "ADMIN" || userRole === "STAFF";
 
   const {
     data: cart,
@@ -180,6 +184,10 @@ export default function CartPage() {
   };
 
   const handleCheckout = () => {
+    if (isAdminUser) {
+      alert("You are admin kindly comes with customer login");
+      return;
+    }
     setIsCheckingOut(true);
     router.push("/checkout");
   };
@@ -245,6 +253,21 @@ export default function CartPage() {
         </div>
       </div>
 
+      {/* Admin Notice Banner */}
+      {isAdminUser && (
+        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:p-5 text-amber-950 flex items-start gap-3 shadow-xs">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-amber-900">
+              You are admin kindly comes with customer login
+            </h3>
+            <p className="text-xs sm:text-sm text-amber-800 mt-0.5">
+              Admin accounts can browse products, add items to the cart, and view the wishlist, but cannot place orders or initiate payments. Please log in with a customer account to checkout.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Cart Item Cards List */}
@@ -275,6 +298,7 @@ export default function CartPage() {
               summary={summary}
               onCheckout={handleCheckout}
               isCheckingOut={isCheckingOut}
+              isAdminUser={isAdminUser}
             />
           </div>
         </div>

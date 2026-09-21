@@ -59,7 +59,10 @@ async function formatAdminProductResponse(
     product.product_hsn_codes?.code ||
     null;
 
-  const imageUrl = product.images?.[0]?.image_url || null;
+  const primaryImg =
+    product.images?.find((img) => img.isPrimary)?.image_url ??
+    product.images?.[0]?.image_url ??
+    null;
 
   return {
     id: productUuid,
@@ -71,7 +74,7 @@ async function formatAdminProductResponse(
     hsnCodeName,
     name: product.name,
     slug: product.slug,
-    imageUrl,
+    imageUrl: primaryImg,
     status: Boolean(product.status),
     isActive: Boolean(product.isActive),
     createdAt: product.createdAt,
@@ -134,10 +137,14 @@ export const productService = {
       throw ApiError.badRequest("Invalid or inactive brand");
     }
 
-    // 3. Resolve & Validate HSN Code UUID
-    const hsnCode = await hsnCodeRepository.findByUuid(data.hsnCodeId);
-    if (!hsnCode || !hsnCode.is_active) {
-      throw ApiError.badRequest("Invalid or inactive HSN code");
+    // 3. Resolve & Validate HSN Code UUID (optional)
+    let resolvedHsnCodeId: bigint | null = null;
+    if (data.hsnCodeId) {
+      const hsnCode = await hsnCodeRepository.findByUuid(data.hsnCodeId);
+      if (!hsnCode || !hsnCode.is_active) {
+        throw ApiError.badRequest("Invalid or inactive HSN code");
+      }
+      resolvedHsnCodeId = hsnCode.id;
     }
 
     // 4. Check duplicate slug
@@ -156,7 +163,7 @@ export const productService = {
       uuid: crypto.randomUUID(),
       categoryId: category.id,
       brandId: brand.id,
-      hsn_code_id: hsnCode.id,
+      hsn_code_id: resolvedHsnCodeId,
       name: data.name,
       slug: data.slug, // Frontend-supplied slug preserved without modification
       status: true, // Static reserved field - always true
@@ -165,7 +172,24 @@ export const productService = {
       updated_by: adminId,
     });
 
-    return formatAdminProductResponse(created, { uuid: category.uuid, name: category.name });
+    const imgUrl = (data as any).productImage || (data as any).imageUrl;
+    let images: Array<{ id: bigint; image_url: string; isPrimary: boolean; sortOrder: number }> = [];
+    if (imgUrl) {
+      const createdImg = await db.productImage.create({
+        data: {
+          productId: created.id,
+          image_url: imgUrl,
+          isPrimary: true,
+          sortOrder: 0,
+          is_active: true,
+          created_by: adminId,
+          updated_by: adminId,
+        },
+      });
+      images = [createdImg];
+    }
+
+    return formatAdminProductResponse({ ...created, images }, { uuid: category.uuid, name: category.name });
   },
 
   async getAdminProducts(params: GetAdminProductsParams = {}) {
@@ -347,11 +371,15 @@ export const productService = {
 
     // Resolve HSN Code UUID if provided
     if (data.hsnCodeId !== undefined) {
-      const hsnCode = await hsnCodeRepository.findByUuid(data.hsnCodeId);
-      if (!hsnCode || !hsnCode.is_active) {
-        throw ApiError.badRequest("Invalid or inactive HSN code");
+      if (data.hsnCodeId === null || data.hsnCodeId === "") {
+        updateData.hsn_code_id = null;
+      } else {
+        const hsnCode = await hsnCodeRepository.findByUuid(data.hsnCodeId);
+        if (!hsnCode || !hsnCode.is_active) {
+          throw ApiError.badRequest("Invalid or inactive HSN code");
+        }
+        updateData.hsn_code_id = hsnCode.id;
       }
-      updateData.hsn_code_id = hsnCode.id;
     }
 
     // Check duplicate slug if slug changes
@@ -377,7 +405,40 @@ export const productService = {
       throw ApiError.notFound("Product not found");
     }
 
-    return formatAdminProductResponse(updated, cachedCategory);
+    const imgUrl = (data as any).productImage ?? (data as any).imageUrl;
+    if (imgUrl !== undefined) {
+      if (imgUrl) {
+        const existingImg = await db.productImage.findFirst({
+          where: { productId: existing.id, is_active: true },
+        });
+        if (existingImg) {
+          await db.productImage.update({
+            where: { id: existingImg.id },
+            data: { image_url: imgUrl, isPrimary: true, updated_by: adminId },
+          });
+        } else {
+          await db.productImage.create({
+            data: {
+              productId: existing.id,
+              image_url: imgUrl,
+              isPrimary: true,
+              sortOrder: 0,
+              is_active: true,
+              created_by: adminId,
+              updated_by: adminId,
+            },
+          });
+        }
+      } else {
+        await db.productImage.updateMany({
+          where: { productId: existing.id, is_active: true },
+          data: { is_active: false, isPrimary: false, updated_at: new Date(), ...(adminId ? { updated_by: adminId } : {}) },
+        });
+      }
+    }
+
+    const refreshed = await productRepository.findByUuid(uuid);
+    return formatAdminProductResponse(refreshed ?? updated, cachedCategory);
   },
 
   async deleteAdminProduct(uuid: string, adminEmail?: string) {

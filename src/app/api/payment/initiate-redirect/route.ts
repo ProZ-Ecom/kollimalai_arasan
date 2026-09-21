@@ -21,6 +21,11 @@ export const POST = createApiHandler(
       const sessionUserId = context.session?.user?.id;
       if (!sessionUserId) throw ApiError.unauthorized("Authentication required");
 
+      const userRole = (context.session?.user as any)?.role;
+      if (userRole === "ADMIN" || userRole === "STAFF") {
+        throw ApiError.forbidden("You are admin kindly comes with customer login");
+      }
+
       const body = context.body as z.infer<typeof schema>;
       const result = await razorpayService.initiateRedirectPayment(sessionUserId, body);
 
