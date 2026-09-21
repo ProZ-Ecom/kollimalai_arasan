@@ -31,6 +31,8 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   searchKey?: string;
   searchPlaceholder?: string;
+  searchValue?: string;
+  onSearch?: (value: string) => void;
   pageSize?: number;
   pageSizeOptions?: number[];
   onPageSizeChange?: (pageSize: number) => void;
@@ -113,6 +115,8 @@ function DataTable<TData, TValue>({
   data,
   searchKey,
   searchPlaceholder = "Search...",
+  searchValue,
+  onSearch,
   pageSize: controlledPageSize,
   pageSizeOptions = [10, 20, 30, 50],
   onPageSizeChange,
@@ -265,11 +269,15 @@ function DataTable<TData, TValue>({
       )}
     >
       {searchKey && (
-        <div className="flex items-center gap-2 bg-transparent p-3 pb-0 flex-shrink-0">
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5 bg-white border-b border-neutral-200/80 flex-shrink-0">
           <SearchInput
             placeholder={searchPlaceholder}
             defaultValue={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
-            onSearch={(value) => table.getColumn(searchKey)?.setFilterValue(value)}
+            value={searchValue}
+            onSearch={(value) => {
+              table.getColumn(searchKey)?.setFilterValue(value);
+              onSearch?.(value);
+            }}
             className="w-full max-w-sm"
           />
         </div>
