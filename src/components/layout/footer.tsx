@@ -57,20 +57,20 @@ export function Footer() {
     };
 
     // 1. Call
-    const defaultCallVal = defaultContacts[0]?.value || "+91 9486150579";
+    const defaultCallVal = defaultContacts[0]?.value || "+91 7418188950";
     const callValue = formatPhoneDisplay(phone, defaultCallVal);
     const callDigits = (phone || defaultCallVal).replace(/\D/g, "");
     const cleanCallNumber = callDigits.length === 10 ? `91${callDigits}` : callDigits;
-    const callLink = cleanCallNumber ? `tel:+${cleanCallNumber}` : "tel:+919486150579";
+    const callLink = cleanCallNumber ? `tel:+${cleanCallNumber}` : "tel:+917418188950";
 
     // 2. WhatsApp (uses phonenumber field value as specified)
-    const defaultWaVal = defaultContacts[1]?.value || "+91 8667380899";
+    const defaultWaVal = defaultContacts[1]?.value || "+91 7418188950";
     const waValue = formatPhoneDisplay(phone, defaultWaVal);
     const waDigits = (phone || defaultWaVal).replace(/\D/g, "");
     const cleanWaNumber = waDigits.length === 10 ? `91${waDigits}` : waDigits;
     const waLink = cleanWaNumber
       ? `https://wa.me/${cleanWaNumber}`
-      : "https://wa.me/918667380899";
+      : "https://wa.me/917418188950";
 
     // 3. Mail
     const companyEmail = company?.email?.trim();
@@ -107,7 +107,7 @@ export function Footer() {
 
   // WhatsApp Link for Social Links
   const waLink = React.useMemo(() => {
-    return dynamicContacts.find((c) => c.id === 2)?.link || "https://wa.me/918667380899";
+    return dynamicContacts.find((c) => c.id === 2)?.link || "https://wa.me/917418188950";
   }, [dynamicContacts]);
 
   // Company Name
