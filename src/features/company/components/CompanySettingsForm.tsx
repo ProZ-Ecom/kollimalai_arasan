@@ -300,7 +300,7 @@ export function CompanySettingsForm() {
               rows={2}
               value={formData.address || ""}
               onChange={(e) => handleInputChange("address", e.target.value)}
-              placeholder="Thuraiyur Road, N Kosavampatti"
+              placeholder="18/41, MGR NAGAR, SAKKARAI PATTI, VALAVANTHI NADU, SEMMEDU POST, KOLLI HILLS TK"
             />
           </div>
 
@@ -309,7 +309,7 @@ export function CompanySettingsForm() {
             <Input
               value={formData.city || ""}
               onChange={(e) => handleInputChange("city", e.target.value)}
-              placeholder="Namakkal"
+              placeholder="NAMAKKAL DISTRICT"
             />
           </div>
 
@@ -336,7 +336,7 @@ export function CompanySettingsForm() {
             <Input
               value={formData.pincode || ""}
               onChange={(e) => handleInputChange("pincode", e.target.value)}
-              placeholder="637002"
+              placeholder="637411"
               maxLength={6}
             />
           </div>
