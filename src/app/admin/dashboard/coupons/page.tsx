@@ -208,6 +208,8 @@ export default function AdminCouponsPage() {
             data={coupons}
             searchKey="code"
             searchPlaceholder="Search coupons..."
+            searchValue={search}
+            onSearch={(val) => setSearch(val)}
             pageSize={20}
             className="bg-white border border-neutral-200"
           />
