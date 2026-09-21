@@ -28,7 +28,7 @@ export const companyApi = {
       "/api/admin/company",
       data
     );
-    return response.data;
+    return response.data!;
   },
 
   /**
@@ -44,6 +44,6 @@ export const companyApi = {
       company: CompanyResponse;
     }>("/api/admin/company/logo", formData);
 
-    return response.data;
+    return response.data!;
   },
 };

@@ -57,7 +57,9 @@ export function createApiHandler(
 ) {
   return async (
     request: NextRequest,
-    routeContext?: { params?: Promise<Record<string, string>> }
+    routeContext: { params: Promise<Record<string, string>> } = {
+      params: Promise.resolve({}),
+    }
   ) => {
     const method = request.method as HttpMethod;
 

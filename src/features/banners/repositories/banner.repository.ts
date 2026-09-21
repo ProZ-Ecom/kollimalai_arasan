@@ -208,7 +208,7 @@ export const bannerRepository = {
     }
 
     if (params.isActive !== undefined) {
-      where.isActive = params.isActive;
+      where.isActive = Boolean(params.isActive);
     }
 
     if (params.search) {
@@ -260,7 +260,7 @@ export const bannerRepository = {
     ]);
 
     return {
-      data: records.map(formatBanner),
+      data: (records as Prisma.BannerGetPayload<{ include: typeof bannerIncludePosition }>[]).map(formatBanner),
       meta: {
         page,
         limit,

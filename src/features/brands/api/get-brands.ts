@@ -12,7 +12,6 @@ export async function getBrands(params?: Record<string, string | number | boolea
     meta: {
       page: response.meta?.page ?? page,
       limit: response.meta?.limit ?? limit,
-      pageSize: response.meta?.pageSize ?? limit,
       total,
       totalPages,
     },

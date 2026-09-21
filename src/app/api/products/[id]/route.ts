@@ -7,7 +7,7 @@ export const GET = createApiHandler({
   GET: async (_request, context) => {
     const id = context.params?.id;
     if (!id) return apiError("Product ID is required", 400);
-    const product = await productService.getProduct(id);
+    const product = await productService.getAdminProductByUuid(id);
     return apiSuccess(product, "Product fetched successfully");
   },
 });
@@ -17,8 +17,9 @@ export const PUT = createApiHandler(
     PUT: async (_request, context) => {
       const id = context.params?.id;
       if (!id) return apiError("Product ID is required", 400);
-      const body = context.body as ReturnType<typeof updateProductSchema.parse>;
-      const product = await productService.updateProduct(parseInt(id), body);
+      const body = context.body as any;
+      const adminEmail = context.session?.user?.email ?? undefined;
+      const product = await productService.updateAdminProduct(id, body, adminEmail);
       return apiSuccess(product, "Product updated successfully");
     },
   },
@@ -34,7 +35,8 @@ export const DELETE = createApiHandler({
   DELETE: async (_request, context) => {
     const id = context.params?.id;
     if (!id) return apiError("Product ID is required", 400);
-    await productService.deleteProduct(parseInt(id));
+    const adminEmail = context.session?.user?.email ?? undefined;
+    await productService.deleteAdminProduct(id, adminEmail);
     return apiSuccess(null, "Product deleted successfully");
   },
 }, {

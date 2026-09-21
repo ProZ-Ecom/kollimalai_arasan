@@ -9,6 +9,7 @@ import {
   acceptDelivery,
   markOutForDelivery,
   markDelivered,
+  markFailed,
   getAdminDeliveryOrders,
   getAdminDeliveryStaff,
   assignDelivery,
@@ -16,6 +17,7 @@ import {
 import type {
   StaffDeliveryListInput,
   MarkDeliveredInput,
+  MarkFailedInput,
   AdminDeliveryOrdersListInput,
   AdminDeliveryStaffListInput,
   AssignDeliveryInput,
@@ -126,6 +128,28 @@ export function useMarkDelivered() {
     meta: {
       successMessage: "Order marked as Delivered successfully.",
       errorMessage: "Failed to mark order as delivered",
+    },
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: deliveryKeys.all });
+      queryClient.invalidateQueries({ queryKey: deliveryKeys.detail(variables.uuid) });
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
+      queryClient.invalidateQueries({ queryKey: adminOrderKeys.all });
+    },
+  });
+}
+
+export function useMarkFailed() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    DeliveryTransitionResult,
+    Error,
+    { uuid: string; data?: MarkFailedInput }
+  >({
+    mutationFn: ({ uuid, data }) => markFailed(uuid, data),
+    meta: {
+      successMessage: "Order marked as delivery failed.",
+      errorMessage: "Failed to mark order as failed",
     },
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: deliveryKeys.all });

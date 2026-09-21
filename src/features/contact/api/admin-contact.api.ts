@@ -53,7 +53,7 @@ export async function getAdminContactMessageDetail(
     `/api/admin/contact-messages/${encodeURIComponent(cleanUuid)}`
   );
 
-  return response.data;
+  return response.data!;
 }
 
 /**
@@ -70,7 +70,7 @@ export async function updateContactMessageStatus(
     { status }
   );
 
-  return response.data;
+  return response.data!;
 }
 
 /**
@@ -87,5 +87,5 @@ export async function replyContactMessage(
     { message }
   );
 
-  return response.data;
+  return response.data!;
 }

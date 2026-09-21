@@ -560,4 +560,48 @@ export const deliveryService = {
       orderStatus: result.order.order_status,
     };
   },
+
+  async markFailed(
+    sessionUserId: string,
+    uuid: string,
+    input?: { reason?: string; note?: string }
+  ): Promise<DeliveryTransitionResult> {
+    const staffUser = await userRepository.findById(sessionUserId);
+    if (!staffUser || !staffUser.internalId) {
+      throw ApiError.unauthorized("Staff member not found");
+    }
+
+    const shipment = await deliveryRepository.findStaffDeliveryByUuid(
+      uuid,
+      staffUser.internalId
+    );
+
+    if (!shipment) {
+      const anyShipment = await deliveryRepository.findShipmentByUuidOnly(uuid);
+      if (anyShipment) {
+        throw ApiError.forbidden("You do not have access to this delivery");
+      }
+      throw ApiError.notFound("Delivery not found");
+    }
+
+    if (shipment.status === "failed") {
+      throw ApiError.badRequest("Delivery is already marked as failed");
+    }
+
+    const reason = input?.reason || "Delivery failed";
+    const result = await deliveryRepository.markFailedTransaction(
+      shipment.id,
+      shipment.orders.id,
+      staffUser.internalId,
+      reason,
+      input?.note
+    );
+
+    return {
+      shipmentId: result.shipment.uuid || String(result.shipment.id),
+      orderId: result.order.uuid || String(result.order.id),
+      shipmentStatus: result.shipment.status,
+      orderStatus: result.order.order_status,
+    };
+  },
 };

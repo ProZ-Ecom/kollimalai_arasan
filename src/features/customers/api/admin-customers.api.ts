@@ -148,7 +148,7 @@ export async function updateCustomerStatus(
     `/api/admin/customers/${encodeURIComponent(cleanUuid)}/status`,
     { isActive }
   );
-  return response.data;
+  return response.data!;
 }
 
 export async function countAdminCustomers(

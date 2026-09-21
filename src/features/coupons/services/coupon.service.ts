@@ -23,14 +23,14 @@ export const couponService = {
 
     return couponRepository.create({
       code: data.code.toUpperCase(),
-      type: data.type,
+      type: data.type === "PERCENTAGE" ? "percentage" : "flat",
       value: data.value,
       minOrderAmount: data.minOrderAmount,
-      maxDiscount: data.maxDiscount,
+      max_discount_amount: data.maxDiscount,
       usageLimit: data.usageLimit,
       isActive: data.isActive ?? true,
-      startsAt: data.startsAt,
-      expiresAt: data.expiresAt,
+      valid_from: data.startsAt,
+      valid_to: data.expiresAt,
     });
   },
 
@@ -49,14 +49,14 @@ export const couponService = {
 
     const updateData: Record<string, unknown> = {};
     if (data.code !== undefined) updateData.code = data.code.toUpperCase();
-    if (data.type !== undefined) updateData.type = data.type;
+    if (data.type !== undefined) updateData.type = data.type === "PERCENTAGE" ? "percentage" : "flat";
     if (data.value !== undefined) updateData.value = data.value;
     if (data.minOrderAmount !== undefined) updateData.minOrderAmount = data.minOrderAmount;
-    if (data.maxDiscount !== undefined) updateData.maxDiscount = data.maxDiscount;
+    if (data.maxDiscount !== undefined) updateData.max_discount_amount = data.maxDiscount;
     if (data.usageLimit !== undefined) updateData.usageLimit = data.usageLimit;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
-    if (data.startsAt !== undefined) updateData.startsAt = data.startsAt;
-    if (data.expiresAt !== undefined) updateData.expiresAt = data.expiresAt;
+    if (data.startsAt !== undefined) updateData.valid_from = data.startsAt;
+    if (data.expiresAt !== undefined) updateData.valid_to = data.expiresAt;
 
     return couponRepository.update(id, updateData as never);
   },

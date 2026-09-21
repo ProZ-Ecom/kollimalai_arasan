@@ -25,7 +25,7 @@ const bannerPositionFormSchema = z.object({
       "Use lowercase letters, numbers and hyphens only (e.g. home-hero)"
     ),
   page: z.string().trim().max(100).optional().nullable(),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 export type BannerPositionFormData = z.infer<typeof bannerPositionFormSchema>;

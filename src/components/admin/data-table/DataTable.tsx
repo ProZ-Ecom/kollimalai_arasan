@@ -265,7 +265,7 @@ function DataTable<TData, TValue>({
       )}
     >
       {searchKey && (
-        <div className="flex items-center gap-2 p-3 pb-0 flex-shrink-0">
+        <div className="flex items-center gap-2 bg-transparent p-3 pb-0 flex-shrink-0">
           <SearchInput
             placeholder={searchPlaceholder}
             defaultValue={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
@@ -294,11 +294,11 @@ function DataTable<TData, TValue>({
                         className={cn(
                           "h-14 px-4 text-left align-middle text-xs font-bold tracking-wider whitespace-nowrap text-white uppercase sm:px-5 bg-[var(--color-secondary-600)] border-b border-[var(--color-secondary-700)] sticky top-0 z-10",
                           isSelect &&
-                            "w-12 px-3 sm:px-4 text-center sticky top-0 left-0 z-30 bg-[var(--color-secondary-600)] border-r border-[var(--color-secondary-700)] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)]",
+                          "w-12 px-3 sm:px-4 text-center sticky top-0 left-0 z-30 bg-[var(--color-secondary-600)] border-r border-[var(--color-secondary-700)] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)]",
                           isActions &&
-                            "text-center sticky top-0 right-0 z-30 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.15)] border-l border-[var(--color-secondary-700)] bg-[var(--color-secondary-600)] text-white",
+                          "text-center sticky top-0 right-0 z-30 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.15)] border-l border-[var(--color-secondary-700)] bg-[var(--color-secondary-600)] text-white",
                           header.column.getCanSort() &&
-                            "cursor-pointer select-none hover:text-white/80"
+                          "cursor-pointer select-none hover:text-white/80"
                         )}
                         onClick={header.column.getToggleSortingHandler()}
                       >
@@ -311,9 +311,9 @@ function DataTable<TData, TValue>({
                           {header.isPlaceholder
                             ? null
                             : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
                           {header.column.getCanSort() && (
                             <span className="text-white/80">
                               {header.column.getIsSorted() === "asc" ? (
@@ -356,17 +356,17 @@ function DataTable<TData, TValue>({
                           className={cn(
                             "px-4 py-4 align-middle whitespace-nowrap sm:px-5 bg-white group-hover:bg-[var(--color-neutral-50)] transition-colors border-b border-gray-200",
                             row.getIsSelected() &&
-                              "bg-secondary-50/40 group-hover:bg-secondary-50/60",
+                            "bg-secondary-50/40 group-hover:bg-secondary-50/60",
                             isSelect &&
-                              "w-12 px-3 sm:px-4 text-center [&>div]:justify-center [&>div]:items-center sticky left-0 z-20 bg-white group-hover:bg-[var(--color-neutral-50)] border-r border-neutral-200/80 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.04)]",
+                            "w-12 px-3 sm:px-4 text-center [&>div]:justify-center [&>div]:items-center sticky left-0 z-20 bg-white group-hover:bg-[var(--color-neutral-50)] border-r border-neutral-200/80 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.04)]",
                             isSelect &&
-                              row.getIsSelected() &&
-                              "bg-secondary-50/80 group-hover:bg-secondary-50/90",
+                            row.getIsSelected() &&
+                            "bg-secondary-50/80 group-hover:bg-secondary-50/90",
                             isActions &&
-                              "text-center [&>div]:justify-center [&>div]:items-center sticky right-0 z-20 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.06)] border-l border-neutral-200/80 bg-white group-hover:bg-[var(--color-neutral-50)]",
+                            "text-center [&>div]:justify-center [&>div]:items-center sticky right-0 z-20 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.06)] border-l border-neutral-200/80 bg-white group-hover:bg-[var(--color-neutral-50)]",
                             isActions &&
-                              row.getIsSelected() &&
-                              "bg-secondary-50/80 group-hover:bg-secondary-50/90"
+                            row.getIsSelected() &&
+                            "bg-secondary-50/80 group-hover:bg-secondary-50/90"
                           )}
                         >
                           {flexRender(

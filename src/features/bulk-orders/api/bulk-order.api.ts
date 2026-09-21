@@ -14,5 +14,5 @@ export async function submitBulkOrderEnquiry(
     input
   );
 
-  return response.data;
+  return response.data!;
 }
