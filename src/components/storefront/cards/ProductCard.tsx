@@ -47,8 +47,44 @@ export function ProductCard({
   const isWishlist = type === "wishlist";
 
   const unitPrices = product.unitPrices ?? [];
+
+  // Show only 2 sizes on cards: default size and highest size
+  const displayedUnitPrices = React.useMemo(() => {
+    if (unitPrices.length <= 2) return unitPrices;
+
+    const parseWeight = (label?: string): number => {
+      const match = String(label || "").trim().toLowerCase().match(/^([\d.]+)\s*([a-z]*)/i);
+      if (!match) return 0;
+      const num = parseFloat(match[1]) || 0;
+      const unit = (match[2] || "").toLowerCase();
+      if (unit === "kg" || unit === "l" || unit === "liter" || unit === "litre") return num * 1000;
+      if (unit === "g" || unit === "gm" || unit === "gram" || unit === "grams") return num;
+      if (unit === "ml") return num;
+      return num;
+    };
+
+    const defaultUnit = unitPrices.find((u) => u.isDefault) || unitPrices[0];
+    let highestUnit = unitPrices[unitPrices.length - 1];
+    let maxWeight = parseWeight(defaultUnit.label);
+
+    for (let i = 1; i < unitPrices.length; i++) {
+      const u = unitPrices[i];
+      const w = parseWeight(u.label) || u.basePrice;
+      if (w > maxWeight) {
+        maxWeight = w;
+        highestUnit = u;
+      }
+    }
+
+    if (highestUnit.id === defaultUnit.id) return [defaultUnit];
+
+    const wDef = parseWeight(defaultUnit.label);
+    const wHigh = parseWeight(highestUnit.label);
+    return wDef <= wHigh ? [defaultUnit, highestUnit] : [highestUnit, defaultUnit];
+  }, [unitPrices]);
+
   const defaultUnitPriceId =
-    unitPrices.find((u) => u.isDefault)?.id ?? unitPrices[0]?.id ?? "";
+    displayedUnitPrices.find((u) => u.isDefault)?.id ?? displayedUnitPrices[0]?.id ?? "";
 
   const [selectedUnitPriceId, setSelectedUnitPriceId] = React.useState(defaultUnitPriceId);
   // Reset the selected pack size during render (not in an effect) whenever
@@ -61,7 +97,11 @@ export function ProductCard({
   }
 
   const selectedUnitPrice =
-    unitPrices.find((u) => u.id === selectedUnitPriceId) ?? unitPrices[0] ?? null;
+    displayedUnitPrices.find((u) => u.id === selectedUnitPriceId) ??
+    unitPrices.find((u) => u.id === selectedUnitPriceId) ??
+    displayedUnitPrices[0] ??
+    unitPrices[0] ??
+    null;
 
   const wishlistIcon = isWishlisted ? ICONS.wishlist_red : ICONS.wishlist;
 
@@ -218,9 +258,9 @@ export function ProductCard({
         </Link>
 
         <div className="flex flex-col items-end shrink-0">
-          {isProduct && unitPrices.length > 0 && (
+          {isProduct && displayedUnitPrices.length > 0 && (
             <div className="flex flex-wrap gap-1 justify-end">
-              {unitPrices.map((unitPrice) => (
+              {displayedUnitPrices.map((unitPrice) => (
                 <button
                   key={unitPrice.id}
                   type="button"
