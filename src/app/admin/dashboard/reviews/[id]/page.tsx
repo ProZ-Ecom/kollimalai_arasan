@@ -36,12 +36,12 @@ import {
 } from "@/features/reviews/hooks/use-admin-reviews";
 
 interface ReviewDetailPageProps {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function ReviewDetailPage({ params }: ReviewDetailPageProps) {
   const router = useRouter();
-  const resolvedParams = "then" in params ? use(params) : params;
+  const resolvedParams = use(params);
   const reviewId = resolvedParams.id;
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
