@@ -167,7 +167,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 
     return (
       <div
-        className={cn("w-full relative", wrapperClassName)}
+        className={cn("w-full relative", isOpen && "z-30", wrapperClassName)}
         ref={containerRef}
         onKeyDown={handleKeyDown}
       >

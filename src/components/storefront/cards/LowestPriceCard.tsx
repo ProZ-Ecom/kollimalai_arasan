@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Heart } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { ProductImage } from "@/components/common/ProductImage";
+import { Select } from "@/components/ui/select";
 import type { StorefrontProduct } from "@/constants/storefront";
 
 export interface LowestPriceCardProps {
@@ -124,19 +125,19 @@ export function LowestPriceCard({
 
       {/* Pack size dropdown */}
       {unitPrices.length > 0 && (
-        <div className="mt-2.5">
-          <select
+        <div className="mt-2.5 relative">
+          <Select
+            options={unitPrices.map((up) => ({
+              value: up.id,
+              label: `${up.label} = ${formatPrice(up.sellingPrice)}`,
+            }))}
             value={selectedUnitPriceId}
-            onChange={(e) => setSelectedUnitPriceId(e.target.value)}
+            onValueChange={(val) => setSelectedUnitPriceId(val)}
+            size="sm"
+            dropdownPosition="top"
             aria-label="Select pack size"
-            className="w-full cursor-pointer rounded-md border border-theme-border bg-[var(--cream-50)] px-2.5 py-2 text-xs font-medium text-[var(--neutral-900)] focus:outline-none focus:ring-1 focus:ring-secondary-500"
-          >
-            {unitPrices.map((up) => (
-              <option key={up.id} value={up.id}>
-                {up.label} = {formatPrice(up.sellingPrice)}
-              </option>
-            ))}
-          </select>
+            className="h-9 rounded-md border-theme-border bg-[var(--cream-50)] px-2.5 text-xs font-medium text-[var(--neutral-900)] hover:border-secondary-500/50"
+          />
         </div>
       )}
 
