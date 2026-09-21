@@ -274,7 +274,7 @@ function SidebarBrand({ collapsed }: { collapsed?: boolean }) {
   return (
     <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
       <Image
-        src="/logo.svg"
+        src="/logos/logo.svg"
         alt=""
         width={32}
         height={32}
@@ -326,7 +326,7 @@ function SidebarNavigation({
   }, [isStaff]);
 
   return (
-    <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden scrollbar-hide px-3 pb-4">
+    <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden scrollbar-hide px-3 pt-3 pb-4">
       {navigationItems.map((item) => (
         <div key={item.href}>
           {item.section &&
