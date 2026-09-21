@@ -300,7 +300,7 @@ export function CompanySettingsForm() {
               rows={2}
               value={formData.address || ""}
               onChange={(e) => handleInputChange("address", e.target.value)}
-              placeholder="6/1033, Thillai Nagar Trichy Road"
+              placeholder="Thuraiyur Road, N Kosavampatti"
             />
           </div>
 

@@ -181,9 +181,9 @@ export interface FooterSocialIcon {
 }
 
 export const footerSocialIcons: FooterSocialIcon[] = [
-  { id: 1, icon: ICONS.facebook, name: "facebook", href: "#" },
+  { id: 1, icon: ICONS.facebook, name: "facebook", href: "https://www.facebook.com/share/18fDBEXh18/" },
   { id: 2, icon: ICONS.instagram, name: "instagram", href: "#" },
-  { id: 3, icon: ICONS.youtube, name: "youtube", href: "#" },
+  { id: 3, icon: ICONS.youtube, name: "youtube", href: "https://youtube.com/@kollimalaiarasan?si=CMvlWG_zegPDyt5O" },
   { id: 4, icon: ICONS.whatsapp1, name: "whatsapp", href: "https://wa.me/918667380899" },
 ];
 

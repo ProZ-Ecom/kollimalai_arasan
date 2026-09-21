@@ -120,7 +120,7 @@ export function Footer() {
   // Formatted Location Address
   const formattedLocation = React.useMemo(() => {
     if (!company) {
-      return "6/1033, Thillai Nagar Trichy Road, Namakkal - 637 002.";
+      return "Kollimalai Arasan, Thuraiyur Road, N Kosavampatti, Namakkal 637002";
     }
 
     const parts: string[] = [];
@@ -136,18 +136,15 @@ export function Footer() {
     }
 
     if (parts.length === 0) {
-      return "6/1033, Thillai Nagar Trichy Road, Namakkal - 637 002.";
+      return "Kollimalai Arasan, Thuraiyur Road, N Kosavampatti, Namakkal 637002";
     }
 
     return parts.join(", ");
   }, [company]);
 
   const mapsUrl = React.useMemo(() => {
-    if (!company?.address && !company?.city) {
-      return "https://www.google.com/maps/search/?api=1&query=Kolli+Hills+Tamil+Nadu";
-    }
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formattedLocation)}`;
-  }, [company, formattedLocation]);
+  }, [formattedLocation]);
 
   return (
     <footer className="header-font">
