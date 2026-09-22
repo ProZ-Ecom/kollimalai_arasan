@@ -5,47 +5,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronRight, Sparkles } from "lucide-react";
-import { ICONS, CATEGORYLOGOS } from "@/constants/storefront";
+import { ICONS } from "@/constants/storefront";
 import { useCustomerCategories } from "@/features/customers/hooks/use-customer-catalog";
 import type { CustomerCategoryDto } from "@/features/customers/types/catalog.types";
 import { getImageUrl } from "@/lib/utils";
-
-const fallbackCategoryLogos: Record<string, string> = {
-  "flavors & spices": CATEGORYLOGOS.flavourSpices,
-  "sweets": CATEGORYLOGOS.sweet,
-  "healthy bites": CATEGORYLOGOS.bites,
-  "traditional delights": CATEGORYLOGOS.traditional,
-  "bakery": CATEGORYLOGOS.bakery,
-  "chips": CATEGORYLOGOS.chips,
-  "namkeen": CATEGORYLOGOS.flavourSpices,
-  "snacks": CATEGORYLOGOS.traditional,
-  "cakes": CATEGORYLOGOS.bakery,
-};
 
 export function resolveCategoryIcon(category: CustomerCategoryDto): string {
   if (category.image?.trim()) {
     return getImageUrl(category.image);
   }
-  const normalizedName = category.name.trim().toLowerCase();
-  if (fallbackCategoryLogos[normalizedName]) {
-    return fallbackCategoryLogos[normalizedName];
-  }
-  if (normalizedName.includes("spice") || normalizedName.includes("masala") || normalizedName.includes("flavor") || normalizedName.includes("flavour")) {
-    return CATEGORYLOGOS.flavourSpices;
-  }
-  if (normalizedName.includes("sweet") || normalizedName.includes("dessert") || normalizedName.includes("halwa")) {
-    return CATEGORYLOGOS.sweet;
-  }
-  if (normalizedName.includes("bakery") || normalizedName.includes("cake") || normalizedName.includes("biscuit") || normalizedName.includes("cookie")) {
-    return CATEGORYLOGOS.bakery;
-  }
-  if (normalizedName.includes("chip") || normalizedName.includes("crisp")) {
-    return CATEGORYLOGOS.chips;
-  }
-  if (normalizedName.includes("bite") || normalizedName.includes("nut") || normalizedName.includes("fruit") || normalizedName.includes("healthy") || normalizedName.includes("millet") || normalizedName.includes("pulse")) {
-    return CATEGORYLOGOS.bites;
-  }
-  return CATEGORYLOGOS.traditional;
+  return "/images/kolli_spices_hero.jpg";
 }
 
 export interface CategoryNavDropdownProps {

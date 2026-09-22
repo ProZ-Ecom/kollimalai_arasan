@@ -16,10 +16,14 @@ export const PAYMENT_METHOD_OPTIONS: {
   label: string;
   description: string;
 }[] = [
-  { value: "CASH_ON_DELIVERY", label: "Cash on Delivery", description: "Pay in cash when your order arrives" },
-  { value: "UPI", label: "UPI", description: "GPay, PhonePe, Paytm and more" },
-  { value: "CREDIT_CARD", label: "Credit Card", description: "Visa, Mastercard, Amex" },
-  { value: "DEBIT_CARD", label: "Debit Card", description: "Visa, Mastercard, RuPay" },
-  { value: "NET_BANKING", label: "Net Banking", description: "All major banks supported" },
-  { value: "WALLET", label: "Wallet", description: "Paytm wallet and more" },
+  {
+    value: "UPI",
+    label: "Pay Online (Razorpay)",
+    description: "Instant & Secure: UPI (Google Pay, PhonePe, Paytm), Cards, Net Banking & Wallets",
+  },
+  {
+    value: "CASH_ON_DELIVERY",
+    label: "Cash on Delivery (COD)",
+    description: "Pay in cash when your order arrives at your doorstep",
+  },
 ];

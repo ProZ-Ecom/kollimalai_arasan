@@ -39,7 +39,11 @@ import {
   useCreateCustomerOrder,
   CUSTOMER_ORDERS_QUERY_KEY,
 } from "@/features/customers/hooks/use-customer-orders";
-import { customerPaymentApi } from "@/features/customers/api/customer-payment.api";
+import {
+  useCreateRazorpayOrder,
+  useVerifyRazorpayPayment,
+} from "@/features/customers/hooks/use-customer-payment";
+import { loadRazorpayScript } from "@/features/customers/utils/razorpay-loader";
 import { useCheckout } from "@/features/checkout/checkout-context";
 import type { CustomerAddressResponse } from "@/features/customers/types/customer-address.types";
 
@@ -100,6 +104,8 @@ export default function CheckoutPage() {
     useCustomerAddresses();
   const createAddressMutation = useCreateCustomerAddress();
   const createOrderMutation = useCreateCustomerOrder();
+  const createRazorpayOrderMutation = useCreateRazorpayOrder();
+  const verifyRazorpayPaymentMutation = useVerifyRazorpayPayment();
 
   // Selected state
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
@@ -112,10 +118,10 @@ export default function CheckoutPage() {
   const [orderNotes, setOrderNotes] = useState<string>("");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  // Redirect payment in-flight guard
+  // In-flight payment guard
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [isVerifyingPayment] = useState(false); // kept for UI compat
-  const [pendingOrder] = useState<null>(null); // no longer used (redirect flow)
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [pendingOrder] = useState<null>(null);
 
   // Reset in-flight payment loading state when user returns to this page (BFCache / browser Back button)
   useEffect(() => {
@@ -411,8 +417,8 @@ export default function CheckoutPage() {
     }
   };
 
-  // Launch redirect-based Razorpay payment
-  const launchRedirectPayment = async (targetAddressId?: string) => {
+  // Launch in-app Razorpay payment modal
+  const launchInAppRazorpayPayment = async (targetAddressId?: string) => {
     if (isAdminUser) {
       setCheckoutError("You are admin kindly comes with customer login");
       return;
@@ -429,15 +435,98 @@ export default function CheckoutPage() {
     }
 
     try {
-      // Call backend to create Razorpay order + one-time token
-      const result = await customerPaymentApi.initiateRedirectPayment({
+      // 1. Ensure Razorpay SDK script is loaded
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        setIsProcessingPayment(false);
+        setCheckoutError(
+          "Unable to load Razorpay payment gateway. Please check your internet connection."
+        );
+        return;
+      }
+
+      // 2. Call backend to create Razorpay order for current cart
+      const rzpOrder = await createRazorpayOrderMutation.mutateAsync({
+        orderId: "cart",
         shippingAddressId: shippingId,
-        billingAddressId: shippingId,
-        notes: orderNotes.trim() || undefined,
       });
 
-      // Redirect browser to payment app
-      window.location.href = result.paymentUrl;
+      // 3. Find recipient info for prefill
+      const selectedAddr = addresses.find(
+        (a) => a.id === shippingId || (a as any).uuid === shippingId
+      );
+
+      const options = {
+        key: rzpOrder.keyId,
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency || "INR",
+        name: "Kollimalai Arasan",
+        description: "Pure Hills Spices & Farm Products",
+        order_id: rzpOrder.razorpayOrderId,
+        prefill: {
+          name: selectedAddr ? selectedAddr.fullName : (session?.user?.name || ""),
+          contact: selectedAddr ? selectedAddr.phone : "",
+          email: session?.user?.email || "",
+        },
+        theme: {
+          color: "#16a34a",
+        },
+        modal: {
+          ondismiss: function () {
+            setIsProcessingPayment(false);
+            setCheckoutError("Payment was cancelled. Your cart items are still saved.");
+          },
+        },
+        handler: async function (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) {
+          try {
+            setIsProcessingPayment(false);
+            setIsVerifyingPayment(true);
+
+            // 4. Server-side HMAC-SHA256 signature verification & order creation
+            const verifyResult = await verifyRazorpayPaymentMutation.mutateAsync({
+              orderId: "cart",
+              shippingAddressId: shippingId,
+              billingAddressId: shippingId,
+              notes: orderNotes.trim() || undefined,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            setIsOrderPlaced(true);
+            queryClient.invalidateQueries({ queryKey: CUSTOMER_ORDERS_QUERY_KEY, refetchType: "all" });
+            queryClient.invalidateQueries({ queryKey: ["customer", "cart"], refetchType: "all" });
+            queryClient.invalidateQueries({ queryKey: ["cart"], refetchType: "all" });
+
+            const params = new URLSearchParams();
+            if (verifyResult.orderId) {
+              params.set("orderId", String(verifyResult.orderId));
+            }
+            if (verifyResult.orderNumber) {
+              params.set("orderNumber", String(verifyResult.orderNumber));
+            }
+            router.push(`/checkout/success${params.toString() ? `?${params.toString()}` : ""}`);
+          } catch (err: any) {
+            setIsVerifyingPayment(false);
+            setCheckoutError(
+              err.message || "Payment verification failed. Please contact customer support."
+            );
+          }
+        },
+      };
+
+      const rzpInstance = new (window as any).Razorpay(options);
+      rzpInstance.on("payment.failed", function (response: any) {
+        setIsProcessingPayment(false);
+        setCheckoutError(
+          response?.error?.description || "Payment was declined. Please try another payment method."
+        );
+      });
+      rzpInstance.open();
     } catch (err: any) {
       setIsProcessingPayment(false);
       setCheckoutError(
@@ -506,10 +595,8 @@ export default function CheckoutPage() {
       return;
     }
 
-    // 2. Online Payment (Razorpay) — Redirect to payment app
-    // No popup. Browser navigates to the payment domain.
-    // Order is only created after payment verification on the backend.
-    await launchRedirectPayment(effectiveAddressId);
+    // 2. Online Payment (Razorpay) — Opens in-app modal popup
+    await launchInAppRazorpayPayment(effectiveAddressId);
   };
 
 
@@ -1174,10 +1261,10 @@ export default function CheckoutPage() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Verifying Payment...
                   </>
-                ) : isProcessingPayment ? (
+                ) : isProcessingPayment || createRazorpayOrderMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Redirecting to Payment...
+                    Opening Payment Gateway...
                   </>
                 ) : createOrderMutation.isPending ? (
                   <>

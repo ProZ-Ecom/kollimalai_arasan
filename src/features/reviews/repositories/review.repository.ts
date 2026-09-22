@@ -184,12 +184,12 @@ export const reviewRepository = {
 
   async createReviewTransaction(params: {
     productId: bigint;
-    variantUnitPriceId: bigint;
+    variantUnitPriceId?: bigint | null;
     userId: bigint;
-    orderItemId: bigint;
+    orderItemId?: bigint | null;
     rating: number;
-    title?: string;
-    comment?: string;
+    title?: string | null;
+    comment?: string | null;
     images?: string[];
   }) {
     const reviewUuid = crypto.randomUUID();
@@ -199,9 +199,9 @@ export const reviewRepository = {
         data: {
           uuid: reviewUuid,
           productId: params.productId,
-          variant_unit_price_id: params.variantUnitPriceId,
+          variant_unit_price_id: params.variantUnitPriceId ?? null,
           userId: params.userId,
-          order_item_id: params.orderItemId,
+          order_item_id: params.orderItemId ?? null,
           rating: params.rating,
           title: params.title || null,
           comment: params.comment || null,

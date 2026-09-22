@@ -14,16 +14,15 @@ export * from "./cards/LowestPriceCard";
 export * from "./footer/FooterLinks";
 export * from "./HeroSlider";
 export * from "./BrandPromise";
-export * from "./TasteTradition";
-export * from "./CategorySection";
+
+
 export * from "./ProductSection";
 export * from "./LowestPrice";
 export * from "./WhyChooseUs";
 export * from "./Banner";
 export * from "./OfferPopup";
 export * from "./OfferReels";
-export * from "./Pledge";
-export * from "./Tradition";
+
 export * from "./Features";
 export * from "./Feedback";
 export * from "./filters/FilterSidebar";
