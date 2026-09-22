@@ -1,7 +1,5 @@
 export const LOGOS = {
   logo: "/logos/logo.svg",
-  title: "/logos/title.svg",
-  mobileTitle: "/logos/mobile_title.svg",
   hero_banner: "/logos/hero_banner.jpg",
   banner: "/logos/banner.svg",
   CategorySection: "/logos/explore_category.svg",
@@ -9,14 +7,7 @@ export const LOGOS = {
   wishlist: "/logos/wishlist.svg",
 };
 
-export const CATEGORYLOGOS = {
-  flavourSpices: "/categoryLogos/flavors_logo.svg",
-  bakery: "/categoryLogos/bakery_logo.svg",
-  bites: "/categoryLogos/bites_logo.svg",
-  chips: "/categoryLogos/chips_logo.svg",
-  sweet: "/categoryLogos/sweet_logo.svg",
-  traditional: "/categoryLogos/traditional_logo.svg",
-};
+
 
 export const ICONS = {
   cart: "/icons/cart.svg",
@@ -48,34 +39,9 @@ export const ICONS = {
   box: "/icons/box-icon.svg",
 };
 
-export const SNACKSLOGOS = {
-  jalebi: "/snacksLogos/jalebi.svg",
-  kai_murukku: "/snacksLogos/kai_murukku.svg",
-  laddu: "/snacksLogos/laddu.svg",
-  mixture: "/snacksLogos/mixture.svg",
-  palkova: "/snacksLogos/palkova.svg",
-  special_butter_murukku: "/snacksLogos/special_butter_murukku.svg",
-  special_spicy_chips: "/snacksLogos/special_spicy_chips.svg",
-  thenkuzhal_murukku: "/snacksLogos/thenkuzhal_murukku.svg",
-};
 
-export const PLEDGELOGOS = {
-  gluten: "/pledgeLogos/gluten.svg",
-  preservatives: "/pledgeLogos/preservatives.svg",
-  protein: "/pledgeLogos/protein.svg",
-  reuseOil: "/pledgeLogos/reuseOil.svg",
-  sugar: "/pledgeLogos/sugar.svg",
-  vegen: "/pledgeLogos/vegen.svg",
-};
 
-export const TraditionLogos = {
-  logo1: "/traditionLogos/01.svg",
-  logo2: "/traditionLogos/02.svg",
-  logo3: "/traditionLogos/03.svg",
-  logo4: "/traditionLogos/4.svg",
-  logo5: "/traditionLogos/5.svg",
-  logo6: "/traditionLogos/6.svg",
-};
+
 
 export const PHOTOS = {
   photo1: "/photos/photo1.svg",
@@ -88,38 +54,7 @@ export const banners = [
 
 ];
 
-export const categories = [
-  {
-    id: 1,
-    name: "Flavors & Spices",
-    image: CATEGORYLOGOS.flavourSpices,
-  },
-  {
-    id: 2,
-    name: "Sweets",
-    image: CATEGORYLOGOS.sweet,
-  },
-  {
-    id: 3,
-    name: "Healthy Bites",
-    image: CATEGORYLOGOS.bites,
-  },
-  {
-    id: 4,
-    name: "Traditional Delights",
-    image: CATEGORYLOGOS.traditional,
-  },
-  {
-    id: 5,
-    name: "Bakery",
-    image: CATEGORYLOGOS.bakery,
-  },
-  {
-    id: 6,
-    name: "Chips",
-    image: CATEGORYLOGOS.chips,
-  },
-];
+
 
 export const features = [
   {
@@ -197,39 +132,6 @@ export const readyToAssist = [
 
 
 
-export const pledges = [
-  {
-    id: 1,
-    name: "Vegan",
-    icon: PLEDGELOGOS.vegen,
-  },
-  {
-    id: 2,
-    name: "No Reuse Oil",
-    icon: PLEDGELOGOS.reuseOil,
-  },
-  {
-    id: 3,
-    name: "Rich in Protein",
-    icon: PLEDGELOGOS.protein,
-  },
-  {
-    id: 4,
-    name: "Gluten Free",
-    icon: PLEDGELOGOS.gluten,
-  },
-  {
-    id: 5,
-    name: "No Preservatives",
-    icon: PLEDGELOGOS.preservatives,
-  },
-  {
-    id: 6,
-    name: "No Refined Sugar",
-    icon: PLEDGELOGOS.sugar,
-  },
-];
-
 export const reviews = [
   {
     id: 1,
@@ -257,39 +159,6 @@ export const reviews = [
     bg: "--blue-50",
     feedback:
       "The finest whole spices I've ordered online. Pure, organic Kolli Hills black pepper and aromatic cardamom. Excellent packaging and prompt delivery!",
-  },
-];
-
-export const traditionImages = [
-  {
-    id: 1,
-    name: "Seasonal Mittai",
-    image: TraditionLogos.logo1,
-  },
-  {
-    id: 2,
-    name: "Mota Mixture",
-    image: TraditionLogos.logo2,
-  },
-  {
-    id: 3,
-    name: "Sugar Free",
-    image: TraditionLogos.logo3,
-  },
-  {
-    id: 4,
-    name: "Ribbon Murukku",
-    image: TraditionLogos.logo4,
-  },
-  {
-    id: 5,
-    name: "Kadalai Mittai",
-    image: TraditionLogos.logo5,
-  },
-  {
-    id: 6,
-    name: "Onion Murukku",
-    image: TraditionLogos.logo6,
   },
 ];
 

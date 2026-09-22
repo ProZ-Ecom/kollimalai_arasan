@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Plus, Pencil, Trash2, Star, Loader2, Tag } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Plus, Pencil, Trash2, Star, Loader2, Tag, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -20,6 +20,7 @@ interface UnitPriceRowFormState {
   unitValue: string;
   sku: string;
   basePrice: string;
+  stock: string;
   isDefault: boolean;
   isActive: boolean;
 }
@@ -29,6 +30,7 @@ const emptyRow: UnitPriceRowFormState = {
   unitValue: "",
   sku: "",
   basePrice: "",
+  stock: "",
   isDefault: false,
   isActive: true,
 };
@@ -39,10 +41,13 @@ interface VariantUnitPriceListProps {
 }
 
 /**
- * Manages the (unit, price) combinations for a single item/variant, e.g.
- * "500g @ Rs.99" and "1kg @ Rs.180" under the same item. Selling price is not
- * collected here - the storefront computes it from basePrice minus any
- * active offer/discount.
+ * Manages the (unit, price, stock) combinations for a single item/variant, e.g.
+ * "500g @ Rs.99, stock: 25" and "1kg @ Rs.180, stock: 10" under the same item.
+ * Selling price is not collected here - the storefront computes it from basePrice
+ * minus any active offer/discount.
+ *
+ * The inline stock input on each row is designed for quick local / walk-in sales
+ * adjustments without opening the full edit form.
  */
 function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceListProps) {
   const { data: unitPrices = [], isLoading } = useVariantUnitPrices(productUuid, variantUuid);
@@ -58,6 +63,11 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
   const [form, setForm] = useState<UnitPriceRowFormState>(emptyRow);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<VariantUnitPriceResponse | null>(null);
+
+  // Inline stock editing state — keyed by unit price ID
+  const [inlineStockValues, setInlineStockValues] = useState<Record<string, string>>({});
+  const [savingInlineStockId, setSavingInlineStockId] = useState<string | null>(null);
+  const inlineInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const resetForm = () => {
     setForm(emptyRow);
@@ -79,6 +89,7 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
       unitValue: String(item.unitValue ?? ""),
       sku: item.sku,
       basePrice: String(item.basePrice ?? ""),
+      stock: item.stock !== undefined ? String(item.stock) : "",
       isDefault: item.isDefault,
       isActive: item.isActive,
     });
@@ -111,6 +122,12 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
       return;
     }
 
+    const stockNum = form.stock.trim() !== "" ? Number(form.stock) : undefined;
+    if (stockNum !== undefined && (Number.isNaN(stockNum) || !Number.isInteger(stockNum) || stockNum < 0)) {
+      setFormError("Stock must be a non-negative whole number");
+      return;
+    }
+
     const payload = {
       unitId: form.unitId,
       unitValue,
@@ -118,6 +135,7 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
       basePrice,
       isDefault: form.isDefault,
       isActive: form.isActive,
+      ...(stockNum !== undefined ? { stock: stockNum } : {}),
     };
 
     try {
@@ -156,6 +174,50 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
     }
   };
 
+  // ── Inline stock editing ──────────────────────────────────────────────────
+  const getInlineStock = (item: VariantUnitPriceResponse) => {
+    if (item.id in inlineStockValues) return inlineStockValues[item.id];
+    return item.stock !== undefined ? String(item.stock) : "";
+  };
+
+  const handleInlineStockSave = async (item: VariantUnitPriceResponse) => {
+    const raw = inlineStockValues[item.id];
+    if (raw === undefined) return; // no change
+    const trimmed = raw.trim();
+    const current = item.stock !== undefined ? String(item.stock) : "";
+    if (trimmed === current) {
+      // No real change — clear dirty state
+      setInlineStockValues((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+      return;
+    }
+
+    const stockNum = trimmed === "" ? 0 : Number(trimmed);
+    if (Number.isNaN(stockNum) || !Number.isInteger(stockNum) || stockNum < 0) return;
+
+    setSavingInlineStockId(item.id);
+    try {
+      await updateMutation.mutateAsync({
+        productUuid,
+        variantUuid,
+        unitPriceUuid: item.id,
+        data: { stock: stockNum },
+      });
+      setInlineStockValues((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+    } catch (err) {
+      console.error("Failed to update stock", err);
+    } finally {
+      setSavingInlineStockId(null);
+    }
+  };
+
   const showForm = isAdding || Boolean(editingId);
 
   return (
@@ -163,7 +225,7 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
       <div className="px-6 py-4.5 border-b border-cream-border flex items-center justify-between">
         <h2 className="text-[15px] font-bold text-neutral-900 tracking-tight flex items-center gap-2">
           <Tag className="w-4 h-4 text-secondary-600" />
-          <span>Units & Pricing</span>
+          <span>Units &amp; Pricing</span>
           <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-cream-200 text-neutral-600 border border-cream-border">
             {unitPrices.length}
           </span>
@@ -194,67 +256,127 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
             </div>
           )}
 
-          {unitPrices.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between gap-3 px-6 py-3.5 hover:bg-cream-50 transition-colors"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-neutral-900">
-                      {item.measurement?.value} {item.unitCode || item.measurement?.unit}
-                    </span>
-                    {item.isDefault && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold">
-                        <Star className="w-3 h-3" /> Default
-                      </span>
-                    )}
-                    {!item.isActive && (
-                      <span className="inline-flex px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 text-[10px] font-bold border border-neutral-200">
-                        Inactive
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[11px] text-neutral-500 font-mono truncate">
-                    SKU: {item.sku}
-                  </span>
-                </div>
-              </div>
+          {unitPrices.map((item) => {
+            const isSavingStock = savingInlineStockId === item.id;
+            const inlineVal = getInlineStock(item);
+            const isDirty = item.id in inlineStockValues;
+            const stockNum = item.stock ?? 0;
 
-              <div className="flex items-center gap-4 shrink-0">
-                <span className="text-sm font-bold text-secondary-900 font-mono">
-                  ₹{item.basePrice.toLocaleString("en-IN")}
-                </span>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => startEdit(item)}
-                    className="h-8 w-8 text-neutral-500 hover:text-secondary-700 hover:bg-secondary-50"
-                    title="Edit"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteTarget(item)}
-                    className="h-8 w-8 text-neutral-500 hover:text-red-600 hover:bg-red-50"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
+            return (
+              <div
+                key={item.id}
+                className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-cream-50 transition-colors"
+              >
+                {/* Left: measurement info */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-bold text-neutral-900">
+                        {item.measurement?.value} {item.unitCode || item.measurement?.unit}
+                      </span>
+                      {item.isDefault && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold">
+                          <Star className="w-3 h-3" /> Default
+                        </span>
+                      )}
+                      {!item.isActive && (
+                        <span className="inline-flex px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 text-[10px] font-bold border border-neutral-200">
+                          Inactive
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-neutral-500 font-mono truncate">
+                      SKU: {item.sku}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right: inline stock + price + actions */}
+                <div className="flex items-center gap-3 shrink-0">
+                  {/* Inline stock editor */}
+                  <div className="flex items-center gap-1.5 group/stock">
+                    <Package className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                    <div className="relative flex items-center">
+                      <input
+                        ref={(el) => { inlineInputRefs.current[item.id] = el; }}
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={inlineVal}
+                        onChange={(e) =>
+                          setInlineStockValues((prev) => ({ ...prev, [item.id]: e.target.value }))
+                        }
+                        onBlur={() => handleInlineStockSave(item)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.currentTarget.blur();
+                          }
+                          if (e.key === "Escape") {
+                            setInlineStockValues((prev) => {
+                              const next = { ...prev };
+                              delete next[item.id];
+                              return next;
+                            });
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        className={`w-16 h-7 px-2 text-xs font-mono text-center rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-secondary-600/20 focus:border-secondary-500
+                          ${stockNum === 0 && !isDirty
+                            ? "bg-rose-50 border-rose-200 text-rose-700 font-bold"
+                            : stockNum <= 5 && !isDirty
+                              ? "bg-amber-50 border-amber-200 text-amber-700"
+                              : "bg-neutral-50 border-neutral-200 text-neutral-800"
+                          } ${isDirty ? "border-secondary-400 bg-white" : ""}`}
+                        title="Click to edit stock. Press Enter or click away to save."
+                        aria-label={`Stock quantity for ${item.sku}`}
+                      />
+                      {isSavingStock && (
+                        <span className="absolute -right-5">
+                          <Loader2 className="w-3 h-3 animate-spin text-secondary-600" />
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-neutral-400 hidden sm:inline select-none">
+                      {stockNum === 0 ? "out" : "units"}
+                    </span>
+                  </div>
+
+                  {/* Price */}
+                  <span className="text-sm font-bold text-secondary-900 font-mono min-w-[52px] text-right">
+                    ₹{item.basePrice.toLocaleString("en-IN")}
+                  </span>
+
+                  {/* Edit / Delete */}
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => startEdit(item)}
+                      className="h-8 w-8 text-neutral-500 hover:text-secondary-700 hover:bg-secondary-50"
+                      title="Edit"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteTarget(item)}
+                      className="h-8 w-8 text-neutral-500 hover:text-red-600 hover:bg-red-50"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {showForm && (
             <div className="p-6 bg-cream-50/60 space-y-4">
               <p className="text-xs text-neutral-500 -mt-1">
                 Add one row for every pack size you sell this item in — e.g. 250 Grams, 500
-                Grams and 1 Kilogram can each have their own price.
+                Grams and 1 Kilogram can each have their own price and quantity.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -331,6 +453,29 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
                   <p className="text-[11px] text-neutral-400 mt-1">
                     What the customer pays for one pack of this size. Offers/discounts, if any,
                     are applied automatically on top.
+                  </p>
+                </div>
+              </div>
+
+              {/* Stock quantity */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-800 mb-1.5">
+                    Stock Quantity
+                    <span className="ml-1.5 text-[10px] font-normal text-neutral-400">(optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={form.stock}
+                    onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+                    placeholder="e.g. 50"
+                    className="w-full h-10 px-3 rounded-lg border border-neutral-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-secondary-600/20 focus:border-secondary-600"
+                  />
+                  <p className="text-[11px] text-neutral-400 mt-1">
+                    How many packs of this size you currently have. Leave blank to track manually later.
+                    When it reaches 0, this item is auto-marked Out of Stock.
                   </p>
                 </div>
               </div>

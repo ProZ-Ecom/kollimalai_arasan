@@ -17,7 +17,7 @@ import {
   Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SNACKSLOGOS } from "@/constants/storefront";
+
 import type { AdminVariantResponse } from "../types";
 
 export interface VariantCardProps {
@@ -32,17 +32,8 @@ export interface VariantCardProps {
   showAdminActions?: boolean;
 }
 
-function resolveFallbackImage(name: string): string {
-  const lower = (name || "").toLowerCase();
-  if (lower.includes("murukku") && lower.includes("kai")) return SNACKSLOGOS.kai_murukku;
-  if (lower.includes("murukku") && lower.includes("thenkuzhal")) return SNACKSLOGOS.thenkuzhal_murukku;
-  if (lower.includes("murukku") || lower.includes("butter")) return SNACKSLOGOS.special_butter_murukku;
-  if (lower.includes("chip")) return SNACKSLOGOS.special_spicy_chips;
-  if (lower.includes("mixture") || lower.includes("namkeen")) return SNACKSLOGOS.mixture;
-  if (lower.includes("laddu")) return SNACKSLOGOS.laddu;
-  if (lower.includes("jalebi")) return SNACKSLOGOS.jalebi;
-  if (lower.includes("palkova")) return SNACKSLOGOS.palkova;
-  return SNACKSLOGOS.special_butter_murukku;
+function resolveFallbackImage(_name: string): string {
+  return "/images/kolli_spices_hero.jpg";
 }
 
 export function VariantCard({

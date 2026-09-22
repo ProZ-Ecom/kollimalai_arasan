@@ -138,6 +138,11 @@ function ProductDetails({ product }: ProductDetailsProps) {
   const [selectedUnitPriceId, setSelectedUnitPriceId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search);
+      const pack = sp.get("pack") || sp.get("unitPrice");
+      if (pack) {
+        const matchingPack = allPackOptions.find((opt) => opt.unitPriceId === pack);
+        if (matchingPack) return matchingPack.unitPriceId;
+      }
       const v = sp.get("variant");
       if (v) {
         const matching = allPackOptions.find((opt) => opt.variantId === v);
@@ -150,13 +155,28 @@ function ProductDetails({ product }: ProductDetailsProps) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search);
+      const pack = sp.get("pack") || sp.get("unitPrice");
+      if (pack) {
+        const matchingPack = allPackOptions.find((opt) => opt.unitPriceId === pack);
+        if (matchingPack && matchingPack.unitPriceId !== selectedUnitPriceId) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setSelectedUnitPriceId(matchingPack.unitPriceId);
+          return;
+        }
+      }
       const v = sp.get("variant");
       if (v) {
-        const matching = allPackOptions.find((opt) => opt.variantId === v);
-        if (matching && matching.unitPriceId !== selectedUnitPriceId) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setSelectedUnitPriceId(matching.unitPriceId);
-          return;
+        // If current selection already belongs to this variant, keep it!
+        const isCurrentInVariant = allPackOptions.some(
+          (opt) => opt.variantId === v && opt.unitPriceId === selectedUnitPriceId
+        );
+        if (!isCurrentInVariant) {
+          const matching = allPackOptions.find((opt) => opt.variantId === v);
+          if (matching) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setSelectedUnitPriceId(matching.unitPriceId);
+            return;
+          }
         }
       }
     }
@@ -213,6 +233,7 @@ function ProductDetails({ product }: ProductDetailsProps) {
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.set("variant", option.variantId);
+      url.searchParams.set("pack", option.unitPriceId);
       window.history.replaceState({}, "", url.toString());
     }
   };
@@ -775,9 +796,13 @@ function ProductDetails({ product }: ProductDetailsProps) {
 
       {/* Connoisseur Feedback & Customer Reviews for Selected Variant */}
       <ProductReviewsSection
+        productId={product.id}
+        productIdOrSlug={product.id}
+        productName={product.name}
         variantId={selectedVariant?.id}
         variantName={selectedVariant?.variantName}
-        productName={product.name}
+        selectedUnitPriceId={activeOption?.unitPriceId}
+        packSizes={selectedVariant?.unitPrices ?? []}
       />
     </div>
   );

@@ -1,18 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Star, CheckCircle2, ChevronDown } from "lucide-react";
+import { Star, CheckCircle2, ChevronDown, PenLine } from "lucide-react";
 import {
   usePublicProductReviews,
   usePublicVariantReviews,
 } from "../hooks/use-public-reviews";
 import type { PublicReviewItem } from "../types/review.types";
+import type { CustomerVariantUnitPriceDto } from "@/features/customers/types/catalog.types";
+import { WriteReviewModal } from "./WriteReviewModal";
 
 interface ProductReviewsSectionProps {
+  productId?: string | null;
+  productIdOrSlug?: string | null;
+  productName?: string;
   variantId?: string | null;
   variantName?: string;
-  productName?: string;
-  productIdOrSlug?: string | null;
+  selectedUnitPriceId?: string | null;
+  packSizes?: CustomerVariantUnitPriceDto[];
 }
 
 function getInitials(name?: string): string {
@@ -23,12 +28,16 @@ function getInitials(name?: string): string {
 }
 
 export function ProductReviewsSection({
+  productId,
+  productIdOrSlug,
+  productName,
   variantId,
   variantName,
-  productName,
-  productIdOrSlug,
+  selectedUnitPriceId,
+  packSizes = [],
 }: ProductReviewsSectionProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isWriteReviewOpen, setIsWriteReviewOpen] = React.useState(false);
 
   // Collapse back to top 3 reviews whenever the selected variant changes
   React.useEffect(() => {
@@ -76,28 +85,39 @@ export function ProductReviewsSection({
             from genuine customers and home chefs
           </p>
 
-          {/* Social Proof Rating Pill (Only if reviews exist) */}
-          {totalCount > 0 && (
-            <div className="inline-flex items-center justify-center gap-2 mt-3.5 px-4 py-1.5 rounded-full bg-white/90 border border-neutral-200/80 text-xs font-semibold text-neutral-700 shadow-2xs">
-              <div className="flex items-center gap-0.5 text-primary-500">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-3.5 h-3.5 ${
-                      i < Math.round(avgRating)
-                        ? "fill-primary-400 text-primary-400"
-                        : "fill-neutral-200 text-neutral-200"
-                    }`}
-                  />
-                ))}
+          {/* Social Proof Rating Pill & Write a Review Action */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+            {totalCount > 0 && (
+              <div className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-white border border-neutral-200/80 text-xs font-semibold text-neutral-700 shadow-2xs">
+                <div className="flex items-center gap-0.5 text-primary-500">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-3.5 h-3.5 ${
+                        i < Math.round(avgRating)
+                          ? "fill-primary-400 text-primary-400"
+                          : "fill-neutral-200 text-neutral-200"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="font-bold text-neutral-900">{avgRating.toFixed(1)}</span>
+                <span className="text-neutral-300">•</span>
+                <span>
+                  {totalCount} customer {totalCount === 1 ? "review" : "reviews"}
+                </span>
               </div>
-              <span className="font-bold text-neutral-900">{avgRating.toFixed(1)}</span>
-              <span className="text-neutral-300">•</span>
-              <span>
-                {totalCount} customer {totalCount === 1 ? "review" : "reviews"}
-              </span>
-            </div>
-          )}
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsWriteReviewOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#006B05] text-white text-xs sm:text-sm font-semibold hover:bg-[#005504] shadow-xs hover:shadow-sm transition-all cursor-pointer select-none active:scale-95"
+            >
+              <PenLine className="w-3.5 h-3.5" />
+              <span>Write a Review</span>
+            </button>
+          </div>
         </div>
 
         {/* Reviews Grid or Clean Empty State */}
@@ -110,65 +130,75 @@ export function ProductReviewsSection({
             <p className="text-xs sm:text-sm text-neutral-500 mt-1.5 leading-relaxed">
               Be the first to experience <strong className="text-neutral-700">{targetTitle}</strong> and share your thoughts with fellow spice enthusiasts!
             </p>
+            <div className="mt-5">
+              <button
+                type="button"
+                onClick={() => setIsWriteReviewOpen(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#006B05] text-white text-xs sm:text-sm font-semibold hover:bg-[#005504] shadow-xs hover:shadow-sm transition-all cursor-pointer select-none active:scale-95"
+              >
+                <PenLine className="w-4 h-4" />
+                <span>Write the First Review</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {displayedReviews.map((review: PublicReviewItem) => {
-            const initials = getInitials(review.customerName);
-            const location = review.title || "Verified Customer";
+              const initials = getInitials(review.customerName);
+              const location = review.title || "Verified Customer";
 
-            return (
-              <div
-                key={review.id}
-                className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-neutral-200/70 shadow-xs hover:shadow-md transition-shadow duration-300 flex flex-col justify-between animate-in fade-in duration-200"
-              >
-                <div>
-                  {/* Star Rating */}
-                  <div className="flex items-center gap-1 text-primary-500 mb-5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-4 h-4 ${
-                          i < review.rating
-                            ? "fill-primary-400 text-primary-400"
-                            : "fill-neutral-200 text-neutral-200"
-                        }`}
-                      />
-                    ))}
+              return (
+                <div
+                  key={review.id}
+                  className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-neutral-200/70 shadow-xs hover:shadow-md transition-shadow duration-300 flex flex-col justify-between animate-in fade-in duration-200"
+                >
+                  <div>
+                    {/* Star Rating */}
+                    <div className="flex items-center gap-1 text-primary-500 mb-5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-4 h-4 ${
+                            i < review.rating
+                              ? "fill-primary-400 text-primary-400"
+                              : "fill-neutral-200 text-neutral-200"
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Comment Quote */}
+                    <p className="text-neutral-700 text-sm sm:text-[14.5px] leading-relaxed italic font-normal">
+                      &ldquo;{review.comment}&rdquo;
+                    </p>
                   </div>
 
-                  {/* Comment Quote */}
-                  <p className="text-neutral-700 text-sm sm:text-[14.5px] leading-relaxed italic font-normal">
-                    &ldquo;{review.comment}&rdquo;
-                  </p>
+                  {/* Reviewer Profile */}
+                  <div className="mt-7 pt-5 border-t border-neutral-100 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-full bg-[#F5F5F5] text-[#007F06] font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                      {initials}
+                    </div>
+
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-bold text-[#101010] truncate">
+                        {review.customerName}
+                      </span>
+                      <span className="text-xs text-secondary-700 font-medium flex items-center gap-1 mt-0.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-secondary-600 shrink-0" />
+                        <span>Verified Buyer</span>
+                        {location && (
+                          <>
+                            <span className="text-neutral-300 mx-0.5">•</span>
+                            <span className="text-neutral-500 truncate">{location}</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-
-                {/* Reviewer Profile */}
-                <div className="mt-7 pt-5 border-t border-neutral-100 flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-full bg-[#F5F5F5] text-[#007F06] font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
-                    {initials}
-                  </div>
-
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-bold text-[#101010] truncate">
-                      {review.customerName}
-                    </span>
-                    <span className="text-xs text-secondary-700 font-medium flex items-center gap-1 mt-0.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-secondary-600 shrink-0" />
-                      <span>Verified Buyer</span>
-                      {location && (
-                        <>
-                          <span className="text-neutral-300 mx-0.5">•</span>
-                          <span className="text-neutral-500 truncate">{location}</span>
-                        </>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
         )}
 
         {/* View All Reviews / Show Less Toggle Button */}
@@ -193,9 +223,20 @@ export function ProductReviewsSection({
           </div>
         )}
       </div>
+
+      {/* Write Review Modal */}
+      <WriteReviewModal
+        isOpen={isWriteReviewOpen}
+        onClose={() => setIsWriteReviewOpen(false)}
+        productId={productId}
+        variantId={variantId}
+        variantName={variantName}
+        productName={productName}
+        selectedUnitPriceId={selectedUnitPriceId}
+        packSizes={packSizes}
+      />
     </section>
   );
 }
 
 export default ProductReviewsSection;
-

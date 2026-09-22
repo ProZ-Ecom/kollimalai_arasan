@@ -88,6 +88,43 @@ export const variantUnitPriceRepository = {
     });
   },
 
+  /**
+   * Checks all non-deleted unit prices for the given variant and syncs the
+   * `out_of_stock` flag on the parent ProductVariant.
+   *
+   * Rules:
+   *  - If EVERY unit price has `quantity_available = 0` (or has no inventory
+   *    record) → set `out_of_stock = true`.
+   *  - If ANY unit price has `quantity_available > 0` → set `out_of_stock = false`.
+   *
+   * Must be called inside a transaction so the sync is atomic with the inventory
+   * upsert that triggered it.
+   */
+  async syncVariantOutOfStockStatus(
+    tx: Prisma.TransactionClient,
+    variantId: bigint
+  ) {
+    const unitPrices = await tx.variantUnitPrice.findMany({
+      where: { variant_id: variantId, deleted_at: null },
+      include: {
+        inventories: {
+          select: { quantity_available: true },
+        },
+      },
+    });
+
+    if (unitPrices.length === 0) return;
+
+    const hasStock = unitPrices.some(
+      (up) => up.inventories && up.inventories.quantity_available > 0
+    );
+
+    await tx.productVariant.updateMany({
+      where: { id: variantId },
+      data: { out_of_stock: !hasStock },
+    });
+  },
+
   async unsetDefaultForVariant(variantId: bigint, excludeId?: bigint) {
     return db.variantUnitPrice.updateMany({
       where: {
@@ -157,6 +194,8 @@ export const variantUnitPriceRepository = {
             updated_by: adminId ?? null,
           },
         });
+        // Auto-sync the variant's out_of_stock flag whenever stock changes
+        await this.syncVariantOutOfStockStatus(tx, existing.variant_id);
       }
 
       return tx.variantUnitPrice.update({
@@ -241,6 +280,8 @@ export const variantUnitPriceRepository = {
               updated_by: adminId ?? null,
             },
           });
+          // Auto-sync the variant's out_of_stock flag whenever stock changes
+          await this.syncVariantOutOfStockStatus(tx, existing.variant_id);
         }
 
         const result = await tx.variantUnitPrice.update({

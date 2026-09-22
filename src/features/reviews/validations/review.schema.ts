@@ -2,23 +2,30 @@ import { z } from "zod";
 
 export const createReviewSchema = z
   .object({
+    productId: z.string().uuid("Invalid product UUID").optional().nullable(),
+    variantId: z.string().uuid("Invalid variant UUID").optional().nullable(),
     variantUnitPriceId: z
-      .string({ message: "Variant unit price ID is required" })
-      .uuid("Invalid variant unit price UUID"),
+      .string()
+      .uuid("Invalid variant unit price UUID")
+      .optional()
+      .nullable(),
     orderItemId: z
-      .string({ message: "Order item ID is required" })
-      .uuid("Invalid order item UUID"),
+      .string()
+      .uuid("Invalid order item UUID")
+      .optional()
+      .nullable(),
     rating: z
       .number({ message: "Rating is required" })
       .int("Rating must be an integer")
       .min(1, "Rating must be at least 1")
       .max(5, "Rating cannot exceed 5"),
-    title: z.string().trim().max(150, "Title cannot exceed 150 characters").optional(),
+    title: z.string().trim().max(150, "Title cannot exceed 150 characters").optional().nullable(),
     comment: z
       .string()
       .trim()
       .max(2000, "Comment cannot exceed 2000 characters")
-      .optional(),
+      .optional()
+      .nullable(),
     images: z
       .array(
         z

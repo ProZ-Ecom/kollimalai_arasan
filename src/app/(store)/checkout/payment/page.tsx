@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -17,10 +18,16 @@ import { RadioGroup } from "@/components/ui/Radio";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
+import { toast } from "@/components/ui/Toast";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import { useAddresses } from "@/features/addresses/hooks";
 import { useCheckout } from "@/features/checkout/checkout-context";
 import { useCheckoutSummary, usePlaceOrder } from "@/features/orders/hooks";
+import {
+  useCreateRazorpayOrder,
+  useVerifyRazorpayPayment,
+} from "@/features/customers/hooks/use-customer-payment";
+import { loadRazorpayScript } from "@/features/customers/utils/razorpay-loader";
 import { OrderItemsList } from "@/features/orders/components/OrderItemsList";
 import { OrderTotals } from "@/features/orders/components/OrderTotals";
 import { PAYMENT_METHOD_OPTIONS } from "@/features/orders/constants";
@@ -36,6 +43,10 @@ export default function CheckoutPaymentPage() {
   const { data: addresses, isLoading: addressesLoading } = useAddresses();
   const checkout = useCheckout();
   const placeOrder = usePlaceOrder();
+  const createRazorpayOrder = useCreateRazorpayOrder();
+  const verifyRazorpayPayment = useVerifyRazorpayPayment();
+
+  const [isRazorpayLoading, setIsRazorpayLoading] = React.useState(false);
 
   const {
     data: summary,
@@ -69,24 +80,109 @@ export default function CheckoutPaymentPage() {
     );
   }
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (isAdminUser || !checkout.addressId) return;
-    placeOrder.mutate(
-      {
-        addressId: checkout.addressId,
-        shippingAddressId: String(checkout.addressId),
-        deliveryMethod: checkout.deliveryMethod,
-        couponCode: checkout.couponCode ?? undefined,
-        paymentMethod: checkout.paymentMethod,
-        notes: checkout.notes || undefined,
-      },
-      {
-        onSuccess: (order) => {
-          checkout.resetCheckout();
-          router.push(`/checkout/success?orderNumber=${order.orderNumber}`);
+
+    // COD Flow
+    if (checkout.paymentMethod === "CASH_ON_DELIVERY") {
+      placeOrder.mutate(
+        {
+          addressId: checkout.addressId,
+          shippingAddressId: String(checkout.addressId),
+          deliveryMethod: checkout.deliveryMethod,
+          couponCode: checkout.couponCode ?? undefined,
+          paymentMethod: "CASH_ON_DELIVERY",
+          notes: checkout.notes || undefined,
         },
+        {
+          onSuccess: (order) => {
+            checkout.resetCheckout();
+            router.push(`/checkout/success?orderNumber=${order.orderNumber}`);
+          },
+        }
+      );
+      return;
+    }
+
+    // Razorpay Online Flow
+    try {
+      setIsRazorpayLoading(true);
+
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        toast.error("Payment Gateway Error", "Unable to load Razorpay checkout SDK. Please check your internet connection.");
+        setIsRazorpayLoading(false);
+        return;
       }
-    );
+
+      // 1. Create order on server from current cart
+      const rzpOrder = await createRazorpayOrder.mutateAsync({
+        orderId: "cart",
+        shippingAddressId: String(checkout.addressId),
+      });
+
+      // 2. Open Razorpay Checkout Modal
+      const options = {
+        key: rzpOrder.keyId,
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency || "INR",
+        name: "Kollimalai Arasan",
+        description: "Pure Farm & Forest Products",
+        order_id: rzpOrder.razorpayOrderId,
+        prefill: {
+          name: selectedAddress
+            ? `${selectedAddress.firstName} ${selectedAddress.lastName}`.trim()
+            : "",
+          contact: selectedAddress?.phone || "",
+          email: session?.user?.email || "",
+        },
+        theme: {
+          color: "#16a34a",
+        },
+        modal: {
+          ondismiss: function () {
+            setIsRazorpayLoading(false);
+            toast.info("Payment Cancelled", "Transaction was cancelled. Your cart is preserved.");
+          },
+        },
+        handler: async function (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) {
+          try {
+            // 3. Cryptographically verify signature and commit order to database
+            const verifyResult = await verifyRazorpayPayment.mutateAsync({
+              orderId: "cart",
+              shippingAddressId: String(checkout.addressId),
+              billingAddressId: String(checkout.addressId),
+              notes: checkout.notes || undefined,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            toast.success("Payment Successful", "Your order has been placed successfully!");
+            checkout.resetCheckout();
+            router.push(`/checkout/success?orderNumber=${verifyResult.orderNumber}`);
+          } catch (err: any) {
+            toast.error("Verification Error", err?.message || "Payment verification failed. Please contact support.");
+          } finally {
+            setIsRazorpayLoading(false);
+          }
+        },
+      };
+
+      const razorpayInstance = new (window as any).Razorpay(options);
+      razorpayInstance.on("payment.failed", function (response: any) {
+        setIsRazorpayLoading(false);
+        toast.error("Payment Failed", response?.error?.description || "Transaction failed. Please try again.");
+      });
+      razorpayInstance.open();
+    } catch (err: any) {
+      setIsRazorpayLoading(false);
+      toast.error("Order Creation Failed", err?.message || "Failed to initialize payment gateway.");
+    }
   };
 
   return (
@@ -223,17 +319,30 @@ export default function CheckoutPaymentPage() {
                 size="lg"
                 onClick={handlePlaceOrder}
                 disabled={
-                  isAdminUser || !checkout.addressId || summaryLoading || placeOrder.isPending
+                  isAdminUser ||
+                  !checkout.addressId ||
+                  summaryLoading ||
+                  placeOrder.isPending ||
+                  isRazorpayLoading ||
+                  createRazorpayOrder.isPending ||
+                  verifyRazorpayPayment.isPending
                 }
               >
-                {placeOrder.isPending && (
+                {(placeOrder.isPending ||
+                  isRazorpayLoading ||
+                  createRazorpayOrder.isPending ||
+                  verifyRazorpayPayment.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 {isAdminUser
                   ? "Payment Disabled for Admin"
+                  : verifyRazorpayPayment.isPending
+                  ? "Verifying Payment..."
+                  : isRazorpayLoading || createRazorpayOrder.isPending
+                  ? "Opening Payment Gateway..."
                   : checkout.paymentMethod === "CASH_ON_DELIVERY"
                   ? "Place Order (Cash on Delivery)"
-                  : `Pay ${checkout.paymentMethod.replace(/_/g, " ")}`}
+                  : "Pay Online with Razorpay"}
               </Button>
 
               {placeOrder.error && (

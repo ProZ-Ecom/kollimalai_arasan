@@ -126,20 +126,25 @@ export const variantUnitPriceService = {
     });
 
     if (data.stock !== undefined) {
-      await db.inventory.upsert({
-        where: { variantUnitPriceId: created.id },
-        create: {
-          variantUnitPriceId: created.id,
-          quantity_available: data.stock,
-          quantity_reserved: 0,
-          is_active: true,
-          created_by: adminId,
-          updated_by: adminId,
-        },
-        update: {
-          quantity_available: data.stock,
-          updated_by: adminId,
-        },
+      // Run inventory upsert + out_of_stock sync atomically so the variant
+      // status is always consistent with its actual stock totals.
+      await db.$transaction(async (tx) => {
+        await tx.inventory.upsert({
+          where: { variantUnitPriceId: created.id },
+          create: {
+            variantUnitPriceId: created.id,
+            quantity_available: data.stock!,
+            quantity_reserved: 0,
+            is_active: true,
+            created_by: adminId,
+            updated_by: adminId,
+          },
+          update: {
+            quantity_available: data.stock!,
+            updated_by: adminId,
+          },
+        });
+        await variantUnitPriceRepository.syncVariantOutOfStockStatus(tx, variant.id);
       });
     }
 

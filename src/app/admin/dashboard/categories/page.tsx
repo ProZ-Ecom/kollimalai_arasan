@@ -88,7 +88,7 @@ export default function AdminCategoriesPage() {
             src={
               row.original.icon
                 ? getImageUrl(row.original.icon)
-                : "/images/category_img.png"
+                : "/images/kolli_spices_hero.jpg"
             }
             alt={row.original.name}
             width={48}

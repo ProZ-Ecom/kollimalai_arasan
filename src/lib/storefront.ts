@@ -1,40 +1,18 @@
-import { SNACKSLOGOS, type StorefrontProduct } from "@/constants/storefront";
+import type { StorefrontProduct } from "@/constants/storefront";
 import { getImageUrl } from "@/lib/utils";
 import { formatMeasurementLabel } from "@/features/variants/utils/measurement.util";
 import type { CustomerVariantListItemDto } from "@/features/customers/types";
 import type { CartItemResponse } from "@/features/cart/types";
 import type { CustomerWishlistItemDto } from "@/features/wishlist/types";
 
+const FALLBACK_IMAGE = "/images/kolli_spices_hero.jpg";
+
 /**
- * Best-effort decorative fallback image when a variant has no uploaded image
- * yet. Purely cosmetic - never affects pricing, cart, or wishlist behavior.
+ * Single decorative fallback image when a variant has no uploaded image yet.
+ * Purely cosmetic - never affects pricing, cart, or wishlist behavior.
  */
-export function resolveSnackFallbackImage(name: string): string {
-  const lower = (name || "").toLowerCase();
-  if (lower.includes("kai") && lower.includes("murukku")) return SNACKSLOGOS.kai_murukku;
-  if (lower.includes("thenkuzhal")) return SNACKSLOGOS.thenkuzhal_murukku;
-  if (lower.includes("chip") || lower.includes("crisp")) return SNACKSLOGOS.special_spicy_chips;
-  if (
-    lower.includes("mixture") ||
-    lower.includes("namkeen") ||
-    lower.includes("pakoda") ||
-    lower.includes("omapodi") ||
-    lower.includes("sev") ||
-    lower.includes("ola")
-  ) {
-    return SNACKSLOGOS.mixture;
-  }
-  if (lower.includes("laddu")) return SNACKSLOGOS.laddu;
-  if (lower.includes("jalebi")) return SNACKSLOGOS.jalebi;
-  if (
-    lower.includes("palkova") ||
-    lower.includes("halwa") ||
-    lower.includes("mysore") ||
-    lower.includes("sweet")
-  ) {
-    return SNACKSLOGOS.palkova;
-  }
-  return SNACKSLOGOS.special_butter_murukku;
+export function resolveSnackFallbackImage(_name: string): string {
+  return FALLBACK_IMAGE;
 }
 
 /**

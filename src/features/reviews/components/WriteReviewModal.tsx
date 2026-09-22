@@ -134,14 +134,14 @@ export function WriteReviewModal({
     }
 
     submitReview({
-      variantId: variantId ?? undefined,
-      variantUnitPriceId: activeUnitPriceId || "",
-      productId: productId ?? undefined,
+      productId: productId || undefined,
+      variantId: variantId || undefined,
+      variantUnitPriceId: activeUnitPriceId || undefined,
       rating,
       title: title.trim() || undefined,
       comment: comment.trim() || undefined,
       images: [],
-    } as any);
+    });
   };
 
   return (
