@@ -102,8 +102,8 @@ export const contacts = [
     id: 3,
     icon: ICONS.mail,
     title: "Mail",
-    value: "contact@kollimalaiarasan.com",
-    link: "mailto:contact@kollimalaiarasan.com",
+    value: "kollimalaiarasan@gmail.com",
+    link: "mailto:kollimalaiarasan@gmail.com",
   },
 ];
 
@@ -127,6 +127,7 @@ export const readyToAssist = [
   { label: "Terms & Conditions", href: "/terms-and-conditions" },
   { label: "Privacy Policy", href: "/privacy-policy" },
   { label: "Return & Refund Policy", href: "/return-refund-policy" },
+  { label: "Disclaimer", href: "/disclaimer" },
   { label: "FAQ's", href: "/faqs" },
 ] as const;
 

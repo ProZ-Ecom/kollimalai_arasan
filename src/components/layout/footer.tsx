@@ -72,10 +72,10 @@ export function Footer() {
     // 3. Mail
     const companyEmail = company?.email?.trim();
     const mailValue =
-      companyEmail || defaultContacts[2]?.value || "contact@kollimalaiarasan.com";
+      companyEmail || defaultContacts[2]?.value || "kollimalaiarasan@gmail.com";
     const mailLink = companyEmail
       ? `mailto:${companyEmail}`
-      : defaultContacts[2]?.link || "mailto:contact@kollimalaiarasan.com";
+      : defaultContacts[2]?.link || "mailto:kollimalaiarasan@gmail.com";
 
     return [
       {

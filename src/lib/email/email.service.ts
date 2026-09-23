@@ -13,7 +13,7 @@ export const emailService = {
     const fromEmail =
       process.env.EMAIL_FROM ||
       process.env.EMAIL_USER ||
-      "noreply@kollimalaiarasan.com";
+      "kollimalaiarasan@gmail.com";
     return fromEmail.includes("<")
       ? fromEmail
       : `"Kollimalai Arasan" <${fromEmail}>`;

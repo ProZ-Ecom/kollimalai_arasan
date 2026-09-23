@@ -24,10 +24,10 @@ export function AboutFounderSection() {
             {/* Paragraphs */}
             <div className="space-y-4 text-about-body text-sm sm:text-base leading-relaxed mb-8 max-w-xl">
               <p>
-                With 17 years of experience in academics, Dr. Anita&apos;s passion for authentic hill farming and natural spice cultivation inspired her to transform her career from an academician to an agri-entrepreneur.
+                With a background in engineering and academics, R. Rajesh&apos;s passion for authentic hill farming and natural spice cultivation inspired him to transform his career to an agri-entrepreneur.
               </p>
               <p>
-                Her vision, dedication and entrepreneurial spirit laid the foundation for Kollimalai Arasan. Today, that same dedication guides every harvest, bringing you pure, unadulterated Kolli Hills spices—Black pepper, cardamom, cloves, and traditional natural products directly from farm to table.
+                His vision, dedication and entrepreneurial spirit laid the foundation for Kollimalai Arasan. Today, that same dedication guides every harvest, bringing you pure, unadulterated Kolli Hills spices—Black pepper, cardamom, cloves, and traditional natural products directly from farm to table.
               </p>
             </div>
 
@@ -35,7 +35,7 @@ export function AboutFounderSection() {
             <div className="pt-6 border-t border-about-divider flex flex-wrap items-center justify-between gap-6 w-full max-w-xl">
               <div>
                 <h4 className="font-bold text-base sm:text-lg text-about-heading">
-                  Dr. S. Anita, Ph.D.
+                  R. Rajesh, M.E. (CSE)
                 </h4>
                 <p className="text-[10px] sm:text-[11px] tracking-wider uppercase font-semibold text-neutral-500 mt-0.5">
                   PROPRIETOR — KOLLIMALAI ARASAN
@@ -43,7 +43,7 @@ export function AboutFounderSection() {
               </div>
 
               <div className="italic text-2xl sm:text-3xl text-about-signature tracking-wide select-none font-semibold">
-                S. Anita
+                R. Rajesh
               </div>
             </div>
           </div>
