@@ -282,7 +282,7 @@ export function FilterSidebar({
     }
   };
 
-  const handleAllSnacksClick = () => {
+  const handleAllProductsClick = () => {
     if (onSelectCategories) onSelectCategories([]);
     if (onSelectCategory) onSelectCategory(null);
     if (onSelectProducts) onSelectProducts([]);
@@ -375,7 +375,7 @@ export function FilterSidebar({
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="w-4 h-4 text-[#007F06]" />
           <h2 className="text-xs font-black uppercase tracking-wider text-[#101010]">
-            Filter Snacks
+            Filter Products
           </h2>
           {totalResultsCount !== undefined && (
             <span className="text-[11px] bg-[#F5F5F5] text-[#007F06] px-2 py-0.5 rounded-full font-bold">
@@ -532,11 +532,11 @@ export function FilterSidebar({
 
             {/* Scrollable category list with expandable nested products */}
             <div className="max-h-72 overflow-y-auto flex flex-col gap-2 pr-1.5 scrollbar-thin">
-              {/* Option: All Snacks (only in multi-category mode) */}
+              {/* Option: All Products (only in multi-category mode) */}
               {!isSingleCategoryMode && !categorySearch && (
                 <button
                   type="button"
-                  onClick={handleAllSnacksClick}
+                  onClick={handleAllProductsClick}
                   className={`flex items-center gap-2.5 py-1 text-left cursor-pointer group transition-colors select-none ${
                     activeCategoryIds.length === 0 && activeProductIds.length === 0
                       ? "text-[#007F06] font-bold"
@@ -561,7 +561,7 @@ export function FilterSidebar({
                         : ""
                     }`}
                   >
-                    All Snacks
+                    All Products
                   </span>
                 </button>
               )}

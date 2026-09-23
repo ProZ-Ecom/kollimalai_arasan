@@ -77,14 +77,14 @@ export function WishlistTab() {
             Your Wishlist is Empty
           </h3>
           <p className="text-xs text-theme-text-muted max-w-xs mx-auto mt-2 mb-6">
-            Save your favorite traditional treats here to reorder whenever you crave them.
+            Save your favorite Kolli Hills produce and spices here to reorder whenever you need them.
           </p>
           <Link href="/products">
             <button
               type="button"
               className="bg-theme-secondary hover:bg-theme-secondary-hover text-theme-secondary-fg text-xs font-semibold uppercase tracking-wider py-3 px-6 rounded-lg transition-colors cursor-pointer min-h-[44px]"
             >
-              Explore Snacks
+              Explore Products
             </button>
           </Link>
         </div>
@@ -98,8 +98,8 @@ export function WishlistTab() {
               <div className="h-32 sm:h-36 overflow-hidden">
                 <ProductImage
                   src={item.primaryImage || (item as any).image || null}
-                  alt={item.product?.name || item.variantName || "Snack"}
-                  fallbackText={item.product?.name || item.variantName || "Snack"}
+                  alt={item.product?.name || item.variantName || "Product"}
+                  fallbackText={item.product?.name || item.variantName || "Product"}
                   containerClassName="w-full h-full"
                   className="w-full h-full object-cover"
                 />
@@ -108,7 +108,7 @@ export function WishlistTab() {
               <div className="p-3.5 sm:p-4 flex flex-col justify-between flex-1 gap-3">
                 <div>
                   <div className="text-xs font-semibold uppercase text-theme-text-primary line-clamp-2 min-h-[32px]">
-                    {item.product?.name || item.variantName || "Snack Item"}
+                    {item.product?.name || item.variantName || "Product"}
                   </div>
                   {item.variantName && (
                     <div className="text-[11px] text-theme-text-muted mt-0.5">

@@ -87,11 +87,11 @@ export function WriteReviewModal({
       setIsSuccess(true);
       toast.success(
         "Review Submitted",
-        "Thank you! Your review is pending admin approval and will appear once approved."
+        "Thank you! Your review has been submitted and will appear once approved by admin."
       );
       setTimeout(() => {
         onClose();
-      }, 2500);
+      }, 2000);
     },
     onError: (err: any) => {
       const msg =
@@ -221,7 +221,7 @@ export function WriteReviewModal({
                 Review Submitted for Approval!
               </h4>
               <p className="text-xs sm:text-sm text-neutral-600 max-w-sm mx-auto leading-relaxed">
-                Thank you for sharing your authentic feedback. Your review has been submitted and is currently pending admin moderation. Once approved, it will be published on the store.
+                Thank you for sharing your feedback. Your review has been submitted and is currently pending admin moderation. Once approved, it will appear on the store.
               </p>
               <div className="pt-2">
                 <button

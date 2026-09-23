@@ -22,7 +22,6 @@ import {
 } from "@/features/reviews/hooks/use-admin-reviews";
 import { ReviewRatingStars } from "@/features/reviews/components/ReviewRatingStars";
 import { ReviewStatusBadge } from "@/features/reviews/components/ReviewStatusBadge";
-import { ReviewStatusTabs, type ReviewStatusTab } from "@/features/reviews/components/ReviewStatusTabs";
 import { AdminReviewDetailModal } from "@/features/reviews/components/AdminReviewDetailModal";
 import { SearchInput } from "@/components/ui/search-input";
 import { Button } from "@/components/ui/button";
@@ -159,12 +158,6 @@ export function VariantReviewsCard({
       setPage(page - 1);
     }
   };
-
-  const tabs: ReviewStatusTab[] = [
-    { id: "all", label: "All Reviews" },
-    { id: "approved", label: "Approved" },
-    { id: "unapproved", label: "Pending / Unapproved" },
-  ];
 
   const startEntry = totalItems > 0 ? (page - 1) * pageSize + 1 : 0;
   const endEntry = totalItems > 0 ? Math.min(page * pageSize, totalItems) : 0;
@@ -348,14 +341,19 @@ export function VariantReviewsCard({
               { value: "rating_asc", label: "Lowest Rating" },
             ]}
           />
-        </div>
 
-        {/* Status Segmented Tabs */}
-        <div className="w-full lg:w-auto overflow-x-auto">
-          <ReviewStatusTabs
-            tabs={tabs}
-            activeTab={statusFilter}
-            onChange={handleTabChange}
+          {/* Status Dropdown Filter */}
+          <Select
+            value={statusFilter}
+            onValueChange={(val) => handleTabChange(val as "all" | "approved" | "unapproved")}
+            size="sm"
+            wrapperClassName="w-36 sm:w-48"
+            className="h-9 rounded-xl text-xs font-semibold"
+            options={[
+              { value: "all", label: "All Reviews" },
+              { value: "approved", label: "Approved" },
+              { value: "unapproved", label: "Pending / Unapproved" },
+            ]}
           />
         </div>
       </div>

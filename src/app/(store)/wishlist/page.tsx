@@ -73,7 +73,7 @@ export default function WishlistPage() {
             Your Wishlist is Waiting
           </h1>
           <p className="text-sm text-theme-text-subtle mb-8 leading-relaxed">
-            Please sign in to view and save your favorite authentic snacks and access them across all your devices.
+            Please sign in to view and save your favorite authentic spices and access them across all your devices.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/login?callbackUrl=/wishlist" className="w-full sm:w-auto">
@@ -87,7 +87,7 @@ export default function WishlistPage() {
                 variant="outline"
                 className="w-full h-11 px-6 rounded-xl border-theme-border-input hover:bg-theme-surface-alt text-theme-text-primary text-sm cursor-pointer"
               >
-                Explore Snacks
+                Explore Products
               </Button>
             </Link>
           </div>
@@ -160,12 +160,12 @@ export default function WishlistPage() {
             Your Wishlist is Empty
           </h1>
           <p className="text-sm text-theme-text-subtle mb-8 leading-relaxed">
-            Explore our traditional handmade snacks and save your favorite treats here for later!
+            Explore our authentic Kolli Hills spices and farm produce, and save your favorites here for later!
           </p>
           <Link href="/products">
             <Button className="h-11 px-8 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-fg font-medium text-sm cursor-pointer shadow-xs">
               <ShoppingBag className="h-4 w-4 mr-2" />
-              Explore All Snacks
+              Explore All Products
               <ArrowRight className="h-4 w-4 ml-1.5" />
             </Button>
           </Link>

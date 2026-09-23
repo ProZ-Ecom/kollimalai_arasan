@@ -257,7 +257,7 @@ export default function ShopAllPage() {
               {pageTitle}
             </h1>
             <p className="mt-2 text-xs sm:text-sm text-[#5A5A5A] max-w-2xl mx-auto leading-relaxed">
-              Authentic South Indian snacks, savories, and traditional sweets crafted with pure ingredients and timeless recipes.
+              Authentic Kolli Hills spices, single-origin produce, and pure hill harvests cultivated with sustainable farming.
             </p>
           </div>
         </div>
@@ -282,7 +282,7 @@ export default function ShopAllPage() {
             </button>
 
             <span className="text-xs text-[#5A5A5A] font-medium">
-              Showing <strong className="text-[#101010]">{meta?.total ?? displayedVariants.length}</strong> snacks
+              Showing <strong className="text-[#101010]">{meta?.total ?? displayedVariants.length}</strong> products
             </span>
           </div>
 
@@ -336,7 +336,7 @@ export default function ShopAllPage() {
                   <strong className="text-[#101010]">
                     {meta?.total ?? displayedVariants.length}
                   </strong>{" "}
-                  authentic {meta?.total === 1 ? "snack" : "snacks"}
+                  authentic {meta?.total === 1 ? "product" : "products"}
                   {currentCategory && (
                     <>
                       {" "}in <strong className="text-[#007F06] font-bold">{currentCategory.name}</strong>
@@ -366,7 +366,7 @@ export default function ShopAllPage() {
               {error && (
                 <div className="rounded-2xl border border-[#E5E5E5] bg-[#FFFFFF] p-8 text-center max-w-md mx-auto my-8 shadow-xs">
                   <h3 className="text-base font-bold text-[#101010] mb-2">
-                    Unable to load snacks
+                    Unable to load products
                   </h3>
                   <p className="text-xs text-[#5A5A5A] mb-4">
                     We encountered a connection issue fetching the product catalog.
@@ -427,13 +427,13 @@ export default function ShopAllPage() {
                     {isFetching && page > 1 && (
                       <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E5E5E5] shadow-xs text-xs font-bold text-[#007F06] animate-in fade-in">
                         <Loader2 className="w-4 h-4 animate-spin text-[#007F06]" />
-                        Loading more snacks...
+                        Loading more products...
                       </div>
                     )}
 
                     {!hasMorePages && displayedVariants.length > 0 && !isFetching && (
                       <p className="text-xs font-semibold text-[#8A8A8A] select-none">
-                        ✦ You have viewed all {displayedVariants.length} snacks ✦
+                        ✦ You have viewed all {displayedVariants.length} products ✦
                       </p>
                     )}
                   </div>

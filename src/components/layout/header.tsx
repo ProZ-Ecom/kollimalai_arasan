@@ -411,10 +411,10 @@ export function Header() {
 
           <nav className="flex-1 overflow-y-auto py-3 scrollbar-thin scrollbar-thumb-white/20">
             {navigation.map((item) => {
-              const isSnacks =
+              const isShopAll =
                 item.text === "Shop All" || item.path === "/products";
 
-              if (isSnacks) {
+              if (isShopAll) {
                 return (
                   <div key={item.id} className="border-b border-white/10">
                     <button

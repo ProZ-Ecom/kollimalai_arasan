@@ -220,7 +220,7 @@ export function DashboardTab({
           <p className="text-xs sm:text-sm text-theme-text-gold font-light max-w-lg leading-relaxed">
             {activeOrdersToDisplay.length > 0
               ? `You have ${activeOrdersToDisplay.length} orders in tracking and active loyalty rewards ready to use.`
-              : "Manage your profile, browse your orders, and explore authentic homemade snacks."}
+              : "Manage your profile, browse your orders, and explore authentic Kolli Hills spices and farm produce."}
           </p>
         </div>
 

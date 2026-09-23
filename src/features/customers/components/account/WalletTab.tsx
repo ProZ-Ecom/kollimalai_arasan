@@ -64,10 +64,10 @@ export function WalletTab({
 
       {/* 3 Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-        {/* Snack Coins */}
+        {/* Reward Coins */}
         <div className="bg-gradient-to-br from-theme-primary to-[#007F06] rounded-2xl p-5 sm:p-6 text-white shadow-2xs">
           <div className="text-[11px] font-semibold uppercase tracking-widest text-theme-secondary">
-            Snack Coins
+            Reward Coins
           </div>
           <div className="text-3xl sm:text-4xl font-bold mt-3">
             ₹{coinsBalance}

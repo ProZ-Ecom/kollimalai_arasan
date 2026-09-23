@@ -343,7 +343,7 @@ export function GlobalSearchModal({ isOpen, onClose, initialQuery = "" }: Global
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search murukku, sweets, mixture, snacks..."
+              placeholder="Search black pepper, cardamom, cloves, spices..."
               size="lg"
               leftIcon={<Search className="w-5 h-5 text-theme-primary shrink-0" />}
               rightIcon={
@@ -478,7 +478,7 @@ export function GlobalSearchModal({ isOpen, onClose, initialQuery = "" }: Global
                       </Button>
                     ))
                   ) : (
-                    <div className="text-xs text-theme-text-muted">Loading popular snacks...</div>
+                    <div className="text-xs text-theme-text-muted">Loading popular products...</div>
                   )}
                 </div>
               </div>
