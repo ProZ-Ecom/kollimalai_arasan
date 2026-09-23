@@ -9,4 +9,5 @@ export {
   useUpdateCategory,
   useDeleteCategory,
   useBulkDeleteCategories,
+  useRestoreCategory,
 } from "./use-category-mutations";

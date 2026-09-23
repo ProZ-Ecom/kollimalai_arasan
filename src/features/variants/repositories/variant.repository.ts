@@ -399,4 +399,74 @@ export const variantRepository = {
       return res;
     });
   },
+
+  async findDeletedAll(params: { page?: number; pageSize?: number; search?: string } = {}) {
+    const page = params.page ?? 1;
+    const pageSize = params.pageSize ?? 50;
+
+    const where: Prisma.ProductVariantWhereInput = {
+      deleted_at: { not: null },
+    };
+
+    if (params.search) {
+      where.AND = [
+        { deleted_at: { not: null } },
+        {
+          OR: [
+            { variant_name: { contains: params.search } },
+            { variant_unit_prices: { some: { sku: { contains: params.search } } } },
+            { product: { name: { contains: params.search } } },
+          ],
+        },
+      ];
+      delete where.deleted_at;
+    }
+
+    return db.productVariant.findMany({
+      where,
+      orderBy: { deleted_at: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        product: { select: { id: true, uuid: true, name: true, deleted_at: true } },
+        variant_unit_prices: {
+          select: { sku: true },
+          take: 1,
+        },
+        product_variant_images: {
+          where: { is_active: true },
+          select: { image_url: true, is_primary: true },
+          orderBy: { is_primary: "desc" },
+          take: 1,
+        },
+      },
+    });
+  },
+
+  async restoreByUuid(uuid: string, adminId?: bigint | null) {
+    const existing = await db.productVariant.findFirst({ where: { uuid, deleted_at: { not: null } } });
+    if (!existing) return null;
+
+    const deletedAt = existing.deleted_at!;
+    const windowStart = new Date(deletedAt.getTime() - 5000);
+    const windowEnd = new Date(deletedAt.getTime() + 5000);
+
+    return db.$transaction(async (tx) => {
+      const restored = await tx.productVariant.update({
+        where: { id: existing.id },
+        data: {
+          isActive: true,
+          deleted_at: null,
+          ...(adminId ? { updated_by: adminId } : {}),
+        },
+      });
+
+      await tx.variantUnitPrice.updateMany({
+        where: { variant_id: existing.id, deleted_at: { gte: windowStart, lte: windowEnd } },
+        data: { isActive: true, deleted_at: null, ...(adminId ? { updated_by: adminId } : {}) },
+      });
+
+      return restored;
+    });
+  },
 };

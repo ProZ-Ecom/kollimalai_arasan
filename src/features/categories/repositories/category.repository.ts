@@ -103,11 +103,16 @@ export const categoryRepository = {
     });
   },
 
+  async findDeletedByUuid(uuid: string) {
+    return db.productCategory.findFirst({
+      where: { uuid, deleted_at: { not: null } },
+    });
+  },
+
   async findBySlug(slug: string, excludeUuid?: string) {
     return db.productCategory.findFirst({
       where: {
         slug,
-        isActive: true,
         deleted_at: null,
         ...(excludeUuid ? { uuid: { not: excludeUuid } } : {}),
       },
@@ -118,7 +123,6 @@ export const categoryRepository = {
     return db.productCategory.findFirst({
       where: {
         name,
-        isActive: true,
         deleted_at: null,
         ...(excludeUuid ? { uuid: { not: excludeUuid } } : {}),
       },
@@ -163,6 +167,49 @@ export const categoryRepository = {
       db.productCategory.findMany({
         where,
         orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      db.productCategory.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit: pageSize,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize) || 1,
+      },
+    };
+  },
+
+  async findDeletedAll(params: { page?: number; pageSize?: number; search?: string } = {}) {
+    const page = params.page ?? 1;
+    const pageSize = params.pageSize ?? 10;
+
+    const where: Prisma.ProductCategoryWhereInput = {
+      deleted_at: { not: null },
+    };
+
+    if (params.search) {
+      where.AND = [
+        { deleted_at: { not: null } },
+        {
+          OR: [
+            { name: { contains: params.search } },
+            { slug: { contains: params.search } },
+          ],
+        },
+      ];
+      delete where.deleted_at;
+    }
+
+    const [data, total] = await Promise.all([
+      db.productCategory.findMany({
+        where,
+        orderBy: { deleted_at: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -280,6 +327,70 @@ export const categoryRepository = {
 
   async delete(id: number | bigint) {
     return db.productCategory.delete({ where: { id: BigInt(id) } });
+  },
+
+  async restoreByUuid(uuid: string, adminId?: bigint | null) {
+    const existing = await db.productCategory.findFirst({
+      where: { uuid },
+    });
+    if (!existing) return null;
+
+    return db.$transaction(async (tx) => {
+      // 1. Restore the category
+      const restoredCategory = await tx.productCategory.update({
+        where: { id: existing.id },
+        data: {
+          isActive: true,
+          status: true,
+          deleted_at: null,
+          ...(adminId ? { updated_by: adminId } : {}),
+        },
+      });
+
+      // 2. Restore all products that were soft-deleted AT THE SAME TIME (within 1 second)
+      const deletedAt = existing.deleted_at;
+      if (deletedAt) {
+        const window = new Date(deletedAt.getTime() + 1000);
+
+        const relatedProducts = await tx.product.findMany({
+          where: {
+            categoryId: existing.id,
+            deleted_at: { gte: deletedAt, lte: window },
+          },
+          select: { id: true },
+        });
+
+        if (relatedProducts.length > 0) {
+          const productIds = relatedProducts.map((p) => p.id);
+
+          await tx.product.updateMany({
+            where: { id: { in: productIds } },
+            data: { isActive: true, status: true, deleted_at: null, ...(adminId ? { updated_by: adminId } : {}) },
+          });
+
+          const relatedVariants = await tx.productVariant.findMany({
+            where: { productId: { in: productIds }, deleted_at: { gte: deletedAt, lte: window } },
+            select: { id: true },
+          });
+
+          if (relatedVariants.length > 0) {
+            const variantIds = relatedVariants.map((v) => v.id);
+
+            await tx.productVariant.updateMany({
+              where: { id: { in: variantIds } },
+              data: { isActive: true, deleted_at: null, ...(adminId ? { updated_by: adminId } : {}) },
+            });
+
+            await tx.variantUnitPrice.updateMany({
+              where: { variant_id: { in: variantIds } },
+              data: { isActive: true, deleted_at: null, ...(adminId ? { updated_by: adminId } : {}) },
+            });
+          }
+        }
+      }
+
+      return restoredCategory;
+    });
   },
 
   async bulkSoftDelete(

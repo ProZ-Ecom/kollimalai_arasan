@@ -7,6 +7,7 @@ import {
   updateCategory,
   deleteCategory,
   bulkDeleteCategories,
+  restoreCategory,
 } from "../api/get-categories";
 
 export function useCreateCategory() {
@@ -72,4 +73,19 @@ export function useBulkDeleteCategories() {
   });
 }
 
+export function useRestoreCategory() {
+  const queryClient = useQueryClient();
 
+  return useMutation({
+    mutationFn: (uuid: string) => restoreCategory(uuid),
+    meta: { skipToast: true },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: productKeys.all });
+      queryClient.invalidateQueries({ queryKey: variantKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "variants"] });
+      queryClient.invalidateQueries({ queryKey: ["customer", "catalog"] });
+    },
+  });
+}

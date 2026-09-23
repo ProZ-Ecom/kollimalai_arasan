@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { FormModal } from "@/components/common/FormModal";
 import { CategoryForm } from "@/features/categories/components/CategoryForm";
 import Image from "next/image";
-import { Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 // import {
 //   Dialog,
 //   DialogContent,
@@ -118,29 +117,6 @@ export default function AdminCategoriesPage() {
       ),
     },
 
-    // {
-    //   accessorKey: "_count.products",
-    //   header: "Products",
-    //   cell: ({ row }) => (
-    //     <span className="text-[var(--color-neutral-700)]">
-    //       {row.original._count?.products || 0} Items
-    //     </span>
-    //   ),
-    // },
-    // {
-    //   accessorKey: "isActive",
-    //   header: "Status",
-    //   cell: ({ row }) =>
-    //     row.original.isActive ? (
-    //       <span className="inline-flex items-center rounded-full bg-[var(--color-success-50)] px-3 py-1 text-xs font-medium text-[var(--color-success-700)]">
-    //         Active
-    //       </span>
-    //     ) : (
-    //       <span className="inline-flex items-center rounded-full bg-[var(--color-neutral-100)] px-3 py-1 text-xs font-medium text-[var(--color-neutral-600)]">
-    //         Inactive
-    //       </span>
-    //     ),
-    // },
     {
       accessorKey: "sortOrder",
       header: "Sort Order",
