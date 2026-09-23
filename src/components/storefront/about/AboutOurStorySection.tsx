@@ -79,9 +79,14 @@ export function AboutOurStorySection() {
             </h2>
 
             {/* Description */}
-            <p className="text-about-body text-sm sm:text-base leading-relaxed mb-8">
-              Kollimalai Arasan was established in 2021 in Namakkal, Tamil Nadu, with a vision to deliver pure, farm-fresh spices directly from Kolli Hills—specializing in premium Spices: Black pepper, cardamom, cloves, and traditional natural products with uncompromised quality.
-            </p>
+            <div className="space-y-4 text-about-body text-sm sm:text-base leading-relaxed mb-8">
+              <p>
+                Nestled in the pristine highlands of Kolli Hills, Tamil Nadu, <strong>Kollimalai Arasan</strong> is a proudly single-origin organic farm committed to cultivating high-quality, 100% natural agricultural products. Set amidst rich biodiversity with abundant natural water sources, our estate flourishes in a completely pollution-free environment — making it an ideal sanctuary for authentic organic farming.
+              </p>
+              <p>
+                We specialize in growing 100% certified organic produce including coffee, black pepper, white pepper, cardamom, cloves, nutmeg, mace, millets, and mountain fruits (pineapple, jackfruit, hill banana) — all cultivated through sustainable, chemical-free farming methods.
+              </p>
+            </div>
 
             {/* 2x2 Fact Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">

@@ -248,7 +248,7 @@ export function CompanySettingsForm() {
               type="email"
               value={formData.email || ""}
               onChange={(e) => handleInputChange("email", e.target.value)}
-              placeholder="e.g. contact@kollimalaiarasan.com"
+              placeholder="e.g. kollimalaiarasan@gmail.com"
             />
           </div>
 
