@@ -26,7 +26,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDateTime } from "@/lib/utils";
 import { ReviewRatingStars } from "./ReviewRatingStars";
 import { ReviewStatusBadge } from "./ReviewStatusBadge";
-import { ReviewStatusTabs, type ReviewStatusTab } from "./ReviewStatusTabs";
 import { AdminReviewDetailModal } from "./AdminReviewDetailModal";
 import {
   useAdminReviews,
@@ -137,12 +136,6 @@ export function AdminReviewListTable({
       setPage(page - 1);
     }
   };
-
-  const tabs: ReviewStatusTab[] = [
-    { id: "all", label: "All Reviews" },
-    { id: "approved", label: "Approved" },
-    { id: "unapproved", label: "Pending / Unapproved" },
-  ];
 
   const columns: ColumnDef<ReviewResponse, unknown>[] = [
     {
@@ -371,6 +364,20 @@ export function AdminReviewListTable({
             ]}
           />
 
+          {/* Status Dropdown Filter */}
+          <Select
+            value={statusFilter}
+            onValueChange={(val) => handleTabChange(val as "all" | "approved" | "unapproved")}
+            size="sm"
+            wrapperClassName="w-36 sm:w-48"
+            className="h-9.5 rounded-lg text-xs font-semibold"
+            options={[
+              { value: "all", label: "All Reviews" },
+              { value: "approved", label: "Approved" },
+              { value: "unapproved", label: "Pending / Unapproved" },
+            ]}
+          />
+
           {/* Refresh Button */}
           <Button
             variant="outline"
@@ -386,15 +393,6 @@ export function AdminReviewListTable({
           </Button>
 
           {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} className="h-9.5" />}
-        </div>
-
-        {/* Right Side: Status Tabs (Segmented) */}
-        <div className="w-full lg:w-auto overflow-x-auto">
-          <ReviewStatusTabs
-            tabs={tabs}
-            activeTab={statusFilter}
-            onChange={handleTabChange}
-          />
         </div>
       </div>
 

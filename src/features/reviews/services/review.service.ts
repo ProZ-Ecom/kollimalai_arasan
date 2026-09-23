@@ -174,21 +174,6 @@ export const reviewService = {
           "Unable to determine the product being reviewed. Please provide a valid product or pack size."
         );
       }
-
-      // Duplicate check for direct review
-      const existing = await db.review.findFirst({
-        where: {
-          userId: customerId,
-          productId,
-          ...(variantUnitPriceId ? { variant_unit_price_id: variantUnitPriceId } : {}),
-          is_active: true,
-        },
-      });
-      if (existing) {
-        throw ApiError.conflict(
-          "You have already submitted a review for this item. Your review will appear once approved by admin."
-        );
-      }
     }
 
     // 6. Create Review Transaction (isApproved: false by default for admin moderation)

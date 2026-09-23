@@ -87,11 +87,11 @@ export function WriteReviewModal({
       setIsSuccess(true);
       toast.success(
         "Review Submitted",
-        "Thank you! Your review is pending admin approval and will appear once approved."
+        "Thank you! Your review has been submitted and will appear once approved by admin."
       );
       setTimeout(() => {
         onClose();
-      }, 2500);
+      }, 2000);
     },
     onError: (err: any) => {
       const msg =
@@ -157,20 +157,20 @@ export function WriteReviewModal({
       />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-lg bg-white rounded-3xl border border-[#E8D9CD] shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg bg-white rounded-3xl border border-neutral-200 shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
         {/* Top Decorative Header Accent */}
-        <div className="h-2 bg-gradient-to-r from-[#7A2224] via-[#8B1D1D] to-[#A83232]" />
+        <div className="h-2 bg-gradient-to-r from-secondary-700 via-secondary-500 to-primary-500" />
 
         {/* Modal Header */}
-        <div className="p-6 sm:p-7 pb-4 flex items-start justify-between gap-4 border-b border-[#F0E4D8] bg-[#FFFDF9]">
+        <div className="p-6 sm:p-7 pb-4 flex items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/50">
           <div className="min-w-0">
-            <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8B1D1D] block mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary-700 block mb-1">
               Customer Feedback
             </span>
-            <h3 className="font-serif text-2xl font-bold text-[#2B1B17] tracking-tight">
+            <h3 className="font-serif text-2xl font-bold text-neutral-900 tracking-tight">
               Review This Product
             </h3>
-            <p className="text-xs sm:text-sm text-stone-600 mt-1 truncate">
+            <p className="text-xs sm:text-sm text-neutral-600 mt-1 truncate">
               {targetName}
             </p>
           </div>
@@ -179,7 +179,7 @@ export function WriteReviewModal({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="rounded-full p-2 text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer disabled:opacity-50"
+            className="rounded-full p-2 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer disabled:opacity-50"
             aria-label="Close review modal"
           >
             <X className="w-5 h-5" />
@@ -190,22 +190,22 @@ export function WriteReviewModal({
         <div className="p-6 sm:p-7 space-y-6 max-h-[75vh] overflow-y-auto">
           {/* Guest / Unauthenticated Notice */}
           {!session && authStatus !== "loading" ? (
-            <div className="rounded-2xl border border-[#E8D9CD] bg-[#FAF4ED] p-6 text-center space-y-4">
-              <div className="w-12 h-12 rounded-full bg-[#F5EDE3] text-[#8B1D1D] flex items-center justify-center mx-auto shadow-2xs">
-                <LogIn className="w-6 h-6 text-[#8B1D1D]" />
+            <div className="rounded-2xl border border-secondary-200/80 bg-secondary-50/50 p-6 text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-secondary-100 text-secondary-700 flex items-center justify-center mx-auto shadow-2xs">
+                <LogIn className="w-6 h-6 text-secondary-700" />
               </div>
               <div className="space-y-1">
-                <h4 className="font-serif text-lg font-bold text-[#2B1B17]">
+                <h4 className="font-serif text-lg font-bold text-neutral-900">
                   Sign In to Share Your Review
                 </h4>
-                <p className="text-xs sm:text-sm text-stone-600 max-w-sm mx-auto leading-relaxed">
+                <p className="text-xs sm:text-sm text-neutral-600 max-w-sm mx-auto leading-relaxed">
                   Join our community of natural products and spices enthusiasts. It only takes a few seconds to sign in!
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleLoginRedirect}
-                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl bg-[#7A2224] hover:bg-[#5A1911] text-white text-xs sm:text-sm font-bold shadow-xs hover:shadow-sm transition-all cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl bg-secondary-700 hover:bg-secondary-800 text-white text-xs sm:text-sm font-bold shadow-xs hover:shadow-sm transition-all cursor-pointer"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Sign In to Continue</span>
@@ -217,17 +217,17 @@ export function WriteReviewModal({
               <div className="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-2xs">
                 <CheckCircle2 className="w-8 h-8 text-emerald-600" />
               </div>
-              <h4 className="font-serif text-xl font-bold text-[#2B1B17]">
+              <h4 className="font-serif text-xl font-bold text-neutral-900">
                 Review Submitted for Approval!
               </h4>
-              <p className="text-xs sm:text-sm text-stone-600 max-w-sm mx-auto leading-relaxed">
-                Thank you for sharing your authentic feedback. Your review has been submitted and is currently pending admin moderation. Once approved, it will be published on the store.
+              <p className="text-xs sm:text-sm text-neutral-600 max-w-sm mx-auto leading-relaxed">
+                Thank you for sharing your feedback. Your review has been submitted and is currently pending admin moderation. Once approved, it will appear on the store.
               </p>
               <div className="pt-2">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-2 rounded-xl bg-[#7A2224] hover:bg-[#5A1911] text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-secondary-700 hover:bg-secondary-800 text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
                 >
                   Got It
                 </button>
@@ -238,19 +238,19 @@ export function WriteReviewModal({
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Reviewer Identity Badge */}
               {session?.user?.name && (
-                <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-[#FBF8F4] border border-[#F0E4D8] text-xs text-stone-600">
-                  <div className="w-6 h-6 rounded-full bg-[#8B1D1D] text-white font-bold flex items-center justify-center text-[10px]">
+                <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs text-neutral-600">
+                  <div className="w-6 h-6 rounded-full bg-secondary-700 text-white font-bold flex items-center justify-center text-[10px]">
                     {session.user.name.charAt(0).toUpperCase()}
                   </div>
                   <span>
-                    Posting as <strong className="text-[#2B1B17] font-semibold">{session.user.name}</strong>
+                    Posting as <strong className="text-neutral-900 font-semibold">{session.user.name}</strong>
                   </span>
                 </div>
               )}
 
               {/* Error Banner */}
               {errorBanner && (
-                <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs animate-in fade-in">
+                <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs animate-in fade-in">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <p className="leading-snug">{errorBanner}</p>
                 </div>
@@ -259,7 +259,7 @@ export function WriteReviewModal({
               {/* Pack Size Selector (if multiple pack sizes exist) */}
               {packSizes.length > 1 && (
                 <div>
-                  <label className="block text-xs font-bold text-[#2B1B17] uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider mb-2">
                     Pack Size Purchased / Tasted
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -272,8 +272,8 @@ export function WriteReviewModal({
                           onClick={() => setActiveUnitPriceId(pack.id)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                             isSelected
-                              ? "bg-[#7A2224] text-white border-[#7A2224] shadow-2xs"
-                              : "bg-white text-stone-700 border-stone-200 hover:border-stone-400"
+                              ? "bg-secondary-700 text-white border-secondary-700 shadow-2xs"
+                              : "bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400"
                           }`}
                         >
                           {getPackSizeLabel(pack)}
@@ -286,8 +286,8 @@ export function WriteReviewModal({
 
               {/* Star Rating Selector */}
               <div>
-                <label className="block text-xs font-bold text-[#2B1B17] uppercase tracking-wider mb-1.5">
-                  Overall Rating <span className="text-[#8B1D1D]">*</span>
+                <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider mb-1.5">
+                  Overall Rating <span className="text-secondary-700">*</span>
                 </label>
                 <div className="flex items-center gap-1.5 py-1">
                   {[1, 2, 3, 4, 5].map((starValue) => {
@@ -305,8 +305,8 @@ export function WriteReviewModal({
                         <Star
                           className={`w-7 h-7 sm:w-8 sm:h-8 transition-colors ${
                             isFilled
-                              ? "fill-amber-400 text-amber-400 drop-shadow-xs"
-                              : "fill-stone-100 text-stone-300"
+                              ? "fill-primary-400 text-primary-400 drop-shadow-xs"
+                              : "fill-neutral-100 text-neutral-300"
                           }`}
                         />
                       </button>
@@ -314,10 +314,10 @@ export function WriteReviewModal({
                   })}
                 </div>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-xs font-bold text-[#8B1D1D]">
+                  <span className="text-xs font-bold text-secondary-800">
                     {ratingInfo.label} ({activeRating}/5)
                   </span>
-                  <span className="text-xs text-stone-500 hidden sm:inline">
+                  <span className="text-xs text-neutral-500 hidden sm:inline">
                     — {ratingInfo.text}
                   </span>
                 </div>
@@ -326,10 +326,10 @@ export function WriteReviewModal({
               {/* Review Title / Headline */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="review-title" className="text-xs font-bold text-[#2B1B17] uppercase tracking-wider">
+                  <label htmlFor="review-title" className="text-xs font-bold text-neutral-800 uppercase tracking-wider">
                     Headline
                   </label>
-                  <span className="text-[11px] text-stone-400">
+                  <span className="text-[11px] text-neutral-400">
                     {title.length}/150
                   </span>
                 </div>
@@ -339,18 +339,18 @@ export function WriteReviewModal({
                   maxLength={150}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Perfectly crunchy with pure ghee aroma!"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white text-sm text-[#2B1B17] placeholder:text-stone-400 focus:outline-hidden focus:border-[#7A2224] focus:ring-2 focus:ring-[#7A2224]/15 transition-all"
+                  placeholder="e.g. Rich, fresh aroma and authentic Kolli Hills flavor!"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-white text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-hidden focus:border-secondary-600 focus:ring-2 focus:ring-secondary-500/15 transition-all"
                 />
               </div>
 
               {/* Detailed Review / Comment */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="review-comment" className="text-xs font-bold text-[#2B1B17] uppercase tracking-wider">
-                    Your Review <span className="text-[#8B1D1D]">*</span>
+                  <label htmlFor="review-comment" className="text-xs font-bold text-neutral-800 uppercase tracking-wider">
+                    Your Review <span className="text-secondary-700">*</span>
                   </label>
-                  <span className="text-[11px] text-stone-400">
+                  <span className="text-[11px] text-neutral-400">
                     {comment.length}/2000
                   </span>
                 </div>
@@ -361,24 +361,24 @@ export function WriteReviewModal({
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="What made this product special? Tell us about the aroma, purity, freshness, or how your family enjoyed it..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white text-sm text-[#2B1B17] placeholder:text-stone-400 focus:outline-hidden focus:border-[#7A2224] focus:ring-2 focus:ring-[#7A2224]/15 transition-all resize-none leading-relaxed"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-white text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-hidden focus:border-secondary-600 focus:ring-2 focus:ring-secondary-500/15 transition-all resize-none leading-relaxed"
                 />
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-3 border-t border-[#F0E4D8] flex items-center justify-end gap-3">
+              <div className="pt-3 border-t border-neutral-200 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={onClose}
                   disabled={isPending}
-                  className="px-5 py-2.5 rounded-xl border border-stone-200 text-stone-700 hover:bg-stone-50 text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl border border-neutral-200 text-neutral-700 hover:bg-neutral-50 text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isPending || (!comment.trim() && !title.trim())}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#7A2224] hover:bg-[#5A1911] text-white text-xs font-bold shadow-xs hover:shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-secondary-700 hover:bg-secondary-800 text-white text-xs font-bold shadow-xs hover:shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isPending ? (
                     <>

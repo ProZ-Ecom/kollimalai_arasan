@@ -700,7 +700,7 @@ export default function CheckoutPage() {
                     </p>
                     <p className="text-xs text-theme-text-subtle mb-4">
                       Please add your delivery address to receive freshly packed
-                      snacks.
+                      products.
                     </p>
                     <Button
                       type="button"

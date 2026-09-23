@@ -52,7 +52,7 @@ function LoginForm() {
           }
 
           const userRole = response?.data?.user?.role;
-          if ((userRole === "ADMIN" || userRole === "STAFF") && callbackUrl === "/") {
+          if (userRole === "ADMIN" || userRole === "STAFF") {
             router.push("/admin/dashboard");
           } else {
             router.push(callbackUrl);
@@ -80,7 +80,7 @@ function LoginForm() {
         </div>
       }
       title="Welcome Back"
-      subtitle="Sign in to access your favorite heritage snacks."
+      subtitle="Sign in to access your account and orders."
       bottomContent={
         <div className="text-sm text-neutral-600">
           New to Kollimalai Arasan?{" "}

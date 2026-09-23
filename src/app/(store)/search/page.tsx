@@ -228,34 +228,34 @@ function SearchResultsContent() {
       <div className="border-b border-[#F0E4D8] bg-gradient-to-b from-[#FFFDF9] via-[#FAF4ED] to-[#F5ECE1] py-8 sm:py-12">
         <div className="w-full max-w-7xl 2xl:max-w-[1600px] 3xl:max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
           {/* Breadcrumb navigation */}
-          <nav className="flex items-center justify-center gap-2 text-xs sm:text-sm text-[#7A6258] mb-3">
-            <Link href="/" className="hover:text-[#7A2224] transition-colors">
+          <nav className="flex items-center justify-center gap-2 text-xs sm:text-sm text-neutral-500 mb-3">
+            <Link href="/" className="hover:text-secondary-700 transition-colors">
               Home
             </Link>
             <ChevronRight className="w-3.5 h-3.5" />
-            <Link href="/products" className="hover:text-[#7A2224] transition-colors">
+            <Link href="/products" className="hover:text-secondary-700 transition-colors">
               Products
             </Link>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="font-bold text-[#2D1810]">
+            <span className="font-bold text-neutral-900">
               Search Results
             </span>
           </nav>
 
           <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#7A2224]/10 text-[#7A2224] text-xs font-bold uppercase tracking-wider mb-2">
-              <Search className="h-3.5 w-3.5 text-[#F8BE15]" />
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-secondary-50 border border-secondary-200/80 text-secondary-800 text-xs font-bold uppercase tracking-wider mb-2">
+              <Search className="h-3.5 w-3.5 text-secondary-600" />
               Catalog Search
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#2D1810] font-serif tracking-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-neutral-900 font-serif tracking-tight">
               {search.trim() ? (
                 <>Results for &ldquo;{search}&rdquo;</>
               ) : (
-                "Search All Snacks"
+                "Search All Spices & Produce"
               )}
             </h1>
-            <p className="mt-2 text-xs sm:text-sm text-[#7A6258] max-w-2xl mx-auto leading-relaxed">
-              Discover authentic handmade South Indian murukku, savories, and traditional sweets crafted with pure ingredients.
+            <p className="mt-2 text-xs sm:text-sm text-neutral-600 max-w-2xl mx-auto leading-relaxed">
+              Discover pure, single-origin organic spices, farm produce, and traditional hill harvests directly from Kolli Hills.
             </p>
           </div>
         </div>
@@ -264,23 +264,23 @@ function SearchResultsContent() {
       <div className="w-full bg-white">
         <div className="w-full max-w-7xl 2xl:max-w-[1600px] 3xl:max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 bg-white">
           {/* Mobile Filter Toggle Button */}
-          <div className="lg:hidden mb-6 flex items-center justify-between gap-3 bg-white border border-[#E8D9CD] rounded-xl p-3 shadow-xs">
+          <div className="lg:hidden mb-6 flex items-center justify-between gap-3 bg-white border border-neutral-200 rounded-xl p-3 shadow-xs">
             <button
               type="button"
               onClick={() => setIsMobileFilterOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#7A2224] text-white font-bold text-xs shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary-700 hover:bg-secondary-800 text-white font-bold text-xs shadow-xs cursor-pointer"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Filters
               {activeFilterCount > 0 && (
-                <span className="w-4.5 h-4.5 rounded-full bg-[#F8BE15] text-[#2D1810] font-black text-[10px] flex items-center justify-center">
+                <span className="w-4.5 h-4.5 rounded-full bg-primary-400 text-neutral-900 font-black text-[10px] flex items-center justify-center">
                   {activeFilterCount}
                 </span>
               )}
             </button>
 
-            <span className="text-xs text-[#7A6258] font-medium">
-              Showing <strong className="text-[#2D1810]">{meta?.total ?? displayedVariants.length}</strong> snacks
+            <span className="text-xs text-neutral-500 font-medium">
+              Showing <strong className="text-neutral-900">{meta?.total ?? displayedVariants.length}</strong> products
             </span>
           </div>
 
@@ -444,15 +444,15 @@ function SearchResultsContent() {
                     className="h-16 flex items-center justify-center my-6"
                   >
                     {isFetching && page > 1 && (
-                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E8D9CD] shadow-xs text-xs font-bold text-[#7A2224] animate-in fade-in">
-                        <Loader2 className="w-4 h-4 animate-spin text-[#7A2224]" />
-                        Loading more snacks...
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-neutral-200 shadow-xs text-xs font-bold text-secondary-700 animate-in fade-in">
+                        <Loader2 className="w-4 h-4 animate-spin text-secondary-600" />
+                        Loading more products...
                       </div>
                     )}
 
                     {!hasMorePages && displayedVariants.length > 0 && !isFetching && (
-                      <p className="text-xs font-semibold text-[#9C8274] select-none">
-                        ✦ You have viewed all {displayedVariants.length} snacks ✦
+                      <p className="text-xs font-semibold text-neutral-500 select-none">
+                        ✦ You have viewed all {displayedVariants.length} products ✦
                       </p>
                     )}
                   </div>

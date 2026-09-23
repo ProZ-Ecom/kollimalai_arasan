@@ -56,8 +56,15 @@ function ProfileContent() {
   const { data: session, status } = useSession();
 
   const currentTab = searchParams.get("tab") || "dashboard";
+  const userRole = (session?.user as any)?.role;
 
-  if (status === "loading") {
+  React.useEffect(() => {
+    if (status === "authenticated" && (userRole === "ADMIN" || userRole === "STAFF")) {
+      router.replace("/admin/dashboard");
+    }
+  }, [status, userRole, router]);
+
+  if (status === "loading" || (status === "authenticated" && (userRole === "ADMIN" || userRole === "STAFF"))) {
     return <AccountPageSkeleton />;
   }
 

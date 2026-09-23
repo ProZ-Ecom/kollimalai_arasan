@@ -47,13 +47,13 @@ export function SettingsTab() {
     },
     {
       key: "festiveOffers" as const,
-      label: "Festive offers & pre-book alerts",
-      hint: "Diwali, Pongal, and seasonal homemade snack drops",
+      label: "Festive offers & harvest alerts",
+      hint: "Seasonal organic harvest drops, farm produce, and spice offers",
     },
     {
       key: "newsletter" as const,
       label: "Email newsletter",
-      hint: "Traditional recipes and newly added snacks twice a month",
+      hint: "Traditional hill farming recipes and newly added spices twice a month",
     },
     {
       key: "restock" as const,

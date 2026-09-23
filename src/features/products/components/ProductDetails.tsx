@@ -458,46 +458,50 @@ function ProductDetails({ product }: ProductDetailsProps) {
               </p>
             )}
             {sourcingLocation && (
-              <p className="inline-flex items-center gap-1.5 mt-1.5 text-xs font-medium text-neutral-500">
-                <MapPin className="w-3.5 h-3.5 text-[#007F06]/70" />
-                Sourced from {sourcingLocation}
+              <p className="flex items-center gap-1.5 mt-1.5 text-xs font-medium text-neutral-500">
+                <MapPin className="w-3.5 h-3.5 text-secondary-600 shrink-0" />
+                <span>Sourced from {sourcingLocation}</span>
               </p>
             )}
 
             {/* Star Rating Social Proof (Only show real rating if reviews exist) */}
-            {totalReviews > 0 ? (
-              <a
-                href="#reviews-section"
-                className="inline-flex items-center gap-2 mt-2 text-xs font-semibold text-neutral-600 hover:text-[#007F06] transition-colors cursor-pointer group"
-              >
-                <div className="flex items-center gap-0.5 text-primary-500">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-3.5 h-3.5 ${
-                        i < Math.round(avgRating)
-                          ? "fill-primary-400 text-primary-400"
-                          : "fill-neutral-200 text-neutral-200"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="font-bold text-neutral-900">{avgRating.toFixed(1)}</span>
-                <span className="text-neutral-300">•</span>
-                <span className="underline underline-offset-2 text-neutral-500 group-hover:text-[#007F06]">
-                  {totalReviews} customer {totalReviews === 1 ? "review" : "reviews"}
-                </span>
-              </a>
-            ) : (
-              <a
-                href="#reviews-section"
-                className="inline-flex items-center gap-1.5 mt-2 text-xs text-neutral-500 hover:text-[#007F06] transition-colors cursor-pointer"
-              >
-                <span>No reviews yet</span>
-                <span className="text-neutral-300">•</span>
-                <span className="underline underline-offset-2">Be the first to review</span>
-              </a>
-            )}
+            <div className="mt-2.5 flex items-center">
+              {totalReviews > 0 ? (
+                <a
+                  href="#reviews-section"
+                  className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-600 hover:text-secondary-700 transition-colors cursor-pointer group"
+                >
+                  <div className="flex items-center gap-0.5 text-primary-500">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`w-3.5 h-3.5 ${
+                          i < Math.round(avgRating)
+                            ? "fill-primary-400 text-primary-400"
+                            : "fill-neutral-200 text-neutral-200"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="font-bold text-neutral-900">{avgRating.toFixed(1)}</span>
+                  <span className="text-neutral-300">•</span>
+                  <span className="underline underline-offset-2 text-neutral-500 group-hover:text-secondary-700">
+                    {totalReviews} customer {totalReviews === 1 ? "review" : "reviews"}
+                  </span>
+                </a>
+              ) : (
+                <a
+                  href="#reviews-section"
+                  className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-secondary-700 transition-colors cursor-pointer"
+                >
+                  <span className="font-medium text-neutral-600">No reviews yet</span>
+                  <span className="text-neutral-300">•</span>
+                  <span className="underline underline-offset-2 text-secondary-700 hover:text-secondary-800 font-medium">
+                    Be the first to review
+                  </span>
+                </a>
+              )}
+            </div>
           </div>
 
           {/* Pricing Card */}

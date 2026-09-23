@@ -120,6 +120,18 @@ export default auth(async (req) => {
     return applyCookies(NextResponse.redirect(url));
   }
 
+  // Redirect admin/staff away from customer profile directly to admin dashboard
+  if (
+    (pathname === "/profile" || pathname.startsWith("/profile/")) &&
+    isAuthenticated &&
+    (userRole === "ADMIN" || userRole === "STAFF")
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/admin/dashboard";
+    url.search = "";
+    return applyCookies(NextResponse.redirect(url));
+  }
+
   if ((pathname === "/login" || pathname === "/register") && isAuthenticated) {
     if (req.nextUrl.searchParams.get("from") === "unauthorized") {
       const response = NextResponse.next();

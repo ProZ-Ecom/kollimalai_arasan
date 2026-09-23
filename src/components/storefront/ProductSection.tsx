@@ -111,10 +111,10 @@ export function ProductSection({
       {!isLoading && !isError && uniqueVariants.length === 0 && (
         <div className="py-16 text-center text-sm text-[var(--color-neutral-500)]">
           <p className="text-base font-medium text-[var(--neutral-900)]">
-            No snacks found in this category.
+            No products found in this category.
           </p>
           <p className="mt-1 text-xs text-gray-400">
-            Please explore our other delicious snack categories.
+            Please explore our other organic spices and farm produce.
           </p>
         </div>
       )}

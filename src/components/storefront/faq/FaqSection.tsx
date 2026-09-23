@@ -165,8 +165,8 @@ export function FaqSection() {
             Frequently Asked Questions
           </h1>
           <p className="mt-4 text-sm leading-relaxed text-[var(--neutral-600)] sm:text-base">
-            Everything you need to know about our snacks — orders and shipping,
-            ingredients and shelf life, festive corporate gifting, and more.
+            Everything you need to know about our spices and produce — orders and shipping,
+            purity standards and shelf life, bulk corporate orders, and more.
           </p>
 
           <div className="mt-7 flex items-center gap-2 rounded-full border border-[var(--cream-border)] bg-white p-1.5 pl-4 shadow-sm">
@@ -313,7 +313,7 @@ export function FaqSection() {
                   <div className="relative h-32 w-full">
                     <Image
                       src="/images/Aboutus_ourstory_img1.jpg"
-                      alt="Freshly prepared snacks at our Namakkal kitchen"
+                      alt="Authentic organic harvest at Kolli Hills"
                       fill
                       sizes="260px"
                       className="object-cover"

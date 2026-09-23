@@ -1,6 +1,6 @@
 export const siteConfig = {
   name: "Kollimalai Arasan",
-  description: "Premium snacks delivered to your doorstep.",
+  description: "Pure Kolli Hills organic spices and farm produce delivered to your doorstep.",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 };
 
