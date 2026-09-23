@@ -16,8 +16,8 @@ async function getStats() {
     lowStock,
     todayOrders,
   ] = await Promise.all([
-    db.product.count(),
-    db.productCategory.count(),
+    db.product.count({ where: { deleted_at: null } }),
+    db.productCategory.count({ where: { deleted_at: null } }),
     db.user.count({ where: { role: { name: "CUSTOMER" } } }),
     db.order.count(),
     db.order.aggregate({ _sum: { totalAmount: true } }),

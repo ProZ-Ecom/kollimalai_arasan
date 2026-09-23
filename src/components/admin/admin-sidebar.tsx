@@ -34,6 +34,7 @@ import {
   Home,
   MessageCircle,
   Megaphone,
+  Trash2,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
@@ -131,6 +132,7 @@ const sidebarItems: SidebarItem[] = [
     ],
   },
   { label: "Settings", href: "/admin/dashboard/settings", icon: Settings },
+  { label: "Trash", href: "/admin/dashboard/trash", icon: Trash2, section: "System" },
 ];
 
 const activeRowClasses =

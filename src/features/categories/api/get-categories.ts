@@ -54,4 +54,9 @@ export async function bulkDeleteCategories(ids: (string | number)[]) {
   return response;
 }
 
+export async function restoreCategory(uuid: string) {
+  const response = await apiClient.post<null>(`/api/admin/categories/${uuid}/restore`, {});
+  return response;
+}
+
 

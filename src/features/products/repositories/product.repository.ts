@@ -352,4 +352,79 @@ export const productRepository = {
       return res;
     });
   },
+
+  async findDeletedAll(params: { page?: number; pageSize?: number; search?: string } = {}) {
+    const page = params.page ?? 1;
+    const pageSize = params.pageSize ?? 50;
+
+    const where: Prisma.ProductWhereInput = {
+      deleted_at: { not: null },
+    };
+
+    if (params.search) {
+      where.AND = [
+        { deleted_at: { not: null } },
+        {
+          OR: [
+            { name: { contains: params.search } },
+            { slug: { contains: params.search } },
+          ],
+        },
+      ];
+      delete where.deleted_at;
+    }
+
+    return db.product.findMany({
+      where,
+      orderBy: { deleted_at: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        images: { select: { image_url: true, isPrimary: true }, orderBy: [{ isPrimary: "desc" }], take: 1 },
+      },
+    });
+  },
+
+  async restoreByUuid(uuid: string, adminId?: bigint | null) {
+    const existing = await db.product.findFirst({ where: { uuid, deleted_at: { not: null } } });
+    if (!existing) return null;
+
+    const deletedAt = existing.deleted_at!;
+    const windowStart = new Date(deletedAt.getTime() - 5000);
+    const windowEnd = new Date(deletedAt.getTime() + 5000);
+
+    return db.$transaction(async (tx) => {
+      const restored = await tx.product.update({
+        where: { id: existing.id },
+        data: {
+          isActive: true,
+          status: true,
+          deleted_at: null,
+          ...(adminId ? { updated_by: adminId } : {}),
+        },
+      });
+
+      const variants = await tx.productVariant.findMany({
+        where: {
+          productId: existing.id,
+          deleted_at: { gte: windowStart, lte: windowEnd },
+        },
+        select: { id: true },
+      });
+
+      if (variants.length > 0) {
+        const variantIds = variants.map((v) => v.id);
+        await tx.productVariant.updateMany({
+          where: { id: { in: variantIds } },
+          data: { isActive: true, deleted_at: null, ...(adminId ? { updated_by: adminId } : {}) },
+        });
+        await tx.variantUnitPrice.updateMany({
+          where: { variant_id: { in: variantIds } },
+          data: { isActive: true, deleted_at: null, ...(adminId ? { updated_by: adminId } : {}) },
+        });
+      }
+
+      return restored;
+    });
+  },
 };

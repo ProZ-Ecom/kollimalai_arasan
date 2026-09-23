@@ -142,9 +142,9 @@ export const categoryService = {
       throw ApiError.conflict(`A category with slug '${data.slug}' already exists`);
     }
 
-    // 2. Check duplicate name
+    // 2. Check duplicate name (skip deleted categories — user may re-create after restore)
     const existingName = await categoryRepository.findByName(data.name);
-    if (existingName) {
+    if (existingName && !existingName.deleted_at) {
       throw ApiError.conflict(`A category with name '${data.name}' already exists`);
     }
 
@@ -166,6 +166,14 @@ export const categoryService = {
 
   async getAdminCategories(params: GetAdminCategoriesParams = {}) {
     const result = await categoryRepository.findAdminAll(params);
+    return {
+      data: result.data.map((cat) => formatAdminCategoryResponse(cat)),
+      meta: result.meta,
+    };
+  },
+
+  async getDeletedAdminCategories(params: { page?: number; pageSize?: number; search?: string } = {}) {
+    const result = await categoryRepository.findDeletedAll(params);
     return {
       data: result.data.map((cat) => formatAdminCategoryResponse(cat)),
       meta: result.meta,
@@ -271,6 +279,25 @@ export const categoryService = {
       success: true,
       count: result.count,
       message: `Successfully deleted ${result.count} categories`,
+    };
+  },
+
+  async restoreAdminCategory(uuid: string, adminEmail?: string) {
+    // Look for a deleted category by uuid
+    const existing = await categoryRepository.findDeletedByUuid(uuid);
+    if (!existing) {
+      throw ApiError.notFound("Deleted category not found");
+    }
+
+    const adminId = await getAdminInternalId(adminEmail);
+    const restored = await categoryRepository.restoreByUuid(uuid, adminId);
+    if (!restored) {
+      throw ApiError.internal("Failed to restore category");
+    }
+
+    return {
+      success: true,
+      message: "Category restored successfully. Associated products and variants have also been restored.",
     };
   },
 };
