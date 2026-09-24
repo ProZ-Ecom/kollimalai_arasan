@@ -45,6 +45,8 @@ next-env.d.ts
 # persistent uploaded files (served via /document, outside the public folder so
 # redeploys / git clean never wipe them)
 /document
+/public/uploads/*
+!/public/uploads/**/.gitkeep
 
 # agents & AI configuration files
 .agents/
