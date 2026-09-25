@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ZodSchema } from "zod";
 import { apiError, apiValidationError, apiFromError } from "./api-response";
-import { ApiError } from "./api-error";
-import { handlePrismaError } from "./api-error";
+import { ApiError, isApiError, handlePrismaError } from "./api-error";
 import { auth } from "@/lib/auth/config";
 import { verifyAccessToken, verifyRefreshToken, generateAccessToken } from "@/lib/auth/jwt";
 import { userRepository } from "@/features/users/repositories/user.repository";
@@ -210,9 +209,9 @@ export function createApiHandler(
       try {
         const fs = await import("fs");
         fs.writeFileSync("handler_error.log", String(error?.stack || error?.message || error));
-      } catch {}
+      } catch { }
 
-      if (error instanceof ApiError) {
+      if (isApiError(error)) {
         return apiFromError(error);
       }
 
@@ -226,6 +225,15 @@ export function createApiHandler(
       const prismaResult = handlePrismaError(error);
       if (prismaResult && prismaResult.message !== "A database error occurred") {
         return apiFromError(prismaResult);
+      }
+
+      // Propagate well-known plain Error messages as 400 (e.g. stock check)
+      if (
+        error instanceof Error &&
+        (error.message.startsWith("Insufficient stock") ||
+          error.message.startsWith("Out of stock"))
+      ) {
+        return apiError(error.message, 400);
       }
 
       console.error(`Unhandled API Error [${method}]:`, error);

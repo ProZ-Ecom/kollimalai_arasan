@@ -168,7 +168,7 @@ export default function CategoryProductsPage({
     maxPrice: maxPrice < 1000 ? maxPrice : undefined,
     sortBy: activeSort.sortBy,
     sortOrder: activeSort.sortOrder,
-    onlyDefault: true,
+    inStock: stockStatus === "in_stock" ? true : stockStatus === "out_of_stock" ? false : undefined,
   });
 
   const meta = variantsResponse?.meta;

@@ -32,10 +32,41 @@ export const razorpayService = {
     const isCartCheckout = !input.orderId || input.orderId === "cart";
 
     // A. Cart-First Flow: Create Razorpay Order directly from active cart (No internal order created yet)
-    if (isCartCheckout) {
+      if (isCartCheckout) {
       const cart = await cartService.getCart(sessionUserId);
       if (!cart || cart.items.length === 0) {
         throw ApiError.badRequest("Your cart is empty. Please add items before checking out.");
+      }
+
+      // Check real-time stock before creating Razorpay order
+      for (const item of cart.items) {
+        if (!item.variantUnitPriceId) continue;
+        const vup = await db.variantUnitPrice.findFirst({
+          where: {
+            OR: [
+              { uuid: item.variantUnitPriceId },
+              ...(isNaN(Number(item.variantUnitPriceId)) ? [] : [{ id: BigInt(item.variantUnitPriceId) }]),
+            ],
+            deleted_at: null,
+          },
+          include: {
+            inventories: {
+              where: { is_active: true },
+              select: { quantity_available: true },
+            },
+          },
+        });
+        const available = vup?.inventories ? Number(vup.inventories.quantity_available) : 0;
+        if (available <= 0) {
+          throw ApiError.badRequest(
+            `"${item.productName}" is out of stock. Please remove it from your cart.`
+          );
+        }
+        if (available < item.quantity) {
+          throw ApiError.badRequest(
+            `Only ${available} unit${available === 1 ? "" : "s"} left for "${item.productName}". Please update your cart.`
+          );
+        }
       }
 
       const payableBeforeShipping = cart.total;
@@ -206,19 +237,47 @@ export const razorpayService = {
         throw ApiError.badRequest("Shipping address is required to complete the order.");
       }
 
-      const createdOrder = await orderService.createCustomerOrder(sessionUserId, {
-        shippingAddressId: input.shippingAddressId,
-        billingAddressId: input.billingAddressId || input.shippingAddressId,
-        notes: input.notes,
-        paymentMethod: "CARD",
-        paymentDetails: {
-          gateway: "RAZORPAY",
-          isPaid: true,
-          razorpay_order_id: input.razorpay_order_id,
-          razorpay_payment_id: input.razorpay_payment_id,
-          razorpay_signature: input.razorpay_signature,
-        },
-      });
+      let createdOrder;
+      try {
+        createdOrder = await orderService.createCustomerOrder(sessionUserId, {
+          shippingAddressId: input.shippingAddressId,
+          billingAddressId: input.billingAddressId || input.shippingAddressId,
+          notes: input.notes,
+          paymentMethod: "CARD",
+          paymentDetails: {
+            gateway: "RAZORPAY",
+            isPaid: true,
+            razorpay_order_id: input.razorpay_order_id,
+            razorpay_payment_id: input.razorpay_payment_id,
+            razorpay_signature: input.razorpay_signature,
+          },
+        });
+      } catch (orderErr: any) {
+        // Stock reservation or order creation failed after payment capture.
+        // Automatically refund captured payment immediately so customer is protected.
+        try {
+          const razorpay = getRazorpayClient();
+          await razorpay.payments.refund(input.razorpay_payment_id, {
+            notes: {
+              reason: "Stock unavailable during checkout; automatic full refund initiated",
+              razorpay_order_id: input.razorpay_order_id,
+            },
+          });
+          console.warn(
+            `[Razorpay] Auto-refunded payment ${input.razorpay_payment_id} due to order placement failure: ${orderErr?.message}`
+          );
+        } catch (refundErr: any) {
+          console.error(
+            `[Razorpay] CRITICAL: Auto-refund failed for payment ${input.razorpay_payment_id}:`,
+            refundErr
+          );
+        }
+
+        const baseMsg = orderErr?.message || "Could not complete order due to stock unavailability.";
+        throw ApiError.badRequest(
+          `${baseMsg} A full refund has been automatically initiated to your payment method.`
+        );
+      }
 
       // Find the created order to retrieve internal BigInt ID
       const dbOrder = await db.order.findFirst({
@@ -408,7 +467,6 @@ export const razorpayService = {
     amount?: number;
     reason?: string;
   }) {
-    const payment = await paymentRepository.findPendingPayment(params.orderId);
     const successPayment = await db.payment.findFirst({
       where: {
         orderId: params.orderId,

@@ -98,6 +98,10 @@ async function formatCartResponse(
       variant.variant_name ||
       `${unitPrice.unit_value ?? ""} ${unitPrice.product_units?.code || ""}`.trim();
 
+    const availableStock = unitPrice.inventories
+      ? Number(unitPrice.inventories.quantity_available || 0)
+      : 0;
+
     return {
       id: item.uuid || String(item.id),
       productId: product.uuid || String(product.id),
@@ -108,6 +112,7 @@ async function formatCartResponse(
       measurement,
       primaryImage: primaryImg,
       quantity: item.quantity,
+      availableStock,
       price: line.finalPrice,
       priceAtAdd,
       basePrice,
@@ -209,7 +214,36 @@ export const cartService = {
 
     const currentPrice = calculateVariantPrice(unitPrice);
 
-    // 2. Add to cart in transaction
+    // 2. Stock check: ensure requested quantity does not exceed available stock
+    const inventory = await db.inventory.findFirst({
+      where: { variantUnitPriceId: unitPrice.id, is_active: true },
+      select: { quantity_available: true },
+    });
+    const availableStock = inventory ? Number(inventory.quantity_available) : 0;
+    if (availableStock <= 0) {
+      throw ApiError.badRequest(
+        `"${variant.variant_name || "This item"}" is out of stock.`
+      );
+    }
+    const existingCart = await cartRepository.findActiveCartByUserId(userId);
+    const existingItem = existingCart?.items?.find(
+      (ci: any) =>
+        ci.is_active &&
+        ci.variantId === variant.id &&
+        (ci.variantUnitPriceId ? ci.variantUnitPriceId === unitPrice.id : true)
+    );
+    const existingQty = existingItem ? Number(existingItem.quantity || 0) : 0;
+    const requestedTotal = existingQty + input.quantity;
+
+    if (requestedTotal > availableStock) {
+      throw ApiError.badRequest(
+        existingQty > 0
+          ? `You already have ${existingQty} in your cart. Only ${availableStock} unit${availableStock === 1 ? "" : "s"} available for "${variant.variant_name || "this item"}".`
+          : `Only ${availableStock} unit${availableStock === 1 ? "" : "s"} available for "${variant.variant_name || "this item"}".`
+      );
+    }
+
+    // 3. Add to cart in transaction
     const updatedCart = await cartRepository.addItemToCart({
       userId,
       productId: variant.productId,
@@ -335,10 +369,37 @@ export const cartService = {
 
     const currentPrice = calculateVariantPrice(unitPrice);
 
+    // Stock check
+    const inventory = await db.inventory.findFirst({
+      where: { variantUnitPriceId: unitPrice.id, is_active: true },
+      select: { quantity_available: true },
+    });
+    const availableStock = inventory ? Number(inventory.quantity_available) : 0;
+
+    let targetQuantity = input.quantity;
+    if (input.quantity < existingItem.quantity) {
+      // User is decrementing: allow it! If still exceeds available stock, clamp to availableStock
+      if (input.quantity > availableStock) {
+        targetQuantity = Math.max(1, availableStock);
+      }
+    } else {
+      // User is incrementing
+      if (availableStock <= 0) {
+        throw ApiError.badRequest(
+          `"${variant?.variant_name || "This item"}" is out of stock.`
+        );
+      }
+      if (input.quantity > availableStock) {
+        throw ApiError.badRequest(
+          `Only ${availableStock} unit${availableStock === 1 ? "" : "s"} available for "${variant?.variant_name || "this item"}".`
+        );
+      }
+    }
+
     const updatedCart = await cartRepository.updateItemQuantity({
       userId,
       variantUnitPriceUuid: identifier,
-      quantity: input.quantity,
+      quantity: targetQuantity,
       currentPrice,
       adminOrUserId: userId,
     });

@@ -14,6 +14,8 @@ import {
 } from "../../validations/customer-address.schema";
 import type { CustomerAddressResponse } from "../../types/customer-address.types";
 import { CustomDropdown } from "./CustomDropdown";
+import { usePincodeLookup } from "../../hooks/use-pincode-lookup";
+import { CheckCircle2, Loader2, Lock } from "lucide-react";
 
 const LABEL_OPTIONS = [
   { value: "home", label: "Home" },
@@ -102,6 +104,16 @@ export function AddressesTab() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
 
+  // India Post PIN code verification hook
+  const {
+    isVerifying: isPincodeVerifying,
+    verificationError: pincodeVerificationError,
+    postalData: pincodePostalData,
+    isVerified: isPincodeVerified,
+    verifyPincode,
+    resetPincodeVerification,
+  } = usePincodeLookup();
+
   // Custom dropdown open state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -133,7 +145,53 @@ export function AddressesTab() {
   }, []);
 
   const handleFieldChange = (field: keyof AddressFormData, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let cleanVal = value;
+    if (field === "phone" && typeof value === "string") {
+      cleanVal = value.replace(/\D/g, "").slice(0, 10);
+    } else if (field === "pincode" && typeof value === "string") {
+      const cleanPin = value.replace(/\D/g, "").slice(0, 6);
+      cleanVal = cleanPin;
+
+      if (cleanPin.length === 6) {
+        verifyPincode(cleanPin).then((result) => {
+          if (result) {
+            setFormData((prev) => ({
+              ...prev,
+              pincode: cleanPin,
+              city: result.district || result.city,
+              state: result.state,
+            }));
+            if (editingId) {
+              setDirtyFields((prev) =>
+                new Set(prev).add("pincode").add("city").add("state")
+              );
+            }
+            setFieldErrors((prev) => {
+              const next = { ...prev };
+              delete next.pincode;
+              delete next.city;
+              delete next.state;
+              return next;
+            });
+          } else {
+            setFieldErrors((prev) => ({
+              ...prev,
+              pincode: "Invalid PIN code. No records found in India Post database.",
+            }));
+            setFormData((prev) => ({
+              ...prev,
+              pincode: cleanPin,
+              city: "",
+              state: "",
+            }));
+          }
+        });
+      } else {
+        resetPincodeVerification();
+      }
+    }
+
+    setFormData((prev) => ({ ...prev, [field]: cleanVal }));
     if (editingId) {
       setDirtyFields((prev) => new Set(prev).add(field));
     }
@@ -171,6 +229,12 @@ export function AddressesTab() {
     setFieldErrors({});
     setServerError(null);
     setIsAdding(true);
+
+    if (address.pincode && address.pincode.length === 6) {
+      verifyPincode(address.pincode);
+    } else {
+      resetPincodeVerification();
+    }
   };
 
   const handleCancel = () => {
@@ -180,6 +244,7 @@ export function AddressesTab() {
     setFieldErrors({});
     setServerError(null);
     setIsDropdownOpen(false);
+    resetPincodeVerification();
     setFormData({
       label: "home",
       fullName: "",
@@ -204,6 +269,27 @@ export function AddressesTab() {
 
     setFieldErrors({});
     setServerError(null);
+
+    // Force valid India Post PIN code verification before submitting
+    const cleanPin = formData.pincode.replace(/\D/g, "");
+    if (cleanPin.length !== 6 || cleanPin.startsWith("0")) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        pincode: "PIN code must be a valid 6-digit Indian postal code",
+      }));
+      return;
+    }
+
+    if (!isPincodeVerified) {
+      const verified = await verifyPincode(cleanPin);
+      if (!verified) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          pincode: "Invalid PIN code. No records found in India Post database.",
+        }));
+        return;
+      }
+    }
 
     if (editingId) {
       // EDIT MODE: If no fields were touched, exit gracefully
@@ -443,22 +529,84 @@ export function AddressesTab() {
               disabled={isSubmitting}
             />
 
-            {/* PIN Code */}
+            {/* PIN Code with India Post Live Lookup */}
             <div className="flex flex-col gap-1">
-              <input
-                type="text"
-                disabled={isSubmitting}
-                placeholder="PIN Code (6 digits, e.g. 637001) *"
-                value={formData.pincode}
-                onChange={(e) => handleFieldChange("pincode", e.target.value)}
-                className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.pincode ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
-                }`}
-              />
-              {fieldErrors.pincode && (
-                <span className="text-[11px] text-red-600">{fieldErrors.pincode}</span>
-              )}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-theme-text-secondary">
+                  PIN Code (6 digits) *
+                </span>
+                {isPincodeVerifying && (
+                  <span className="flex items-center gap-1 text-[10px] text-theme-primary font-medium">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Checking...
+                  </span>
+                )}
+                {isPincodeVerified && pincodePostalData && (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-semibold">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Verified
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  disabled={isSubmitting}
+                  maxLength={6}
+                  placeholder="PIN Code (e.g. 607106) *"
+                  value={formData.pincode}
+                  onChange={(e) => handleFieldChange("pincode", e.target.value)}
+                  className={`w-full border rounded-lg px-3.5 pr-9 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
+                    fieldErrors.pincode || pincodeVerificationError
+                      ? "border-red-500 bg-red-50/20"
+                      : isPincodeVerified
+                      ? "border-emerald-500"
+                      : "border-theme-border-input"
+                  }`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                  {isPincodeVerifying ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-theme-primary" />
+                  ) : isPincodeVerified ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  ) : null}
+                </div>
+              </div>
+              {fieldErrors.pincode || pincodeVerificationError ? (
+                <span className="text-[11px] text-red-600">
+                  {fieldErrors.pincode || pincodeVerificationError}
+                </span>
+              ) : isPincodeVerified && pincodePostalData ? (
+                <span className="text-[11px] text-emerald-600 font-medium">
+                  ✓ Verified: {pincodePostalData.district}, {pincodePostalData.state}
+                </span>
+              ) : null}
             </div>
+
+            {/* Locality / Post Office Selection (when multiple post offices exist) */}
+            {pincodePostalData?.postOffices && pincodePostalData.postOffices.length > 0 && (
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <label className="text-[11px] font-semibold text-theme-text-secondary">
+                  Select Post Office / Locality ({pincodePostalData.postOffices.length} found in India Post)
+                </label>
+                <select
+                  disabled={isSubmitting}
+                  value={formData.addressLine2}
+                  onChange={(e) => handleFieldChange("addressLine2", e.target.value)}
+                  className="w-full border border-theme-border-input rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-white focus:border-theme-primary transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <option value="">-- Choose your nearest Post Office / Area --</option>
+                  {pincodePostalData.postOffices.map((po) => (
+                    <option key={po.name} value={po.name}>
+                      {po.name} ({po.branchType} • {po.deliveryStatus})
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10px] text-theme-text-muted">
+                  Auto-fills your locality for faster, accurate postal delivery.
+                </span>
+              </div>
+            )}
 
             {/* Address Line 1 */}
             <div className="flex flex-col gap-1 sm:col-span-2">
@@ -508,16 +656,29 @@ export function AddressesTab() {
 
             {/* City */}
             <div className="flex flex-col gap-1">
-              <input
-                type="text"
-                disabled={isSubmitting}
-                placeholder="City *"
-                value={formData.city}
-                onChange={(e) => handleFieldChange("city", e.target.value)}
-                className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.city ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
-                }`}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  readOnly={isPincodeVerified}
+                  disabled={isSubmitting}
+                  placeholder={isPincodeVerified ? formData.city : "City (Enter PIN Code) *"}
+                  value={formData.city}
+                  onChange={(e) => handleFieldChange("city", e.target.value)}
+                  className={`w-full border rounded-lg px-3.5 py-2.5 text-xs transition-colors ${
+                    isPincodeVerified
+                      ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 cursor-not-allowed border-theme-border"
+                      : fieldErrors.city
+                      ? "border-red-500 bg-red-50/20 text-theme-text-primary"
+                      : "border-theme-border-input bg-theme-surface-warm text-theme-text-primary focus:border-theme-primary"
+                  } disabled:opacity-50`}
+                />
+                {isPincodeVerified && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted">
+                    <Lock className="h-3 w-3" />
+                    <span>Verified</span>
+                  </div>
+                )}
+              </div>
               {fieldErrors.city && (
                 <span className="text-[11px] text-red-600">{fieldErrors.city}</span>
               )}
@@ -525,16 +686,29 @@ export function AddressesTab() {
 
             {/* State */}
             <div className="flex flex-col gap-1">
-              <input
-                type="text"
-                disabled={isSubmitting}
-                placeholder="State *"
-                value={formData.state}
-                onChange={(e) => handleFieldChange("state", e.target.value)}
-                className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.state ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
-                }`}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  readOnly={isPincodeVerified}
+                  disabled={isSubmitting}
+                  placeholder={isPincodeVerified ? formData.state : "State (Enter PIN Code) *"}
+                  value={formData.state}
+                  onChange={(e) => handleFieldChange("state", e.target.value)}
+                  className={`w-full border rounded-lg px-3.5 py-2.5 text-xs transition-colors ${
+                    isPincodeVerified
+                      ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 cursor-not-allowed border-theme-border"
+                      : fieldErrors.state
+                      ? "border-red-500 bg-red-50/20 text-theme-text-primary"
+                      : "border-theme-border-input bg-theme-surface-warm text-theme-text-primary focus:border-theme-primary"
+                  } disabled:opacity-50`}
+                />
+                {isPincodeVerified && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted">
+                    <Lock className="h-3 w-3" />
+                    <span>Verified</span>
+                  </div>
+                )}
+              </div>
               {fieldErrors.state && (
                 <span className="text-[11px] text-red-600">{fieldErrors.state}</span>
               )}

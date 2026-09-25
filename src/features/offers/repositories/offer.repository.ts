@@ -68,10 +68,7 @@ type UnitPriceTargetRow = Prisma.VariantUnitPriceGetPayload<{
 
 function stockOf(row: UnitPriceTargetRow): { inStock: boolean; quantity: number } {
   const available = row.inventories
-    ? Math.max(
-        0,
-        row.inventories.quantity_available - row.inventories.quantity_reserved
-      )
+    ? Math.max(0, Number(row.inventories.quantity_available || 0))
     : 0;
   return {
     inStock: available > 0 && !row.variant?.out_of_stock,
