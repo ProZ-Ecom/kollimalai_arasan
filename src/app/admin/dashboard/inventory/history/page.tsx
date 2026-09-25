@@ -113,18 +113,18 @@ export default function InventoryHistoryPage() {
           </div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-semibold text-neutral-600 whitespace-nowrap">Filter by type:</label>
-            <Select
-              wrapperClassName="w-44"
-              size="sm"
-              className="h-10 rounded-xl text-xs"
-              value={params.type ?? ""}
-              onValueChange={(val) =>
-                setParams((prev) => ({
-                  ...prev,
-                  type: val || undefined,
-                  page: 1,
-                }))
-              }
+            <div className="w-44">
+              <Select
+                size="sm"
+                className="h-10 rounded-xl text-xs"
+                value={params.type ?? ""}
+                onValueChange={(val) =>
+                  setParams((prev) => ({
+                    ...prev,
+                    type: val || undefined,
+                    page: 1,
+                  }))
+                }
               options={[
                 { value: "", label: "All Types" },
                 { value: "PURCHASE", label: "Purchase" },
@@ -135,6 +135,7 @@ export default function InventoryHistoryPage() {
                 { value: "TRANSFER", label: "Transfer" },
               ]}
             />
+            </div>
           </div>
 
           {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} />}

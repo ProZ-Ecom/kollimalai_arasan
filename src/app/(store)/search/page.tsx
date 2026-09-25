@@ -110,6 +110,7 @@ function SearchResultsContent() {
     maxPrice: maxPrice < 1000 ? maxPrice : undefined,
     sortBy: activeSort.sortBy,
     sortOrder: activeSort.sortOrder,
+    inStock: inStockParam,
   });
 
   const meta = variantsResponse?.meta;

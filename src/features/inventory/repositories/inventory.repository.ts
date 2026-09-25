@@ -7,6 +7,8 @@ interface FindAllParams {
   limit?: number;
   search?: string;
   lowStock?: boolean;
+  lowStockThreshold?: number;
+  reserved?: boolean;
   outOfStock?: boolean;
 }
 
@@ -14,41 +16,88 @@ interface FindTransactionsParams {
   page?: number;
   limit?: number;
   type?: InventoryTransactionType;
+  search?: string;
 }
 
-const inventoryInclude = {
+const inventoryInclude: Prisma.InventoryInclude = {
   variant_unit_price: {
     include: {
+      product_units: true,
       variant: {
         include: {
           product: {
             select: { id: true, name: true, slug: true },
           },
+          product_variant_images: {
+            where: { is_active: true },
+            take: 1,
+          },
         },
       },
     },
   },
-} as const;
+};
 
 export const inventoryRepository = {
   async findAll(params: FindAllParams) {
     const { page = 1, limit = 10, search, lowStock, outOfStock } = params;
     const skip = (page - 1) * limit;
 
-    const where: Prisma.InventoryWhereInput = {};
+    const where: Prisma.InventoryWhereInput = {
+      is_active: true,
+    };
 
-    if (search) {
-      where.variant_unit_price = {
-        variant: {
-          product: {
-            name: { contains: search },
+    if (search && search.trim() !== "") {
+      const q = search.trim();
+      where.OR = [
+        {
+          variant_unit_price: {
+            variant: {
+              product: {
+                name: { contains: q },
+              },
+            },
           },
         },
-      };
+        {
+          variant_unit_price: {
+            sku: { contains: q },
+          },
+        },
+        {
+          variant_unit_price: {
+            variant: {
+              variant_name: { contains: q },
+            },
+          },
+        },
+      ];
     }
 
-    if (lowStock) {
-      where.quantity_available = { gt: 0 };
+    const { lowStockThreshold, reserved } = params;
+
+    if (lowStockThreshold && lowStockThreshold > 0) {
+      const lowStockRows = await db.$queryRaw<{ id: bigint }[]>`
+        SELECT id FROM inventories
+        WHERE is_active = true
+          AND quantity_available > 0
+          AND quantity_available <= ${lowStockThreshold}
+      `;
+      const ids = lowStockRows.map((r) => BigInt(r.id));
+      where.id = { in: ids };
+    } else if (lowStock) {
+      const lowStockRows = await db.$queryRaw<{ id: bigint }[]>`
+        SELECT id FROM inventories
+        WHERE is_active = true
+          AND quantity_available > 0
+          AND quantity_available <= IF(reorder_level > 0, reorder_level, 5)
+      `;
+      const ids = lowStockRows.map((r) => BigInt(r.id));
+      where.id = { in: ids };
+    }
+
+    if (reserved) {
+      where.quantity_reserved = { gt: 0 };
     }
 
     if (outOfStock) {
@@ -71,7 +120,7 @@ export const inventoryRepository = {
 
   async findById(id: number) {
     return db.inventory.findUnique({
-      where: { id },
+      where: { id: BigInt(id) },
       include: inventoryInclude,
     });
   },
@@ -81,8 +130,8 @@ export const inventoryRepository = {
       where: {
         variant_unit_price: {
           variant: {
-            productId,
-            ...(variantId ? { id: variantId } : {}),
+            productId: BigInt(productId),
+            ...(variantId ? { id: BigInt(variantId) } : {}),
           },
         },
       },
@@ -99,7 +148,7 @@ export const inventoryRepository = {
 
   async update(id: number, data: Prisma.InventoryUpdateInput) {
     return db.inventory.update({
-      where: { id },
+      where: { id: BigInt(id) },
       data,
       include: inventoryInclude,
     });
@@ -113,9 +162,10 @@ export const inventoryRepository = {
     const skip = (page - 1) * limit;
 
     const inventory = await db.inventory.findUnique({
-      where: { id: inventoryId },
+      where: { id: BigInt(inventoryId) },
       select: { variantUnitPriceId: true },
     });
+
 
     if (!inventory) {
       return { data: [], total: 0 };
@@ -135,6 +185,65 @@ export const inventoryRepository = {
         include: {
           variant_unit_price: {
             include: {
+              product_units: true,
+              variant: {
+                include: {
+                  product: { select: { name: true } },
+                },
+              },
+            },
+          },
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      db.inventoryTransaction.count({ where }),
+    ]);
+
+    return { data, total };
+  },
+
+  async findAllTransactions(params: FindTransactionsParams) {
+    const { page = 1, limit = 20, type, search } = params;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.InventoryTransactionWhereInput = {};
+
+    if (type) {
+      where.type = type as any;
+    }
+
+    if (search && search.trim() !== "") {
+      const q = search.trim();
+      where.OR = [
+        {
+          variant_unit_price: {
+            variant: {
+              product: {
+                name: { contains: q },
+              },
+            },
+          },
+        },
+        {
+          variant_unit_price: {
+            sku: { contains: q },
+          },
+        },
+        {
+          note: { contains: q },
+        },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      db.inventoryTransaction.findMany({
+        where,
+        include: {
+          variant_unit_price: {
+            include: {
+              product_units: true,
               variant: {
                 include: {
                   product: { select: { name: true } },

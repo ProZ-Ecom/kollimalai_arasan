@@ -188,11 +188,11 @@ export const variantService = {
 
     // 3. Create Variant (item-level only; unit/price combos are managed
     // separately via variantUnitPriceService)
-    const existingVariantsCount = await db.productVariant.count({
-      where: { productId: product.id, deleted_at: null },
-    });
-    const isFirstVariant = existingVariantsCount === 0;
-    const isDefault = (data as any).isDefault !== undefined ? (data as any).isDefault : isFirstVariant;
+    const hasDefaultVariant =
+      (await db.productVariant.count({
+        where: { productId: product.id, is_default: true, deleted_at: null },
+      })) > 0;
+    const isDefault = Boolean((data as any).isDefault || !hasDefaultVariant);
 
     const variant = await variantRepository.create({
       uuid: crypto.randomUUID(),
@@ -205,7 +205,7 @@ export const variantService = {
       is_featured: data.isFeatured ?? false,
       is_default: isDefault,
       isActive: data.isActive !== undefined ? data.isActive : true,
-      out_of_stock: data.outOfStock !== undefined ? data.outOfStock : false,
+      out_of_stock: data.outOfStock !== undefined ? data.outOfStock : true,
       created_by: adminId,
       updated_by: adminId,
     });
@@ -392,6 +392,19 @@ export const variantService = {
 
     const adminId = await getAdminInternalId(adminEmail);
     await variantRepository.softDeleteByUuid(variantUuid, adminId);
+
+    if (existing.is_default) {
+      const remainingVariant = await db.productVariant.findFirst({
+        where: { productId: product.id, deleted_at: null },
+        orderBy: { createdAt: "asc" },
+      });
+      if (remainingVariant) {
+        await db.productVariant.update({
+          where: { id: remainingVariant.id },
+          data: { is_default: true },
+        });
+      }
+    }
 
     return {
       success: true,

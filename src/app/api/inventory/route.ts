@@ -19,10 +19,19 @@ export const GET = createApiHandler({
   },
 });
 
-export const POST = createApiHandler({
-  POST: async (_request, context) => {
-    const input = createInventorySchema.parse(context.body);
-    const result = await inventoryService.createInventory(input);
-    return apiCreated(result);
+export const POST = createApiHandler(
+  {
+    POST: async (request, context) => {
+      const body = context.body ?? (await request.json().catch(() => ({})));
+      const input = createInventorySchema.parse(body);
+      const result = await inventoryService.createInventory(input);
+      return apiCreated(result);
+    },
   },
-}, { requireAuth: true, requiredRole: ["ADMIN", "STAFF"] });
+  {
+    requireAuth: true,
+    requiredRole: ["ADMIN", "STAFF"],
+    bodySchema: createInventorySchema,
+  }
+);
+

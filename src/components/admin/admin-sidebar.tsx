@@ -35,6 +35,7 @@ import {
   MessageCircle,
   Megaphone,
   Trash2,
+  Boxes,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
@@ -72,6 +73,7 @@ const sidebarItems: SidebarItem[] = [
       { label: "Categories", href: "/admin/dashboard/categories", icon: FolderTree },
       { label: "Products", href: "/admin/dashboard/products", icon: Package },
       { label: "Items", href: "/admin/dashboard/variants", icon: Layers },
+      { label: "Inventory", href: "/admin/dashboard/inventory", icon: Boxes },
       { label: "Reviews", href: "/admin/dashboard/reviews", icon: Star },
       { label: "Brands", href: "/admin/dashboard/brands", icon: Crown },
       // { label: "Attributes", href: "/admin/dashboard/attributes", icon: Tag },

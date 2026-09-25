@@ -1,153 +1,289 @@
 "use client";
 
+import { useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import {
-  Package,
-  FolderTree,
   Users,
   ShoppingCart,
   DollarSign,
+  TrendingUp,
+  CreditCard,
   Clock,
   AlertTriangle,
   Calendar,
+  RefreshCw,
+  Plus,
+  Boxes,
+  FileBarChart,
+  Tag,
+  ExternalLink,
 } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
-import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { useDashboardStats } from "@/features/dashboard/hooks";
+import type { DashboardPeriod } from "@/features/dashboard/api/get-stats";
 import { formatPrice } from "@/lib/utils";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import { AdminPageHeader, AdminContent } from "@/components/admin/AdminPageHeader";
 import { SalesChart } from "@/components/admin/dashboard/SalesChart";
-import { RecentOrders, type DummyOrder } from "@/components/admin/dashboard/RecentOrders";
-import { TopProducts, type DummyProduct } from "@/components/admin/dashboard/TopProducts";
-import {
-  LowStockAlerts,
-  type DummyLowStockItem,
-} from "@/components/admin/dashboard/LowStockAlerts";
+import { RecentOrders } from "@/components/admin/dashboard/RecentOrders";
+import { TopProducts } from "@/components/admin/dashboard/TopProducts";
+import { LowStockAlerts } from "@/components/admin/dashboard/LowStockAlerts";
+import { ProfitLossCard } from "@/components/admin/dashboard/ProfitLossCard";
+import { OrderStatusPipeline } from "@/components/admin/dashboard/OrderStatusPipeline";
+import { DashboardSkeleton } from "@/components/admin/dashboard/DashboardSkeleton";
 
-const DUMMY_SALES_DATA = [
-  { label: "Mon", value: 12500 },
-  { label: "Tue", value: 18200 },
-  { label: "Wed", value: 9800 },
-  { label: "Thu", value: 22100 },
-  { label: "Fri", value: 27400 },
-  { label: "Sat", value: 31200 },
-  { label: "Sun", value: 19600 },
-];
-
-const DUMMY_ORDERS: DummyOrder[] = [
-  { id: "#ORD-1042", customer: "Aarav Sharma", date: "Sep 3, 2026", amount: 1249, status: "Delivered" },
-  { id: "#ORD-1041", customer: "Priya Nair", date: "Sep 3, 2026", amount: 899, status: "Processing" },
-  { id: "#ORD-1040", customer: "Rohan Iyer", date: "Sep 2, 2026", amount: 2150, status: "Pending" },
-  { id: "#ORD-1039", customer: "Sneha Reddy", date: "Sep 2, 2026", amount: 540, status: "Delivered" },
-  { id: "#ORD-1038", customer: "Kabir Menon", date: "Sep 1, 2026", amount: 375, status: "Cancelled" },
-];
-
-const DUMMY_TOP_PRODUCTS: DummyProduct[] = [
-  { id: "p1", name: "Classic Banana Chips", category: "Chips", unitsSold: 320, revenue: 15980 },
-  { id: "p2", name: "Masala Peanuts", category: "Namkeen", unitsSold: 275, revenue: 11350 },
-  { id: "p3", name: "Roasted Cashew Mix", category: "Nuts", unitsSold: 190, revenue: 24700 },
-  { id: "p4", name: "Ragi Murukku", category: "Snacks", unitsSold: 160, revenue: 8640 },
-];
-
-const DUMMY_LOW_STOCK: DummyLowStockItem[] = [
-  { id: "l1", name: "Spicy Mixture 200g", sku: "SNK-2201", stock: 4, reorderLevel: 20 },
-  { id: "l2", name: "Coconut Chips 100g", sku: "SNK-1187", stock: 7, reorderLevel: 25 },
-  { id: "l3", name: "Sweet Boondi 250g", sku: "SNK-3390", stock: 2, reorderLevel: 15 },
+const PERIOD_OPTIONS: { id: DashboardPeriod; label: string }[] = [
+  { id: "today", label: "Today" },
+  { id: "7d", label: "7 Days" },
+  { id: "month", label: "This Month" },
+  { id: "30d", label: "30 Days" },
+  { id: "year", label: "This Year" },
 ];
 
 export default function AdminDashboardPage() {
   const { data: session } = useSession();
-  const { data: stats, isLoading, error, refetch } = useDashboardStats();
+  const [period, setPeriod] = useState<DashboardPeriod>("month");
+  const { data: stats, isLoading, isFetching, error, refetch } = useDashboardStats(period);
 
   if (isLoading) {
-    return <AdminTableSkeleton showStats />;
+    return <DashboardSkeleton />;
   }
 
-  if (error) {
+  if (error || !stats) {
     return (
       <ErrorState
-        message="Failed to load dashboard stats. Please try again."
+        message="Failed to load dashboard analytics. Please try again."
         onRetry={refetch}
       />
     );
   }
 
+  const { summary, financials, statusBreakdown, salesTrend, topProducts, recentOrders, lowStockItems } = stats;
+
   return (
-    <div>
+    <div className="space-y-6">
+      {/* Header with Title and Period Controls */}
       <AdminPageHeader
         title={`Welcome back, ${session?.user?.name || "Admin"}`}
-        description="Here's what's happening with your store today."
+        description={`Store overview and live performance metrics for ${stats.periodLabel}.`}
         breadcrumbs={<AdminBreadcrumb items={[{ label: "Dashboard" }]} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Period Filter Pills */}
+            <div className="flex rounded-xl bg-neutral-100 p-1 border border-neutral-200/60 shadow-2xs">
+              {PERIOD_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setPeriod(opt.id)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                    period === opt.id
+                      ? "bg-white text-secondary-800 shadow-xs font-semibold"
+                      : "text-neutral-600 hover:text-neutral-900"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Refresh Button */}
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh live metrics"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 shadow-2xs transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin text-secondary-600" : ""}`} />
+            </button>
+          </div>
+        }
       />
 
-      <AdminContent>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <AdminContent className="mt-4 space-y-6">
+        {/* Executive Key Metric Cards (8 KPIs) */}
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
           <StatsCard
-            title="Total Products"
-            value={stats?.totalProducts ?? 0}
-            icon={Package}
-            description="All products in store"
+            title={`${stats.periodLabel} Revenue`}
+            value={formatPrice(summary.periodRevenue)}
+            icon={DollarSign}
+            description={`${stats.periodLabel} gross sales`}
+            trend={summary.revenueTrend}
           />
           <StatsCard
-            title="Total Categories"
-            value={stats?.totalCategories ?? 0}
-            icon={FolderTree}
-            description="Product categories"
+            title={`${stats.periodLabel} Orders`}
+            value={summary.periodOrders}
+            icon={ShoppingCart}
+            description={`${summary.totalOrdersAllTime} all-time orders`}
+            trend={summary.ordersTrend}
+          />
+          <StatsCard
+            title="Net Realized Inflow"
+            value={formatPrice(summary.netRealizedRevenue)}
+            icon={TrendingUp}
+            description={`${summary.realizationRate}% conversion rate`}
+          />
+          <StatsCard
+            title="Average Order Value"
+            value={formatPrice(summary.averageOrderValue)}
+            icon={CreditCard}
+            description="Per completed order"
+          />
+          <StatsCard
+            title="Pending Fulfillment"
+            value={summary.pendingOrders}
+            icon={Clock}
+            description="Orders awaiting action"
+          />
+          <StatsCard
+            title="Today's Activity"
+            value={summary.todayOrders}
+            icon={Calendar}
+            description={`${formatPrice(summary.todayRevenue)} captured today`}
+          />
+          <StatsCard
+            title="Critical Inventory"
+            value={summary.lowStockCount}
+            icon={AlertTriangle}
+            description={`${summary.outOfStockCount} items out of stock`}
           />
           <StatsCard
             title="Total Customers"
-            value={stats?.totalCustomers ?? 0}
+            value={summary.totalCustomers}
             icon={Users}
-            description="Registered customers"
-          />
-          <StatsCard
-            title="Total Orders"
-            value={stats?.totalOrders ?? 0}
-            icon={ShoppingCart}
-            description="All time orders"
-          />
-          <StatsCard
-            title="Revenue"
-            value={formatPrice(stats?.totalRevenue ?? 0)}
-            icon={DollarSign}
-            description="Total revenue"
-          />
-          <StatsCard
-            title="Pending Orders"
-            value={stats?.pendingOrders ?? 0}
-            icon={Clock}
-            description="Awaiting processing"
-          />
-          <StatsCard
-            title="Low Stock"
-            value={stats?.lowStock ?? 0}
-            icon={AlertTriangle}
-            description="Items below reorder level"
-          />
-          <StatsCard
-            title="Today's Orders"
-            value={stats?.todayOrders ?? 0}
-            icon={Calendar}
-            description="Orders placed today"
+            description={`${summary.totalProducts} active products`}
           />
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        {/* Sales Chart & Profit Loss Breakdown */}
+        <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <SalesChart data={DUMMY_SALES_DATA} />
+            <SalesChart
+              data={salesTrend}
+              periodLabel={stats.periodLabel}
+              averageOrderValue={summary.averageOrderValue}
+              aovDifference={summary.aovDifference}
+              realizationRate={summary.realizationRate}
+              returnRate={summary.returnRate ?? 0}
+              cancelledOrdersCount={summary.cancelledOrdersCount ?? 0}
+              topProductName={topProducts[0]?.name}
+              totalOrdersCount={summary.periodOrders}
+            />
           </div>
-          <TopProducts products={DUMMY_TOP_PRODUCTS} />
+          <div>
+            <ProfitLossCard financials={financials} periodLabel={stats.periodLabel} />
+          </div>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        {/* Order Fulfillment Pipeline */}
+        <div>
+          <OrderStatusPipeline
+            statusBreakdown={statusBreakdown}
+            totalOrders={summary.periodOrders}
+          />
+        </div>
+
+        {/* Live Recent Orders & Top Selling Products */}
+        <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <RecentOrders orders={DUMMY_ORDERS} />
+            <RecentOrders orders={recentOrders} />
           </div>
-          <LowStockAlerts items={DUMMY_LOW_STOCK} />
+          <div>
+            <TopProducts products={topProducts} />
+          </div>
+        </div>
+
+        {/* Low Stock Alerts & Quick Admin Actions */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <LowStockAlerts items={lowStockItems} />
+          </div>
+
+          {/* Quick Actions Shortcuts Card */}
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-[var(--color-neutral-200)] bg-white p-5 shadow-xs">
+            <div>
+              <div className="mb-4 border-b border-neutral-100 pb-3">
+                <h3 className="text-base font-semibold text-neutral-900">Quick Store Actions</h3>
+                <p className="text-xs text-neutral-500">Shortcuts to daily management tasks</p>
+              </div>
+
+              <div className="space-y-2.5">
+                <Link
+                  href="/admin/dashboard/products"
+                  className="flex items-center justify-between rounded-xl border border-neutral-100 p-3 hover:bg-neutral-50 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary-50 text-secondary-700">
+                      <Plus className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-medium text-neutral-800 group-hover:text-secondary-700">
+                      Add New Product
+                    </span>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-neutral-400 group-hover:text-secondary-600" />
+                </Link>
+
+                <Link
+                  href="/admin/dashboard/inventory"
+                  className="flex items-center justify-between rounded-xl border border-neutral-100 p-3 hover:bg-neutral-50 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                      <Boxes className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-medium text-neutral-800 group-hover:text-blue-600">
+                      Manage Stock & Inventory
+                    </span>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-neutral-400 group-hover:text-blue-600" />
+                </Link>
+
+                <Link
+                  href="/admin/dashboard/reports"
+                  className="flex items-center justify-between rounded-xl border border-neutral-100 p-3 hover:bg-neutral-50 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+                      <FileBarChart className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-medium text-neutral-800 group-hover:text-purple-600">
+                      View Sales & Tax Reports
+                    </span>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-neutral-400 group-hover:text-purple-600" />
+                </Link>
+
+                <Link
+                  href="/admin/dashboard/coupons"
+                  className="flex items-center justify-between rounded-xl border border-neutral-100 p-3 hover:bg-neutral-50 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                      <Tag className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-medium text-neutral-800 group-hover:text-amber-600">
+                      Create Discount Coupon
+                    </span>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-neutral-400 group-hover:text-amber-600" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-neutral-100 text-xs text-neutral-400 flex items-center justify-between">
+              <span>Admin Control Center</span>
+              <Link href="/" target="_blank" className="text-secondary-700 font-medium hover:underline inline-flex items-center gap-1">
+                Storefront
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+          </div>
         </div>
       </AdminContent>
     </div>
   );
 }
+

@@ -102,7 +102,7 @@ function toVariantListItemDto(
       measurement: formatVariantMeasurement(up.product_units, up.unit_value ?? 0),
       basePrice,
       sellingPrice: computeSellingPrice(basePrice),
-      isDefault: Boolean(up.is_default),
+      isDefault: up.uuid === defaultUnitPrice?.uuid,
     };
   });
 
@@ -1260,7 +1260,7 @@ export const catalogRepository = {
       const stockQuantity = variant.variant_unit_prices.reduce((sum, up) => {
         const inventory = up.inventories;
         if (!inventory) return sum;
-        return sum + Math.max(inventory.quantity_available - inventory.quantity_reserved, 0);
+        return sum + Math.max(Number(inventory.quantity_available || 0), 0);
       }, 0);
 
       const categoryRow = product.categoryId
