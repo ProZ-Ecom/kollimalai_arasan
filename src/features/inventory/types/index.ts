@@ -8,17 +8,31 @@ export type InventoryTransactionType =
 
 export interface InventoryListItem {
   id: number;
+  variantUnitPriceId?: number;
   productId: number;
   variantId: number | null;
+  sku: string;
+  basePrice: number;
+  imageUrl: string | null;
+  unitLabel: string;
   quantity: number;
   reservedQuantity: number;
   reorderLevel: number;
   availableQuantity: number;
+  warehouseLocation: string | null;
   productName: string;
   productSlug: string;
   variantName?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface InventoryStats {
+  totalSkus: number;
+  totalUnits: number;
+  reservedUnits: number;
+  lowStockCount: number;
+  outOfStockCount: number;
 }
 
 export interface InventoryTransactionItem {
@@ -31,6 +45,8 @@ export interface InventoryTransactionItem {
   notes: string | null;
   createdAt: Date;
   productName?: string;
+  sku?: string;
+  unitLabel?: string;
 }
 
 export interface GetInventoryParams {
@@ -65,6 +81,7 @@ export interface CreateInventoryInput {
   variantId?: number;
   quantity: number;
   reorderLevel?: number;
+  warehouseLocation?: string;
 }
 
 export type LowStockResult = InventoryListItem[];
