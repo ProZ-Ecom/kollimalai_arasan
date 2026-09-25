@@ -7,6 +7,7 @@ import { FormInput } from "@/components/forms/form-input";
 import { FormTextarea } from "@/components/forms/form-textarea";
 import { FormImageUpload } from "@/components/forms/form-image-upload";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
+import { formatTitleCase } from "@/lib/utils";
 import type { z } from "zod";
 
 type CategoryFormData = z.infer<typeof createCategorySchema>;
@@ -43,7 +44,10 @@ function CategoryForm({
       image: (initialData?.image as string) || "",
       parentId: (initialData?.parentId as number) ?? undefined,
       isActive: (initialData?.isActive as boolean) ?? true,
-      sortOrder: (initialData?.sortOrder as number) || 0,
+      sortOrder:
+        initialData?.sortOrder !== undefined && initialData?.sortOrder !== null
+          ? (initialData.sortOrder as number)
+          : ("" as any),
       metaTitle: (initialData?.metaTitle as string) || "",
       metaDescription: (initialData?.metaDescription as string) || "",
     },
@@ -53,8 +57,13 @@ function CategoryForm({
     <FormProvider {...methods}>
       <form
           onSubmit={methods.handleSubmit((data) => {
-            console.log("Category Form Data:", data);
-            onSubmit(data as CategoryFormData);
+            const formattedData = {
+              ...data,
+              name: formatTitleCase(data.name),
+              sortOrder: Number(data.sortOrder || 0),
+            };
+            console.log("Category Form Data:", formattedData);
+            onSubmit(formattedData as CategoryFormData);
           })}
           className="space-y-6"
         >
@@ -63,6 +72,7 @@ function CategoryForm({
             name="name"
             label="Category Name"
             placeholder="Enter category name"
+            isTitleCase
             required
           />
 

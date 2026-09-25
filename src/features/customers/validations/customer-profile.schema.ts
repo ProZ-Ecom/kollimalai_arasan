@@ -1,16 +1,46 @@
 import { z } from "zod";
 
+const indianPhoneRegex = /^[6-9]\d{9}$/;
+const numbersOnlyRegex = /^\d+$/;
+
 const indiaPhoneSchema = z
   .string()
   .trim()
+  .superRefine((val, ctx) => {
+    if (!val || val.length === 0) return;
+    let digits = val.replace(/[\s-]/g, "");
+    if (digits.startsWith("+91")) {
+      digits = digits.slice(3);
+    } else if (digits.startsWith("0")) {
+      digits = digits.slice(1);
+    }
+
+    if (!numbersOnlyRegex.test(digits)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Phone number must contain numbers only",
+      });
+      return;
+    }
+    if (!indianPhoneRegex.test(digits)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please enter a valid 10-digit phone number starting with 6, 7, 8, or 9",
+      });
+    }
+  })
   .transform((val) => {
-    if (/^[6-9]\d{9}$/.test(val)) {
-      return `+91${val}`;
+    if (!val || val.trim() === "") return null;
+    let digits = val.replace(/[\s-]/g, "");
+    if (digits.startsWith("+91")) {
+      digits = digits.slice(3);
+    } else if (digits.startsWith("0")) {
+      digits = digits.slice(1);
+    }
+    if (indianPhoneRegex.test(digits)) {
+      return `+91${digits}`;
     }
     return val;
-  })
-  .refine((val) => /^\+91[6-9]\d{9}$/.test(val), {
-    message: "WhatsApp number must be a valid 10-digit Indian number starting with +91 (e.g. +919876543810)",
   });
 
 export const updateCustomerProfileSchema = z
@@ -18,9 +48,10 @@ export const updateCustomerProfileSchema = z
     name: z
       .string()
       .trim()
-      .min(1, "Name cannot be empty")
+      .min(1, "Name is required")
       .max(255, "Name cannot exceed 255 characters")
       .optional(),
+    phone: indiaPhoneSchema.optional().nullable(),
     dob: z
       .string()
       .trim()
@@ -40,9 +71,7 @@ export const updateCustomerProfileSchema = z
       .nullable(),
     gender: z.enum(["male", "female", "other"]).optional().nullable(),
     isWhatsapp: z.boolean().optional(),
-    whatsappNo: z
-      .union([indiaPhoneSchema, z.literal(""), z.null()])
-      .optional(),
+    whatsappNo: indiaPhoneSchema.optional().nullable(),
   })
   .strict()
   .superRefine((data, ctx) => {

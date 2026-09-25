@@ -10,10 +10,7 @@ export function useSubmitBulkOrderEnquiry() {
   return useMutation<BulkOrderEnquiryResponse, Error, CreateBulkOrderInput>({
     mutationFn: submitBulkOrderEnquiry,
     onSuccess: () => {
-      toast.success(
-        "Enquiry Submitted",
-        "Thanks for reaching out! Our team will contact you shortly with bulk pricing details."
-      );
+      toast.success("Bulk order submitted successfully");
     },
     onError: (error) => {
       toast.error(

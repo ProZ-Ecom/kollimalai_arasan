@@ -102,7 +102,7 @@ export default function AdminCategoriesPage() {
       header: "Category Name",
       cell: ({ row }) => (
         <div>
-          <p className="font-semibold text-[var(--color-neutral-900)]">{row.original.name}</p>
+          <p className="font-semibold text-[var(--color-neutral-900)] capitalize">{row.original.name}</p>
         </div>
       ),
     },
@@ -273,7 +273,7 @@ export default function AdminCategoriesPage() {
           if (deleteId) {
             deleteMutation.mutate(deleteId, {
               onSuccess: () => {
-                toast.success("Category Deleted", "Category removed successfully.");
+                toast.success("Category Deleted", "Category deleted successfully.");
                 setDeleteId(null);
               },
               onError: (err: any) => {
@@ -335,7 +335,7 @@ export default function AdminCategoriesPage() {
               slug: data.slug,
               description: data.description,
               icon: data.image,
-              sortOrder: Number(data.sortOrder),
+              sortOrder: Number(data.sortOrder || 0),
             };
 
             console.log("Create payload:", payload);
@@ -356,6 +356,7 @@ export default function AdminCategoriesPage() {
         }}
         title="Update Category"
         description="Update the selected category"
+        size="lg"
       >
         {selectedCategory && (
           <CategoryForm
@@ -377,7 +378,7 @@ export default function AdminCategoriesPage() {
                 slug: data.slug,
                 description: data.description,
                 icon: data.image,
-                sortOrder: Number(data.sortOrder),
+                sortOrder: Number(data.sortOrder || 0),
               };
 
               await updateMutation.mutateAsync({

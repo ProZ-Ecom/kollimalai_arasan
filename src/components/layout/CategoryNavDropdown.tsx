@@ -208,7 +208,7 @@ export function CategoryNavDropdown({
                             className="w-6 h-6 object-contain"
                           />
                         </div>
-                        <span className="text-sm font-medium truncate">
+                        <span className="text-sm font-medium truncate capitalize">
                           {category.name}
                         </span>
                       </div>

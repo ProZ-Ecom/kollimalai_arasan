@@ -496,7 +496,7 @@ export default function AdminProductDetailsPage() {
             {/* Title & Badges */}
             <div className="min-w-0 flex flex-col gap-1.5">
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 capitalize">
                   {product.name}
                 </h1>
                 {/* Active/Inactive badge */}
@@ -519,7 +519,7 @@ export default function AdminProductDetailsPage() {
 
               {/* Category · Brand · Slug · HSN · Created subline */}
               <div className="flex items-center gap-2.5 flex-wrap text-xs sm:text-sm text-neutral-500">
-                <span>{categoryName || "Not Assigned"}</span>
+                <span className="capitalize">{categoryName || "Not Assigned"}</span>
                 <span className="opacity-40">·</span>
                 <span>{brandName || "Not Assigned"}</span>
                 <span className="opacity-40">·</span>
@@ -853,7 +853,7 @@ export default function AdminProductDetailsPage() {
                               )}
                             </div>
                             <div className="min-w-0">
-                              <span className="font-semibold text-neutral-900 group-hover/variant:text-secondary-600 group-hover/variant:underline block leading-snug truncate transition-colors">
+                              <span className="font-semibold text-neutral-900 group-hover/variant:text-secondary-600 group-hover/variant:underline block leading-snug truncate transition-colors capitalize">
                                 {variant.variantName}
                               </span>
                               <span className="font-mono text-[11px] text-neutral-400 block truncate">
@@ -1189,6 +1189,15 @@ export default function AdminProductDetailsPage() {
                 formData.productImage !== primaryProductImage
               ) {
                 await saveProductPrimaryImage(canonicalProductId, formData.productImage);
+              } else if (!formData.productImage && primaryProductImage) {
+                await Promise.all(
+                  productImages.map((img) =>
+                    deleteProductImageMutation.mutateAsync({
+                      productUuid: canonicalProductId,
+                      imageId: img.id,
+                    })
+                  )
+                );
               }
             } catch (err: any) {
               console.error("Failed to update product", err);

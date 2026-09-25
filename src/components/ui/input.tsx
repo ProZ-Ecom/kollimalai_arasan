@@ -67,6 +67,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               error && "border-theme-status-can-fg focus:border-theme-status-can-fg focus:ring-theme-status-can-fg/20",
               className
             )}
+            onFocus={(e) => {
+              if (type === "number" && e.target.value === "0") {
+                e.target.select();
+              }
+              props.onFocus?.(e);
+            }}
             {...props}
           />
 

@@ -5,6 +5,7 @@ import { useFormContext, Controller } from "react-hook-form";
 import { Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "./label";
+import { cn, formatTitleCase } from "@/lib/utils";
 
 export function formatSlug(val: string): string {
   return val
@@ -24,6 +25,7 @@ interface FormInputProps
   rightIcon?: React.ReactNode;
   inputPrefix?: React.ReactNode;
   isSlug?: boolean;
+  isTitleCase?: boolean;
   required?: boolean;
 }
 
@@ -37,6 +39,7 @@ function FormInput({
   rightIcon,
   inputPrefix,
   isSlug,
+  isTitleCase,
   required,
   ...props
 }: FormInputProps) {
@@ -110,9 +113,20 @@ function FormInput({
             value={field.value ?? ""}
             onChange={(e) => {
               if (props.type === "number") {
-                const value =
-                  e.target.value === "" ? "" : Number(e.target.value);
-                field.onChange(value);
+                const raw = e.target.value;
+                if (raw === "") {
+                  field.onChange("");
+                  return;
+                }
+                // Strip leading zeroes (e.g. "01" -> 1, but preserve decimals like "0.5")
+                if (/^0[0-9]+/.test(raw)) {
+                  const cleaned = raw.replace(/^0+/, "") || "0";
+                  const parsed = Number(cleaned);
+                  field.onChange(isNaN(parsed) ? cleaned : parsed);
+                  return;
+                }
+                const parsedNum = Number(raw);
+                field.onChange(isNaN(parsedNum) ? raw : parsedNum);
                 return;
               }
 
@@ -122,6 +136,12 @@ function FormInput({
               }
 
               field.onChange(value);
+            }}
+            onFocus={(e) => {
+              if (props.type === "number" && e.target.value === "0") {
+                e.target.select();
+              }
+              props.onFocus?.(e);
             }}
             onPaste={(e) => {
               if (isSlugField) {
@@ -143,10 +163,19 @@ function FormInput({
               }
               props.onPaste?.(e);
             }}
-            onBlur={field.onBlur}
+            onBlur={(e) => {
+              if (isTitleCase && typeof field.value === "string") {
+                const formatted = formatTitleCase(field.value);
+                if (formatted !== field.value) {
+                  field.onChange(formatted);
+                }
+              }
+              field.onBlur();
+              props.onBlur?.(e);
+            }}
             name={field.name}
             ref={field.ref}
-            className={className}
+            className={cn(isTitleCase && "capitalize", className)}
             leftIcon={leftIcon}
             rightIcon={rightIcon}
             inputPrefix={inputPrefix}

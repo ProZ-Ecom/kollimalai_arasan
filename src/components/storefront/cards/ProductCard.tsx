@@ -240,7 +240,7 @@ export function ProductCard({
         <Link href={`/products/${product.productId}`} className="flex-1 pr-2 min-w-0">
           <h3
             className="
-              uppercase
+              capitalize
               text-[11px]
               sm:text-[13px]
               md:text-[15px]

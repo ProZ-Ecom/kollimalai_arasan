@@ -1,22 +1,65 @@
 import { z } from "zod";
 
+const indianPhoneRegex = /^[6-9]\d{9}$/;
+const numbersOnlyRegex = /^\d+$/;
+
 export const createContactSchema = z
   .object({
     name: z
       .string({ message: "Name is required" })
       .trim()
-      .min(1, "Name cannot be empty")
+      .min(1, "Name is required")
       .max(150, "Name cannot exceed 150 characters"),
     email: z
       .string({ message: "Email is required" })
       .trim()
-      .email("Invalid email address")
-      .max(150, "Email cannot exceed 150 characters"),
+      .superRefine((val, ctx) => {
+        if (!val || val.length === 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Email address is required",
+          });
+          return;
+        }
+        if (val.length > 150) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Email cannot exceed 150 characters",
+          });
+          return;
+        }
+        if (!z.string().email().safeParse(val).success) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Please enter a valid email address",
+          });
+        }
+      }),
     phone: z
       .string({ message: "Phone is required" })
       .trim()
-      .min(5, "Phone number must be at least 5 digits")
-      .max(20, "Phone number cannot exceed 20 characters"),
+      .superRefine((val, ctx) => {
+        if (!val || val.length === 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Phone number is required",
+          });
+          return;
+        }
+        if (!numbersOnlyRegex.test(val)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Phone number must contain numbers only",
+          });
+          return;
+        }
+        if (!indianPhoneRegex.test(val)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Please enter a valid 10-digit phone number starting with 6, 7, 8, or 9",
+          });
+        }
+      }),
     subject: z
       .string({ message: "Subject is required" })
       .trim()

@@ -84,6 +84,18 @@ export const customerProfileService = {
       await userRepository.update(user.internalId, { name: data.name });
     }
 
+    if (data.phone !== undefined) {
+      const formattedPhone = data.phone ? data.phone.trim() : null;
+      if (formattedPhone) {
+        const existingWithPhone = await userRepository.findByPhone(formattedPhone);
+        if (existingWithPhone && existingWithPhone.internalId !== user.internalId) {
+          throw ApiError.badRequest("This mobile number is already registered with another account");
+        }
+      }
+      updateData.phone = formattedPhone;
+      await userRepository.update(user.internalId, { phone: formattedPhone });
+    }
+
     if (data.dob !== undefined) {
       updateData.dob = data.dob ? new Date(data.dob) : null;
     }

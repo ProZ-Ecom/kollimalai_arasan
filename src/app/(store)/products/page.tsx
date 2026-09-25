@@ -233,7 +233,7 @@ export default function ShopAllPage() {
             {selectedCategoryIds.length === 1 && currentCategory && (
               <>
                 <ChevronRight className="w-3.5 h-3.5" />
-                <span className="font-bold text-[#101010]">
+                <span className="font-bold text-[#101010] capitalize">
                   {currentCategory.name}
                 </span>
               </>
@@ -253,7 +253,7 @@ export default function ShopAllPage() {
               <Sparkles className="h-3.5 w-3.5 text-[#F8BE15]" />
               Authentic Collection
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#101010] font-serif tracking-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#101010] font-serif tracking-tight capitalize">
               {pageTitle}
             </h1>
             <p className="mt-2 text-xs sm:text-sm text-[#5A5A5A] max-w-2xl mx-auto leading-relaxed">

@@ -275,7 +275,7 @@ export function VariantCard({
               title="View Variant Details"
             >
               <h3
-                className="text-xs sm:text-sm font-bold text-[var(--neutral-900)] leading-snug line-clamp-2 uppercase group-hover/link:text-[var(--color-secondary-700)] transition-colors"
+                className="text-xs sm:text-sm font-bold text-[var(--neutral-900)] leading-snug line-clamp-2 capitalize group-hover/link:text-[var(--color-secondary-700)] transition-colors"
                 title={variant.variantName}
               >
                 {variant.variantName}
@@ -283,7 +283,7 @@ export function VariantCard({
             </Link>
           ) : (
             <h3
-              className="text-xs sm:text-sm font-bold text-[var(--neutral-900)] leading-snug line-clamp-2 uppercase group-hover:text-[var(--color-secondary-700)] transition-colors"
+              className="text-xs sm:text-sm font-bold text-[var(--neutral-900)] leading-snug line-clamp-2 capitalize group-hover:text-[var(--color-secondary-700)] transition-colors"
               title={variant.variantName}
             >
               {variant.variantName}

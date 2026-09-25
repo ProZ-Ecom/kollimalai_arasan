@@ -25,7 +25,7 @@ export const createAdminUnitSchema = z
       .number({ message: "Conversion factor is required" })
       .gt(0, "Conversion factor must be greater than 0")
       .default(1),
-    sortOrder: z
+    sortOrder: z.coerce
       .number()
       .int("Sort order must be an integer")
       .min(0, "Sort order cannot be negative")

@@ -23,7 +23,7 @@ function CategoryHeader({ category, className }: CategoryHeaderProps) {
         </div>
       )}
       <div className="relative px-6 py-10 sm:px-10 sm:py-14">
-        <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+        <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl capitalize">
           {category.name}
         </h1>
         {category.description && (

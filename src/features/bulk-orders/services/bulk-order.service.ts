@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/api/api-error";
 import { bulkOrderRepository } from "../repositories/bulk-order.repository";
 import { userRepository } from "@/features/users/repositories/user.repository";
+import { emailService } from "@/lib/email/email.service";
 import type {
   BulkOrderEnquiryResponse,
   AdminBulkOrderListItem,
@@ -53,6 +54,24 @@ export const bulkOrderService = {
     input: CreateBulkOrderInput
   ): Promise<BulkOrderEnquiryResponse> {
     const created = await bulkOrderRepository.create(input);
+
+    emailService
+      .sendBulkOrderAcknowledgementEmail({
+        to: input.email,
+        name: input.name,
+        phone: input.phone,
+        companyName: input.companyName,
+        productInterest: input.productInterest,
+        quantity: input.quantity,
+        message: input.message,
+      })
+      .catch((err) => {
+        console.error(
+          "[BULK ORDER] Failed to send acknowledgement email to user:",
+          err
+        );
+      });
+
     return formatBulkOrderResponse(created);
   },
 

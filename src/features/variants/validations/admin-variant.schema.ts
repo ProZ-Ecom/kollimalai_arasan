@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatTitleCase } from "@/lib/utils";
 
 export const createAdminVariantSchema = z
   .object({
@@ -6,7 +7,8 @@ export const createAdminVariantSchema = z
       .string({ message: "Variant name is required" })
       .trim()
       .min(1, "Variant name cannot be empty")
-      .max(100, "Variant name cannot exceed 100 characters"),
+      .max(100, "Variant name cannot exceed 100 characters")
+      .transform(formatTitleCase),
     slug: z
       .string({ message: "Slug is required" })
       .trim()
@@ -44,6 +46,7 @@ export const updateAdminVariantSchema = z
       .trim()
       .min(1, "Variant name cannot be empty")
       .max(100, "Variant name cannot exceed 100 characters")
+      .transform(formatTitleCase)
       .optional(),
     slug: z
       .string()

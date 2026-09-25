@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { db } from "@/lib/db/prisma";
 import { ApiError } from "@/lib/api/api-error";
+import { formatTitleCase } from "@/lib/utils";
 import { variantRepository } from "../repositories/variant.repository";
 import { productRepository } from "@/features/products/repositories/product.repository";
 import { userRepository } from "@/features/users/repositories/user.repository";
@@ -196,7 +197,7 @@ export const variantService = {
     const variant = await variantRepository.create({
       uuid: crypto.randomUUID(),
       productId: product.id,
-      variant_name: data.variantName,
+      variant_name: formatTitleCase(data.variantName),
       slug: variantSlug,
       short_description: data.shortDescription ?? null,
       description: data.description ?? null,
@@ -424,7 +425,7 @@ function buildVariantUpdateData(
     updateData.updated_by = adminId;
   }
   if (data.variantName !== undefined) {
-    updateData.variant_name = data.variantName;
+    updateData.variant_name = formatTitleCase(data.variantName);
   }
   if (data.shortDescription !== undefined) {
     updateData.short_description = data.shortDescription;

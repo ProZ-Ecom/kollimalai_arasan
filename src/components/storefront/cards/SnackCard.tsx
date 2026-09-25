@@ -276,7 +276,7 @@ export function SnackCard({
           {/* Name, SKU and pack price, stacked left */}
           <div className="mt-3 px-0.5">
             <Link href={resolvedHref} className="block">
-              <h3 className="font-bold text-sm text-secondary-500 leading-tight line-clamp-2 hover:text-secondary-600 transition-colors">
+              <h3 className="font-bold text-sm text-secondary-500 leading-tight line-clamp-2 hover:text-secondary-600 transition-colors capitalize">
                 {resolvedName}
               </h3>
             </Link>
@@ -320,12 +320,12 @@ export function SnackCard({
             {/* Left Column: Product/Variant Title using global brown typography */}
             <div className="flex-1 pr-1 min-w-0">
               {subtitle && (
-                <p className="text-[11px] sm:text-xs text-neutral-500 font-medium truncate mb-0.5">
+                <p className="text-[11px] sm:text-xs text-neutral-500 font-medium truncate mb-0.5 capitalize">
                   {subtitle}
                 </p>
               )}
               <Link href={resolvedHref} className="block">
-                <h3 className="font-extrabold text-[var(--neutral-900)] uppercase text-sm sm:text-base md:text-[17px] tracking-tight leading-tight line-clamp-2 text-hover-primary transition-colors">
+                <h3 className="font-extrabold text-[var(--neutral-900)] capitalize text-sm sm:text-base md:text-[17px] tracking-tight leading-tight line-clamp-2 text-hover-primary transition-colors">
                   {resolvedName}
                 </h3>
               </Link>

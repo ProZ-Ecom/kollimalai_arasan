@@ -157,6 +157,16 @@ export function calculateDiscountPrice(
   return price - (price * discountPercent) / 100;
 }
 
+export function formatTitleCase(str?: string | null): string {
+  if (!str) return "";
+  return str
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/(?:^|\s|-|\/)([a-z])/g, (match) => match.toUpperCase());
+}
+
+export const toTitleCase = formatTitleCase;
+
 export function getInitials(name: string): string {
   return name
     .split(" ")

@@ -253,7 +253,7 @@ export default function AdminVariantsPage() {
       header: "Product",
       cell: ({ row }) => (
         <div>
-          <p className="font-semibold text-[var(--color-neutral-900)]">
+          <p className="font-semibold text-[var(--color-neutral-900)] capitalize">
             {row.original.productName || "—"}
           </p>
         </div>
@@ -270,7 +270,7 @@ export default function AdminVariantsPage() {
           className="group block cursor-pointer"
           title="View Variant Details"
         >
-          <p className="font-medium text-[var(--color-neutral-900)] group-hover:text-secondary-600 transition-colors">
+          <p className="font-medium text-[var(--color-neutral-900)] group-hover:text-secondary-600 transition-colors capitalize">
             {row.original.variantName || "—"}
           </p>
           <p className="text-xs text-[var(--color-neutral-500)] mt-0.5 font-mono">
