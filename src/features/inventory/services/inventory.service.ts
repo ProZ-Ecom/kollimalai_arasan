@@ -94,7 +94,7 @@ export const inventoryService = {
     for (const item of items) {
       const avail = item.quantity_available || 0;
       const res = item.quantity_reserved || 0;
-      const reorder = item.reorderLevel || 0;
+      const reorder = item.reorderLevel > 0 ? item.reorderLevel : 5;
 
       totalUnits += avail;
       reservedUnits += res;
@@ -121,46 +121,113 @@ export const inventoryService = {
       throw ApiError.notFound("Inventory item not found");
     }
 
-    const newQuantity = inventory.quantity_available + input.quantity;
+    const currentAvailable = Number(inventory.quantity_available || 0);
+    const currentReserved = Number(inventory.quantity_reserved || 0);
 
-    if (
-      (input.type === "SALE" || input.type === "TRANSFER" || input.type === "DAMAGE") &&
-      newQuantity < 0
-    ) {
-      throw ApiError.badRequest(
-        `Insufficient stock. Available: ${inventory.quantity_available}, Requested: ${Math.abs(input.quantity)}`
-      );
-    }
-
+    let newAvailable = currentAvailable;
+    let newReserved = currentReserved;
+    let txQuantity = Math.abs(input.quantity);
     let txType: "in" | "out" | "reserved" | "released" = "in";
-    if (
-      input.type === "SALE" ||
-      input.type === "DAMAGE" ||
-      input.type === "TRANSFER" ||
-      input.quantity < 0
-    ) {
-      txType = "out";
-    } else {
-      txType = "in";
+    let txNote = input.notes ? `${input.type}: ${input.notes}` : `${input.type}`;
+
+    if (input.releaseReserved) {
+      // Release reserved stock back to available
+      const releaseAmount =
+        input.quantity > 0
+          ? Math.min(input.quantity, currentReserved)
+          : currentReserved;
+      newReserved = Math.max(0, currentReserved - releaseAmount);
+      newAvailable = currentAvailable + releaseAmount;
+      txType = "released";
+      txQuantity = releaseAmount;
+      txNote = input.notes
+        ? `RELEASE_RESERVED: ${input.notes}`
+        : `Admin released ${releaseAmount} reserved units to available stock`;
+    } else if (input.quantity !== 0) {
+      newAvailable = currentAvailable + input.quantity;
+      if (
+        (input.type === "SALE" ||
+          input.type === "TRANSFER" ||
+          input.type === "DAMAGE") &&
+        newAvailable < 0
+      ) {
+        throw ApiError.badRequest(
+          `Insufficient stock. Available: ${currentAvailable}, Requested: ${Math.abs(input.quantity)}`
+        );
+      }
+      txType =
+        input.type === "SALE" ||
+        input.type === "DAMAGE" ||
+        input.type === "TRANSFER" ||
+        input.quantity < 0
+          ? "out"
+          : "in";
     }
 
-    const transaction = await db.$transaction(async (tx) => {
-      const txn = await tx.inventoryTransaction.create({
-        data: {
-          variant_unit_price: { connect: { id: inventory.variantUnitPriceId } },
-          type: txType,
-          quantity: Math.abs(input.quantity),
-          note: input.notes ? `${input.type}: ${input.notes}` : `${input.type}`,
-        },
-      });
-      await tx.inventory.update({
-        where: { id: input.inventoryId },
-        data: { quantity_available: newQuantity },
-      });
-      return txn;
-    });
+    const vupId = inventory.variantUnitPriceId
+      ? BigInt(inventory.variantUnitPriceId)
+      : undefined;
+    if (!vupId) {
+      throw ApiError.badRequest("Inventory item is missing variantUnitPriceId");
+    }
 
-    return transaction;
+    return db.$transaction(async (tx) => {
+      let txn = null;
+      if (input.quantity !== 0 || input.releaseReserved) {
+        txn = await tx.inventoryTransaction.create({
+          data: {
+            variant_unit_price: { connect: { id: vupId } },
+            type: txType,
+            quantity: txQuantity,
+            note: txNote,
+          },
+        });
+      }
+
+      const updateData: any = {
+        quantity_available: newAvailable,
+        quantity_reserved: newReserved,
+      };
+      if (input.reorderLevel !== undefined) {
+        updateData.reorderLevel = input.reorderLevel;
+      }
+
+      const updatedInv = await tx.inventory.update({
+        where: { id: BigInt(input.inventoryId) },
+        data: updateData,
+      });
+
+      // Auto-sync variant out_of_stock status
+      const vup = await tx.variantUnitPrice.findFirst({
+        where: { id: vupId },
+        select: { variant_id: true },
+      });
+      if (vup?.variant_id) {
+        const inStockCount = await tx.inventory.count({
+          where: {
+            variant_unit_price: { variant_id: vup.variant_id, deleted_at: null },
+            quantity_available: { gt: 0 },
+            is_active: true,
+          },
+        });
+        await tx.productVariant.update({
+          where: { id: vup.variant_id },
+          data: { out_of_stock: inStockCount === 0 },
+        });
+      }
+
+      return {
+        id: txn ? Number(txn.id) : Number(updatedInv.id),
+        inventoryId: Number(updatedInv.id),
+        type: txn ? txn.type : "adjustment",
+        quantity: txn ? txn.quantity : 0,
+        note: txn ? txn.note : "Reorder level updated",
+        newQuantity: updatedInv.quantity_available,
+        newReserved: updatedInv.quantity_reserved,
+        reorderLevel: updatedInv.reorderLevel,
+        createdAt: txn ? txn.createdAt : new Date(),
+      };
+    });
   },
 
   async createInventory(input: CreateInventoryInput) {

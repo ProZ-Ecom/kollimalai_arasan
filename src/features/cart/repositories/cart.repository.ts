@@ -27,6 +27,10 @@ export const cartItemInclude = Prisma.validator<Prisma.CartItemInclude>()({
       is_default: true,
       isActive: true,
       deleted_at: true,
+      inventories: {
+        where: { is_active: true },
+        select: { quantity_available: true },
+      },
       product_units: {
         select: {
           id: true,

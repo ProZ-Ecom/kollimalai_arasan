@@ -498,11 +498,31 @@ export default function CheckoutPage() {
         return;
       }
 
+      // 1b. Pre-payment stock validation — catch issues before Razorpay opens
+      try {
+        const stockRes = await fetch("/api/customer/cart/validate-stock", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!stockRes.ok) {
+          const stockData = await stockRes.json().catch(() => ({}));
+          setIsProcessingPayment(false);
+          setCheckoutError(
+            stockData?.message ||
+              "Some items in your cart are no longer available. Please update your cart."
+          );
+          return;
+        }
+      } catch {
+        // Network error — allow through, server will catch it at verify
+      }
+
       // 2. Call backend to create Razorpay order for current cart
       const rzpOrder = await createRazorpayOrderMutation.mutateAsync({
         orderId: "cart",
         shippingAddressId: shippingId,
       });
+
 
       // 3. Find recipient info for prefill
       const selectedAddr = addresses.find(

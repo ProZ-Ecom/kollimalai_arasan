@@ -59,12 +59,13 @@ export function InventoryStockTable({
           </thead>
           <tbody className="divide-y divide-cream-border/60">
             {items.map((item) => {
+              const effectiveReorder = item.reorderLevel > 0 ? item.reorderLevel : 5;
               const isOutOfStock = item.availableQuantity === 0;
               const isLowStock =
-                !isOutOfStock && item.availableQuantity <= item.reorderLevel;
+                !isOutOfStock && item.availableQuantity <= effectiveReorder;
 
               // Health progress bar percentage (capped at 100%)
-              const targetThreshold = Math.max(item.reorderLevel * 2, 20);
+              const targetThreshold = Math.max(effectiveReorder * 2, 20);
               const stockPercent = Math.min(
                 100,
                 Math.round((item.availableQuantity / targetThreshold) * 100)
@@ -121,7 +122,7 @@ export function InventoryStockTable({
                   <td className="py-3.5 px-4 min-w-[130px]">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-[10px]">
-                        <span className="text-neutral-400">Reorder at {item.reorderLevel}</span>
+                        <span className="text-neutral-400">Reorder at {effectiveReorder}</span>
                         <span className="font-mono font-bold text-neutral-700">
                           {item.availableQuantity} units
                         </span>
@@ -160,9 +161,14 @@ export function InventoryStockTable({
                   <td className="py-3.5 px-4 text-right">
                     <span className="font-mono text-xs font-medium text-neutral-500">
                       {item.reservedQuantity > 0 ? (
-                        <span className="text-blue-600 font-semibold">
+                        <button
+                          type="button"
+                          onClick={() => onAdjustStock(item)}
+                          className="text-blue-600 font-bold hover:underline cursor-pointer inline-flex items-center gap-1"
+                          title="Click to manage or release reserved stock"
+                        >
                           {item.reservedQuantity.toLocaleString("en-IN")}
-                        </span>
+                        </button>
                       ) : (
                         "0"
                       )}

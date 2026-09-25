@@ -36,9 +36,12 @@ type TabMode = "stock" | "low_stock" | "history";
 
 const statusFilterOptions: SelectOption[] = [
   { value: "all", label: "All Stock Statuses" },
-  { value: "in_stock", label: "In Stock (Healthy)" },
-  { value: "low_stock", label: "Low Stock (Reorder)" },
-  { value: "out_of_stock", label: "Out of Stock" },
+  { value: "in_stock", label: "In Stock (> 0 units)" },
+  { value: "low_stock", label: "Low Stock (Reorder Level)" },
+  { value: "low_stock_10", label: "Low Stock (< 10 units)" },
+  { value: "low_stock_50", label: "Low Stock (< 50 units)" },
+  { value: "reserved", label: "Has Reserved Stock (> 0)" },
+  { value: "out_of_stock", label: "Out of Stock (0 units)" },
 ];
 
 export default function InventoryDashboardPage() {
@@ -68,6 +71,9 @@ export default function InventoryDashboardPage() {
   // Live inventory list query
   const isLowStockFilter =
     activeTab === "low_stock" || statusFilter === "low_stock";
+  const isLowStock10 = statusFilter === "low_stock_10";
+  const isLowStock50 = statusFilter === "low_stock_50";
+  const isReservedFilter = statusFilter === "reserved";
   const isOutOfStockFilter = statusFilter === "out_of_stock";
 
   const {
@@ -80,6 +86,8 @@ export default function InventoryDashboardPage() {
     limit: pageSize,
     search: search.trim() || undefined,
     lowStock: isLowStockFilter || undefined,
+    lowStockThreshold: isLowStock10 ? 10 : isLowStock50 ? 50 : undefined,
+    reserved: isReservedFilter || undefined,
     outOfStock: isOutOfStockFilter || undefined,
   });
 
@@ -118,6 +126,9 @@ export default function InventoryDashboardPage() {
     } else if (filterId === "in_stock") {
       setActiveTab("stock");
       setStatusFilter("in_stock");
+    } else if (filterId === "reserved") {
+      setActiveTab("stock");
+      setStatusFilter("reserved");
     } else {
       setActiveTab("stock");
       setStatusFilter("all");
@@ -191,6 +202,7 @@ export default function InventoryDashboardPage() {
                 type="button"
                 onClick={() => {
                   setActiveTab("stock");
+                  setStatusFilter("all");
                   setPage(1);
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${

@@ -54,6 +54,8 @@ export interface GetInventoryParams {
   limit?: number;
   search?: string;
   lowStock?: boolean;
+  lowStockThreshold?: number;
+  reserved?: boolean;
   outOfStock?: boolean;
 }
 
@@ -73,6 +75,8 @@ export interface AdjustStockInput {
   inventoryId: number;
   type: InventoryTransactionType;
   quantity: number;
+  reorderLevel?: number;
+  releaseReserved?: boolean;
   notes?: string;
 }
 

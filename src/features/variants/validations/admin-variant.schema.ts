@@ -31,7 +31,7 @@ export const createAdminVariantSchema = z
       .nullable(),
     isFeatured: z.boolean().optional().default(false),
     isActive: z.boolean().optional().default(true),
-    outOfStock: z.boolean().optional().default(false),
+    outOfStock: z.boolean().optional().default(true),
   })
   .strict();
 

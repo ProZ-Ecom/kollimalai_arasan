@@ -133,6 +133,11 @@ export default function AdminVariantsPage() {
     createdVariant?.id || null
   );
   const hasCreatedPrices = createdVariantPrices.length > 0;
+  const createdVariantTotalStock = createdVariantPrices.reduce(
+    (sum, up) => (up.stock !== undefined ? sum + up.stock : sum),
+    0
+  );
+  const isCreatedVariantOutOfStock = hasCreatedPrices && createdVariantTotalStock === 0;
 
   const variants = data?.data ?? [];
   const products = productsData?.data ?? [];
@@ -866,11 +871,16 @@ export default function AdminVariantsPage() {
                     type="button"
                     onClick={async () => {
                       try {
-                        await updateMutation.mutateAsync({
+                        const res = await updateMutation.mutateAsync({
                           productUuid: createdVariant.productId,
                           variantUuid: createdVariant.id,
                           data: { isActive: true },
                         });
+                        if (res && (res as any).data) {
+                          setCreatedVariant((prev) =>
+                            prev ? { ...prev, variantData: (res as any).data } : null
+                          );
+                        }
                       } catch (e) {
                         console.error("Failed to activate variant:", e);
                       }
@@ -910,14 +920,28 @@ export default function AdminVariantsPage() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800 text-xs flex items-center gap-3">
-                <Check className="h-5 w-5 text-emerald-600 shrink-0" />
-                <div>
-                  <p className="font-bold">Item Created Successfully!</p>
-                  <p className="text-emerald-700 mt-0.5">
-                    Here is how this Item appears to customers on the storefront:
-                  </p>
+              <div className="space-y-3">
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800 text-xs flex items-center gap-3">
+                  <Check className="h-5 w-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="font-bold">Item Created Successfully!</p>
+                    <p className="text-emerald-700 mt-0.5">
+                      Here is how this Item appears to customers on the storefront:
+                    </p>
+                  </div>
                 </div>
+
+                {isCreatedVariantOutOfStock && (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-amber-900 text-xs flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-amber-900 text-sm">Notice: Item is currently Out of Stock</p>
+                      <p className="text-amber-800 mt-0.5">
+                        No stock quantity was entered during creation. Admin can go to the <strong>Inventory</strong> dashboard anytime to put in the stock.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

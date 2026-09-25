@@ -13,6 +13,7 @@ export interface CartItemResponse {
   measurement: VariantMeasurement;
   primaryImage: string | null;
   quantity: number;
+  availableStock?: number;
   /** Alias of `currentPrice`, kept for callers that read `price`. */
   price?: number;
   /** Catalog price captured when the item was added to the cart. */

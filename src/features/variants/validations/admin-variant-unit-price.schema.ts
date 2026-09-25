@@ -17,10 +17,15 @@ export const createVariantUnitPriceSchema = z
       .number({ message: "Base price is required" })
       .min(0, "Base price cannot be negative"),
     stock: z
-      .number()
-      .int("Stock must be an integer")
-      .min(0, "Stock cannot be negative")
-      .optional(),
+      .preprocess(
+        (val) => (val === null || val === undefined || val === "" ? 0 : val),
+        z
+          .number({ message: "Stock must be a number" })
+          .int("Stock must be an integer")
+          .min(0, "Stock cannot be negative")
+      )
+      .optional()
+      .default(0),
     isDefault: z.boolean().optional().default(false),
     isActive: z.boolean().optional().default(true),
   })
@@ -40,9 +45,13 @@ export const updateVariantUnitPriceSchema = z
       .optional(),
     basePrice: z.number().min(0, "Base price cannot be negative").optional(),
     stock: z
-      .number()
-      .int("Stock must be an integer")
-      .min(0, "Stock cannot be negative")
+      .preprocess(
+        (val) => (val === null || val === "" ? 0 : val),
+        z
+          .number({ message: "Stock must be a number" })
+          .int("Stock must be an integer")
+          .min(0, "Stock cannot be negative")
+      )
       .optional(),
     isDefault: z.boolean().optional(),
     isActive: z.boolean().optional(),

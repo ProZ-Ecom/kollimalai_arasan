@@ -333,11 +333,25 @@ export const orderService = {
       );
     }
 
-    return orderRepository.cancelOrderTransaction({
+    const cancelledOrder = await orderRepository.cancelOrderTransaction({
       orderId: order.id,
       note: input?.note || "Cancelled by customer",
       changedBy: user.internalId,
     });
+
+    if (order.payment_status === "paid") {
+      try {
+        const { razorpayService } = await import("@/features/payment/services/razorpay.service");
+        await razorpayService.refundPayment({
+          orderId: order.id,
+          reason: input?.note || "Customer order cancellation",
+        });
+      } catch (refundError: any) {
+        console.error(`[Refund Error] Auto-refund failed for cancelled order ${order.orderNumber}:`, refundError?.message || refundError);
+      }
+    }
+
+    return cancelledOrder;
   },
 
   async cancelAdminOrder(
@@ -371,11 +385,25 @@ export const orderService = {
       );
     }
 
-    return orderRepository.cancelOrderTransaction({
+    const cancelledOrder = await orderRepository.cancelOrderTransaction({
       orderId: order.id,
       note: input?.note || "Cancelled by admin",
       changedBy: adminUser.internalId,
     });
+
+    if (order.payment_status === "paid") {
+      try {
+        const { razorpayService } = await import("@/features/payment/services/razorpay.service");
+        await razorpayService.refundPayment({
+          orderId: order.id,
+          reason: input?.note || "Admin order cancellation",
+        });
+      } catch (refundError: any) {
+        console.error(`[Refund Error] Auto-refund failed for admin-cancelled order ${order.orderNumber}:`, refundError?.message || refundError);
+      }
+    }
+
+    return cancelledOrder;
   },
 
   async returnCustomerOrder(

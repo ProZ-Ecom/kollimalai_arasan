@@ -7,6 +7,8 @@ interface FindAllParams {
   limit?: number;
   search?: string;
   lowStock?: boolean;
+  lowStockThreshold?: number;
+  reserved?: boolean;
   outOfStock?: boolean;
 }
 
@@ -72,8 +74,30 @@ export const inventoryRepository = {
       ];
     }
 
-    if (lowStock) {
-      where.quantity_available = { gt: 0 };
+    const { lowStockThreshold, reserved } = params;
+
+    if (lowStockThreshold && lowStockThreshold > 0) {
+      const lowStockRows = await db.$queryRaw<{ id: bigint }[]>`
+        SELECT id FROM inventories
+        WHERE is_active = true
+          AND quantity_available > 0
+          AND quantity_available <= ${lowStockThreshold}
+      `;
+      const ids = lowStockRows.map((r) => BigInt(r.id));
+      where.id = { in: ids };
+    } else if (lowStock) {
+      const lowStockRows = await db.$queryRaw<{ id: bigint }[]>`
+        SELECT id FROM inventories
+        WHERE is_active = true
+          AND quantity_available > 0
+          AND quantity_available <= IF(reorder_level > 0, reorder_level, 5)
+      `;
+      const ids = lowStockRows.map((r) => BigInt(r.id));
+      where.id = { in: ids };
+    }
+
+    if (reserved) {
+      where.quantity_reserved = { gt: 0 };
     }
 
     if (outOfStock) {
@@ -96,7 +120,7 @@ export const inventoryRepository = {
 
   async findById(id: number) {
     return db.inventory.findUnique({
-      where: { id },
+      where: { id: BigInt(id) },
       include: inventoryInclude,
     });
   },
@@ -106,8 +130,8 @@ export const inventoryRepository = {
       where: {
         variant_unit_price: {
           variant: {
-            productId,
-            ...(variantId ? { id: variantId } : {}),
+            productId: BigInt(productId),
+            ...(variantId ? { id: BigInt(variantId) } : {}),
           },
         },
       },
@@ -124,7 +148,7 @@ export const inventoryRepository = {
 
   async update(id: number, data: Prisma.InventoryUpdateInput) {
     return db.inventory.update({
-      where: { id },
+      where: { id: BigInt(id) },
       data,
       include: inventoryInclude,
     });
@@ -138,9 +162,10 @@ export const inventoryRepository = {
     const skip = (page - 1) * limit;
 
     const inventory = await db.inventory.findUnique({
-      where: { id: inventoryId },
+      where: { id: BigInt(inventoryId) },
       select: { variantUnitPriceId: true },
     });
+
 
     if (!inventory) {
       return { data: [], total: 0 };

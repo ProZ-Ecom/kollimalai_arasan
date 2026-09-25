@@ -108,12 +108,18 @@ function CartItem({
           ? item.product.images[0]
           : null);
 
-  const stockQuantity = Number(
-    item.variant?.stockQuantity ??
-      item.variant?.stock_quantity ??
-      item.product?.stockQuantity ??
-      99
-  );
+  const stockQuantity =
+    item.availableStock !== undefined
+      ? Number(item.availableStock)
+      : Number(
+          item.variant?.stockQuantity ??
+            item.variant?.stock_quantity ??
+            item.product?.stockQuantity ??
+            99
+        );
+
+  const isOverStock = stockQuantity > 0 && quantity > stockQuantity;
+  const isOutOfStock = stockQuantity === 0;
 
   const itemId = item.variantId || item.variantUuid || item.id;
 
@@ -203,6 +209,16 @@ function CartItem({
               </span>
             )}
           </div>
+
+          {isOutOfStock ? (
+            <div className="mt-2 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5">
+              <span>Out of stock — please remove this item to proceed</span>
+            </div>
+          ) : isOverStock ? (
+            <div className="mt-2 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5">
+              <span>Only {stockQuantity} unit{stockQuantity === 1 ? "" : "s"} available in stock. Click &minus; to adjust.</span>
+            </div>
+          ) : null}
         </div>
 
         {/* Quantity Controls & Line Total */}
@@ -221,7 +237,7 @@ function CartItem({
               value={quantity}
               onChange={(newQty) => onUpdateQuantity(itemId, newQty)}
               min={1}
-              max={stockQuantity}
+              max={stockQuantity > 0 ? stockQuantity : 1}
               disabled={isUpdating || isRemoving}
               size="sm"
             />

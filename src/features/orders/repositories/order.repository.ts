@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { db } from "@/lib/db/prisma";
 import { Prisma } from "@/generated/prisma";
+import { ApiError } from "@/lib/api/api-error";
 import { formatVariantMeasurement } from "@/features/variants/utils/measurement.util";
 import type {
   OrderDetailResponse,
@@ -529,7 +530,74 @@ export const orderRepository = {
         },
       });
 
-      // 6. Fetch created full order
+      // 6. Reserve inventory atomically for each order line item.
+      //    Uses an UPDATE WHERE quantity_available >= qty — this is a single
+      //    atomic SQL statement, so two concurrent orders racing on the last
+      //    unit will never both succeed (one gets rowsAffected=0).
+      for (const item of params.items) {
+        const rowsAffected = await tx.$executeRaw`
+          UPDATE inventories
+          SET quantity_available = quantity_available - ${item.quantity},
+              quantity_reserved  = quantity_reserved  + ${item.quantity},
+              updated_by         = ${params.userId}
+          WHERE variant_unit_price_id = ${item.variantUnitPriceId}
+            AND quantity_available    >= ${item.quantity}
+            AND is_active             = true
+        `;
+
+        if (rowsAffected === 0) {
+          // No rows updated — either no inventory record or stock ran out
+          // mid-flight (another concurrent order beat us).
+          const inv = await tx.inventory.findFirst({
+            where: { variantUnitPriceId: item.variantUnitPriceId, is_active: true },
+            select: { quantity_available: true },
+          });
+          const avail = inv ? Number(inv.quantity_available) : 0;
+          throw ApiError.badRequest(
+            avail > 0
+              ? `Only ${avail} unit${avail === 1 ? "" : "s"} left for "${item.productName}". Please update your cart.`
+              : `"${item.productName}" is out of stock. Please remove it from your cart.`
+          );
+        }
+
+        // Re-read updated row for transaction log
+        const updatedInv = await tx.inventory.findFirst({
+          where: { variantUnitPriceId: item.variantUnitPriceId, is_active: true },
+          select: { id: true },
+        });
+
+        await tx.inventoryTransaction.create({
+          data: {
+            variant_unit_price_id: item.variantUnitPriceId,
+            type: "reserved" as any,
+            quantity: item.quantity,
+            note: `Order ${createdOrder.orderNumber}: stock reserved`,
+            created_by: params.userId,
+            updated_by: params.userId,
+          },
+        });
+      }
+
+      // 7. Sync variant out_of_stock flags
+      const uniqueVupIds = [...new Set(params.items.map((i) => i.variantUnitPriceId))];
+      for (const vupId of uniqueVupIds) {
+        const vup = await tx.variantUnitPrice.findFirst({
+          where: { id: BigInt(vupId), deleted_at: null },
+          select: { variant_id: true },
+        });
+        if (!vup) continue;
+        const unitPrices = await tx.variantUnitPrice.findMany({
+          where: { variant_id: vup.variant_id, deleted_at: null },
+          include: { inventories: { select: { quantity_available: true } } },
+        });
+        const hasStock = unitPrices.some((up) => up.inventories && up.inventories.quantity_available > 0);
+        await tx.productVariant.updateMany({
+          where: { id: vup.variant_id },
+          data: { out_of_stock: !hasStock },
+        });
+      }
+
+      // 8. Fetch created full order
       const fullOrder = await tx.order.findUniqueOrThrow({
         where: { id: createdOrder.id },
         include: orderDetailInclude,
@@ -918,6 +986,70 @@ export const orderRepository = {
         },
       });
 
+      // Release reserved inventory back to available
+      const orderItems = await tx.orderItem.findMany({
+        where: { orderId: params.orderId, is_active: true },
+        select: { variantUnitPriceId: true, quantity: true, sku_snapshot: true },
+      });
+
+      for (const item of orderItems) {
+        if (!item.variantUnitPriceId) continue;
+        const vupId = BigInt(item.variantUnitPriceId);
+
+        const inv = await tx.inventory.findFirst({
+          where: { variantUnitPriceId: vupId, is_active: true },
+        });
+        if (!inv) continue;
+
+        const reserved = Math.max(0, Number(inv.quantity_reserved) - item.quantity);
+        const available = Number(inv.quantity_available) + item.quantity;
+
+        await tx.inventory.update({
+          where: { id: BigInt(inv.id) },
+          data: {
+            quantity_available: available,
+            quantity_reserved: reserved,
+            updated_by: params.changedBy,
+          },
+        });
+
+        await tx.inventoryTransaction.create({
+          data: {
+            variant_unit_price_id: vupId,
+            type: "released" as any,
+            quantity: item.quantity,
+            note: `Order cancelled: stock released`,
+            created_by: params.changedBy,
+            updated_by: params.changedBy,
+          },
+        });
+      }
+
+      // Sync out_of_stock flags
+      const uniqueVupIds = [
+        ...new Set(
+          orderItems
+            .filter((i) => i.variantUnitPriceId != null)
+            .map((i) => BigInt(i.variantUnitPriceId!))
+        ),
+      ];
+      for (const vupId of uniqueVupIds) {
+        const vup = await tx.variantUnitPrice.findFirst({
+          where: { id: vupId, deleted_at: null },
+          select: { variant_id: true },
+        });
+        if (!vup) continue;
+        const unitPrices = await tx.variantUnitPrice.findMany({
+          where: { variant_id: vup.variant_id, deleted_at: null },
+          include: { inventories: { select: { quantity_available: true } } },
+        });
+        const hasStock = unitPrices.some((up) => up.inventories && up.inventories.quantity_available > 0);
+        await tx.productVariant.updateMany({
+          where: { id: vup.variant_id },
+          data: { out_of_stock: !hasStock },
+        });
+      }
+
       const updated = await tx.order.findUniqueOrThrow({
         where: { id: params.orderId },
         include: orderDetailInclude,
@@ -955,6 +1087,70 @@ export const orderRepository = {
           updated_by: params.changedBy,
         },
       });
+
+      // Return stock to available (items physically come back)
+      const orderItems = await tx.orderItem.findMany({
+        where: { orderId: params.orderId, is_active: true },
+        select: { variantUnitPriceId: true, quantity: true },
+      });
+
+      for (const item of orderItems) {
+        if (!item.variantUnitPriceId) continue;
+        const vupId = BigInt(item.variantUnitPriceId);
+
+        const inv = await tx.inventory.findFirst({
+          where: { variantUnitPriceId: vupId, is_active: true },
+        });
+        if (!inv) continue;
+
+        // At return time the order was already delivered: quantity_reserved was
+        // zeroed at delivery. We just add back to quantity_available.
+        const available = Number(inv.quantity_available) + item.quantity;
+
+        await tx.inventory.update({
+          where: { id: BigInt(inv.id) },
+          data: {
+            quantity_available: available,
+            updated_by: params.changedBy,
+          },
+        });
+
+        await tx.inventoryTransaction.create({
+          data: {
+            variant_unit_price_id: vupId,
+            type: "in" as any,
+            quantity: item.quantity,
+            note: `RETURN: stock restored`,
+            created_by: params.changedBy,
+            updated_by: params.changedBy,
+          },
+        });
+      }
+
+      // Sync out_of_stock flags
+      const uniqueVupIds = [
+        ...new Set(
+          orderItems
+            .filter((i) => i.variantUnitPriceId != null)
+            .map((i) => BigInt(i.variantUnitPriceId!))
+        ),
+      ];
+      for (const vupId of uniqueVupIds) {
+        const vup = await tx.variantUnitPrice.findFirst({
+          where: { id: vupId, deleted_at: null },
+          select: { variant_id: true },
+        });
+        if (!vup) continue;
+        const unitPrices = await tx.variantUnitPrice.findMany({
+          where: { variant_id: vup.variant_id, deleted_at: null },
+          include: { inventories: { select: { quantity_available: true } } },
+        });
+        const hasStock = unitPrices.some((up) => up.inventories && up.inventories.quantity_available > 0);
+        await tx.productVariant.updateMany({
+          where: { id: vup.variant_id },
+          data: { out_of_stock: !hasStock },
+        });
+      }
 
       const updated = await tx.order.findUniqueOrThrow({
         where: { id: params.orderId },
@@ -994,6 +1190,47 @@ export const orderRepository = {
           updated_by: params.changedBy,
         },
       });
+
+      // When order is delivered: release reserved stock (it's been consumed)
+      if (params.status === "delivered") {
+        const orderItems = await tx.orderItem.findMany({
+          where: { orderId: params.orderId, is_active: true },
+          select: { variantUnitPriceId: true, quantity: true },
+        });
+
+        for (const item of orderItems) {
+          if (!item.variantUnitPriceId) continue;
+          const vupId = BigInt(item.variantUnitPriceId);
+
+          const inv = await tx.inventory.findFirst({
+            where: { variantUnitPriceId: vupId, is_active: true },
+          });
+          if (!inv) continue;
+
+          // Stock was already deducted from quantity_available at order time.
+          // Now we clear the reserved hold.
+          const reserved = Math.max(0, Number(inv.quantity_reserved) - item.quantity);
+
+          await tx.inventory.update({
+            where: { id: BigInt(inv.id) },
+            data: {
+              quantity_reserved: reserved,
+              updated_by: params.changedBy,
+            },
+          });
+
+          await tx.inventoryTransaction.create({
+            data: {
+              variant_unit_price_id: vupId,
+              type: "out" as any,
+              quantity: item.quantity,
+              note: `SALE: order delivered — stock committed`,
+              created_by: params.changedBy,
+              updated_by: params.changedBy,
+            },
+          });
+        }
+      }
 
       const updated = await tx.order.findUniqueOrThrow({
         where: { id: params.orderId },
