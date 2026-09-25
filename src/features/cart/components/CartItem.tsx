@@ -170,12 +170,12 @@ function CartItem({
             {productSlug ? (
               <Link
                 href={`/products/${productSlug}`}
-                className="font-bold text-base sm:text-lg text-theme-text-primary hover:text-theme-primary transition-colors line-clamp-1"
+                className="font-bold text-base sm:text-lg text-theme-text-primary hover:text-theme-primary transition-colors line-clamp-1 capitalize"
               >
                 {productName}
               </Link>
             ) : (
-              <span className="font-bold text-base sm:text-lg text-theme-text-primary line-clamp-1">
+              <span className="font-bold text-base sm:text-lg text-theme-text-primary line-clamp-1 capitalize">
                 {productName}
               </span>
             )}
@@ -183,7 +183,7 @@ function CartItem({
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-theme-text-subtle mt-1">
             {variantName && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-theme-surface-alt border border-theme-border text-theme-primary font-semibold">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-theme-surface-alt border border-theme-border text-theme-primary font-semibold capitalize">
                 {variantName}
               </span>
             )}

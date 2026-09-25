@@ -211,7 +211,7 @@ export default function AdminProductsPage() {
           href={`/admin/dashboard/products/${row.original.id}`}
           className="group block cursor-pointer"
         >
-          <p className="font-semibold text-secondary-600 underline-offset-2 group-hover:underline transition-colors">
+          <p className="font-semibold text-secondary-600 underline-offset-2 group-hover:underline transition-colors capitalize">
             {row.original.name}
           </p>
           <p className="text-xs text-[var(--color-neutral-500)] mt-0.5">
@@ -224,7 +224,7 @@ export default function AdminProductsPage() {
       accessorKey: "categoryName",
       header: "Category",
       cell: ({ row }) => (
-        <span className="text-[var(--color-neutral-700)]">
+        <span className="text-[var(--color-neutral-700)] capitalize">
           {row.original.categoryName || "—"}
         </span>
       ),

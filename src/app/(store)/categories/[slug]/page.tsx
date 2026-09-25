@@ -290,16 +290,7 @@ export default function CategoryProductsPage({
             </Link>
             <ChevronRight className="w-3.5 h-3.5" />
             {isSingleCategoryMode ? (
-              <>
-                <Link
-                  href="/categories/all"
-                  className="hover:text-[#007F06] transition-colors"
-                >
-                  Categories
-                </Link>
-                <ChevronRight className="w-3.5 h-3.5" />
-                <span className="font-bold text-[#101010]">{categoryTitle}</span>
-              </>
+              <span className="font-bold text-[#101010] capitalize">{categoryTitle}</span>
             ) : (
               <span className="font-bold text-[#101010]">All Categories</span>
             )}
@@ -310,7 +301,7 @@ export default function CategoryProductsPage({
               <Sparkles className="h-3.5 w-3.5 text-[#F8BE15]" />
               Authentic Collection
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#101010] font-serif tracking-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#101010] font-serif tracking-tight capitalize">
               {categoryTitle}
             </h1>
             <p className="mt-2 text-xs sm:text-sm text-[#5A5A5A] max-w-2xl mx-auto leading-relaxed">

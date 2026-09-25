@@ -659,7 +659,7 @@ export function GlobalSearchModal({ isOpen, onClose, initialQuery = "" }: Global
                                 className="w-5 h-5 object-contain"
                               />
                             </div>
-                            <span className="text-xs font-bold text-theme-text-primary truncate">
+                            <span className="text-xs font-bold text-theme-text-primary truncate capitalize">
                               {category.name}
                             </span>
                           </div>
@@ -714,11 +714,11 @@ export function GlobalSearchModal({ isOpen, onClose, initialQuery = "" }: Global
                               />
                             </div>
                             <div className="min-w-0">
-                              <h5 className="text-xs sm:text-sm font-bold text-theme-text-primary truncate">
+                              <h5 className="text-xs sm:text-sm font-bold text-theme-text-primary truncate capitalize">
                                 {product.name}
                               </h5>
                               {product.brand && (
-                                <p className="text-[11px] text-theme-text-muted truncate">
+                                <p className="text-[11px] text-theme-text-muted truncate capitalize">
                                   {product.brand.name}
                                 </p>
                               )}

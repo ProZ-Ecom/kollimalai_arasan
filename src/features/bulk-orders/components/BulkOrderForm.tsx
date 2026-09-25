@@ -29,6 +29,7 @@ export function BulkOrderForm() {
     formState: { errors },
   } = useForm<CreateBulkOrderInput>({
     resolver: zodResolver(createBulkOrderSchema),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       email: "",
@@ -77,14 +78,48 @@ export function BulkOrderForm() {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Full Name <span className="text-red-600">*</span>
           </label>
-          <input {...register("name")} className={inputClass} placeholder="Your name" />
+          <input {...register("name")} className={inputClass} placeholder="Your full name" />
           <FieldError message={errors.name?.message} />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Phone Number <span className="text-red-600">*</span>
           </label>
-          <input {...register("phone")} className={inputClass} placeholder="Mobile number" />
+          <input
+            {...register("phone", {
+              onChange: (e) => {
+                const numeric = e.target.value.replace(/\D/g, "").slice(0, 10);
+                e.target.value = numeric;
+              },
+            })}
+            type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            className={inputClass}
+            placeholder="10-digit mobile number"
+            onKeyDown={(e) => {
+              if (
+                [
+                  "Backspace",
+                  "Delete",
+                  "Tab",
+                  "Escape",
+                  "Enter",
+                  "ArrowLeft",
+                  "ArrowRight",
+                  "ArrowUp",
+                  "ArrowDown",
+                ].includes(e.key) ||
+                (e.ctrlKey && ["a", "c", "v", "x", "z"].includes(e.key.toLowerCase())) ||
+                (e.metaKey && ["a", "c", "v", "x", "z"].includes(e.key.toLowerCase()))
+              ) {
+                return;
+              }
+              if (!/^[0-9]$/.test(e.key)) {
+                e.preventDefault();
+              }
+            }}
+          />
           <FieldError message={errors.phone?.message} />
         </div>
       </div>
@@ -122,7 +157,7 @@ export function BulkOrderForm() {
           <input
             {...register("productInterest")}
             className={inputClass}
-            placeholder="e.g. Butter Murukku"
+            placeholder="e.g. Hill Spices, Millets, Natural Honey"
           />
           <FieldError message={errors.productInterest?.message} />
         </div>

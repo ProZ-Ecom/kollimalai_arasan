@@ -33,14 +33,14 @@ function AdminBreadcrumb({ items, className }: AdminBreadcrumbProps) {
             {item.href ? (
               <Link
                 href={item.href}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
+                className="text-gray-500 hover:text-gray-700 transition-colors capitalize"
               >
                 {item.label}
                 
               </Link>
               
             ) : (
-              <span className="font-medium text-gray-900">{item.label}</span>
+              <span className="font-medium text-gray-900 capitalize">{item.label}</span>
             )}
               <ChevronRight className="h-4 w-4 text-gray-300" />
           </li>

@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { ApiError } from "@/lib/api/api-error";
+import { formatTitleCase } from "@/lib/utils";
 import { categoryRepository } from "../repositories/category.repository";
 import { userRepository } from "@/features/users/repositories/user.repository";
 import type { Prisma } from "@/generated/prisma";
@@ -86,7 +87,7 @@ export const categoryService = {
     // }
 
     return categoryRepository.create({
-      name: data.name,
+      name: formatTitleCase(data.name),
       slug: data.slug,
       description: data.description,
       icon: data.image,
@@ -110,7 +111,7 @@ export const categoryService = {
     }
 
     const updateData: Prisma.ProductCategoryUncheckedUpdateInput = {};
-    if (data.name !== undefined) updateData.name = data.name;
+    if (data.name !== undefined) updateData.name = formatTitleCase(data.name);
     if (data.slug !== undefined) updateData.slug = data.slug;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.image !== undefined) updateData.icon = data.image;
@@ -139,18 +140,20 @@ export const categoryService = {
     // 1. Check duplicate slug
     const existingSlug = await categoryRepository.findBySlug(data.slug);
     if (existingSlug) {
-      throw ApiError.conflict(`A category with slug '${data.slug}' already exists`);
+      throw ApiError.conflict(`A category with code '${data.slug}' already exists`);
     }
 
+    const formattedName = formatTitleCase(data.name);
+
     // 2. Check duplicate name (skip deleted categories — user may re-create after restore)
-    const existingName = await categoryRepository.findByName(data.name);
+    const existingName = await categoryRepository.findByName(formattedName);
     if (existingName && !existingName.deleted_at) {
-      throw ApiError.conflict(`A category with name '${data.name}' already exists`);
+      throw ApiError.conflict(`A category with name '${formattedName}' already exists`);
     }
 
     const created = await categoryRepository.create({
       uuid: crypto.randomUUID(),
-      name: data.name,
+      name: formattedName,
       slug: data.slug, // Use exact frontend slug without modification
       description: data.description ?? null,
       icon: data.icon ?? null,
@@ -215,18 +218,19 @@ export const categoryService = {
     if (data.slug !== undefined && data.slug !== existing.slug) {
       const slugConflict = await categoryRepository.findBySlug(data.slug, uuid);
       if (slugConflict) {
-        throw ApiError.conflict(`A category with slug '${data.slug}' already exists`);
+        throw ApiError.conflict(`A category with code '${data.slug}' already exists`);
       }
       updateData.slug = data.slug;
     }
 
     // Check name conflict if name changes
     if (data.name !== undefined && data.name !== existing.name) {
-      const nameConflict = await categoryRepository.findByName(data.name, uuid);
+      const formattedName = formatTitleCase(data.name);
+      const nameConflict = await categoryRepository.findByName(formattedName, uuid);
       if (nameConflict) {
-        throw ApiError.conflict(`A category with name '${data.name}' already exists`);
+        throw ApiError.conflict(`A category with name '${formattedName}' already exists`);
       }
-      updateData.name = data.name;
+      updateData.name = formattedName;
     }
 
     if (data.description !== undefined) {

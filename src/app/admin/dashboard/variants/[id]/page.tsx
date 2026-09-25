@@ -324,14 +324,14 @@ export default function AdminVariantDetailsPage() {
             <>
               <Link
                 href={`/admin/dashboard/products/${canonicalProductUuid}`}
-                className="hover:text-secondary-600 transition-colors truncate max-w-[150px] sm:max-w-xs"
+                className="hover:text-secondary-600 transition-colors truncate max-w-[150px] sm:max-w-xs capitalize"
               >
                 {variant.productName}
               </Link>
               <span className="opacity-40">/</span>
             </>
           )}
-          <span className="text-neutral-900 font-semibold truncate max-w-[200px] sm:max-w-md">
+          <span className="text-neutral-900 font-semibold truncate max-w-[200px] sm:max-w-md capitalize">
             {variant.variantName}
           </span>
         </div>
@@ -364,7 +364,7 @@ export default function AdminVariantDetailsPage() {
           {/* Title & Metadata */}
           <div className="flex flex-col gap-1.5 min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 truncate">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 truncate capitalize">
                 {variant.variantName}
               </h1>
 

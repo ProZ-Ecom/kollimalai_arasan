@@ -264,7 +264,7 @@ export function Footer() {
           <p>
             Design and Developed By{" "}
             <a
-              href="https://prozsolutions.in"
+              href="https://proz.in/"
               target="_blank"
               rel="noopener noreferrer"
               className="underline underline-offset-2 hover:opacity-80 transition-opacity"

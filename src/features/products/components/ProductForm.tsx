@@ -9,13 +9,15 @@ import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import { FormImageUpload } from "@/components/forms/form-image-upload";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
+import { formatTitleCase } from "@/lib/utils";
 
 const productFormSchema = z.object({
   name: z
     .string()
     .trim()
     .min(1, "Product name is required")
-    .max(200, "Product name cannot exceed 200 characters"),
+    .max(200, "Product name cannot exceed 200 characters")
+    .transform(formatTitleCase),
   slug: z
     .string()
     .trim()
@@ -180,6 +182,7 @@ function ProductForm({
     const finalSlug = `${slugPrefix}${extraSlug.trim()}`;
     await onSubmit({
       ...formData,
+      name: formatTitleCase(formData.name),
       brandId: finalBrandId,
       slug: finalSlug,
       hsnCodeId: formData.hsnCodeId ? formData.hsnCodeId : null,
@@ -206,6 +209,7 @@ function ProductForm({
             name="name"
             label="Product Name"
             placeholder="e.g. Kollimalai Black Pepper, Seeraga Samba Rice"
+            isTitleCase
             required
           />
 

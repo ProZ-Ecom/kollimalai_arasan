@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatTitleCase } from "@/lib/utils";
 
 export const getProductsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -15,7 +16,12 @@ export const getProductsQuerySchema = z.object({
 export type GetProductsQueryInput = z.infer<typeof getProductsQuerySchema>;
 
 export const createProductSchema = z.object({
-  name: z.string().min(1, "Product name is required").max(255),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Product name is required")
+    .max(255)
+    .transform(formatTitleCase),
   slug: z.string().min(1, "Product code is required").max(255),
   description: z.string().optional(),
   shortDescription: z.string().max(500).optional(),

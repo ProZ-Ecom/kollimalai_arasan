@@ -313,7 +313,7 @@ export function VariantCustomerPreviewModal({
 
                 {/* Name + Weight */}
                 <div className="flex mt-3 gap-2 justify-between items-start">
-                  <h3 className="flex-1 pr-2 uppercase text-xs sm:text-[13px] font-bold leading-snug text-[var(--neutral-900)]">
+                  <h3 className="flex-1 pr-2 capitalize text-xs sm:text-[13px] font-bold leading-snug text-[var(--neutral-900)]">
                     {variant.productName || variant.variantName}
                   </h3>
 
@@ -391,12 +391,12 @@ export function VariantCustomerPreviewModal({
 
                 {/* Details */}
                 <div className="flex-1 min-w-0">
-                  <h5 className="text-sm font-bold text-neutral-900 truncate">
+                  <h5 className="text-sm font-bold text-neutral-900 truncate capitalize">
                     {variant.productName || "Product"}
                   </h5>
                   <p className="text-xs text-neutral-500 font-medium mt-0.5">
                     Variant:{" "}
-                    <span className="text-neutral-800 font-semibold">
+                    <span className="text-neutral-800 font-semibold capitalize">
                       {variant.variantName}
                     </span>
                   </p>

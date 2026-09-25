@@ -27,7 +27,7 @@ function CategoryCard({ category }: CategoryCardProps) {
           )}
         </div>
         <CardContent className="p-4">
-          <h3 className="font-semibold group-hover:text-primary transition-colors">
+          <h3 className="font-semibold group-hover:text-primary transition-colors capitalize">
             {category.name}
           </h3>
           {category.description && (
