@@ -45,6 +45,7 @@ import {
 } from "@/features/customers/hooks/use-customer-payment";
 import { loadRazorpayScript } from "@/features/customers/utils/razorpay-loader";
 import { useCheckout } from "@/features/checkout/checkout-context";
+import { usePincodeLookup } from "@/features/customers/hooks/use-pincode-lookup";
 import type { CustomerAddressResponse } from "@/features/customers/types/customer-address.types";
 
 
@@ -165,6 +166,16 @@ export default function CheckoutPage() {
   const [touchedAddressFields, setTouchedAddressFields] = useState<Record<string, boolean>>({});
   const [addressFormError, setAddressFormError] = useState<string | null>(null);
 
+  // India Post PIN code verification hook
+  const {
+    isVerifying: isPincodeVerifying,
+    verificationError: pincodeVerificationError,
+    postalData: pincodePostalData,
+    isVerified: isPincodeVerified,
+    verifyPincode,
+    resetPincodeVerification,
+  } = usePincodeLookup();
+
   const validateAddressField = (field: string, value: string): string => {
     switch (field) {
       case "fullName": {
@@ -216,7 +227,41 @@ export default function CheckoutPage() {
     if (field === "phone" && typeof rawValue === "string") {
       value = rawValue.replace(/\D/g, "").slice(0, 10);
     } else if (field === "pincode" && typeof rawValue === "string") {
-      value = rawValue.replace(/\D/g, "").slice(0, 6);
+      const cleanPin = rawValue.replace(/\D/g, "").slice(0, 6);
+      value = cleanPin;
+
+      if (cleanPin.length === 6) {
+        verifyPincode(cleanPin).then((result) => {
+          if (result) {
+            setNewAddressForm((prev) => ({
+              ...prev,
+              pincode: cleanPin,
+              city: result.district || result.city,
+              state: result.state,
+            }));
+            setAddressFieldErrors((prev) => {
+              const next = { ...prev };
+              delete next.pincode;
+              delete next.city;
+              delete next.state;
+              return next;
+            });
+          } else {
+            setAddressFieldErrors((prev) => ({
+              ...prev,
+              pincode: "Invalid PIN code. No records found in India Post database.",
+            }));
+            setNewAddressForm((prev) => ({
+              ...prev,
+              pincode: cleanPin,
+              city: "",
+              state: "",
+            }));
+          }
+        });
+      } else {
+        resetPincodeVerification();
+      }
     }
 
     setNewAddressForm((prev) => ({ ...prev, [field]: value }));
@@ -257,6 +302,7 @@ export default function CheckoutPage() {
 
   const handleCloseAddressForm = () => {
     setIsAddingAddress(false);
+    resetPincodeVerification();
     setAddressFieldErrors({});
     setTouchedAddressFields({});
     setAddressFormError(null);
@@ -386,7 +432,14 @@ export default function CheckoutPage() {
     if (cityErr) errors.city = cityErr;
 
     const pinErr = validateAddressField("pincode", newAddressForm.pincode);
-    if (pinErr) errors.pincode = pinErr;
+    if (pinErr) {
+      errors.pincode = pinErr;
+    } else if (!isPincodeVerified) {
+      const verified = await verifyPincode(newAddressForm.pincode);
+      if (!verified) {
+        errors.pincode = "Invalid PIN code. No records found in India Post database.";
+      }
+    }
 
     if (Object.keys(errors).length > 0) {
       setAddressFieldErrors(errors);
@@ -844,6 +897,87 @@ export default function CheckoutPage() {
                     )}
                   </div>
 
+                  {/* PIN Code with India Post Live Lookup */}
+                  <div className="sm:col-span-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-theme-text-secondary">
+                        PIN Code (6 digits) <span className="text-red-500 font-bold ml-0.5">*</span>
+                      </label>
+                      {isPincodeVerifying && (
+                        <span className="flex items-center gap-1 text-[11px] text-theme-primary font-medium">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Checking India Post...
+                        </span>
+                      )}
+                      {isPincodeVerified && pincodePostalData && (
+                        <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Verified ({pincodePostalData.district}, {pincodePostalData.state})
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="Enter 6-digit PIN code (e.g. 607106)"
+                        value={newAddressForm.pincode}
+                        onChange={(e) =>
+                          handleAddressFieldChange("pincode", e.target.value)
+                        }
+                        onBlur={() => handleAddressFieldBlur("pincode")}
+                        className={`w-full min-h-[44px] rounded-xl border bg-white px-3 pr-10 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
+                          touchedAddressFields.pincode && (addressFieldErrors.pincode || pincodeVerificationError)
+                            ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                            : isPincodeVerified
+                            ? "border-emerald-500 focus:border-emerald-600"
+                            : "border-theme-border-input focus:border-theme-primary"
+                        }`}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                        {isPincodeVerifying ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-theme-primary" />
+                        ) : isPincodeVerified ? (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        ) : null}
+                      </div>
+                    </div>
+                    {(touchedAddressFields.pincode && addressFieldErrors.pincode) || pincodeVerificationError ? (
+                      <p className="mt-1 text-xs text-red-500 font-medium">
+                        {addressFieldErrors.pincode || pincodeVerificationError}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-[11px] text-theme-text-muted">
+                        Enter your 6-digit PIN code to automatically verify and fill City & State.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Locality / Post Office Selection (when multiple post offices exist) */}
+                  {pincodePostalData?.postOffices && pincodePostalData.postOffices.length > 0 && (
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
+                        Select Post Office / Locality ({pincodePostalData.postOffices.length} found)
+                      </label>
+                      <select
+                        value={newAddressForm.addressLine2}
+                        onChange={(e) => handleAddressFieldChange("addressLine2", e.target.value)}
+                        className="w-full min-h-[44px] rounded-xl border border-theme-border-input bg-white px-3 text-xs text-theme-text-primary focus:outline-none focus:border-theme-primary transition-colors cursor-pointer"
+                      >
+                        <option value="">-- Choose your nearest Post Office / Area --</option>
+                        {pincodePostalData.postOffices.map((po) => (
+                          <option key={po.name} value={po.name}>
+                            {po.name} ({po.branchType} • {po.deliveryStatus})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-[11px] text-theme-text-muted">
+                        Selecting your post office helps delivery executives locate your address accurately.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
                       Flat / House No., Building, Street <span className="text-red-500 font-bold ml-0.5">*</span>
@@ -868,23 +1002,50 @@ export default function CheckoutPage() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
-                      City <span className="text-red-500 font-bold ml-0.5">*</span>
+                      Area / Locality / Street Line 2 (Optional)
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Salem"
-                      value={newAddressForm.city}
+                      placeholder="e.g. Near Old Bus Stand, North Street"
+                      value={newAddressForm.addressLine2}
                       onChange={(e) =>
-                        handleAddressFieldChange("city", e.target.value)
+                        handleAddressFieldChange("addressLine2", e.target.value)
                       }
-                      onBlur={() => handleAddressFieldBlur("city")}
-                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${touchedAddressFields.city && addressFieldErrors.city
-                        ? "border-red-500 bg-red-50/20 focus:border-red-500"
-                        : "border-theme-border-input focus:border-theme-primary"
-                        }`}
+                      className="w-full min-h-[44px] rounded-xl border border-theme-border-input bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none focus:border-theme-primary transition-colors"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
+                      City / District <span className="text-red-500 font-bold ml-0.5">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        readOnly={isPincodeVerified}
+                        placeholder={isPincodeVerified ? newAddressForm.city : "Enter PIN Code first"}
+                        value={newAddressForm.city}
+                        onChange={(e) =>
+                          handleAddressFieldChange("city", e.target.value)
+                        }
+                        onBlur={() => handleAddressFieldBlur("city")}
+                        className={`w-full min-h-[44px] rounded-xl border px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
+                          isPincodeVerified
+                            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 cursor-not-allowed border-theme-border"
+                            : touchedAddressFields.city && addressFieldErrors.city
+                            ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                            : "border-theme-border-input focus:border-theme-primary bg-white"
+                        }`}
+                      />
+                      {isPincodeVerified && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted">
+                          <Lock className="h-3 w-3" />
+                          <span>Verified</span>
+                        </div>
+                      )}
+                    </div>
                     {touchedAddressFields.city && addressFieldErrors.city && (
                       <p className="mt-1 text-xs text-red-500 font-medium">
                         {addressFieldErrors.city}
@@ -894,28 +1055,30 @@ export default function CheckoutPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
-                      PIN Code (6 digits) <span className="text-red-500 font-bold ml-0.5">*</span>
+                      State <span className="text-red-500 font-bold ml-0.5">*</span>
                     </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="e.g. 636001"
-                      value={newAddressForm.pincode}
-                      onChange={(e) =>
-                        handleAddressFieldChange("pincode", e.target.value)
-                      }
-                      onBlur={() => handleAddressFieldBlur("pincode")}
-                      className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${touchedAddressFields.pincode && addressFieldErrors.pincode
-                        ? "border-red-500 bg-red-50/20 focus:border-red-500"
-                        : "border-theme-border-input focus:border-theme-primary"
+                    <div className="relative">
+                      <input
+                        type="text"
+                        readOnly={isPincodeVerified}
+                        placeholder={isPincodeVerified ? newAddressForm.state : "Enter PIN Code first"}
+                        value={newAddressForm.state}
+                        onChange={(e) =>
+                          handleAddressFieldChange("state", e.target.value)
+                        }
+                        className={`w-full min-h-[44px] rounded-xl border px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
+                          isPincodeVerified
+                            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 cursor-not-allowed border-theme-border"
+                            : "border-theme-border-input focus:border-theme-primary bg-white"
                         }`}
-                    />
-                    {touchedAddressFields.pincode && addressFieldErrors.pincode && (
-                      <p className="mt-1 text-xs text-red-500 font-medium">
-                        {addressFieldErrors.pincode}
-                      </p>
-                    )}
+                      />
+                      {isPincodeVerified && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted">
+                          <Lock className="h-3 w-3" />
+                          <span>Verified</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 

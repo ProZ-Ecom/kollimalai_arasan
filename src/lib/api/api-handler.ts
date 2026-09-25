@@ -210,7 +210,7 @@ export function createApiHandler(
       try {
         const fs = await import("fs");
         fs.writeFileSync("handler_error.log", String(error?.stack || error?.message || error));
-      } catch {}
+      } catch { }
 
       if (error instanceof ApiError) {
         return apiFromError(error);
