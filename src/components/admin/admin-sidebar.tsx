@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -212,10 +212,22 @@ function SidebarItemComponent({
       );
     }
 
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const handleToggle = () => {
+      const nextOpen = !isOpen;
+      setIsOpen(nextOpen);
+      if (nextOpen) {
+        setTimeout(() => {
+          containerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 50);
+      }
+    };
+
     return (
-      <div>
+      <div ref={containerRef}>
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleToggle}
           className={cn(
             "group flex w-full items-center gap-2.5 rounded-lg py-2 pl-2 pr-3 text-sm font-medium transition-all duration-200 cursor-pointer",
             isActive ? activeRowClasses : inactiveRowClasses

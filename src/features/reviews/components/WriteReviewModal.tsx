@@ -159,7 +159,7 @@ export function WriteReviewModal({
       {/* Modal Container */}
       <div className="relative w-full max-w-lg bg-white rounded-3xl border border-neutral-200 shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
         {/* Top Decorative Header Accent */}
-        <div className="h-2 bg-gradient-to-r from-secondary-700 via-secondary-500 to-primary-500" />
+        <div className="h-2 bg-gradient-to-r from-secondary-700 to-secondary-500" />
 
         {/* Modal Header */}
         <div className="p-6 sm:p-7 pb-4 flex items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/50">
@@ -378,7 +378,7 @@ export function WriteReviewModal({
                 <button
                   type="submit"
                   disabled={isPending || (!comment.trim() && !title.trim())}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-secondary-700 hover:bg-secondary-800 text-white text-xs font-bold shadow-xs hover:shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-secondary-700 hover:bg-secondary-800 text-white text-xs font-bold shadow-xs hover:shadow-sm transition-all cursor-pointer disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed disabled:shadow-none"
                 >
                   {isPending ? (
                     <>

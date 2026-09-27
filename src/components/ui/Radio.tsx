@@ -37,15 +37,15 @@ const Radio = React.forwardRef<HTMLInputElement, RadioProps>(
             htmlFor={inputId}
             className={cn(
               "flex h-5 w-5 items-center justify-center rounded-full border-2 border-gray-300",
-              "bg-white transition-colors duration-200",
-              "peer-checked:border-primary peer-checked:bg-primary",
+              "bg-white transition-colors duration-200 cursor-pointer",
+              "peer-checked:border-primary peer-checked:bg-primary peer-checked:[&>span]:scale-100",
               "peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30",
               "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
               error && "border-error-600",
               className
             )}
           >
-            <span className="h-2 w-2 rounded-full bg-white scale-0 transition-transform duration-200 peer-checked:scale-100" />
+            <span className="h-2 w-2 rounded-full bg-white scale-0 transition-transform duration-200" />
           </label>
         </div>
         {(label || description) && (

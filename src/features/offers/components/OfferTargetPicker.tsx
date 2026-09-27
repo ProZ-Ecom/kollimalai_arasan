@@ -235,28 +235,33 @@ export function OfferTargetPicker({
                 : "Select a product above, or search by SKU, to list its items."
             }
           >
-            {visibleItems.map((item) => (
-              <TargetRow
-                key={item.id}
-                selected={selectedItemIds.includes(item.id)}
-                onToggle={() => toggleItem(item.id)}
-                title={item.label || item.sku}
-                subtitle={`SKU ${item.sku}`}
-                meta={
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-neutral-900">
-                      ₹{item.basePrice.toFixed(2)}
-                    </span>
-                    <Badge
-                      variant={item.inStock ? "success" : "warning"}
-                      className="text-[10px]"
-                    >
-                      {item.inStock ? `In stock (${item.stockQuantity})` : "Out of stock"}
-                    </Badge>
-                  </div>
-                }
-              />
-            ))}
+            {visibleItems.map((item) => {
+              const isOutOfStock = !item.inStock || item.stockQuantity <= 0;
+              return (
+                <TargetRow
+                  key={item.id}
+                  selected={selectedItemIds.includes(item.id)}
+                  disabled={isOutOfStock}
+                  disabledTooltip={isOutOfStock ? "Cannot apply offer to out-of-stock items" : undefined}
+                  onToggle={() => toggleItem(item.id)}
+                  title={item.label || item.sku}
+                  subtitle={`SKU ${item.sku}`}
+                  meta={
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-neutral-900">
+                        ₹{item.basePrice.toFixed(2)}
+                      </span>
+                      <Badge
+                        variant={item.inStock ? "success" : "warning"}
+                        className="text-[10px]"
+                      >
+                        {item.inStock ? `In stock (${item.stockQuantity})` : "Out of stock"}
+                      </Badge>
+                    </div>
+                  }
+                />
+              );
+            })}
           </TargetList>
 
           <p className="text-xs text-neutral-500">
@@ -316,28 +321,40 @@ function TargetRow({
   title,
   subtitle,
   meta,
+  disabled,
+  disabledTooltip,
 }: {
   selected: boolean;
   onToggle: () => void;
   title: string;
   subtitle: string;
   meta?: React.ReactNode;
+  disabled?: boolean;
+  disabledTooltip?: string;
 }) {
   return (
     <li>
       <button
         type="button"
-        onClick={onToggle}
+        disabled={disabled}
+        title={disabledTooltip}
+        onClick={disabled ? undefined : onToggle}
         aria-pressed={selected}
         className={cn(
-          "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors cursor-pointer",
-          selected ? "bg-emerald-50/70" : "hover:bg-neutral-50"
+          "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
+          disabled
+            ? "opacity-50 cursor-not-allowed bg-neutral-50/50"
+            : selected
+            ? "bg-emerald-50/70 cursor-pointer"
+            : "hover:bg-neutral-50 cursor-pointer"
         )}
       >
         <span
           className={cn(
             "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors",
-            selected
+            disabled
+              ? "border-neutral-200 bg-neutral-100 text-neutral-300"
+              : selected
               ? "border-emerald-500 bg-emerald-500 text-white"
               : "border-neutral-300 bg-white"
           )}

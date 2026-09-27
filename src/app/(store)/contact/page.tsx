@@ -427,11 +427,6 @@ export default function ContactPage() {
                       error={fieldErrors.subject}
                       className="rounded-xl border-neutral-200 py-3 text-sm font-medium"
                     />
-                    {fieldErrors.subject && (
-                      <p className="text-xs text-rose-500 mt-1 font-medium">
-                        {fieldErrors.subject}
-                      </p>
-                    )}
                   </div>
                 </div>
 

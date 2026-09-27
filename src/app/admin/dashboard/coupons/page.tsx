@@ -52,16 +52,21 @@ export default function AdminCouponsPage() {
     defaultValues: {
       code: "",
       type: "PERCENTAGE",
-      value: 0,
+      value: undefined as unknown as number,
       isActive: true,
     },
   });
 
   useEffect(() => {
     if (editingCoupon) {
+      const normalizedType =
+        editingCoupon.type?.toUpperCase() === "FLAT" ||
+        editingCoupon.type?.toUpperCase() === "FIXED"
+          ? "FIXED"
+          : "PERCENTAGE";
       reset({
         code: editingCoupon.code,
-        type: editingCoupon.type as "PERCENTAGE" | "FIXED",
+        type: normalizedType,
         value: editingCoupon.value,
         minOrderAmount: editingCoupon.minOrderAmount ?? undefined,
         maxDiscount: editingCoupon.maxDiscount ?? undefined,
@@ -75,7 +80,12 @@ export default function AdminCouponsPage() {
           : undefined,
       });
     } else {
-      reset({ code: "", type: "PERCENTAGE", value: 0, isActive: true });
+      reset({
+        code: "",
+        type: "PERCENTAGE",
+        value: undefined as unknown as number,
+        isActive: true,
+      });
     }
   }, [editingCoupon, reset]);
 

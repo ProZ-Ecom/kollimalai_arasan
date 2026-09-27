@@ -37,6 +37,7 @@ interface AdminReviewDetailModalProps {
   open: boolean;
   onClose: () => void;
   onDeleted?: () => void;
+  onStatusChanged?: () => void;
 }
 
 export function AdminReviewDetailModal({
@@ -45,6 +46,7 @@ export function AdminReviewDetailModal({
   open,
   onClose,
   onDeleted,
+  onStatusChanged,
 }: AdminReviewDetailModalProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
@@ -62,6 +64,7 @@ export function AdminReviewDetailModal({
       reviewId: review.id,
       isApproved,
     });
+    onStatusChanged?.();
   };
 
   const handleDelete = async () => {
@@ -129,7 +132,7 @@ export function AdminReviewDetailModal({
 
             {/* Product & Variant Card */}
             <div className="p-4 rounded-xl border border-cream-border bg-white shadow-2xs space-y-2.5">
-              <div className="text-[11px] font-bold tracking-wider text-neutral-400 uppercase flex items-center gap-1.5">
+              <div className="text-[11px] font-bold tracking-wider text-neutral-600 uppercase flex items-center gap-1.5">
                 <Package className="w-3.5 h-3.5" />
                 <span>Reviewed Item</span>
               </div>
@@ -162,7 +165,7 @@ export function AdminReviewDetailModal({
                   )}
 
                   {review.orderItem && (
-                    <div className="text-xs text-neutral-400 flex items-center gap-1.5 pt-0.5">
+                    <div className="text-xs text-neutral-500 flex items-center gap-1.5 pt-0.5">
                       <ShoppingBag className="w-3.5 h-3.5" />
                       <span>
                         Order Item: {review.orderItem.productNameSnapshot || "Purchased"} (Qty: {review.orderItem.quantity || 1})
@@ -187,13 +190,13 @@ export function AdminReviewDetailModal({
             <div className="p-4 rounded-xl border border-cream-border bg-white shadow-2xs space-y-3">
               <div className="flex items-center justify-between gap-2 border-b border-cream-border pb-3">
                 <div className="space-y-1">
-                  <div className="text-[11px] font-bold tracking-wider text-neutral-400 uppercase">
+                  <div className="text-[11px] font-bold tracking-wider text-neutral-600 uppercase">
                     Rating Score
                   </div>
                   <ReviewRatingStars rating={review.rating} size="lg" showScore />
                 </div>
 
-                <div className="text-right text-xs text-neutral-400">
+                <div className="text-right text-xs text-neutral-500">
                   {review.updatedAt && (
                     <div>Updated: {formatDateTime(review.updatedAt)}</div>
                   )}
@@ -202,7 +205,7 @@ export function AdminReviewDetailModal({
 
               {review.title && (
                 <div>
-                  <div className="text-[11px] font-bold tracking-wider text-neutral-400 uppercase mb-1">
+                  <div className="text-[11px] font-bold tracking-wider text-neutral-600 uppercase mb-1">
                     Title
                   </div>
                   <h4 className="text-sm font-bold text-neutral-900">
@@ -212,7 +215,7 @@ export function AdminReviewDetailModal({
               )}
 
               <div>
-                <div className="text-[11px] font-bold tracking-wider text-neutral-400 uppercase mb-1 flex items-center gap-1">
+                <div className="text-[11px] font-bold tracking-wider text-neutral-600 uppercase mb-1 flex items-center gap-1">
                   <MessageSquareQuote className="w-3.5 h-3.5" />
                   <span>Customer Review</span>
                 </div>
@@ -224,7 +227,7 @@ export function AdminReviewDetailModal({
               {/* Review Photos / Images */}
               {Array.isArray(review.images) && review.images.length > 0 && (
                 <div className="pt-2 space-y-2">
-                  <div className="text-[11px] font-bold tracking-wider text-neutral-400 uppercase">
+                  <div className="text-[11px] font-bold tracking-wider text-neutral-600 uppercase">
                     Attached Photos ({review.images.length})
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">

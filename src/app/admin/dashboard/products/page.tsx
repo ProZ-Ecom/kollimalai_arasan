@@ -209,12 +209,13 @@ export default function AdminProductsPage() {
       cell: ({ row }) => (
         <Link
           href={`/admin/dashboard/products/${row.original.id}`}
-          className="group block cursor-pointer"
+          className="group block cursor-pointer max-w-[280px]"
+          title={row.original.name}
         >
-          <p className="font-semibold text-secondary-600 underline-offset-2 group-hover:underline transition-colors capitalize">
+          <p className="font-semibold text-secondary-600 underline-offset-2 group-hover:underline transition-colors capitalize truncate">
             {row.original.name}
           </p>
-          <p className="text-xs text-[var(--color-neutral-500)] mt-0.5">
+          <p className="text-xs text-[var(--color-neutral-500)] mt-0.5 truncate">
             {row.original.slug}
           </p>
         </Link>
@@ -499,7 +500,7 @@ export default function AdminProductsPage() {
           }
         }}
         title="Delete Product"
-        description="Are you sure you want to delete this product? Deleting this product will automatically deactivate and remove all associated variants, unit prices, and inventory items from both the admin dashboard and the customer storefront. This action cannot be undone."
+        description="Are you sure you want to delete this product? This action cannot be undone."
         confirmText="Delete Product"
         variant="destructive"
         isLoading={deleteMutation.isPending}

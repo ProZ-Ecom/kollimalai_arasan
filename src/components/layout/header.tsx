@@ -343,14 +343,6 @@ export function Header() {
               }
             />
 
-            {navCategories.map((category) => (
-              <CategoryMenuItem
-                key={category.id}
-                category={category}
-                isActive={pathname === `/categories/${category.id}`}
-              />
-            ))}
-
             <Link href="/about" className={navLinkClass(pathname === "/about")}>
               About Us
             </Link>

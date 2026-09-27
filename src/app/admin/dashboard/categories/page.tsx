@@ -283,7 +283,7 @@ export default function AdminCategoriesPage() {
           }
         }}
         title="Delete Category"
-        description="Are you sure you want to delete this category? Deleting this category will automatically deactivate and remove all associated products and items from both the admin dashboard and the customer storefront. This action cannot be undone."
+        description="Are you sure you want to delete this category? This action cannot be undone."
         confirmText="Delete Category"
         variant="destructive"
         isLoading={deleteMutation.isPending}

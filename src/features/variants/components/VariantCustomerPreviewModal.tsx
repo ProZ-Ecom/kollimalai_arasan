@@ -460,13 +460,13 @@ export function VariantCustomerPreviewModal({
         {/* Technical Variant Metadata Summary Banner */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl bg-cream-50 border border-cream-border text-xs">
           <div>
-            <span className="text-neutral-400 font-medium block">SKU Code</span>
+            <span className="text-neutral-700 font-semibold block">SKU Code</span>
             <span className="font-mono font-bold text-neutral-800">
               {variant.sku}
             </span>
           </div>
           <div>
-            <span className="text-neutral-400 font-medium block">
+            <span className="text-neutral-700 font-semibold block">
               Active Status
             </span>
             <span
@@ -478,7 +478,7 @@ export function VariantCustomerPreviewModal({
             </span>
           </div>
           <div>
-            <span className="text-neutral-400 font-medium block">
+            <span className="text-neutral-700 font-semibold block">
               Base Price / MRP
             </span>
             <span className="font-semibold text-neutral-800">
@@ -486,7 +486,7 @@ export function VariantCustomerPreviewModal({
             </span>
           </div>
           <div>
-            <span className="text-neutral-400 font-medium block">
+            <span className="text-neutral-700 font-semibold block">
               Total Images
             </span>
             <span className="font-bold text-secondary-700">
