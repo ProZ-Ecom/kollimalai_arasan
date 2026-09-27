@@ -495,7 +495,7 @@ export function AddressesTab() {
               <input
                 type="text"
                 disabled={isSubmitting}
-                placeholder="e.g. Ashok Kumar"
+                placeholder="Enter your name"
                 value={formData.fullName}
                 onChange={(e) => handleFieldChange("fullName", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${

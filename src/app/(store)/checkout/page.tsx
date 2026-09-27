@@ -873,7 +873,7 @@ export default function CheckoutPage() {
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Ramesh Kumar"
+                      placeholder="Enter your name"
                       value={newAddressForm.fullName}
                       onChange={(e) =>
                         handleAddressFieldChange("fullName", e.target.value)
