@@ -206,11 +206,6 @@ export function createApiHandler(
     try {
       return await handler(request, context);
     } catch (error: any) {
-      try {
-        const fs = await import("fs");
-        fs.writeFileSync("handler_error.log", String(error?.stack || error?.message || error));
-      } catch { }
-
       if (isApiError(error)) {
         return apiFromError(error);
       }

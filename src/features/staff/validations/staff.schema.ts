@@ -6,7 +6,8 @@ export const createStaffSchema = z
       .string({ message: "Name is required" })
       .trim()
       .min(1, "Name is required")
-      .max(150, "Name cannot exceed 150 characters"),
+      .max(150, "Name cannot exceed 150 characters")
+      .regex(/^[a-zA-Z\s'.-]+$/, "Name can only contain letters, spaces, hyphens, apostrophes, and dots"),
     email: z
       .string({ message: "Email is required" })
       .trim()
