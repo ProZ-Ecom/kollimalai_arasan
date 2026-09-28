@@ -45,6 +45,7 @@ export const variantInclude = Prisma.validator<Prisma.ProductVariantInclude>()({
           id: true,
           quantity_available: true,
           quantity_reserved: true,
+          reorderLevel: true,
         },
       },
     },

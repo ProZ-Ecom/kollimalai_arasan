@@ -160,6 +160,11 @@ export function AdjustStockModal({
               <h4 className="text-sm font-bold text-neutral-900 truncate">
                 {item.productName}
               </h4>
+              {item.variantName && (
+                <div className="text-xs font-semibold text-neutral-600 truncate capitalize">
+                  {item.variantName}
+                </div>
+              )}
               <div className="flex items-center gap-2 mt-0.5 text-xs text-neutral-500">
                 <span className="font-semibold text-secondary-700 bg-secondary-50 px-2 py-0.5 rounded border border-secondary-200">
                   {item.unitLabel}

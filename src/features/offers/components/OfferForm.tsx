@@ -145,27 +145,46 @@ export function OfferForm({
   const [categoryId, setCategoryId] = React.useState("");
   const [productFilterId, setProductFilterId] = React.useState("");
 
-  // Sample pack sizes for the preview: the exact items for an item-wise
-  // offer, or the pack sizes under the first selected product otherwise.
-  const { data: previewItemsForProduct = [] } = useOfferItemTargets({
-    productId: level === "product" ? productIds[0] : undefined,
+  // Cache all loaded item targets so previews and selections across multiple products persist
+  const [knownItems, setKnownItems] = React.useState<Map<string, OfferItemTarget>>(() => {
+    const map = new Map<string, OfferItemTarget>();
+    (initialData?.items ?? []).forEach((item) => map.set(item.id, item));
+    return map;
+  });
+
+  const handleLoadedItemsChange = React.useCallback((loadedItems: OfferItemTarget[]) => {
+    setKnownItems((prev) => {
+      let changed = false;
+      const next = new Map(prev);
+      for (const item of loadedItems) {
+        if (!next.has(item.id)) {
+          next.set(item.id, item);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
+  // Sample pack sizes for previewing product-level offers
+  const { data: catalogItems = [] } = useOfferItemTargets({
+    productId: level === "product" && productIds.length === 1 ? productIds[0] : undefined,
     enabled: level === "product" && productIds.length > 0,
   });
 
-  const { data: itemsForSelection = [] } = useOfferItemTargets({
-    productId: productFilterId || undefined,
-    enabled: level === "item",
-  });
+  const previewItemsForProduct = React.useMemo(() => {
+    if (level !== "product" || productIds.length === 0) return [];
+    if (productIds.length === 1) return catalogItems;
+    // For multiple products, pick sample pack sizes across the selected products
+    const matching = catalogItems.filter((i) => productIds.includes(i.productId));
+    return matching.length > 0 ? matching.slice(0, 10) : catalogItems.slice(0, 10);
+  }, [level, productIds, catalogItems]);
 
   const selectedItemDetails = React.useMemo<OfferItemTarget[]>(() => {
-    const byId = new Map<string, OfferItemTarget>();
-    for (const item of [...(initialData?.items ?? []), ...itemsForSelection]) {
-      byId.set(item.id, item);
-    }
     return itemIds
-      .map((id) => byId.get(id))
+      .map((id) => knownItems.get(id))
       .filter((item): item is OfferItemTarget => Boolean(item));
-  }, [itemIds, itemsForSelection, initialData]);
+  }, [itemIds, knownItems]);
 
   const previewItems =
     level === "item" ? selectedItemDetails : previewItemsForProduct;
@@ -283,6 +302,7 @@ export function OfferForm({
             preloadedItems={initialData?.items}
             preloadedProducts={initialData?.products}
             error={targetError}
+            onLoadedItemsChange={handleLoadedItemsChange}
           />
         </section>
 

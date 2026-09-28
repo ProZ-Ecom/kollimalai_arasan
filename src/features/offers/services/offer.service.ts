@@ -110,12 +110,11 @@ async function assertDiscountFitsPrices(params: {
   if (prices.length === 0) return;
 
   if (params.type === "flat") {
-    const tooCheap = prices.filter((p) => p.basePrice > 0 && params.value >= p.basePrice);
-    if (tooCheap.length > 0) {
-      const skus = tooCheap.slice(0, 3).map((p) => p.sku).join(", ");
+    // Only reject if ALL covered items have a price less than or equal to the discount
+    const validItems = prices.filter((p) => p.basePrice > params.value);
+    if (validItems.length === 0 && prices.some((p) => p.basePrice > 0)) {
       throw ApiError.badRequest(
-        `Discount of ₹${params.value} is not less than the price of ${skus}` +
-          (tooCheap.length > 3 ? ` and ${tooCheap.length - 3} more` : "")
+        `Flat discount of ₹${params.value} must be less than the price of at least one selected item`
       );
     }
     return;
@@ -130,7 +129,7 @@ async function assertDiscountFitsPrices(params: {
   }
 }
 
-async function warnOnConflicts(params: {
+async function warnOnConflicts(_params: {
   level: OfferLevel;
   type: OfferType;
   startsAt: Date;
@@ -139,14 +138,9 @@ async function warnOnConflicts(params: {
   itemIds: bigint[];
   excludeId?: bigint;
 }) {
-  const conflicts = await offerRepository.findConflictingOffers(params);
-  if (conflicts.length > 0) {
-    const names = conflicts.map((c) => c.name).join(", ");
-    throw ApiError.conflict(
-      `An active offer of the same type and level already covers one of these targets over the same dates: ${names}. ` +
-        `Change the dates, the targets, or deactivate the existing offer first.`
-    );
-  }
+  // Competing offers on overlapping targets are supported and resolved deterministically
+  // by level (item-wise beats product-wise), priority, and discount depth in offer-calculation.ts.
+  // We no longer block creation with a 409 conflict.
 }
 
 async function assertCodeIsFree(code: string | null | undefined, excludeUuid?: string) {
@@ -373,11 +367,6 @@ export const offerService = {
     search?: string;
     limit?: number;
   }): Promise<OfferItemTarget[]> {
-    if (!params.productId && !params.categoryId && !params.search) {
-      // Without a parent selection the list would be the whole catalog; the
-      // admin picks a product first.
-      return [];
-    }
     return offerRepository.findSelectableItems({
       productId: params.productId,
       categoryId: params.categoryId,

@@ -49,7 +49,13 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
-import type { AdminVariantResponse } from "@/features/variants/types";
+import type {
+  AdminVariantResponse,
+  VariantUnitPriceResponse,
+} from "@/features/variants/types";
+import { AdjustStockModal } from "@/features/inventory/components";
+import { getInventoryByUnitPrice } from "@/features/inventory/api/get-inventory";
+import type { InventoryListItem } from "@/features/inventory/types";
 import {
   VariantForm,
   VariantImageUploader,
@@ -93,6 +99,16 @@ export default function AdminVariantsPage() {
   // Customer Preview Modal State
   const [previewVariant, setPreviewVariant] =
     useState<AdminVariantResponse | null>(null);
+
+  // Adjust Stock Modal State
+  const [adjustInventoryItem, setAdjustInventoryItem] =
+    useState<InventoryListItem | null>(null);
+  const [isAdjustStockModalOpen, setIsAdjustStockModalOpen] = useState(false);
+  const [packPickerVariant, setPackPickerVariant] =
+    useState<AdminVariantResponse | null>(null);
+  const [isPackPickerOpen, setIsPackPickerOpen] = useState(false);
+  const [loadingUnitPriceId, setLoadingUnitPriceId] = useState<string | null>(null);
+  const [loadingVariantId, setLoadingVariantId] = useState<string | null>(null);
 
   // Bulk Selection State
   const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
@@ -211,23 +227,54 @@ export default function AdminVariantsPage() {
     }
   };
 
-  const handleToggleStock = async (
+  const openAdjustForUnitPrice = async (
     variant: AdminVariantResponse,
-    nextOutOfStock: boolean
+    unitPrice: VariantUnitPriceResponse
   ) => {
     try {
-      await updateMutation.mutateAsync({
-        productUuid: variant.productId,
-        variantUuid: variant.id,
-        data: { outOfStock: nextOutOfStock },
-      });
-      refetch();
+      setLoadingUnitPriceId(unitPrice.id);
+      const invItem = await getInventoryByUnitPrice(unitPrice.id);
+      if (!invItem) {
+        toast.error("Could not load inventory record for this item.");
+        return;
+      }
+      const enrichedItem: InventoryListItem = {
+        ...invItem,
+        imageUrl: invItem.imageUrl || variant.primaryImage || null,
+        productName: invItem.productName || variant.productName || variant.variantName,
+        variantName: invItem.variantName || variant.variantName,
+      };
+      setAdjustInventoryItem(enrichedItem);
+      setIsPackPickerOpen(false);
+      setIsAdjustStockModalOpen(true);
     } catch (err: any) {
-      console.error("Failed to toggle Item stock", err);
+      console.error("Failed to load inventory for unit price", err);
+      toast.error("Failed to load inventory", err?.message || "Please try again.");
+    } finally {
+      setLoadingUnitPriceId(null);
+    }
+  };
+
+  const handleStockClick = async (variant: AdminVariantResponse) => {
+    const prices = variant.unitPrices || [];
+    if (prices.length === 0) {
       toast.error(
-        "Stock not changed",
-        err?.message || "Failed to update stock status."
+        "No pack sizes available",
+        "Please add at least one unit price / pack size before adjusting inventory stock."
       );
+      return;
+    }
+
+    if (prices.length === 1) {
+      try {
+        setLoadingVariantId(variant.id);
+        await openAdjustForUnitPrice(variant, prices[0]);
+      } finally {
+        setLoadingVariantId(null);
+      }
+    } else {
+      setPackPickerVariant(variant);
+      setIsPackPickerOpen(true);
     }
   };
 
@@ -348,23 +395,21 @@ export default function AdminVariantsPage() {
       header: "Stock",
       cell: ({ row }) => {
         const isOutOfStock = Boolean(row.original.outOfStock);
-        const isRowPending =
-          updateMutation.isPending &&
-          updateMutation.variables?.variantUuid === row.original.id;
+        const isLoadingThis = loadingVariantId === row.original.id;
 
         return (
           <button
             type="button"
-            onClick={() => handleToggleStock(row.original, !isOutOfStock)}
-            disabled={isRowPending}
-            title={isOutOfStock ? "Click to mark In Stock" : "Click to mark Out of Stock"}
+            onClick={() => handleStockClick(row.original)}
+            disabled={isLoadingThis}
+            title="Click to adjust stock & inventory"
             className={`group inline-flex items-center justify-between min-w-[132px] h-8 px-3 rounded-md text-xs font-bold border bg-white cursor-pointer shadow-xs transition-all hover:shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 ${!isOutOfStock
                 ? "text-emerald-700 border-emerald-300 hover:bg-emerald-50"
                 : "text-rose-700 border-rose-300 hover:bg-rose-50"
               }`}
           >
             <span className="flex items-center gap-1.5 whitespace-nowrap">
-              {isRowPending ? (
+              {isLoadingThis ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
               ) : !isOutOfStock ? (
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -373,7 +418,7 @@ export default function AdminVariantsPage() {
               )}
               <span className="whitespace-nowrap select-none">{!isOutOfStock ? "In Stock" : "Out of Stock"}</span>
             </span>
-            {!isRowPending && (
+            {!isLoadingThis && (
               <ArrowLeftRight className="w-3 h-3 opacity-40 group-hover:opacity-80 transition-opacity shrink-0 ml-1.5" />
             )}
           </button>
@@ -648,7 +693,7 @@ export default function AdminVariantsPage() {
                           }
                           onPreview={(v) => setPreviewVariant(v)}
                           onToggleStatus={handleToggleStatus}
-                          onToggleStock={handleToggleStock}
+                          onToggleStock={handleStockClick}
                         />
                       ))}
                     </div>
@@ -1150,6 +1195,86 @@ export default function AdminVariantsPage() {
         confirmText={`Delete ${selectedRows.length} ${selectedRows.length === 1 ? "Item" : "Items"}`}
         variant="destructive"
         isLoading={bulkDeleteMutation.isPending}
+      />
+
+      {/* PACK SIZE PICKER MODAL (When item has multiple pack sizes) */}
+      <FormModal
+        open={isPackPickerOpen}
+        onClose={() => {
+          setIsPackPickerOpen(false);
+          setPackPickerVariant(null);
+        }}
+        title={`Adjust Stock: ${packPickerVariant?.variantName || "Item"}`}
+        description="Select which pack size / unit you want to adjust in warehouse inventory"
+        size="md"
+      >
+        {packPickerVariant && (
+          <div className="space-y-3">
+            {(packPickerVariant.unitPrices || []).map((up) => {
+              const isLoadingThis = loadingUnitPriceId === up.id;
+              const isOut = (up.stock ?? 0) === 0;
+              return (
+                <div
+                  key={up.id}
+                  className="flex items-center justify-between p-3.5 rounded-xl border border-cream-border bg-white hover:bg-cream-50/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-cream-100 border border-cream-border flex items-center justify-center shrink-0">
+                      <Package className="w-5 h-5 text-neutral-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-neutral-900">
+                          {up.measurement.value} {up.measurement.unit}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            !isOut
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-rose-50 text-rose-700 border-rose-200"
+                          }`}
+                        >
+                          {!isOut ? `${up.stock ?? 0} in stock` : "Out of stock"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-neutral-500 font-mono mt-0.5">
+                        <span>SKU: {up.sku || "—"}</span>
+                        <span>•</span>
+                        <span>₹{up.basePrice}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    onClick={() => openAdjustForUnitPrice(packPickerVariant, up)}
+                    disabled={isLoadingThis}
+                    className="bg-secondary-600 hover:bg-secondary-700 text-white font-semibold text-xs h-8 px-3.5 rounded-lg shrink-0 cursor-pointer"
+                  >
+                    {isLoadingThis ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      "Adjust"
+                    )}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </FormModal>
+
+      {/* ADJUST STOCK MODAL */}
+      <AdjustStockModal
+        open={isAdjustStockModalOpen}
+        onClose={() => {
+          setIsAdjustStockModalOpen(false);
+          setAdjustInventoryItem(null);
+        }}
+        item={adjustInventoryItem}
+        onSuccess={() => {
+          refetch();
+        }}
       />
     </div>
   );
