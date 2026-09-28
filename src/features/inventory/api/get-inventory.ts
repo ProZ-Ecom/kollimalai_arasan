@@ -37,6 +37,13 @@ export async function getInventoryItem(id: string | number) {
   return response;
 }
 
+export async function getInventoryByUnitPrice(unitPriceUuid: string) {
+  const response = await apiClient.get<InventoryListItem>(
+    `/api/inventory/by-unit-price?unitPriceUuid=${unitPriceUuid}`
+  );
+  return response.data;
+}
+
 export async function adjustStock(input: AdjustStockInput) {
   const response = await apiClient.post(
     "/api/inventory/adjust",

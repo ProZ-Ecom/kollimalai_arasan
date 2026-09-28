@@ -97,6 +97,11 @@ export function InventoryStockTable({
                         <div className="font-bold text-neutral-900 truncate max-w-[200px] sm:max-w-[260px]">
                           {item.productName}
                         </div>
+                        {item.variantName && (
+                          <div className="text-xs font-semibold text-neutral-600 truncate max-w-[200px] sm:max-w-[260px] capitalize">
+                            {item.variantName}
+                          </div>
+                        )}
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="font-semibold text-secondary-700 bg-secondary-50 px-1.5 py-0.5 rounded text-[10px] border border-secondary-200">
                             {item.unitLabel}
@@ -123,16 +128,16 @@ export function InventoryStockTable({
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-[10px]">
                         <span className="text-neutral-400">Reorder at {effectiveReorder}</span>
-                        <span className="font-mono font-bold text-neutral-700">
+                        <span className={`font-mono font-bold ${isOutOfStock ? "text-rose-600" : "text-neutral-700"}`}>
                           {item.availableQuantity} units
                         </span>
                       </div>
                       <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
                         <div
-                          style={{ width: `${stockPercent}%` }}
+                          style={{ width: `${isOutOfStock ? 100 : stockPercent}%` }}
                           className={`h-full rounded-full transition-all duration-300 ${
                             isOutOfStock
-                              ? "bg-rose-500"
+                              ? "bg-[repeating-linear-gradient(135deg,#f43f5e,#f43f5e_4px,#fda4af_4px,#fda4af_8px)]"
                               : isLowStock
                               ? "bg-amber-500"
                               : "bg-emerald-500"
@@ -178,13 +183,14 @@ export function InventoryStockTable({
                   {/* Status Badge */}
                   <td className="py-3.5 px-4 text-center">
                     {isOutOfStock ? (
-                      <Badge
-                        variant="destructive"
-                        className="text-[10px] px-2 py-0.5 font-bold shadow-2xs"
-                      >
-                        <XCircle className="w-3 h-3 mr-1" />
-                        Out of Stock
-                      </Badge>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-300 shadow-2xs bg-[repeating-linear-gradient(135deg,rgba(244,63,94,0.08),rgba(244,63,94,0.08)_4px,transparent_4px,transparent_8px)] select-none">
+                        <span className="relative flex h-2 w-2 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600" />
+                        </span>
+                        <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        <span className="whitespace-nowrap font-extrabold tracking-wide">Out of Stock</span>
+                      </span>
                     ) : isLowStock ? (
                       <Badge className="bg-amber-100 text-amber-800 border border-amber-300 text-[10px] px-2 py-0.5 font-bold shadow-2xs hover:bg-amber-100">
                         <AlertTriangle className="w-3 h-3 mr-1 text-amber-600" />

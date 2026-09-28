@@ -43,7 +43,12 @@ type VariantUnitPriceWithRelations = {
   createdAt: Date;
   updatedAt: Date;
   product_units?: { uuid: string | null; name: string; code: string; type?: string | null } | null;
-  inventories?: { quantity_available: number; quantity_reserved: number } | null;
+  inventories?: {
+    id: bigint;
+    quantity_available: number;
+    quantity_reserved: number;
+    reorderLevel?: number;
+  } | null;
 };
 
 export function formatUnitPriceResponse(
@@ -73,7 +78,10 @@ export function formatUnitPriceResponse(
     unitCode: item.product_units?.code,
     isDefault: Boolean(item.is_default),
     isActive: Boolean(item.isActive),
-    stock: item.inventories?.quantity_available,
+    stock: item.inventories?.quantity_available !== undefined ? Number(item.inventories.quantity_available) : undefined,
+    inventoryId: item.inventories?.id ? Number(item.inventories.id) : undefined,
+    reservedQuantity: item.inventories?.quantity_reserved !== undefined ? Number(item.inventories.quantity_reserved) : 0,
+    reorderLevel: item.inventories?.reorderLevel !== undefined ? Number(item.inventories.reorderLevel) : 5,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
@@ -128,6 +136,13 @@ function formatAdminVariantResponse(
     0
   );
 
+  // A variant is out of stock if it has pack sizes and total stock is 0,
+  // or if explicitly marked out of stock in the DB.
+  const isOutOfStock =
+    unitPrices.length > 0
+      ? totalStock === 0 || Boolean(variant.out_of_stock)
+      : Boolean(variant.out_of_stock);
+
   return {
     id: variantUuid,
     productId: productUuid,
@@ -141,7 +156,7 @@ function formatAdminVariantResponse(
     isFeatured: Boolean(variant.is_featured),
     primaryImage,
     isActive: Boolean(variant.isActive),
-    outOfStock: Boolean(variant.out_of_stock),
+    outOfStock: isOutOfStock,
     createdAt: variant.createdAt,
     updatedAt: variant.updatedAt,
     unitPrices,
@@ -151,6 +166,7 @@ function formatAdminVariantResponse(
     basePrice: defaultUnitPrice?.basePrice,
     salePrice: defaultUnitPrice?.basePrice,
     stock: unitPrices.length > 0 ? totalStock : undefined,
+    inventoryId: defaultUnitPrice?.inventoryId,
     unitId: defaultUnitPrice?.unitId,
     unitValue: defaultUnitPrice?.unitValue,
     unitName: defaultUnitPrice?.unitName,

@@ -180,6 +180,7 @@ function SidebarItemComponent({
   collapsed?: boolean;
   onExpandSidebar?: () => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(() => {
     if (item.children) {
       return item.children.some(
@@ -211,8 +212,6 @@ function SidebarItemComponent({
         </button>
       );
     }
-
-    const containerRef = useRef<HTMLDivElement>(null);
 
     const handleToggle = () => {
       const nextOpen = !isOpen;

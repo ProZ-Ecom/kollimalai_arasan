@@ -69,8 +69,7 @@ export function useOfferItemTargets(params: {
         categoryId: params.categoryId,
         search: params.search,
       }),
-    // Without a parent product the item list would be the whole catalog.
-    enabled: (params.enabled ?? true) && Boolean(params.productId || params.search),
+    enabled: params.enabled ?? true,
     placeholderData: keepPreviousData,
   });
 }

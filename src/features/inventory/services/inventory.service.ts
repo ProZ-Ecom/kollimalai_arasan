@@ -73,6 +73,66 @@ export const inventoryService = {
     return mapToInventoryListItem(item);
   },
 
+  async getOrCreateByUnitPriceUuid(unitPriceUuid: string): Promise<InventoryListItem> {
+    const vup = await db.variantUnitPrice.findFirst({
+      where: { uuid: unitPriceUuid, deleted_at: null },
+      include: {
+        variant: {
+          include: {
+            product: { select: { id: true, name: true, slug: true } },
+            product_variant_images: { where: { is_active: true }, take: 1 },
+          },
+        },
+        product_units: true,
+      },
+    });
+    if (!vup) throw ApiError.notFound("Pack size / unit price not found");
+
+    let inv = await db.inventory.findFirst({
+      where: { variantUnitPriceId: vup.id },
+      include: {
+        variant_unit_price: {
+          include: {
+            product_units: true,
+            variant: {
+              include: {
+                product: { select: { id: true, name: true, slug: true } },
+                product_variant_images: { where: { is_active: true }, take: 1 },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!inv) {
+      inv = await db.inventory.create({
+        data: {
+          variantUnitPriceId: vup.id,
+          quantity_available: 0,
+          quantity_reserved: 0,
+          reorderLevel: 5,
+          is_active: true,
+        },
+        include: {
+          variant_unit_price: {
+            include: {
+              product_units: true,
+              variant: {
+                include: {
+                  product: { select: { id: true, name: true, slug: true } },
+                  product_variant_images: { where: { is_active: true }, take: 1 },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    return mapToInventoryListItem(inv);
+  },
+
   async getStats(): Promise<InventoryStats> {
     const [totalSkus, items] = await Promise.all([
       db.inventory.count({ where: { is_active: true } }),
