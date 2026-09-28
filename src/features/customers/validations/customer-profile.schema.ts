@@ -87,3 +87,25 @@ export const updateCustomerProfileSchema = z
   });
 
 export type UpdateCustomerProfileInput = z.infer<typeof updateCustomerProfileSchema>;
+
+export const changeCustomerPasswordSchema = z
+  .object({
+    currentPassword: z
+      .string({ message: "Current password is required" })
+      .min(1, "Current password is required")
+      .max(100, "Current password cannot exceed 100 characters"),
+    newPassword: z
+      .string({ message: "New password is required" })
+      .min(6, "New password must be at least 6 characters")
+      .max(100, "New password cannot exceed 100 characters"),
+    confirmPassword: z
+      .string({ message: "Confirm password is required" })
+      .min(1, "Please confirm your new password")
+      .max(100, "Confirm password cannot exceed 100 characters"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export type ChangeCustomerPasswordInput = z.infer<typeof changeCustomerPasswordSchema>;

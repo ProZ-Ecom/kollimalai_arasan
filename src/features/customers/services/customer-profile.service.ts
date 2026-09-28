@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
+import { db } from "@/lib/db/prisma";
 import { ApiError } from "@/lib/api/api-error";
 import { userRepository } from "@/features/users/repositories/user.repository";
 import {
@@ -7,7 +9,10 @@ import {
 } from "../repositories/customer-profile.repository";
 import { uploadService } from "@/features/uploads/services/upload.service";
 import type { CustomerProfileResponse } from "../types";
-import type { UpdateCustomerProfileInput } from "../validations/customer-profile.schema";
+import type {
+  UpdateCustomerProfileInput,
+  ChangeCustomerPasswordInput,
+} from "../validations/customer-profile.schema";
 
 function generateReferralCode(uuidOrId?: string): string {
   const rand = crypto.randomUUID().replace(/-/g, "").toUpperCase().slice(0, 6);
@@ -208,6 +213,37 @@ export const customerProfileService = {
 
     return {
       profileImage: null,
+    };
+  },
+
+  async changeCustomerPassword(
+    sessionUserId: string,
+    input: ChangeCustomerPasswordInput
+  ): Promise<{ message: string }> {
+    const user = await resolveActiveUser(sessionUserId);
+
+    const dbUser = await db.user.findUnique({
+      where: { id: BigInt(user.internalId) },
+    });
+
+    if (!dbUser || !dbUser.password_hash) {
+      throw ApiError.badRequest("No password set for this account. Please use password reset.");
+    }
+
+    const isMatch = await bcrypt.compare(input.currentPassword, dbUser.password_hash);
+    if (!isMatch) {
+      throw ApiError.badRequest("Current password is incorrect");
+    }
+
+    const hashedPassword = await bcrypt.hash(input.newPassword, 12);
+
+    await db.user.update({
+      where: { id: BigInt(user.internalId) },
+      data: { password_hash: hashedPassword },
+    });
+
+    return {
+      message: "Password changed successfully",
     };
   },
 };
