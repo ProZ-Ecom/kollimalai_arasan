@@ -62,7 +62,6 @@ function CategoryForm({
               name: formatTitleCase(data.name),
               sortOrder: Number(data.sortOrder || 0),
             };
-            console.log("Category Form Data:", formattedData);
             onSubmit(formattedData as CategoryFormData);
           })}
           className="space-y-6"

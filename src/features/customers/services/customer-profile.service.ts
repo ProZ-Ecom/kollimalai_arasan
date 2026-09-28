@@ -216,34 +216,38 @@ export const customerProfileService = {
     };
   },
 
-  async changeCustomerPassword(
+  async changePassword(
     sessionUserId: string,
-    input: ChangeCustomerPasswordInput
-  ): Promise<{ message: string }> {
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> {
     const user = await resolveActiveUser(sessionUserId);
 
     const dbUser = await db.user.findUnique({
       where: { id: BigInt(user.internalId) },
+      select: { password_hash: true },
     });
 
     if (!dbUser || !dbUser.password_hash) {
-      throw ApiError.badRequest("No password set for this account. Please use password reset.");
+      throw ApiError.badRequest("Account does not have a local password set");
     }
 
-    const isMatch = await bcrypt.compare(input.currentPassword, dbUser.password_hash);
+    const isMatch = await bcrypt.compare(currentPassword, dbUser.password_hash);
     if (!isMatch) {
       throw ApiError.badRequest("Current password is incorrect");
     }
 
-    const hashedPassword = await bcrypt.hash(input.newPassword, 12);
+    const isSame = await bcrypt.compare(newPassword, dbUser.password_hash);
+    if (isSame) {
+      throw ApiError.badRequest("New password must be different from current password");
+    }
 
-    await db.user.update({
-      where: { id: BigInt(user.internalId) },
-      data: { password_hash: hashedPassword },
-    });
+    const hashedNew = await bcrypt.hash(newPassword, 12);
+    await userRepository.resetPassword(user.internalId, hashedNew);
 
     return {
-      message: "Password changed successfully",
+      success: true,
+      message: "Password updated successfully",
     };
   },
 };

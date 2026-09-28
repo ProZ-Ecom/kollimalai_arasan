@@ -23,8 +23,10 @@ import { FormModal } from "@/components/common/FormModal";
 import { Plus, Pencil, Trash2, KeyRound } from "lucide-react";
 import {
   createUserSchema,
+  updateUserSchema,
   resetPasswordSchema,
   type CreateUserSchemaInput,
+  type UpdateUserSchemaInput,
 } from "@/features/users/validations/user.schema";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { UserListItem } from "@/features/users/types";
@@ -51,8 +53,8 @@ export default function AdminUsersPage() {
     watch,
     setValue,
     formState: { errors },
-  } = useForm<CreateUserSchemaInput>({
-    resolver: zodResolver(createUserSchema),
+  } = useForm<CreateUserSchemaInput | UpdateUserSchemaInput>({
+    resolver: zodResolver(modalMode === "edit" ? updateUserSchema : createUserSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -144,7 +146,7 @@ export default function AdminUsersPage() {
       case "active":
         return "success";
       case "inactive":
-        return "secondary";
+        return "warning";
       case "banned":
       case "blocked":
         return "destructive";
@@ -268,6 +270,7 @@ export default function AdminUsersPage() {
       </AdminContent>
 
       <FormModal
+        key={modalMode ?? "closed"}
         open={modalMode === "create" || modalMode === "edit"}
         onClose={handleCloseModal}
         title={modalMode === "edit" ? "Edit User" : "Add User"}

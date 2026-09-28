@@ -207,7 +207,7 @@ export function StaffFormModal({
           </Label>
           <Input
             id="staff-name"
-            placeholder="e.g. Ramesh Kumar"
+            placeholder="Enter full name"
             leftIcon={<User className="h-4 w-4" />}
             {...register("name")}
             error={errors.name?.message}

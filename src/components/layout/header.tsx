@@ -343,14 +343,6 @@ export function Header() {
               }
             />
 
-            {navCategories.map((category) => (
-              <CategoryMenuItem
-                key={category.id}
-                category={category}
-                isActive={pathname === `/categories/${category.id}`}
-              />
-            ))}
-
             <Link href="/about" className={navLinkClass(pathname === "/about")}>
               About Us
             </Link>
@@ -367,7 +359,7 @@ export function Header() {
             className="shrink-0 flex items-center gap-2 text-sm font-medium text-secondary-500 underline underline-offset-4 decoration-1 hover:text-secondary-600 transition-colors"
           >
             <Truck className="w-[18px] h-[18px]" strokeWidth={1.75} />
-            <span>Need Delivery?</span>
+            <span>Bulk Orders</span>
           </Link>
         </div>
       </div>

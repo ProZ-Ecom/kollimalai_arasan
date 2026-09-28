@@ -17,7 +17,6 @@ import {
   UploadCloud,
   X,
   AlertTriangle,
-  ShieldCheck,
   Send,
   Loader2,
   Calendar,
@@ -856,30 +855,8 @@ function CreateCampaignContent() {
               4. Review, Schedule & Launch
             </h2>
             <p className="text-sm text-neutral-500 mt-0.5">
-              Verify your anti-ban delivery parameters and start your campaign.
+              Verify your delivery parameters and start your campaign.
             </p>
-          </div>
-
-          {/* Anti-ban Safeguard Badge Box */}
-          <div className="bg-secondary-50/60 border border-secondary-200/80 rounded-2xl p-5 space-y-3">
-            <div className="flex items-center gap-2 text-secondary-800 font-bold text-sm">
-              <ShieldCheck className="w-5 h-5 text-secondary-600 flex-shrink-0" />
-              <span>Anti-Ban Delivery Safeguards Active</span>
-            </div>
-            <ul className="text-xs text-secondary-900 space-y-1.5 list-disc list-inside">
-              <li>
-                <strong>Strict 1-by-1 Sequential Queue:</strong> Zero simultaneous blasting. Each message
-                is delivered after the previous one finishes.
-              </li>
-              <li>
-                <strong>Human Typing Simulation:</strong> Baileys sends a WhatsApp <em>composing</em> signal
-                with a randomized <strong>2.5s – 4.5s jitter delay</strong> between contacts.
-              </li>
-              <li>
-                <strong>Circuit Breaker:</strong> If your phone loses connection, the campaign pauses automatically
-                rather than dropping messages.
-              </li>
-            </ul>
           </div>
 
           {/* Summary Cards */}

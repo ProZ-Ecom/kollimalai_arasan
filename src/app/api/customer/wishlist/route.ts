@@ -34,7 +34,7 @@ export const POST = createApiHandler(
 
       try {
         const body = context.body as AddWishlistInput;
-        console.log("Adding to wishlist with user:", sessionUserId, "body:", body);
+
         const result = await wishlistService.addToWishlist(sessionUserId, body);
         return apiSuccess(result, "Added to wishlist successfully", 200);
       } catch (err) {

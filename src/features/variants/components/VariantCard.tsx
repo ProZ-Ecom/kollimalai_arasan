@@ -17,6 +17,7 @@ import {
   Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getImageUrl } from "@/lib/utils";
 
 import type { AdminVariantResponse } from "../types";
 
@@ -77,7 +78,7 @@ export function VariantCard({
       : "bg-emerald-50 text-emerald-800 border-emerald-200";
 
   const displayImage = !imageError && variant.primaryImage
-    ? variant.primaryImage
+    ? getImageUrl(variant.primaryImage)
     : resolveFallbackImage(variant.productName || variant.variantName);
 
   return (

@@ -18,7 +18,10 @@ function getRefreshSecret(): string {
 }
 
 function getResetPasswordSecret(): string {
-  const secret = process.env.JWT_RESET_PASSWORD_SECRET || process.env.JWT_SECRET || "default_secret_key";
+  const secret = process.env.JWT_RESET_PASSWORD_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_RESET_PASSWORD_SECRET environment variable is not defined");
+  }
   return secret;
 }
 

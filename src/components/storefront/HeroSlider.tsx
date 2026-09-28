@@ -11,20 +11,30 @@ import { IconButton } from "./buttons/IconButton";
 export function HeroSlider() {
   const { data: heroBanners } = useCustomerBanners({ position: "home-hero" });
 
+  const [failedImages, setFailedImages] = React.useState<Record<string, boolean>>({});
+
   const slides = React.useMemo(() => {
     if (heroBanners && heroBanners.length > 0) {
-      return heroBanners.map((banner) => ({
-        key: banner.id,
-        image: banner.imageUrl,
-        link: banner.linkUrl,
-        alt: banner.title || "Hero Banner",
-      }));
+      return heroBanners.map((banner) => {
+        const rawTitle = (banner.title || "").trim();
+        const cleanAlt =
+          rawTitle && rawTitle.toLowerCase() !== "fixed"
+            ? rawTitle
+            : "Kollimalai Arasan - Pure Organic Spices & Farm Produce";
+
+        return {
+          key: banner.id,
+          image: banner.imageUrl || "/images/kolli_spices_hero.jpg",
+          link: banner.linkUrl,
+          alt: cleanAlt,
+        };
+      });
     }
     return banners.map((image, index) => ({
       key: `fallback-${index}`,
-      image,
+      image: image || "/images/kolli_spices_hero.jpg",
       link: null as string | null,
-      alt: "Hero Banner",
+      alt: "Kollimalai Arasan - Pure Organic Spices & Farm Produce",
     }));
   }, [heroBanners]);
 
@@ -35,14 +45,22 @@ export function HeroSlider() {
     return null;
   }
 
+  const isFailed = failedImages[activeSlide.key];
+  const imageSrc = isFailed
+    ? "/images/kolli_spices_hero.jpg"
+    : activeSlide.image || "/images/kolli_spices_hero.jpg";
+
   const slideImage = (
     <Image
-      src={activeSlide.image}
+      src={imageSrc}
       alt={activeSlide.alt}
       width={1366}
       height={623}
       priority
-      className="w-full h-auto block transition-all duration-500"
+      onError={() => {
+        setFailedImages((prev) => ({ ...prev, [activeSlide.key]: true }));
+      }}
+      className="w-full h-auto block transition-all duration-500 object-cover"
     />
   );
 

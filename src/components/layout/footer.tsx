@@ -57,16 +57,16 @@ export function Footer() {
     };
 
     // 1. Call
-    const defaultCallVal = defaultContacts[0]?.value || "+91 7418188950";
+    const defaultCallVal = defaultContacts[0]?.value || "+91 94861 50579";
     const callValue = formatPhoneDisplay(phone, defaultCallVal);
     const callDigits = (phone || defaultCallVal).replace(/\D/g, "");
     const cleanCallNumber = callDigits.length === 10 ? `91${callDigits}` : callDigits;
-    const callLink = cleanCallNumber ? `tel:+${cleanCallNumber}` : "tel:+917418188950";
+    const callLink = cleanCallNumber ? `tel:+${cleanCallNumber}` : "tel:+919486150579";
 
     // 2. WhatsApp
-    const defaultWaVal = defaultContacts[1]?.value || "+91 73388 80950";
+    const defaultWaVal = defaultContacts[1]?.value || "+91 86673 80899";
     const waValue = defaultWaVal;
-    const cleanWaNumber = "917338880950";
+    const cleanWaNumber = "918667380899";
     const waLink = `https://wa.me/${cleanWaNumber}`;
 
     // 3. Mail
@@ -104,7 +104,7 @@ export function Footer() {
 
   // WhatsApp Link for Social Links
   const waLink = React.useMemo(() => {
-    return "https://wa.me/917338880950";
+    return "https://wa.me/918667380899";
   }, []);
 
   // Company Name
@@ -117,7 +117,7 @@ export function Footer() {
   // Formatted Location Address
   const formattedLocation = React.useMemo(() => {
     if (!company) {
-      return "18/41, MGR Nagar, Sakkarai Patti, Valavanthi Nadu, Semmedu Post, Kolli Hills Tk, Namakkal District - 637411";
+      return "6/1033, Thillai Nagar Trichy Road, Namakkal - 637 002";
     }
 
     const parts: string[] = [];
@@ -133,7 +133,7 @@ export function Footer() {
     }
 
     if (parts.length === 0) {
-      return "18/41, MGR Nagar, Sakkarai Patti, Valavanthi Nadu, Semmedu Post, Kolli Hills Tk, Namakkal District - 637411";
+      return "6/1033, Thillai Nagar Trichy Road, Namakkal - 637 002";
     }
 
     return parts.join(", ");

@@ -1254,40 +1254,50 @@ export default function AdminProductDetailsPage() {
               productUuid={canonicalProductId}
               variantUuid={newlyCreatedVariant.id}
             />
-            <div className="flex justify-end gap-2">
-              {!hasNewlyCreatedPrices ? (
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsAddVariantOpen(false);
-                    setNewlyCreatedVariant(null);
-                  }}
-                  className="h-10 rounded-xl bg-neutral-100 text-neutral-800 border border-neutral-300 hover:bg-neutral-200 px-5 text-sm font-semibold cursor-pointer"
-                >
-                  Skip for now & Close
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await updateVariantMutation.mutateAsync({
-                        productUuid: canonicalProductId,
-                        variantUuid: newlyCreatedVariant.id,
-                        data: { isActive: true },
-                      });
-                      toast.success("Item Activated", "Item is now active and will appear on the storefront.");
-                    } catch (e) {
-                      console.error("Failed to activate variant:", e);
-                    }
-                    setIsAddVariantOpen(false);
-                    setNewlyCreatedVariant(null);
-                  }}
-                  className="h-10 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] cursor-pointer"
-                >
-                  Save & Activate
-                </Button>
-              )}
+            <div className="flex justify-between items-center gap-2 pt-2 border-t border-neutral-100">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setNewlyCreatedVariant(null)}
+                className="h-10 rounded-xl px-4 text-sm font-medium text-neutral-600 hover:text-neutral-900 border-neutral-300 hover:bg-neutral-50 cursor-pointer"
+              >
+                ← Back to Details
+              </Button>
+              <div className="flex items-center gap-2">
+                {!hasNewlyCreatedPrices ? (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setIsAddVariantOpen(false);
+                      setNewlyCreatedVariant(null);
+                    }}
+                    className="h-10 rounded-xl bg-neutral-100 text-neutral-800 border border-neutral-300 hover:bg-neutral-200 px-5 text-sm font-semibold cursor-pointer"
+                  >
+                    Skip for now & Close
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await updateVariantMutation.mutateAsync({
+                          productUuid: canonicalProductId,
+                          variantUuid: newlyCreatedVariant.id,
+                          data: { isActive: true },
+                        });
+                        toast.success("Item Activated", "Item is now active and will appear on the storefront.");
+                      } catch (e) {
+                        console.error("Failed to activate variant:", e);
+                      }
+                      setIsAddVariantOpen(false);
+                      setNewlyCreatedVariant(null);
+                    }}
+                    className="h-10 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] cursor-pointer"
+                  >
+                    Save & Activate
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}

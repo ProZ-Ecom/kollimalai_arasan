@@ -88,15 +88,15 @@ export const contacts = [
     id: 1,
     icon: ICONS.call,
     title: "Call",
-    value: "+91 74181 88950",
-    link: "tel:+917418188950",
+    value: "+91 94861 50579",
+    link: "tel:+919486150579",
   },
   {
     id: 2,
     icon: ICONS.whatsapp,
     title: "WhatsApp",
-    value: "+91 73388 80950",
-    link: "https://wa.me/917338880950",
+    value: "+91 86673 80899",
+    link: "https://wa.me/918667380899",
   },
   {
     id: 3,
@@ -119,7 +119,7 @@ export const footerSocialIcons: FooterSocialIcon[] = [
   { id: 1, icon: ICONS.facebook, name: "facebook", href: "https://www.facebook.com/share/18fDBEXh18/" },
   { id: 2, icon: ICONS.instagram, name: "instagram", href: "#" },
   { id: 3, icon: ICONS.youtube, name: "youtube", href: "https://youtube.com/@kollimalaiarasan?si=CMvlWG_zegPDyt5O" },
-  { id: 4, icon: ICONS.whatsapp1, name: "whatsapp", href: "https://wa.me/917338880950" },
+  { id: 4, icon: ICONS.whatsapp1, name: "whatsapp", href: "https://wa.me/918667380899" },
 ];
 
 export const readyToAssist = [
@@ -137,7 +137,7 @@ export const reviews = [
   {
     id: 1,
     image: PHOTOS.photo1,
-    name: "Mrs. Kavi P.,",
+    name: "Mrs. Kavi P.",
     location: "Namakkal, Tamil Nadu",
     feedback:
       "Kollimalai Arasan spices are extraordinarily pure and aromatic. The black pepper and green cardamom have an authentic mountain aroma that you simply cannot find in regular markets!",
@@ -146,7 +146,7 @@ export const reviews = [
   {
     id: 2,
     image: PHOTOS.photo2,
-    name: "Mr. Muni K.,",
+    name: "Mr. Muni K.",
     location: "Salem, Tamil Nadu",
     bg: "--green-50",
     feedback:
@@ -155,7 +155,7 @@ export const reviews = [
   {
     id: 3,
     image: PHOTOS.photo3,
-    name: "Mrs. Thenmozhi A.,",
+    name: "Mrs. Thenmozhi A.",
     location: "Chennai, Tamil Nadu",
     bg: "--blue-50",
     feedback:

@@ -103,6 +103,13 @@ export const changeCustomerPasswordSchema = z
       .min(1, "Please confirm your new password")
       .max(100, "Confirm password cannot exceed 100 characters"),
   })
+  .refine(
+    (data) => !data.currentPassword || data.newPassword !== data.currentPassword,
+    {
+      message: "New password must be different from current password",
+      path: ["newPassword"],
+    }
+  )
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],

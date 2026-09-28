@@ -489,13 +489,13 @@ export function AddressesTab() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Full Name */}
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-theme-text-secondary">
-                Full Name <span className="text-danger-base font-bold ml-0.5">*</span>
+              <label className="text-xs font-semibold text-theme-text-primary">
+                Full Name <span className="text-red-600 font-bold">*</span>
               </label>
               <input
                 type="text"
                 disabled={isSubmitting}
-                placeholder="e.g. Ashok Kumar"
+                placeholder="Enter your name"
                 value={formData.fullName}
                 onChange={(e) => handleFieldChange("fullName", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
@@ -509,13 +509,13 @@ export function AddressesTab() {
 
             {/* Phone Number */}
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-theme-text-secondary">
-                Phone Number <span className="text-danger-base font-bold ml-0.5">*</span>
+              <label className="text-xs font-semibold text-theme-text-primary">
+                Phone Number <span className="text-red-600 font-bold">*</span>
               </label>
               <input
                 type="tel"
                 disabled={isSubmitting}
-                placeholder="10-digit mobile number (e.g. 9876543210)"
+                placeholder="10-digit mobile number"
                 value={formData.phone}
                 onChange={(e) => handleFieldChange("phone", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
@@ -621,13 +621,13 @@ export function AddressesTab() {
 
             {/* Address Line 1 */}
             <div className="flex flex-col gap-1 sm:col-span-2">
-              <label className="text-[11px] font-semibold text-theme-text-secondary">
-                Address Line 1 (Door no., Building, Street) <span className="text-danger-base font-bold ml-0.5">*</span>
+              <label className="text-xs font-semibold text-theme-text-primary">
+                Address Line 1 <span className="text-red-600 font-bold">*</span>
               </label>
               <input
                 type="text"
                 disabled={isSubmitting}
-                placeholder="e.g. 42, Sri Krishna Nagar, Main Road"
+                placeholder="Door no., Building, Street"
                 value={formData.addressLine1}
                 onChange={(e) => handleFieldChange("addressLine1", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
@@ -641,13 +641,13 @@ export function AddressesTab() {
 
             {/* Address Line 2 */}
             <div className="flex flex-col gap-1 sm:col-span-2">
-              <label className="text-[11px] font-semibold text-theme-text-secondary">
-                Address Line 2 (Area, Colony, Sector) <span className="text-[10px] font-normal text-theme-text-muted">(Optional)</span>
+              <label className="text-xs font-semibold text-theme-text-primary">
+                Address Line 2
               </label>
               <input
                 type="text"
                 disabled={isSubmitting}
-                placeholder="e.g. Near Community Hall, North Sector"
+                placeholder="Area, Colony, Sector"
                 value={formData.addressLine2}
                 onChange={(e) => handleFieldChange("addressLine2", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
@@ -661,8 +661,8 @@ export function AddressesTab() {
 
             {/* Landmark */}
             <div className="flex flex-col gap-1 sm:col-span-2">
-              <label className="text-[11px] font-semibold text-theme-text-secondary">
-                Landmark <span className="text-[10px] font-normal text-theme-text-muted">(Optional)</span>
+              <label className="text-xs font-semibold text-theme-text-primary">
+                Landmark
               </label>
               <input
                 type="text"
@@ -676,15 +676,15 @@ export function AddressesTab() {
 
             {/* City */}
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-theme-text-secondary">
-                City <span className="text-danger-base font-bold ml-0.5">*</span>
+              <label className="text-xs font-semibold text-theme-text-primary">
+                City <span className="text-red-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
                   type="text"
                   readOnly
                   disabled={isSubmitting}
-                  placeholder={isPincodeVerified ? formData.city : "City (auto-filled from PIN Code)"}
+                  placeholder={isPincodeVerified ? formData.city : "City (Enter PIN Code)"}
                   value={formData.city}
                   onChange={(e) => handleFieldChange("city", e.target.value)}
                   className={`w-full border rounded-lg px-3.5 pr-20 py-2.5 text-xs transition-colors ${
@@ -707,15 +707,15 @@ export function AddressesTab() {
 
             {/* State */}
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-theme-text-secondary">
-                State <span className="text-danger-base font-bold ml-0.5">*</span>
+              <label className="text-xs font-semibold text-theme-text-primary">
+                State <span className="text-red-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
                   type="text"
                   readOnly
                   disabled={isSubmitting}
-                  placeholder={isPincodeVerified ? formData.state : "State (auto-filled from PIN Code)"}
+                  placeholder={isPincodeVerified ? formData.state : "State (Enter PIN Code)"}
                   value={formData.state}
                   onChange={(e) => handleFieldChange("state", e.target.value)}
                   className={`w-full border rounded-lg px-3.5 pr-20 py-2.5 text-xs transition-colors ${
@@ -784,8 +784,8 @@ export function AddressesTab() {
         </form>
       )}
 
-      {/* Address Cards Grid - Hidden during add/edit to prevent visual clutter */}
-      {!isAdding && (
+      {/* Address Cards Grid - hidden when adding or editing */}
+      {!isAdding && !editingId && (
         addresses.length === 0 ? (
           <div className="bg-theme-surface border border-theme-border rounded-2xl p-10 text-center shadow-2xs">
             <p className="text-sm text-theme-text-muted">No saved delivery addresses found.</p>

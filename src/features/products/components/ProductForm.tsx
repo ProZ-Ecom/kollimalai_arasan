@@ -16,7 +16,7 @@ const productFormSchema = z.object({
     .string()
     .trim()
     .min(1, "Product name is required")
-    .max(200, "Product name cannot exceed 200 characters")
+    .max(100, "Product name cannot exceed 100 characters")
     .transform(formatTitleCase),
   slug: z
     .string()
@@ -300,7 +300,7 @@ function ProductForm({
           {/* Helper message / live preview / error */}
           <div className="mt-1.5 min-h-[18px]">
             {extraSlugError || methods.formState.errors.slug?.message ? (
-              <p className="text-xs text-red-500 font-medium">
+              <p className="text-xs text-theme-status-can-fg font-medium">
                 {extraSlugError || methods.formState.errors.slug?.message}
               </p>
             ) : (

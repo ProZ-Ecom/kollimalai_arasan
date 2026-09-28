@@ -27,6 +27,9 @@ interface FormInputProps
   isSlug?: boolean;
   isTitleCase?: boolean;
   required?: boolean;
+  /** Set to true on admin management fields (SKU, stock, pricing) to prevent
+   * browser autofill popover from obstructing adjacent fields or live previews. */
+  disableAutofill?: boolean;
 }
 
 function FormInput({
@@ -41,6 +44,7 @@ function FormInput({
   isSlug,
   isTitleCase,
   required,
+  disableAutofill,
   ...props
 }: FormInputProps) {
   const { control } = useFormContext();
@@ -179,6 +183,7 @@ function FormInput({
             leftIcon={leftIcon}
             rightIcon={rightIcon}
             inputPrefix={inputPrefix}
+            autoComplete={disableAutofill ? "one-time-code" : props.autoComplete}
             error={fieldState.error?.message}
           />
           {description && !fieldState.error && (

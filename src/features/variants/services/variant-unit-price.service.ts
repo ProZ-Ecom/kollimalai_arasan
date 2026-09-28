@@ -46,9 +46,9 @@ function formatVariantPriceHistory(
     changedAt: item.changed_at,
     changedBy: user
       ? {
-          id: user.uuid || String(user.id),
-          name: user.name,
-        }
+        id: user.uuid || String(user.id),
+        name: user.name,
+      }
       : null,
   };
 }

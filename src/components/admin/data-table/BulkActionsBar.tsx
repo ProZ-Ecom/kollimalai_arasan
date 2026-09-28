@@ -44,8 +44,8 @@ export function BulkActionsBar({
         </span>
         <span className="text-sm font-semibold text-neutral-800">
           {selectedCount === 1
-            ? `1 ${entityName} selected`
-            : `${selectedCount} ${pluralEntity} selected`}
+            ? `${entityName} selected`
+            : `${pluralEntity} selected`}
         </span>
         {filterNotice && (
           <span className="text-xs px-2.5 py-1 rounded-lg bg-cream-100 border border-cream-border text-neutral-600 font-medium">

@@ -95,9 +95,9 @@ export const razorpayService = {
           err?.error?.description ||
           err?.message ||
           "Failed to communicate with Razorpay API";
-        console.error("Razorpay orders.create error:", err);
+        console.error("[Razorpay] Order creation failed (cart checkout):", err);
         throw ApiError.badRequest(
-          `Razorpay Error: ${description}. Please verify your RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env.`
+          `Payment service is temporarily unavailable: ${description}. Please try again.`
         );
       }
 
@@ -168,9 +168,9 @@ export const razorpayService = {
         err?.error?.description ||
         err?.message ||
         "Failed to communicate with Razorpay API";
-      console.error("Razorpay orders.create error:", err);
+      console.error("[Razorpay] Order creation failed (existing order):", err);
       throw ApiError.badRequest(
-        `Razorpay Error: ${description}. Please verify your RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env.`
+        `Payment service is temporarily unavailable: ${description}. Please try again.`
       );
     }
 

@@ -283,7 +283,7 @@ export default function AdminCategoriesPage() {
           }
         }}
         title="Delete Category"
-        description="Are you sure you want to delete this category? Deleting this category will automatically deactivate and remove all associated products and items from both the admin dashboard and the customer storefront. This action cannot be undone."
+        description="Are you sure you want to delete this category? This action cannot be undone."
         confirmText="Delete Category"
         variant="destructive"
         isLoading={deleteMutation.isPending}
@@ -338,12 +338,18 @@ export default function AdminCategoriesPage() {
               sortOrder: Number(data.sortOrder || 0),
             };
 
-            console.log("Create payload:", payload);
-
-            await createMutation.mutateAsync(payload);
-
-            setIsCreateOpen(false);
-            refetch();
+            try {
+              await createMutation.mutateAsync(payload);
+              setIsCreateOpen(false);
+              refetch();
+            } catch (err: any) {
+              const msg = err?.message || "";
+              if (msg.toLowerCase().includes("unique") || msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("slug")) {
+                toast.error("Duplicate Category Code", { description: `The category code "${data.slug}" already exists. Please use a different code.` });
+              } else {
+                throw err;
+              }
+            }
           }}
         />
       </FormModal>
@@ -381,14 +387,22 @@ export default function AdminCategoriesPage() {
                 sortOrder: Number(data.sortOrder || 0),
               };
 
-              await updateMutation.mutateAsync({
-                id: selectedCategory.id,
-                data: payload,
-              });
-
-              setIsEditOpen(false);
-              setSelectedCategory(null);
-              refetch();
+              try {
+                await updateMutation.mutateAsync({
+                  id: selectedCategory.id,
+                  data: payload,
+                });
+                setIsEditOpen(false);
+                setSelectedCategory(null);
+                refetch();
+              } catch (err: any) {
+                const msg = err?.message || "";
+                if (msg.toLowerCase().includes("unique") || msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("slug")) {
+                  toast.error("Duplicate Category Code", { description: `The category code "${data.slug}" already exists. Please use a different code.` });
+                } else {
+                  throw err;
+                }
+              }
             }}
           />
         )}
