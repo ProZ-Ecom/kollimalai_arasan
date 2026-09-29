@@ -3,11 +3,12 @@
 import { useState } from "react";
 import {
   Boxes,
-  Plus,
   RefreshCw,
   AlertTriangle,
   History,
   SlidersHorizontal,
+  Layers,
+  PlusCircle,
 } from "lucide-react";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import {
@@ -28,6 +29,7 @@ import {
   InventoryKpiCards,
   InventoryStockTable,
   AdjustStockModal,
+  BulkRestockModal,
   InventoryHistoryTab,
 } from "@/features/inventory/components";
 import type { InventoryListItem } from "@/features/inventory/types";
@@ -51,9 +53,15 @@ export default function InventoryDashboardPage() {
   const [page, setPage] = useState<number>(1);
   const pageSize = 12;
 
-  // Selected item for modal
+  // Selected item for single adjust modal
   const [adjustItem, setAdjustItem] = useState<InventoryListItem | null>(null);
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+
+  // Multi-selection for bulk restock
+  const [selectedItemsMap, setSelectedItemsMap] = useState<
+    Record<number, InventoryListItem>
+  >({});
+  const [isBulkRestockModalOpen, setIsBulkRestockModalOpen] = useState(false);
 
   // Filter history by specific item
   const [historyFilterItem, setHistoryFilterItem] =
@@ -94,6 +102,43 @@ export default function InventoryDashboardPage() {
   const inventoryData = (inventoryResponse as any)?.data;
   const items: InventoryListItem[] = inventoryData?.data ?? [];
   const meta = inventoryData?.meta;
+
+  const selectedIds = Object.keys(selectedItemsMap).map(Number);
+  const selectedItems = Object.values(selectedItemsMap);
+
+  const handleToggleSelect = (id: number) => {
+    const item = items.find((i) => i.id === id) || selectedItemsMap[id];
+    if (!item) return;
+    setSelectedItemsMap((prev) => {
+      const next = { ...prev };
+      if (next[id]) {
+        delete next[id];
+      } else {
+        next[id] = item;
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (items.length === 0) return;
+    const allPageSelected = items.every((i) => !!selectedItemsMap[i.id]);
+    setSelectedItemsMap((prev) => {
+      const next = { ...prev };
+      if (allPageSelected) {
+        items.forEach((i) => delete next[i.id]);
+      } else {
+        items.forEach((i) => {
+          next[i.id] = i;
+        });
+      }
+      return next;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedItemsMap({});
+  };
 
   const hasActiveFilters =
     search.trim() !== "" || statusFilter !== "all" || activeTab !== "stock";
@@ -147,7 +192,7 @@ export default function InventoryDashboardPage() {
 
       <AdminPageHeader
         title="Inventory Management"
-        description="Real-time warehouse stock tracking, reorder thresholds, and audit movement"
+        description="Real-time warehouse stock tracking, bulk restock, and audit movement"
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -163,12 +208,24 @@ export default function InventoryDashboardPage() {
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
               Refresh
             </Button>
-            {items.length > 0 && (
+            {selectedIds.length > 0 && (
               <Button
                 type="button"
                 size="sm"
+                onClick={() => setIsBulkRestockModalOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
+              >
+                <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
+                Bulk Restock ({selectedIds.length})
+              </Button>
+            )}
+            {items.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => handleOpenAdjust(items[0])}
-                className="bg-secondary-600 hover:bg-secondary-700 text-white font-bold text-xs shadow-xs"
+                className="text-secondary-700 border-secondary-200 hover:bg-secondary-50 font-bold text-xs shadow-xs"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
                 Quick Adjust Stock
@@ -283,6 +340,50 @@ export default function InventoryDashboardPage() {
           )}
         </div>
 
+        {/* Bulk Action Sticky Banner when items are selected */}
+        {selectedIds.length > 0 && activeTab !== "history" && (
+          <div className="bg-gradient-to-r from-secondary-900 to-secondary-800 text-white rounded-2xl p-3.5 sm:px-5 shadow-lg flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-secondary-700/80 border border-secondary-600 flex items-center justify-center text-secondary-200 shrink-0">
+                <Layers className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>
+                    {selectedIds.length}{" "}
+                    {selectedIds.length === 1 ? "product" : "products"} selected
+                  </span>
+                  <span className="text-secondary-300 text-[11px] font-normal hidden sm:inline">
+                    • Ready for bulk stock update
+                  </span>
+                </p>
+                <p className="text-[11px] text-secondary-300 truncate hidden md:block">
+                  Apply identical restock quantity (e.g. 50 units) across all selected products at once.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                className="px-3 py-1.5 text-xs font-medium text-secondary-200 hover:text-white hover:bg-secondary-700/60 rounded-lg transition-colors cursor-pointer"
+              >
+                Clear Selection
+              </button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setIsBulkRestockModalOpen(true)}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-md border-0 gap-1.5 px-4"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Bulk Restock ({selectedIds.length})
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Content based on Active Tab */}
         {activeTab === "history" ? (
           <InventoryHistoryTab
@@ -305,6 +406,9 @@ export default function InventoryDashboardPage() {
           <div className="space-y-4">
             <InventoryStockTable
               items={items}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onToggleSelectAll={handleToggleSelectAll}
               onAdjustStock={handleOpenAdjust}
               onViewHistory={handleViewHistoryForItem}
             />
@@ -353,6 +457,18 @@ export default function InventoryDashboardPage() {
             setAdjustItem(null);
           }}
           onSuccess={() => {
+            refetchInventory();
+            refetchStats();
+          }}
+        />
+
+        {/* Bulk Restock Modal */}
+        <BulkRestockModal
+          items={selectedItems}
+          open={isBulkRestockModalOpen}
+          onClose={() => setIsBulkRestockModalOpen(false)}
+          onSuccess={() => {
+            setSelectedItemsMap({});
             refetchInventory();
             refetchStats();
           }}

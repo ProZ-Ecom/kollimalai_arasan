@@ -534,8 +534,8 @@ export default function AdminVariantsPage() {
         description="Manage product Items, sizing, packaging, pricing, SKUs, and images with realistic customer card preview."
       />
 
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden  py-1 rounded-2xl">
+      <AdminContent className="flex-1 min-h-0 flex flex-col">
+        <div className="flex flex-1 flex-col py-1 rounded-2xl min-h-0">
           {/* Controls Header */}
           <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
@@ -607,7 +607,7 @@ export default function AdminVariantsPage() {
           </div>
 
           {/* VIEW RENDERER: Table View vs Customer Card View */}
-          <div className="mt-6 flex-1 min-h-0 overflow-hidden flex flex-col">
+          <div className="mt-6 flex-1 min-h-0 flex flex-col">
             <BulkActionsBar
               selectedCount={selectedRows.length}
               entityName="item"
@@ -624,6 +624,7 @@ export default function AdminVariantsPage() {
               <DataTable
                 columns={columns}
                 data={variants}
+                tableClassName="min-w-[1150px]"
                 pageSize={pageSize}
                 pageSizeOptions={[10, 12, 20, 30, 50]}
                 page={page}

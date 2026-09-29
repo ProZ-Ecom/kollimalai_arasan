@@ -7,6 +7,7 @@ import type {
   InventoryListItem,
   InventoryTransactionItem,
   InventoryStats,
+  BulkAdjustStockInput,
 } from "../types";
 
 export async function getInventory(params: GetInventoryParams) {
@@ -49,6 +50,16 @@ export async function adjustStock(input: AdjustStockInput) {
     "/api/inventory/adjust",
     input
   );
+  return response;
+}
+
+export async function bulkAdjustStock(input: BulkAdjustStockInput) {
+  const response = await apiClient.post<{
+    updatedCount: number;
+    totalRequested: number;
+    results: any[];
+    errors?: any[];
+  }>("/api/inventory/bulk-adjust", input);
   return response;
 }
 

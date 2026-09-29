@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   MapPin,
   CreditCard,
@@ -13,12 +14,16 @@ import {
   Phone,
   Mail,
   ShieldCheck,
+  Copy,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatPrice } from "@/lib/utils";
 import { OrderItemsList } from "./OrderItemsList";
 import { OrderTotals } from "./OrderTotals";
 import type { OrderDetailResponse, OrderDetail } from "../types";
+import { LiveTrackingModal } from "./LiveTrackingModal";
 
 interface OrderDetailViewProps {
   order: OrderDetailResponse | OrderDetail;
@@ -76,6 +81,9 @@ export function OrderDetailView({
   isCancelling = false,
   canCancel = false,
 }: OrderDetailViewProps) {
+  const [awbCopied, setAwbCopied] = useState(false);
+  const [liveTrackingOpen, setLiveTrackingOpen] = useState(false);
+
   const shippingAddress =
     ("shippingAddress" in order ? order.shippingAddress : (order as any).address) ||
     null;
@@ -95,12 +103,12 @@ export function OrderDetailView({
 
   const formattedDate = order.createdAt
     ? new Date(order.createdAt).toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
     : "—";
 
   return (
@@ -131,11 +139,10 @@ export function OrderDetailView({
           {/* Payment Status Badge */}
           {paymentStatus && (
             <span
-              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-                paymentStatus.toLowerCase() === "paid"
-                  ? "bg-secondary-50 text-secondary-700 border-secondary-200"
-                  : "bg-primary-50 text-primary-700 border-primary-200"
-              }`}
+              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${paymentStatus.toLowerCase() === "paid"
+                ? "bg-secondary-50 text-secondary-700 border-secondary-200"
+                : "bg-primary-50 text-primary-700 border-primary-200"
+                }`}
             >
               {paymentStatus}
             </span>
@@ -176,7 +183,7 @@ export function OrderDetailView({
           </div>
 
           {/* 2. Three Info Cards: Customer, Address & Staff */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-1">
             {/* Customer Details */}
             {customer && (
               <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-2xs overflow-hidden">
@@ -250,56 +257,96 @@ export function OrderDetailView({
               </div>
             )}
 
-            {/* Assigned Delivery Staff */}
+            {/* Delivery Staff / Courier */}
             <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-2xs overflow-hidden">
-              <div className="bg-theme-surface-alt border-b border-theme-border-subtle px-4 py-3 flex items-center gap-2">
-                <Truck className="h-4 w-4 text-theme-secondary" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-primary">
-                  Assigned Staff
-                </h3>
+              <div className="bg-theme-surface-alt border-b border-theme-border-subtle px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-theme-secondary" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-primary">
+                    Courier Shipment
+                  </h3>
+                </div>
+                {delivery?.trackingNumber && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-secondary-100 text-secondary-800 px-2 py-0.5 rounded-full border border-secondary-200">
+                    Live Tracking
+                  </span>
+                )}
               </div>
-              <div className="p-4 text-xs space-y-2 text-theme-text-subtle">
-                {delivery?.staff ? (
+              <div className="p-4 text-xs space-y-3 text-theme-text-subtle">
+                {delivery?.trackingNumber ? (
                   <>
-                    <div className="flex items-center gap-2.5">
-                      <div className="grid h-8 w-8 place-items-center rounded-xl bg-theme-surface-alt border border-theme-border text-theme-primary text-xs font-bold shrink-0">
-                        {delivery.staff.name.charAt(0).toUpperCase()}
+                    <div>
+                      <div className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider mb-1">
+                        Courier Partner
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-theme-text-primary truncate">
-                          {delivery.staff.name}
-                        </p>
-                        {delivery.assignmentStatus && (
-                          <span className="inline-block text-[10px] font-bold text-primary-700 bg-primary-50 px-1.5 py-0.5 rounded capitalize">
-                            {delivery.assignmentStatus.replace(/_/g, " ")}
-                          </span>
-                        )}
+                      <div className="font-bold text-sm text-theme-text-primary">
+                        {delivery.deliveryPartner?.name || "ST Courier"}
+                      </div>
+                      {delivery.deliveryPartner?.contactNumber && (
+                        <div className="text-[11px] text-theme-text-muted mt-0.5">
+                          Helpline: {delivery.deliveryPartner.contactNumber}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-3 bg-theme-surface-alt rounded-xl border border-theme-border-subtle space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider">
+                          AWB / Consignment No
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (delivery.trackingNumber) {
+                              navigator.clipboard.writeText(delivery.trackingNumber);
+                              setAwbCopied(true);
+                              setTimeout(() => setAwbCopied(false), 2000);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary-600 hover:text-secondary-800 cursor-pointer"
+                        >
+                          {awbCopied ? (
+                            <>
+                              <Check className="h-3 w-3 text-secondary-600" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3" />
+                              Copy
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <div className="font-mono text-sm font-bold text-neutral-900 tracking-wider">
+                        {delivery.trackingNumber}
+                      </div>
+
+                      <div className="pt-1 flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => setLiveTrackingOpen(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-600 hover:bg-secondary-700 text-white font-semibold text-xs transition-colors cursor-pointer"
+                        >
+                          <Truck className="h-3.5 w-3.5" />
+                          <span>Live Tracking Timeline</span>
+                        </button>
                       </div>
                     </div>
-                    {delivery.staff.phone && (
-                      <p className="flex items-center gap-1.5 text-xs text-theme-text-muted">
-                        <Phone className="h-3 w-3 shrink-0" />
-                        <span className="font-mono">{delivery.staff.phone}</span>
-                      </p>
-                    )}
-                    {delivery.staff.email && (
-                      <p className="text-xs truncate text-theme-text-muted">
-                        {delivery.staff.email}
-                      </p>
-                    )}
-                    {delivery.assignedAt && (
-                      <p className="text-[11px] text-theme-text-muted pt-1">
-                        Assigned on {formatDateTime(delivery.assignedAt)}
-                      </p>
+
+                    {delivery.shippedAt && (
+                      <div className="text-[11px] text-theme-text-muted">
+                        Shipped on {formatDateTime(delivery.shippedAt)}
+                      </div>
                     )}
                   </>
                 ) : (
                   <div className="py-2">
                     <span className="inline-flex items-center gap-1 text-[11px] font-bold text-theme-text-muted bg-theme-surface-alt px-2.5 py-0.5 rounded-full border border-theme-border">
-                      Unassigned
+                      Pending Dispatch
                     </span>
                     <p className="text-xs text-theme-text-muted mt-2">
-                      No delivery staff assigned yet. Kitchen is packaging your order.
+                      Order will be dispatched via ST Courier once packed.
                     </p>
                   </div>
                 )}
@@ -325,45 +372,7 @@ export function OrderDetailView({
           )}
 
           {/* Status History Timeline */}
-          {statusHistory.length > 0 && (
-            <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-2xs overflow-hidden">
-              <div className="bg-theme-surface-alt border-b border-theme-border-subtle px-5 py-3.5 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-theme-secondary" />
-                <h3 className="text-sm font-bold text-theme-text-primary">
-                  Order Timeline & Updates
-                </h3>
-              </div>
-              <div className="p-5 space-y-3 divide-y divide-theme-border-subtle">
-                {statusHistory.map((item, idx) => {
-                  const itemStatusMeta = getStatusBadgeMeta(item.status);
-                  return (
-                    <div
-                      key={item.id || idx}
-                      className="flex items-start gap-3 pt-3 first:pt-0 text-xs"
-                    >
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${itemStatusMeta.bg}`}
-                      >
-                        <span className={`h-1.5 w-1.5 rounded-full ${itemStatusMeta.dot}`} />
-                        {item.status.replace(/_/g, " ")}
-                      </span>
 
-                      <div className="flex-1 min-w-0">
-                        {item.note && (
-                          <p className="text-theme-text-primary font-medium">
-                            {item.note}
-                          </p>
-                        )}
-                        <p className="text-[11px] text-theme-text-muted mt-0.5">
-                          {formatDateTime(item.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Sidebar: Order Totals Summary (Sticky) */}
@@ -389,6 +398,16 @@ export function OrderDetailView({
           </div>
         </div>
       </div>
+
+      {delivery?.trackingNumber && (
+        <LiveTrackingModal
+          open={liveTrackingOpen}
+          onClose={() => setLiveTrackingOpen(false)}
+          awb={delivery.trackingNumber}
+          courierName={delivery.deliveryPartner?.name || "Courier"}
+          orderNumber={order.orderNumber}
+        />
+      )}
     </div>
   );
 }

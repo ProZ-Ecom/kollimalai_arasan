@@ -41,6 +41,7 @@ interface DataTableProps<TData, TValue> {
   totalItems?: number;
   onPageChange?: (page: number) => void;
   className?: string;
+  tableClassName?: string;
   emptyMessage?: string;
   enableSelection?: boolean;
   selectedRowIds?: Record<string, boolean>;
@@ -125,6 +126,7 @@ function DataTable<TData, TValue>({
   totalItems,
   onPageChange,
   className,
+  tableClassName,
   emptyMessage = "No results found.",
   enableSelection = true,
   selectedRowIds,
@@ -264,12 +266,12 @@ function DataTable<TData, TValue>({
   return (
     <div
       className={cn(
-        "w-full flex-1 flex flex-col justify-between rounded-2xl overflow-hidden min-h-[380px] border border-neutral-200",
+        "w-full flex-1 min-h-0 flex flex-col justify-between rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-2xs",
         className
       )}
     >
       {searchKey && (
-        <div className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5 bg-white border-b border-neutral-200/80 flex-shrink-0">
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5 bg-white border-b border-neutral-200/80 flex-shrink-0 rounded-t-2xl">
           <SearchInput
             placeholder={searchPlaceholder}
             defaultValue={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
@@ -283,125 +285,123 @@ function DataTable<TData, TValue>({
         </div>
       )}
 
-      <div className="min-h-[240px] flex-1 overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-x-auto overflow-y-auto overscroll-x-contain">
-          <table className="w-full min-w-[720px] table-auto caption-bottom text-sm border-separate border-spacing-0">
-            <thead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="transition-colors">
-                  {headerGroup.headers.map((header) => {
-                    const isActions =
-                      header.column.id.toLowerCase() === "actions" ||
-                      header.id.toLowerCase() === "actions";
-                    const isSelect =
-                      header.column.id.toLowerCase() === "select" ||
-                      header.id.toLowerCase() === "select";
-                    return (
-                      <th
-                        key={header.id}
+      <div className="relative w-full flex-1 min-h-0 overflow-auto overscroll-contain scrollbar-thin">
+        <table className={cn("w-full min-w-[1000px] table-auto caption-bottom text-sm border-separate border-spacing-0", tableClassName)}>
+          <thead className="sticky top-0 z-30">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id} className="transition-colors">
+                {headerGroup.headers.map((header) => {
+                  const isActions =
+                    header.column.id.toLowerCase() === "actions" ||
+                    header.id.toLowerCase() === "actions";
+                  const isSelect =
+                    header.column.id.toLowerCase() === "select" ||
+                    header.id.toLowerCase() === "select";
+                  return (
+                    <th
+                      key={header.id}
+                      className={cn(
+                        "h-14 px-4 text-left align-middle text-xs font-bold tracking-wider whitespace-nowrap text-white uppercase sm:px-5 bg-[var(--color-secondary-600)] border-b border-[var(--color-secondary-700)] sticky top-0 z-30 first:rounded-tl-2xl last:rounded-tr-2xl",
+                        isSelect &&
+                        "w-12 px-3 sm:px-4 text-center sticky top-0 left-0 z-40 bg-[var(--color-secondary-600)] border-r border-[var(--color-secondary-700)] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)]",
+                        isActions &&
+                        "text-center sticky top-0 right-0 z-40 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.15)] border-l border-[var(--color-secondary-700)] bg-[var(--color-secondary-600)] text-white",
+                        header.column.getCanSort() &&
+                        "cursor-pointer select-none hover:text-white/80"
+                      )}
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      <div
                         className={cn(
-                          "h-14 px-4 text-left align-middle text-xs font-bold tracking-wider whitespace-nowrap text-white uppercase sm:px-5 bg-[var(--color-secondary-600)] border-b border-[var(--color-secondary-700)] sticky top-0 z-10",
-                          isSelect &&
-                          "w-12 px-3 sm:px-4 text-center sticky top-0 left-0 z-30 bg-[var(--color-secondary-600)] border-r border-[var(--color-secondary-700)] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)]",
-                          isActions &&
-                          "text-center sticky top-0 right-0 z-30 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.15)] border-l border-[var(--color-secondary-700)] bg-[var(--color-secondary-600)] text-white",
-                          header.column.getCanSort() &&
-                          "cursor-pointer select-none hover:text-white/80"
+                          "flex items-center gap-1 text-white",
+                          isActions || isSelect ? "justify-center" : ""
                         )}
-                        onClick={header.column.getToggleSortingHandler()}
                       >
-                        <div
-                          className={cn(
-                            "flex items-center gap-1 text-white",
-                            isActions || isSelect ? "justify-center" : ""
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
                           )}
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
+                        {header.column.getCanSort() && (
+                          <span className="text-white/80">
+                            {header.column.getIsSorted() === "asc" ? (
+                              <ChevronUp className="h-4 w-4 text-white" />
+                            ) : header.column.getIsSorted() === "desc" ? (
+                              <ChevronDown className="h-4 w-4 text-white" />
+                            ) : (
+                              <ChevronsUpDown className="h-4 w-4 text-white/70" />
                             )}
-                          {header.column.getCanSort() && (
-                            <span className="text-white/80">
-                              {header.column.getIsSorted() === "asc" ? (
-                                <ChevronUp className="h-4 w-4 text-white" />
-                              ) : header.column.getIsSorted() === "desc" ? (
-                                <ChevronDown className="h-4 w-4 text-white" />
-                              ) : (
-                                <ChevronsUpDown className="h-4 w-4 text-white/70" />
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      </th>
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <tr
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                  className={cn(
+                    "group transition-colors hover:bg-[var(--color-neutral-50)]",
+                    row.getIsSelected() && "bg-secondary-50/40 hover:bg-secondary-50/60"
+                  )}
+                >
+                  {row.getVisibleCells().map((cell) => {
+                    const isActions =
+                      cell.column.id.toLowerCase() === "actions" ||
+                      cell.id.toLowerCase().includes("actions");
+                    const isSelect =
+                      cell.column.id.toLowerCase() === "select" ||
+                      cell.id.toLowerCase() === "select";
+                    return (
+                      <td
+                        key={cell.id}
+                        className={cn(
+                          "px-4 py-4 align-middle whitespace-nowrap sm:px-5 bg-white group-hover:bg-[var(--color-neutral-50)] transition-colors border-b border-gray-200",
+                          row.getIsSelected() &&
+                          "bg-secondary-50/40 group-hover:bg-secondary-50/60",
+                          isSelect &&
+                          "w-12 px-3 sm:px-4 text-center [&>div]:justify-center [&>div]:items-center sticky left-0 z-10 bg-white group-hover:bg-[var(--color-neutral-50)] border-r border-neutral-200/80 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.04)]",
+                          isSelect &&
+                          row.getIsSelected() &&
+                          "bg-secondary-50/80 group-hover:bg-secondary-50/90",
+                          isActions &&
+                          "text-center [&>div]:justify-center [&>div]:items-center sticky right-0 z-10 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.06)] border-l border-neutral-200/80 bg-white group-hover:bg-[var(--color-neutral-50)]",
+                          isActions &&
+                          row.getIsSelected() &&
+                          "bg-secondary-50/80 group-hover:bg-secondary-50/90"
+                        )}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
                     );
                   })}
                 </tr>
-              ))}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                    className={cn(
-                      "group transition-colors hover:bg-[var(--color-neutral-50)]",
-                      row.getIsSelected() && "bg-secondary-50/40 hover:bg-secondary-50/60"
-                    )}
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const isActions =
-                        cell.column.id.toLowerCase() === "actions" ||
-                        cell.id.toLowerCase().includes("actions");
-                      const isSelect =
-                        cell.column.id.toLowerCase() === "select" ||
-                        cell.id.toLowerCase() === "select";
-                      return (
-                        <td
-                          key={cell.id}
-                          className={cn(
-                            "px-4 py-4 align-middle whitespace-nowrap sm:px-5 bg-white group-hover:bg-[var(--color-neutral-50)] transition-colors border-b border-gray-200",
-                            row.getIsSelected() &&
-                            "bg-secondary-50/40 group-hover:bg-secondary-50/60",
-                            isSelect &&
-                            "w-12 px-3 sm:px-4 text-center [&>div]:justify-center [&>div]:items-center sticky left-0 z-20 bg-white group-hover:bg-[var(--color-neutral-50)] border-r border-neutral-200/80 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.04)]",
-                            isSelect &&
-                            row.getIsSelected() &&
-                            "bg-secondary-50/80 group-hover:bg-secondary-50/90",
-                            isActions &&
-                            "text-center [&>div]:justify-center [&>div]:items-center sticky right-0 z-20 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.06)] border-l border-neutral-200/80 bg-white group-hover:bg-[var(--color-neutral-50)]",
-                            isActions &&
-                            row.getIsSelected() &&
-                            "bg-secondary-50/80 group-hover:bg-secondary-50/90"
-                          )}
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={effectiveColumns.length}
-                    className="h-24 text-center text-gray-500 bg-white border-b border-gray-200"
-                  >
-                    {emptyMessage}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={effectiveColumns.length}
+                  className="h-24 text-center text-gray-500 bg-white border-b border-gray-200"
+                >
+                  {emptyMessage}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-5 py-2.5 flex-shrink-0 border-t border-neutral-200/80 bg-white">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-5 py-2.5 flex-shrink-0 border-t border-neutral-200/80 bg-white rounded-b-2xl">
         <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-sm text-[var(--color-neutral-500)]">
           <p>
             Showing {startEntry}–{endEntry} of {computedTotalItems} entries

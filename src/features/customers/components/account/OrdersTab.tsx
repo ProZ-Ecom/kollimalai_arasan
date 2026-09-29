@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Check, Package, X } from "lucide-react";
+import { Check, Package, X, Copy, ExternalLink, Truck } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { OrderDetailResponse } from "@/features/orders/types";
 import { useCustomerOrders, useCancelCustomerOrder } from "../../hooks/use-customer-orders";
@@ -10,6 +10,7 @@ import { useAddToCartMutation } from "../../hooks/use-customer-cart";
 import { CustomDropdown, type DropdownOption } from "./CustomDropdown";
 import { SearchInput } from "@/components/common/search-input";
 import { ProductImage } from "@/components/common/ProductImage";
+import { LiveTrackingModal } from "@/features/orders/components/LiveTrackingModal";
 
 const STATUS_OPTIONS: DropdownOption[] = [
   { value: "all", label: "All Orders" },
@@ -40,8 +41,21 @@ export function OrdersTab({
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [trackingOrder, setTrackingOrder] = useState<OrderDetailResponse | null>(null);
+  const [copiedAwb, setCopiedAwb] = useState<string | null>(null);
   const [reorderingId, setReorderingId] = useState<string | null>(null);
   const [reorderSuccessId, setReorderSuccessId] = useState<string | null>(null);
+  const [liveTrackingModal, setLiveTrackingModal] = useState<{
+    open: boolean;
+    awb: string;
+    courierName?: string;
+    orderNumber?: string;
+  }>({ open: false, awb: "" });
+
+  const handleCopyAwb = (awb: string) => {
+    navigator.clipboard.writeText(awb);
+    setCopiedAwb(awb);
+    setTimeout(() => setCopiedAwb(null), 2500);
+  };
 
   const cancelMutation = useCancelCustomerOrder();
   const addToCartMutation = useAddToCartMutation();
@@ -401,7 +415,18 @@ export function OrdersTab({
                   {isOngoing ? (
                     <button
                       type="button"
-                      onClick={() => setTrackingOrder(order)}
+                      onClick={() => {
+                        if (order.delivery?.trackingNumber) {
+                          setLiveTrackingModal({
+                            open: true,
+                            awb: order.delivery.trackingNumber,
+                            courierName: order.delivery.deliveryPartner?.name || "ST Courier",
+                            orderNumber: order.orderNumber,
+                          });
+                        } else {
+                          setTrackingOrder(order);
+                        }
+                      }}
                       className="bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-fg text-xs font-semibold uppercase tracking-wider py-2.5 px-4 rounded-lg transition-colors cursor-pointer min-h-[40px]"
                     >
                       Track Order
@@ -690,6 +715,17 @@ export function OrdersTab({
           </div>
         </div>
       )}
+
+      {/* In-App Live Tracking Modal */}
+      <LiveTrackingModal
+        open={liveTrackingModal.open}
+        onClose={() =>
+          setLiveTrackingModal((prev) => ({ ...prev, open: false }))
+        }
+        awb={liveTrackingModal.awb}
+        courierName={liveTrackingModal.courierName}
+        orderNumber={liveTrackingModal.orderNumber}
+      />
     </div>
   );
 }
