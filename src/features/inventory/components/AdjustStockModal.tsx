@@ -158,7 +158,7 @@ export function AdjustStockModal({
     >
       {item && (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Item Preview Card */}
+
           <div className="flex items-center gap-3.5 p-3.5 bg-cream-50/70 border border-cream-border rounded-xl">
             <div className="w-12 h-12 rounded-lg bg-cream-100 border border-cream-border flex items-center justify-center overflow-hidden shrink-0 relative">
               {item.imageUrl ? (
@@ -239,11 +239,10 @@ export function AdjustStockModal({
                   key={preset.label}
                   type="button"
                   onClick={() => setReorderLevel(preset.val)}
-                  className={`px-2 py-1 text-xs font-bold font-mono rounded-lg border transition-all cursor-pointer ${
-                    reorderLevel === preset.val
+                  className={`px-2 py-1 text-xs font-bold font-mono rounded-lg border transition-all cursor-pointer ${reorderLevel === preset.val
                       ? "bg-amber-600 text-white border-amber-700 shadow-xs"
                       : "bg-white text-neutral-700 border-amber-200 hover:border-amber-400 hover:bg-amber-50"
-                  }`}
+                    }`}
                 >
                   {preset.label}
                 </button>
@@ -303,11 +302,10 @@ export function AdjustStockModal({
               <button
                 type="button"
                 onClick={() => setMode("delta")}
-                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  mode === "delta"
+                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === "delta"
                     ? "bg-white text-secondary-800 shadow-2xs border border-cream-border/70"
                     : "text-neutral-600 hover:text-neutral-900"
-                }`}
+                  }`}
               >
                 +/- Add or Deduct Quantity
               </button>
@@ -317,11 +315,10 @@ export function AdjustStockModal({
                   setMode("target");
                   setTargetQty(currentAvailable);
                 }}
-                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  mode === "target"
+                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === "target"
                     ? "bg-white text-secondary-800 shadow-2xs border border-cream-border/70"
                     : "text-neutral-600 hover:text-neutral-900"
-                }`}
+                  }`}
               >
                 Set Exact Total Stock (e.g. 30, 20, 0)
               </button>
@@ -415,13 +412,12 @@ export function AdjustStockModal({
                       key={num}
                       type="button"
                       onClick={() => setTargetQty(num)}
-                      className={`px-2 py-0.5 text-xs font-mono font-bold rounded-md border cursor-pointer transition-all ${
-                        targetQty === num
+                      className={`px-2 py-0.5 text-xs font-mono font-bold rounded-md border cursor-pointer transition-all ${targetQty === num
                           ? "bg-secondary-600 text-white border-secondary-600"
                           : num === 0
-                          ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
-                          : "bg-white text-neutral-700 border-cream-border hover:bg-cream-50"
-                      }`}
+                            ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                            : "bg-white text-neutral-700 border-cream-border hover:bg-cream-50"
+                        }`}
                     >
                       {num === 0 ? "0 (Out of Stock)" : num}
                     </button>
@@ -435,11 +431,10 @@ export function AdjustStockModal({
 
             {/* Live Balance Preview Banner */}
             <div
-              className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
-                isNegativeStock
+              className={`p-3 rounded-xl border flex items-center justify-between text-xs ${isNegativeStock
                   ? "bg-rose-50 border-rose-200 text-rose-800"
                   : "bg-secondary-50/70 border-secondary-200 text-secondary-900"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2">
                 {isNegativeStock ? (
