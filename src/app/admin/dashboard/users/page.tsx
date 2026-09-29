@@ -33,6 +33,15 @@ import type { UserListItem } from "@/features/users/types";
 
 type ModalMode = "create" | "edit" | "resetPassword" | null;
 
+interface UserFormValues {
+  name: string;
+  email: string;
+  password?: string;
+  phone?: string;
+  roleId?: number;
+  status: "active" | "inactive" | "banned";
+}
+
 export default function AdminUsersPage() {
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedUser, setSelectedUser] = useState<UserListItem | null>(null);
@@ -53,8 +62,8 @@ export default function AdminUsersPage() {
     watch,
     setValue,
     formState: { errors },
-  } = useForm<CreateUserSchemaInput | UpdateUserSchemaInput>({
-    resolver: zodResolver(modalMode === "edit" ? updateUserSchema : createUserSchema),
+  } = useForm<UserFormValues>({
+    resolver: zodResolver(modalMode === "edit" ? updateUserSchema : createUserSchema) as any,
     defaultValues: {
       name: "",
       email: "",
@@ -97,7 +106,7 @@ export default function AdminUsersPage() {
     }
   }, [modalMode, selectedUser, reset]);
 
-  const onSubmit = (formData: CreateUserSchemaInput) => {
+  const onSubmit = (formData: any) => {
     if (modalMode === "edit" && selectedUser) {
       const { password: _, ...updateData } = formData;
       updateMutation.mutate(
@@ -256,11 +265,12 @@ export default function AdminUsersPage() {
           </Button>
         }
       />
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <AdminContent className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           <DataTable
             columns={columns}
             data={users}
+            tableClassName="min-w-[1050px]"
             searchKey="name"
             searchPlaceholder="Search users..."
             pageSize={20}

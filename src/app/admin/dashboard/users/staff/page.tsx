@@ -282,8 +282,8 @@ export default function AdminStaffPage() {
       </div>
 
       {/* Main Content: Fixed viewport height with scrolling table records */}
-      <AdminContent className="flex-1 min-h-0 overflow-hidden mt-4">
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col rounded-2xl border border-neutral-200 bg-white shadow-xs">
+      <AdminContent className="flex-1 min-h-0 flex flex-col mt-4">
+        <div className="flex-1 min-h-0 flex flex-col">
           {isLoading && !data ? (
             <div className="flex-1 flex items-center justify-center p-12">
               <AdminTableSkeleton />
@@ -300,6 +300,7 @@ export default function AdminStaffPage() {
             <DataTable
               columns={columns}
               data={staffList}
+              tableClassName="min-w-[1150px]"
               page={page}
               pageSize={pageSize}
               pageSizeOptions={[10, 20, 30, 50]}
@@ -310,7 +311,7 @@ export default function AdminStaffPage() {
                 setPageSize(newSize);
                 setPage(1);
               }}
-              className="bg-white border-0"
+              className="bg-white border border-neutral-200"
               emptyMessage={
                 search.trim() || statusFilter !== "all"
                   ? "No staff members matched your filter criteria."

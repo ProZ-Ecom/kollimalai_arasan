@@ -37,16 +37,21 @@ const FormRadio = React.forwardRef<HTMLInputElement, FormRadioProps>(
           <label
             htmlFor={id}
             className={cn(
-              "flex h-5 w-5 items-center justify-center rounded-full border-2 border-gray-300",
-              "bg-white transition-colors duration-200",
-              "peer-checked:border-primary peer-checked:bg-primary",
-              "peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30",
+              "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 bg-white transition-all duration-200 cursor-pointer",
+              checked ? "border-secondary-600" : "border-neutral-300",
+              "peer-checked:border-secondary-600 peer-checked:[&>span]:scale-100",
+              "peer-focus-visible:ring-2 peer-focus-visible:ring-secondary-600/30",
               "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
               error && "border-error-600",
               className
             )}
           >
-            {checked && <span className="h-2 w-2 rounded-full bg-white" />}
+            <span
+              className={cn(
+                "h-2.5 w-2.5 rounded-full bg-secondary-600 transition-transform duration-200",
+                checked ? "scale-100" : "scale-0"
+              )}
+            />
           </label>
         </div>
         <div className="flex flex-col">

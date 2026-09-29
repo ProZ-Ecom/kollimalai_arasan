@@ -8,6 +8,7 @@ import {
   getInventoryStats,
   getInventoryItem,
   adjustStock,
+  bulkAdjustStock,
   createInventory,
   getLowStock,
   getTransactions,
@@ -17,6 +18,7 @@ import type {
   GetInventoryParams,
   AdjustStockInput,
   CreateInventoryInput,
+  BulkAdjustStockInput,
 } from "../types";
 
 export const inventoryKeys = {
@@ -61,6 +63,21 @@ export function useAdjustStock() {
     mutationFn: (input: AdjustStockInput) => adjustStock(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["variants"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useBulkAdjustStock() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: BulkAdjustStockInput) => bulkAdjustStock(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["variants"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     },
   });
 }

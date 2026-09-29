@@ -7,6 +7,7 @@ import type {
   InventoryListItem,
   InventoryTransactionItem,
   InventoryStats,
+  BulkAdjustStockInput,
 } from "../types";
 
 export async function getInventory(params: GetInventoryParams) {
@@ -37,11 +38,28 @@ export async function getInventoryItem(id: string | number) {
   return response;
 }
 
+export async function getInventoryByUnitPrice(unitPriceUuid: string) {
+  const response = await apiClient.get<InventoryListItem>(
+    `/api/inventory/by-unit-price?unitPriceUuid=${unitPriceUuid}`
+  );
+  return response.data;
+}
+
 export async function adjustStock(input: AdjustStockInput) {
   const response = await apiClient.post(
     "/api/inventory/adjust",
     input
   );
+  return response;
+}
+
+export async function bulkAdjustStock(input: BulkAdjustStockInput) {
+  const response = await apiClient.post<{
+    updatedCount: number;
+    totalRequested: number;
+    results: any[];
+    errors?: any[];
+  }>("/api/inventory/bulk-adjust", input);
   return response;
 }
 

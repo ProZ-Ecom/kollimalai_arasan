@@ -440,6 +440,7 @@ export function AdminReviewListTable({
           <DataTable
             columns={columns}
             data={reviews}
+            tableClassName="min-w-[1150px]"
             page={meta?.page ?? page}
             pageSize={meta?.limit ?? pageSize}
             totalItems={meta?.total ?? reviews.length}

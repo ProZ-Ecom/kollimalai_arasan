@@ -29,6 +29,7 @@ export function useCreateOffer() {
   return useMutation({
     mutationFn: (data: SaveOfferInput | Record<string, unknown>) => createOffer(data),
     onSuccess: () => invalidate(),
+    meta: { skipToast: true },
   });
 }
 
@@ -43,6 +44,7 @@ export function useUpdateOffer() {
       data: UpdateOfferInput | Record<string, unknown>;
     }) => updateOffer(id, data),
     onSuccess: (_result, variables) => invalidate(variables.id),
+    meta: { skipToast: true },
   });
 }
 
@@ -52,6 +54,7 @@ export function useToggleOfferStatus() {
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       updateOfferStatus(id, isActive),
     onSuccess: (_result, variables) => invalidate(variables.id),
+    meta: { skipToast: true },
   });
 }
 
@@ -60,5 +63,6 @@ export function useDeleteOffer() {
   return useMutation({
     mutationFn: (id: string) => deleteOffer(id),
     onSuccess: () => invalidate(),
+    meta: { skipToast: true },
   });
 }

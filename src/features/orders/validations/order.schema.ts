@@ -125,17 +125,20 @@ export type AdminOrdersListInput = z.infer<typeof adminOrdersListSchema>;
 
 export const cancelOrderSchema = z
   .object({
-    note: z.string().max(255, "Note cannot exceed 255 characters").optional(),
+    reason: z.string().max(500, "Reason cannot exceed 500 characters").optional(),
+    note: z.string().max(500, "Note cannot exceed 500 characters").optional(),
   })
-  .strict();
+  .passthrough();
 
 export type CancelOrderInput = z.infer<typeof cancelOrderSchema>;
 
 export const returnOrderSchema = z
   .object({
-    note: z.string().max(255, "Note cannot exceed 255 characters").optional(),
+    reason: z.string().max(500, "Reason cannot exceed 500 characters").optional(),
+    note: z.string().max(500, "Note cannot exceed 500 characters").optional(),
+    amount: z.coerce.number().positive("Refund amount must be greater than 0").optional(),
   })
-  .strict();
+  .passthrough();
 
 export type ReturnOrderInput = z.infer<typeof returnOrderSchema>;
 
@@ -187,3 +190,14 @@ export const checkoutSummarySchema = z
   .passthrough();
 
 export type CheckoutSummarySchemaInput = z.infer<typeof checkoutSummarySchema>;
+
+export const shipOrderCourierSchema = z
+  .object({
+    deliveryPartnerId: z.union([z.string(), z.number()]),
+    trackingNumber: z.string().trim().min(3, "Tracking / AWB number is required").max(100),
+    notes: z.string().max(500).optional(),
+  })
+  .strict();
+
+export type ShipOrderCourierInput = z.infer<typeof shipOrderCourierSchema>;
+

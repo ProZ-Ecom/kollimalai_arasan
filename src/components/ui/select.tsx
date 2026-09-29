@@ -167,7 +167,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 
     return (
       <div
-        className={cn("w-full relative", isOpen && "z-30", wrapperClassName)}
+        className={cn("w-full relative", wrapperClassName, isOpen && "z-[60]")}
         ref={containerRef}
         onKeyDown={handleKeyDown}
       >
@@ -255,7 +255,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {isOpen && (
           <div
             className={cn(
-              "absolute left-0 right-0 z-[60] overflow-hidden rounded-xl border border-theme-border bg-theme-surface shadow-lg animate-in zoom-in-95 duration-150 min-w-[140px]",
+              "absolute left-0 right-0 z-[100] overflow-hidden rounded-xl border border-theme-border bg-theme-surface shadow-2xl animate-in zoom-in-95 duration-150 min-w-[140px]",
               dropdownPosition === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5",
               contentClassName
             )}

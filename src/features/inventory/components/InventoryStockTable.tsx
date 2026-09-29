@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  MapPin,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,12 +17,18 @@ interface InventoryStockTableProps {
   items: InventoryListItem[];
   onAdjustStock: (item: InventoryListItem) => void;
   onViewHistory: (item: InventoryListItem) => void;
+  selectedIds?: number[];
+  onToggleSelect?: (id: number) => void;
+  onToggleSelectAll?: () => void;
 }
 
 export function InventoryStockTable({
   items,
   onAdjustStock,
   onViewHistory,
+  selectedIds = [],
+  onToggleSelect,
+  onToggleSelectAll,
 }: InventoryStockTableProps) {
   if (items.length === 0) {
     return (
@@ -41,19 +46,34 @@ export function InventoryStockTable({
     );
   }
 
+  const allSelected = items.length > 0 && items.every((i) => selectedIds.includes(i.id));
+  const someSelected = items.some((i) => selectedIds.includes(i.id)) && !allSelected;
+
   return (
     <div className="bg-white rounded-2xl border border-cream-border shadow-xs overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="border-b border-cream-border bg-neutral-50/60 text-neutral-500 font-semibold tracking-tight">
+              {/* Checkbox Select All */}
+              <th className="py-3 px-3 w-10 text-center">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected;
+                  }}
+                  onChange={onToggleSelectAll}
+                  aria-label="Select all on this page"
+                  className="h-4 w-4 rounded border-neutral-300 text-secondary-600 focus:ring-secondary-500 cursor-pointer accent-secondary-600"
+                />
+              </th>
               <th className="py-3 px-4 sm:px-5">Product & Variant</th>
               <th className="py-3 px-4">SKU</th>
               <th className="py-3 px-4 text-center">Stock Health</th>
               <th className="py-3 px-4 text-right">Available</th>
               <th className="py-3 px-4 text-right">Reserved</th>
               <th className="py-3 px-4 text-center">Status</th>
-              <th className="py-3 px-4">Location</th>
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
@@ -71,11 +91,29 @@ export function InventoryStockTable({
                 Math.round((item.availableQuantity / targetThreshold) * 100)
               );
 
+              const isSelected = selectedIds.includes(item.id);
+
               return (
                 <tr
                   key={item.id}
-                  className="hover:bg-cream-50/40 transition-colors group"
+                  className={`hover:bg-cream-50/40 transition-colors group ${
+                    isSelected ? "bg-secondary-50/30" : ""
+                  }`}
                 >
+                  {/* Row Checkbox */}
+                  <td
+                    className="py-3.5 px-3 w-10 text-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => onToggleSelect?.(item.id)}
+                      aria-label={`Select ${item.productName}`}
+                      className="h-4 w-4 rounded border-neutral-300 text-secondary-600 focus:ring-secondary-500 cursor-pointer accent-secondary-600"
+                    />
+                  </td>
+
                   {/* Product + Variant */}
                   <td className="py-3.5 px-4 sm:px-5">
                     <div className="flex items-center gap-3">
@@ -97,6 +135,11 @@ export function InventoryStockTable({
                         <div className="font-bold text-neutral-900 truncate max-w-[200px] sm:max-w-[260px]">
                           {item.productName}
                         </div>
+                        {item.variantName && (
+                          <div className="text-xs font-semibold text-neutral-600 truncate max-w-[200px] sm:max-w-[260px] capitalize">
+                            {item.variantName}
+                          </div>
+                        )}
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="font-semibold text-secondary-700 bg-secondary-50 px-1.5 py-0.5 rounded text-[10px] border border-secondary-200">
                             {item.unitLabel}
@@ -123,16 +166,16 @@ export function InventoryStockTable({
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-[10px]">
                         <span className="text-neutral-400">Reorder at {effectiveReorder}</span>
-                        <span className="font-mono font-bold text-neutral-700">
+                        <span className={`font-mono font-bold ${isOutOfStock ? "text-rose-600" : "text-neutral-700"}`}>
                           {item.availableQuantity} units
                         </span>
                       </div>
                       <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
                         <div
-                          style={{ width: `${stockPercent}%` }}
+                          style={{ width: `${isOutOfStock ? 100 : stockPercent}%` }}
                           className={`h-full rounded-full transition-all duration-300 ${
                             isOutOfStock
-                              ? "bg-rose-500"
+                              ? "bg-[repeating-linear-gradient(135deg,#f43f5e,#f43f5e_4px,#fda4af_4px,#fda4af_8px)]"
                               : isLowStock
                               ? "bg-amber-500"
                               : "bg-emerald-500"
@@ -178,13 +221,14 @@ export function InventoryStockTable({
                   {/* Status Badge */}
                   <td className="py-3.5 px-4 text-center">
                     {isOutOfStock ? (
-                      <Badge
-                        variant="destructive"
-                        className="text-[10px] px-2 py-0.5 font-bold shadow-2xs"
-                      >
-                        <XCircle className="w-3 h-3 mr-1" />
-                        Out of Stock
-                      </Badge>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-300 shadow-2xs bg-[repeating-linear-gradient(135deg,rgba(244,63,94,0.08),rgba(244,63,94,0.08)_4px,transparent_4px,transparent_8px)] select-none">
+                        <span className="relative flex h-2 w-2 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600" />
+                        </span>
+                        <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        <span className="whitespace-nowrap font-extrabold tracking-wide">Out of Stock</span>
+                      </span>
                     ) : isLowStock ? (
                       <Badge className="bg-amber-100 text-amber-800 border border-amber-300 text-[10px] px-2 py-0.5 font-bold shadow-2xs hover:bg-amber-100">
                         <AlertTriangle className="w-3 h-3 mr-1 text-amber-600" />
@@ -195,18 +239,6 @@ export function InventoryStockTable({
                         <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" />
                         Healthy
                       </Badge>
-                    )}
-                  </td>
-
-                  {/* Warehouse Location */}
-                  <td className="py-3.5 px-4">
-                    {item.warehouseLocation ? (
-                      <div className="flex items-center gap-1 text-[11px] text-neutral-600 font-medium">
-                        <MapPin className="w-3 h-3 text-neutral-400 shrink-0" />
-                        <span>{item.warehouseLocation}</span>
-                      </div>
-                    ) : (
-                      <span className="text-neutral-400 font-mono text-xs">—</span>
                     )}
                   </td>
 

@@ -120,6 +120,9 @@ async function getStats(period: DashboardPeriod = "month") {
     recentOrdersRaw,
     lowStockRowsRaw,
     periodOrdersList,
+    categoriesListRaw,
+    razorpayPaymentsRaw,
+    allRefundsRaw,
   ] = await Promise.all([
     // Catalog counts
     db.product.count({ where: { deleted_at: null } }),
@@ -245,6 +248,32 @@ async function getStats(period: DashboardPeriod = "month") {
         order_status: true,
       },
       orderBy: { createdAt: "asc" },
+    }),
+
+    // Top categories for dashboard display
+    db.productCategory.findMany({
+      where: { deleted_at: null },
+      take: 4,
+      select: { name: true },
+      orderBy: { createdAt: "asc" },
+    }),
+
+    // All-time online Razorpay captured payments
+    db.payment.aggregate({
+      where: {
+        gateway: "RAZORPAY",
+        status: "success",
+        is_active: true,
+      },
+      _sum: { amount: true },
+    }),
+
+    // All-time completed refunds
+    db.refunds.aggregate({
+      where: {
+        status: "completed",
+      },
+      _sum: { amount: true },
     }),
   ]);
 
@@ -470,12 +499,29 @@ async function getStats(period: DashboardPeriod = "month") {
       ? Number(((cancelledCount / currentOrdersCount) * 100).toFixed(2))
       : 0;
 
+  const topCategoryNames =
+    categoriesListRaw.map((c) => c.name).join(", ") ||
+    "Sweets, Savouries & Millets";
+  const netRazorpaySettlement = Math.max(
+    0,
+    Number(razorpayPaymentsRaw._sum.amount ?? 0) -
+      Number(allRefundsRaw._sum.amount ?? 0)
+  );
+  const totalNonFailedOrders =
+    totalOrdersAllTime -
+    ((statusMap.cancelled || 0) + (statusMap.returned || 0));
+  const fulfillmentSuccessRate =
+    totalOrdersAllTime > 0
+      ? Math.round((totalNonFailedOrders / totalOrdersAllTime) * 100)
+      : 100;
+
   return apiSuccess({
     period,
     periodLabel,
     summary: {
       totalProducts,
       totalCategories,
+      topCategoryNames,
       totalCustomers,
       totalOrdersAllTime,
       totalRevenueAllTime: Number(allTimeRevenueResult._sum.totalAmount ?? 0),
@@ -484,7 +530,9 @@ async function getStats(period: DashboardPeriod = "month") {
       periodRevenue: grossSales,
       revenueTrend,
       netRealizedRevenue,
+      settlementFromRazorpay: netRazorpaySettlement,
       realizationRate,
+      fulfillmentSuccessRate,
       averageOrderValue,
       previousAverageOrderValue,
       aovDifference,

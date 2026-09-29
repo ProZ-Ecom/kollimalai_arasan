@@ -8,6 +8,7 @@ import type {
   CreateInventoryInput,
   InventoryTransactionItem,
   InventoryStats,
+  BulkAdjustStockInput,
 } from "../types";
 
 function mapToInventoryListItem(item: any): InventoryListItem {
@@ -71,6 +72,66 @@ export const inventoryService = {
       throw ApiError.notFound("Inventory item not found");
     }
     return mapToInventoryListItem(item);
+  },
+
+  async getOrCreateByUnitPriceUuid(unitPriceUuid: string): Promise<InventoryListItem> {
+    const vup = await db.variantUnitPrice.findFirst({
+      where: { uuid: unitPriceUuid, deleted_at: null },
+      include: {
+        variant: {
+          include: {
+            product: { select: { id: true, name: true, slug: true } },
+            product_variant_images: { where: { is_active: true }, take: 1 },
+          },
+        },
+        product_units: true,
+      },
+    });
+    if (!vup) throw ApiError.notFound("Pack size / unit price not found");
+
+    let inv = await db.inventory.findFirst({
+      where: { variantUnitPriceId: vup.id },
+      include: {
+        variant_unit_price: {
+          include: {
+            product_units: true,
+            variant: {
+              include: {
+                product: { select: { id: true, name: true, slug: true } },
+                product_variant_images: { where: { is_active: true }, take: 1 },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!inv) {
+      inv = await db.inventory.create({
+        data: {
+          variantUnitPriceId: vup.id,
+          quantity_available: 0,
+          quantity_reserved: 0,
+          reorderLevel: 5,
+          is_active: true,
+        },
+        include: {
+          variant_unit_price: {
+            include: {
+              product_units: true,
+              variant: {
+                include: {
+                  product: { select: { id: true, name: true, slug: true } },
+                  product_variant_images: { where: { is_active: true }, take: 1 },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    return mapToInventoryListItem(inv);
   },
 
   async getStats(): Promise<InventoryStats> {
@@ -228,6 +289,36 @@ export const inventoryService = {
         createdAt: txn ? txn.createdAt : new Date(),
       };
     });
+  },
+
+  async bulkAdjustStock(input: BulkAdjustStockInput) {
+    if (!input.inventoryIds || input.inventoryIds.length === 0) {
+      throw ApiError.badRequest("No inventory items selected");
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const invId of input.inventoryIds) {
+      try {
+        const res = await this.adjustStock({
+          inventoryId: invId,
+          type: input.type || "PURCHASE",
+          quantity: input.quantity,
+          notes: input.notes ? `BULK: ${input.notes}` : "Bulk restock",
+        });
+        results.push(res);
+      } catch (err: any) {
+        errors.push({ inventoryId: invId, error: err.message || "Failed to adjust stock" });
+      }
+    }
+
+    return {
+      updatedCount: results.length,
+      totalRequested: input.inventoryIds.length,
+      results,
+      errors: errors.length > 0 ? errors : undefined,
+    };
   },
 
   async createInventory(input: CreateInventoryInput) {
