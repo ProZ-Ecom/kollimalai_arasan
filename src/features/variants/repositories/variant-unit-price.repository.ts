@@ -185,6 +185,7 @@ export const variantUnitPriceRepository = {
             variantUnitPriceId: existing.id,
             quantity_available: stock,
             quantity_reserved: 0,
+            reorderLevel: 0,
             is_active: true,
             created_by: adminId ?? null,
             updated_by: adminId ?? null,
