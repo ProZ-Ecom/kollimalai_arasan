@@ -398,13 +398,12 @@ export function AdminOrderListTable({
                     ? "Update ST Courier Tracking"
                     : "Ship with ST Courier"
                 }
-                className={`grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
-                  orderStatus === "packed"
+                className={`grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer ${orderStatus === "packed"
                     ? "border-secondary-600 bg-secondary-600 text-white hover:bg-secondary-700 shadow-xs"
                     : row.original.delivery?.trackingNumber
-                    ? "border-secondary-300 bg-secondary-50 text-secondary-700 hover:bg-secondary-100"
-                    : "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                }`}
+                      ? "border-secondary-300 bg-secondary-50 text-secondary-700 hover:bg-secondary-100"
+                      : "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                  }`}
                 disabled={isTransitionPending}
               >
                 <Truck className="h-3.5 w-3.5" />
@@ -479,7 +478,7 @@ export function AdminOrderListTable({
   ];
 
   return (
-    <div className="w-full flex-1 min-h-0 flex flex-col rounded-2xl bg-transparent">
+    <div className="flex flex-1 min-h-0 min-w-0 flex flex-col bg-transparent">
       {/* Filter and Search Bar */}
       <div className="admin-surface flex-shrink-0 mb-4 flex flex-col gap-3 rounded-xl p-2.5 sm:flex-row sm:items-center sm:justify-between relative z-50">
         <div className="flex flex-1 items-center gap-3">
@@ -526,7 +525,7 @@ export function AdminOrderListTable({
       </div>
 
       {/* Table & Pagination Content */}
-      <div className="w-full flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col">
         {isLoading ? (
           <AdminTableSkeleton bare rows={8} columns={8} />
         ) : error ? (
@@ -539,7 +538,7 @@ export function AdminOrderListTable({
             columns={columns}
             data={orders}
             pageSize={pageSize}
-            pageSizeOptions={[10, 20, 30, 50]}
+            pageSizeOptions={[5, 10, 20, 50]}
             page={meta?.page ?? page}
             totalPages={
               meta?.totalPages ??
@@ -690,56 +689,56 @@ export function AdminOrderListTable({
 
                 {(currentDetailStatus === "shipped" ||
                   currentDetailStatus === "out_for_delivery") && (
-                  <Button
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                    onClick={() => {
-                      deliverOrder.mutate(
-                        {
-                          id: orderDetail.id,
-                          note: "Order marked as delivered by admin",
-                        },
-                        {
-                          onSuccess: () => {
-                            refetch();
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      onClick={() => {
+                        deliverOrder.mutate(
+                          {
+                            id: orderDetail.id,
+                            note: "Order marked as delivered by admin",
                           },
-                        }
-                      );
-                    }}
-                    disabled={isTransitionPending}
-                  >
-                    {deliverOrder.isPending ? (
-                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle className="mr-1.5 h-4 w-4" />
-                    )}
-                    Mark Delivered
-                  </Button>
-                )}
+                          {
+                            onSuccess: () => {
+                              refetch();
+                            },
+                          }
+                        );
+                      }}
+                      disabled={isTransitionPending}
+                    >
+                      {deliverOrder.isPending ? (
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="mr-1.5 h-4 w-4" />
+                      )}
+                      Mark Delivered
+                    </Button>
+                  )}
 
                 {/* Refund / Return Manual Action for Admin */}
                 {["delivered", "shipped", "out_for_delivery"].includes(
                   currentDetailStatus || ""
                 ) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-purple-700 border-purple-300 hover:bg-purple-50"
-                    onClick={() =>
-                      setReturnRefundOrder({
-                        id: orderDetail.id,
-                        orderNumber: orderDetail.orderNumber,
-                        totalAmount: Number(orderDetail.totalAmount),
-                        paymentStatus: orderDetail.paymentStatus,
-                        customerName: orderDetail.customer?.name,
-                      })
-                    }
-                    disabled={isTransitionPending}
-                  >
-                    <RotateCcw className="mr-1.5 h-4 w-4" />
-                    Process Return / Refund
-                  </Button>
-                )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                      onClick={() =>
+                        setReturnRefundOrder({
+                          id: orderDetail.id,
+                          orderNumber: orderDetail.orderNumber,
+                          totalAmount: Number(orderDetail.totalAmount),
+                          paymentStatus: orderDetail.paymentStatus,
+                          customerName: orderDetail.customer?.name,
+                        })
+                      }
+                      disabled={isTransitionPending}
+                    >
+                      <RotateCcw className="mr-1.5 h-4 w-4" />
+                      Process Return / Refund
+                    </Button>
+                  )}
 
                 <Button
                   variant="outline"

@@ -4,6 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { Section } from "./Section";
 import { ICONS } from "@/constants/storefront";
+import { CategorySection } from "./CategorySection";
 
 const PROMISES = [
   {
@@ -39,7 +40,12 @@ export function BrandPromise() {
         </span>
       </h2>
 
-      <div className="mt-9 sm:mt-12 grid grid-cols-1 sm:grid-cols-3 gap-9 sm:gap-6">
+      {/* Categories auto-scroll section */}
+      <div className="mt-8 sm:mt-12">
+        <CategorySection withoutSectionWrapper />
+      </div>
+
+      <div className="mt-12 sm:mt-16 grid grid-cols-1 sm:grid-cols-3 gap-9 sm:gap-6">
         {PROMISES.map(({ id, icon, title, description }) => (
           <div
             key={id}

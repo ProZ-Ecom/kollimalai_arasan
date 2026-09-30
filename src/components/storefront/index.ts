@@ -14,6 +14,7 @@ export * from "./cards/LowestPriceCard";
 export * from "./footer/FooterLinks";
 export * from "./HeroSlider";
 export * from "./BrandPromise";
+export * from "./CategorySection";
 
 
 export * from "./ProductSection";

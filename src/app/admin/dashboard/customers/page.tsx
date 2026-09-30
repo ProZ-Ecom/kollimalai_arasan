@@ -188,8 +188,8 @@ export default function AdminCustomersPage() {
                 {item.customerId
                   ? `ID: ${item.customerId}`
                   : item.id
-                  ? `ID: ${item.id.slice(0, 8)}...`
-                  : "-"}
+                    ? `ID: ${item.id.slice(0, 8)}...`
+                    : "-"}
               </p>
             </div>
           </Link>
@@ -388,7 +388,7 @@ export default function AdminCustomersPage() {
     statusTargetCustomer?.status === "inactive";
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
+    <div className="flex flex-1 flex-col space-y-4 sm:space-y-6">
       <AdminPageHeader
         title="Customers"
         description="View and manage registered customers who have logged in or registered through the store"
@@ -512,13 +512,13 @@ export default function AdminCustomersPage() {
       </div>
 
       {/* Data Table Container */}
-      <div className="flex-1 min-h-0 flex flex-col w-full">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col w-full">
         <DataTable
           columns={columns}
           data={customers}
           tableClassName="min-w-[1250px]"
           pageSize={pageSize}
-          pageSizeOptions={[10, 20, 30, 50]}
+          pageSizeOptions={[5, 10, 20, 50]}
           page={meta?.page ?? page}
           totalPages={
             meta?.totalPages ??
@@ -547,12 +547,10 @@ export default function AdminCustomersPage() {
         }
         description={
           isTargetBlocked
-            ? `Are you sure you want to unblock ${
-                statusTargetCustomer?.name || "this customer"
-              }? Their account will be reactivated, allowing them to sign in and place new orders.`
-            : `Are you sure you want to block ${
-                statusTargetCustomer?.name || "this customer"
-              }? This will deactivate their account and prevent them from signing in or placing new orders.`
+            ? `Are you sure you want to unblock ${statusTargetCustomer?.name || "this customer"
+            }? Their account will be reactivated, allowing them to sign in and place new orders.`
+            : `Are you sure you want to block ${statusTargetCustomer?.name || "this customer"
+            }? This will deactivate their account and prevent them from signing in or placing new orders.`
         }
         confirmText={
           isUpdatingStatus
@@ -560,8 +558,8 @@ export default function AdminCustomersPage() {
               ? "Unblocking..."
               : "Blocking..."
             : isTargetBlocked
-            ? "Unblock Customer"
-            : "Block Customer"
+              ? "Unblock Customer"
+              : "Block Customer"
         }
         cancelText="Cancel"
         variant={isTargetBlocked ? "default" : "destructive"}

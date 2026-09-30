@@ -51,7 +51,7 @@ export default function InventoryDashboardPage() {
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState<number>(1);
-  const pageSize = 12;
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // Selected item for single adjust modal
   const [adjustItem, setAdjustItem] = useState<InventoryListItem | null>(null);
@@ -235,7 +235,7 @@ export default function InventoryDashboardPage() {
         }
       />
 
-      <AdminContent className="space-y-6">
+      <AdminContent className="space-y-6 pb-24">
         {/* KPI Metric Cards */}
         <InventoryKpiCards
           stats={stats}
@@ -403,7 +403,7 @@ export default function InventoryDashboardPage() {
             onRetry={() => refetchInventory()}
           />
         ) : (
-          <div className="space-y-4">
+          <div className="w-full">
             <InventoryStockTable
               items={items}
               selectedIds={selectedIds}
@@ -411,40 +411,78 @@ export default function InventoryDashboardPage() {
               onToggleSelectAll={handleToggleSelectAll}
               onAdjustStock={handleOpenAdjust}
               onViewHistory={handleViewHistoryForItem}
-            />
+              footer={
+                meta ? (
+                  <div className="px-4 py-3 sm:px-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500">
+                    <div className="flex items-center gap-3.5 flex-wrap w-full sm:w-auto justify-between sm:justify-start">
+                      <span>
+                        Showing{" "}
+                        <strong className="text-neutral-800">
+                          {meta.total === 0 ? 0 : (meta.page - 1) * meta.limit + 1}
+                        </strong>{" "}
+                        to{" "}
+                        <strong className="text-neutral-800">
+                          {Math.min(meta.page * meta.limit, meta.total)}
+                        </strong>{" "}
+                        of <strong className="text-neutral-800">{meta.total}</strong> products
+                      </span>
 
-            {/* Pagination */}
-            {meta && meta.totalPages > 1 && (
-              <div className="px-4 py-3 bg-white rounded-2xl border border-cream-border shadow-xs flex items-center justify-between text-xs text-neutral-500">
-                <span>
-                  Showing page <strong className="text-neutral-800">{meta.page}</strong> of{" "}
-                  <strong className="text-neutral-800">{meta.totalPages}</strong> (
-                  {meta.total} total items)
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={meta.page <= 1}
-                    className="h-8 text-xs font-semibold"
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-                    disabled={meta.page >= meta.totalPages}
-                    className="h-8 text-xs font-semibold"
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
+                      {/* Rows per page selector chips */}
+                      <div className="flex items-center gap-2 pl-3 border-l border-cream-border/80">
+                        <span className="text-neutral-500 text-xs font-medium">Show:</span>
+                        <div className="flex items-center gap-1">
+                          {[5, 10, 20, 50].map((size) => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => {
+                                setPageSize(size);
+                                setPage(1);
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer font-mono ${
+                                pageSize === size
+                                  ? "bg-secondary-600 text-white shadow-2xs"
+                                  : "bg-neutral-50 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 border border-cream-border"
+                              }`}
+                            >
+                              {size}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Page Navigation */}
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                      <span className="text-xs text-neutral-500 mr-1 whitespace-nowrap">
+                        Page <strong className="text-neutral-800">{meta.page}</strong> of{" "}
+                        <strong className="text-neutral-800">{meta.totalPages || 1}</strong>
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={meta.page <= 1}
+                        className="h-8 px-3 text-xs font-semibold cursor-pointer"
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+                        disabled={meta.page >= meta.totalPages}
+                        className="h-8 px-3 text-xs font-semibold cursor-pointer"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                ) : null
+              }
+            />
           </div>
         )}
 

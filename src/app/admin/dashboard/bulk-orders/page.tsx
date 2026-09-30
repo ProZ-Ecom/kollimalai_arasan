@@ -219,7 +219,7 @@ export default function AdminBulkOrdersPage() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
+    <div className="flex flex-1 flex-col space-y-4 sm:space-y-6">
       <AdminPageHeader
         title="Bulk Order Enquiries"
         description="Review bulk order enquiries submitted via the storefront and track follow-up status"
@@ -299,13 +299,13 @@ export default function AdminBulkOrdersPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col w-full">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col w-full">
         <DataTable
           columns={columns}
           data={enquiries}
           tableClassName="min-w-[1150px]"
           pageSize={pageSize}
-          pageSizeOptions={[10, 20, 30, 50]}
+          pageSizeOptions={[5, 10, 20, 50]}
           page={meta?.page ?? page}
           totalPages={
             meta?.totalPages ??

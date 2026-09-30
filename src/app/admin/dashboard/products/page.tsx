@@ -292,14 +292,14 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex flex-1 min-h-0 min-w-0 flex-col">
       <AdminPageHeader
         title="Product Management"
         description="Manage your product catalog, categories, brands, and taxes."
       />
 
-      <AdminContent className="flex-1 min-h-0 flex flex-col">
-        <div className="flex flex-1 flex-col py-1 rounded-2xl min-h-0">
+      <AdminContent className="flex-1 min-h-0 min-w-0">
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-transparent">
           <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
               <SearchInput
@@ -337,7 +337,7 @@ export default function AdminProductsPage() {
             </Button>
           </div>
 
-          <div className="mt-6 flex-1 min-h-0 flex flex-col">
+          <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
             <BulkActionsBar
               selectedCount={selectedRows.length}
               entityName="product"
@@ -355,7 +355,7 @@ export default function AdminProductsPage() {
               data={products}
               tableClassName="min-w-[1050px]"
               pageSize={pageSize}
-              pageSizeOptions={[10, 20, 30, 50]}
+              pageSizeOptions={[5, 10, 20, 50]}
               page={data?.meta?.page ?? page}
               totalPages={data?.meta?.totalPages ?? Math.max(1, Math.ceil((data?.meta?.total ?? products.length) / pageSize))}
               totalItems={data?.meta?.total ?? products.length}
