@@ -287,10 +287,11 @@ export function AdminDeliveryOrdersTable() {
       </div>
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col">
         <DataTable
           columns={columns}
           data={orders}
+          tableClassName="min-w-[1200px]"
           pageSize={pageSize}
           pageSizeOptions={[10, 20, 30, 50]}
           page={meta?.page ?? page}

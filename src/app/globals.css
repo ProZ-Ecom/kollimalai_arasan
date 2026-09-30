@@ -564,14 +564,19 @@ textarea:focus-visible {
 
 /* Hide scrollbar but keep scrolling */
 .scrollbar-hide,
-.no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+.no-scrollbar,
+.category-carousel {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar,
-.no-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari */
+.no-scrollbar::-webkit-scrollbar,
+.category-carousel::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari */
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
 
 /* Storefront Button & Utility Styles */

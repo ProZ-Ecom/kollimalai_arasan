@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Package, PackageSearch } from "lucide-react";
+import { Check, Package, PackageSearch, X } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { SearchInput } from "@/components/ui/search-input";
 import { Badge } from "@/components/ui/badge";
@@ -30,14 +30,14 @@ interface OfferTargetPickerProps {
   preloadedItems?: OfferItemTarget[];
   preloadedProducts?: OfferProductTarget[];
   error?: string;
+  onLoadedItemsChange?: (items: OfferItemTarget[]) => void;
 }
 
 /**
  * Category -> Product -> Item/Variant, where each level narrows the next.
  *
- * A product-wise offer needs only the product, so the item list is hidden.
- * An item-wise offer requires at least one pack size, and shows the SKU,
- * price and stock of each so the admin can tell "500g" from "1kg".
+ * A product-wise offer supports choosing multiple products.
+ * An item-wise offer allows choosing multiple items across products or within a product.
  */
 export function OfferTargetPicker({
   level,
@@ -52,6 +52,7 @@ export function OfferTargetPicker({
   preloadedItems = [],
   preloadedProducts = [],
   error,
+  onLoadedItemsChange,
 }: OfferTargetPickerProps) {
   const [productSearch, setProductSearch] = React.useState("");
   const [itemSearch, setItemSearch] = React.useState("");
@@ -69,6 +70,32 @@ export function OfferTargetPicker({
     search: itemSearch || undefined,
     enabled: level === "item",
   });
+
+  // Persistent cache of known products and items across filter changes and searches
+  const productCacheRef = React.useRef<Map<string, OfferProductTarget>>(new Map());
+  const itemCacheRef = React.useRef<Map<string, OfferItemTarget>>(new Map());
+
+  React.useEffect(() => {
+    products.forEach((p) => productCacheRef.current.set(p.id, p));
+  }, [products]);
+
+  React.useEffect(() => {
+    items.forEach((i) => itemCacheRef.current.set(i.id, i));
+    if (onLoadedItemsChange && items.length > 0) {
+      onLoadedItemsChange(items);
+    }
+  }, [items, onLoadedItemsChange]);
+
+  React.useEffect(() => {
+    preloadedProducts.forEach((p) => productCacheRef.current.set(p.id, p));
+  }, [preloadedProducts]);
+
+  React.useEffect(() => {
+    preloadedItems.forEach((i) => itemCacheRef.current.set(i.id, i));
+    if (onLoadedItemsChange && preloadedItems.length > 0) {
+      onLoadedItemsChange(preloadedItems);
+    }
+  }, [preloadedItems, onLoadedItemsChange]);
 
   const categoryOptions = React.useMemo(
     () => [
@@ -89,23 +116,54 @@ export function OfferTargetPicker({
     [products]
   );
 
-  // Keep already-selected targets visible even when the current filters would
-  // exclude them, so a selection can always be reviewed and removed.
+  // Keep already-selected targets visible even when current filters would exclude them
   const visibleProducts = React.useMemo(() => {
-    const byId = new Map(products.map((p) => [p.id, p]));
-    for (const product of preloadedProducts) {
-      if (selectedProductIds.includes(product.id)) byId.set(product.id, product);
+    const byId = new Map<string, OfferProductTarget>();
+    for (const p of products) {
+      byId.set(p.id, p);
+    }
+    for (const p of preloadedProducts) {
+      if (selectedProductIds.includes(p.id)) byId.set(p.id, p);
+    }
+    for (const id of selectedProductIds) {
+      const cached = productCacheRef.current.get(id);
+      if (cached && !byId.has(id)) {
+        byId.set(id, cached);
+      }
     }
     return [...byId.values()];
   }, [products, preloadedProducts, selectedProductIds]);
 
   const visibleItems = React.useMemo(() => {
-    const byId = new Map(items.map((i) => [i.id, i]));
-    for (const item of preloadedItems) {
-      if (selectedItemIds.includes(item.id)) byId.set(item.id, item);
+    const byId = new Map<string, OfferItemTarget>();
+    for (const i of items) {
+      byId.set(i.id, i);
+    }
+    for (const i of preloadedItems) {
+      if (selectedItemIds.includes(i.id)) byId.set(i.id, i);
+    }
+    for (const id of selectedItemIds) {
+      const cached = itemCacheRef.current.get(id);
+      if (cached && !byId.has(id)) {
+        byId.set(id, cached);
+      }
     }
     return [...byId.values()];
   }, [items, preloadedItems, selectedItemIds]);
+
+  // List of selected product items for chips
+  const selectedProductsList = React.useMemo(() => {
+    return selectedProductIds
+      .map((id) => productCacheRef.current.get(id) || preloadedProducts.find((p) => p.id === id))
+      .filter((p): p is OfferProductTarget => Boolean(p));
+  }, [selectedProductIds, preloadedProducts]);
+
+  // List of selected items for chips
+  const selectedItemsList = React.useMemo(() => {
+    return selectedItemIds
+      .map((id) => itemCacheRef.current.get(id) || preloadedItems.find((i) => i.id === id))
+      .filter((i): i is OfferItemTarget => Boolean(i));
+  }, [selectedItemIds, preloadedItems]);
 
   const toggleProduct = (id: string) => {
     onSelectedProductIdsChange(
@@ -138,7 +196,6 @@ export function OfferTargetPicker({
             disabled={categoriesLoading}
             onValueChange={(value) => {
               onCategoryChange(value);
-              // The chosen product may not belong to the new category.
               onProductChange("");
             }}
           />
@@ -146,8 +203,7 @@ export function OfferTargetPicker({
 
         <div className="space-y-2">
           <Label htmlFor="offer-product-filter">
-            Product
-            {level === "item" && <span className="text-error-600 font-bold ml-1">*</span>}
+            {level === "item" ? "Product Filter" : "Product"}
           </Label>
           <Select
             id="offer-product-filter"
@@ -157,16 +213,16 @@ export function OfferTargetPicker({
             disabled={productsLoading}
             onValueChange={onProductChange}
           />
-          {level === "item" && !productId && !itemSearch && (
+          {level === "item" && (
             <p className="text-xs text-neutral-500">
-              Pick a product to list its items/variants.
+              Filter by product or search below to pick items across multiple products.
             </p>
           )}
         </div>
       </div>
 
       {level === "product" ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <Label>
               Select products
@@ -176,6 +232,36 @@ export function OfferTargetPicker({
               {selectedCount} selected
             </Badge>
           </div>
+
+          {/* Selected Products Chips Bar */}
+          {selectedProductsList.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 p-2.5 rounded-xl bg-neutral-50 border border-neutral-200">
+              <span className="text-xs font-semibold text-neutral-600 mr-1">Selected:</span>
+              {selectedProductsList.map((p) => (
+                <span
+                  key={p.id}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-secondary-50 text-secondary-900 border border-secondary-200 text-xs font-medium shadow-2xs"
+                >
+                  <span className="truncate max-w-[160px]">{p.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => toggleProduct(p.id)}
+                    className="hover:text-error-600 cursor-pointer p-0.5 rounded transition-colors"
+                    title="Remove product"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={() => onSelectedProductIdsChange([])}
+                className="text-[11px] text-neutral-500 hover:text-error-600 ml-auto cursor-pointer underline px-1"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
 
           <SearchInput
             placeholder="Search products by name..."
@@ -202,12 +288,11 @@ export function OfferTargetPicker({
           </TargetList>
 
           <p className="text-xs text-neutral-500">
-            A product-wise offer applies to every item and pack size under the
-            products you select.
+            A product-wise offer applies to every item and pack size under all selected products.
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <Label>
               Select items / variants
@@ -217,6 +302,36 @@ export function OfferTargetPicker({
               {selectedCount} selected
             </Badge>
           </div>
+
+          {/* Selected Items Chips Bar */}
+          {selectedItemsList.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 p-2.5 rounded-xl bg-neutral-50 border border-neutral-200">
+              <span className="text-xs font-semibold text-neutral-600 mr-1">Selected:</span>
+              {selectedItemsList.map((i) => (
+                <span
+                  key={i.id}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-secondary-50 text-secondary-900 border border-secondary-200 text-xs font-medium shadow-2xs"
+                >
+                  <span className="truncate max-w-[160px]">{i.label || i.sku}</span>
+                  <button
+                    type="button"
+                    onClick={() => toggleItem(i.id)}
+                    className="hover:text-error-600 cursor-pointer p-0.5 rounded transition-colors"
+                    title="Remove item"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={() => onSelectedItemIdsChange([])}
+                className="text-[11px] text-neutral-500 hover:text-error-600 ml-auto cursor-pointer underline px-1"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
 
           <SearchInput
             placeholder="Search by item name or SKU..."
@@ -228,35 +343,36 @@ export function OfferTargetPicker({
             isLoading={itemsLoading}
             isEmpty={visibleItems.length === 0}
             emptyIcon={<PackageSearch className="h-6 w-6" />}
-            emptyTitle={productId || itemSearch ? "No items found" : "Choose a product first"}
-            emptyDescription={
-              productId || itemSearch
-                ? "This product has no active pack sizes matching your search."
-                : "Select a product above, or search by SKU, to list its items."
-            }
+            emptyTitle="No items found"
+            emptyDescription="Try selecting a different product, category, or changing your search term."
           >
-            {visibleItems.map((item) => (
-              <TargetRow
-                key={item.id}
-                selected={selectedItemIds.includes(item.id)}
-                onToggle={() => toggleItem(item.id)}
-                title={item.label || item.sku}
-                subtitle={`SKU ${item.sku}`}
-                meta={
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-neutral-900">
-                      ₹{item.basePrice.toFixed(2)}
-                    </span>
-                    <Badge
-                      variant={item.inStock ? "success" : "warning"}
-                      className="text-[10px]"
-                    >
-                      {item.inStock ? `In stock (${item.stockQuantity})` : "Out of stock"}
-                    </Badge>
-                  </div>
-                }
-              />
-            ))}
+            {visibleItems.map((item) => {
+              const isOutOfStock = !item.inStock || item.stockQuantity <= 0;
+              return (
+                <TargetRow
+                  key={item.id}
+                  selected={selectedItemIds.includes(item.id)}
+                  disabled={isOutOfStock}
+                  disabledTooltip={isOutOfStock ? "Cannot apply offer to out-of-stock items" : undefined}
+                  onToggle={() => toggleItem(item.id)}
+                  title={item.label || item.sku}
+                  subtitle={`SKU ${item.sku}`}
+                  meta={
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-neutral-900">
+                        ₹{item.basePrice.toFixed(2)}
+                      </span>
+                      <Badge
+                        variant={item.inStock ? "success" : "warning"}
+                        className="text-[10px]"
+                      >
+                        {item.inStock ? `In stock (${item.stockQuantity})` : "Out of stock"}
+                      </Badge>
+                    </div>
+                  }
+                />
+              );
+            })}
           </TargetList>
 
           <p className="text-xs text-neutral-500">
@@ -316,28 +432,40 @@ function TargetRow({
   title,
   subtitle,
   meta,
+  disabled,
+  disabledTooltip,
 }: {
   selected: boolean;
   onToggle: () => void;
   title: string;
   subtitle: string;
   meta?: React.ReactNode;
+  disabled?: boolean;
+  disabledTooltip?: string;
 }) {
   return (
     <li>
       <button
         type="button"
-        onClick={onToggle}
+        disabled={disabled}
+        title={disabledTooltip}
+        onClick={disabled ? undefined : onToggle}
         aria-pressed={selected}
         className={cn(
-          "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors cursor-pointer",
-          selected ? "bg-emerald-50/70" : "hover:bg-neutral-50"
+          "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
+          disabled
+            ? "opacity-50 cursor-not-allowed bg-neutral-50/50"
+            : selected
+            ? "bg-emerald-50/70 cursor-pointer"
+            : "hover:bg-neutral-50 cursor-pointer"
         )}
       >
         <span
           className={cn(
             "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors",
-            selected
+            disabled
+              ? "border-neutral-200 bg-neutral-100 text-neutral-300"
+              : selected
               ? "border-emerald-500 bg-emerald-500 text-white"
               : "border-neutral-300 bg-white"
           )}

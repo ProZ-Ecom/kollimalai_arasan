@@ -6,10 +6,7 @@ import { loginSchema } from "@/lib/validations/auth";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
-  secret:
-    process.env.AUTH_SECRET ||
-    process.env.NEXTAUTH_SECRET ||
-    "kollimalai-arasan@2026",
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
   },

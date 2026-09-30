@@ -5,27 +5,41 @@ import {
 } from "@tanstack/react-query";
 import {
   getInventory,
+  getInventoryStats,
   getInventoryItem,
   adjustStock,
+  bulkAdjustStock,
   createInventory,
   getLowStock,
   getTransactions,
+  getAllTransactions,
 } from "../api/get-inventory";
 import type {
   GetInventoryParams,
   AdjustStockInput,
   CreateInventoryInput,
+  BulkAdjustStockInput,
 } from "../types";
 
-const inventoryKeys = {
+export const inventoryKeys = {
   all: ["inventory"] as const,
+  stats: () => [...inventoryKeys.all, "stats"] as const,
   list: (params: GetInventoryParams) =>
     [...inventoryKeys.all, "list", params] as const,
-  detail: (id: string) => [...inventoryKeys.all, "detail", id] as const,
+  detail: (id: string | number) => [...inventoryKeys.all, "detail", String(id)] as const,
   lowStock: () => [...inventoryKeys.all, "lowStock"] as const,
-  transactions: (inventoryId: string, params?: any) =>
-    [...inventoryKeys.all, "transactions", inventoryId, params] as const,
+  transactions: (inventoryId: string | number, params?: any) =>
+    [...inventoryKeys.all, "transactions", String(inventoryId), params] as const,
+  allTransactions: (params?: any) =>
+    [...inventoryKeys.all, "all-transactions", params] as const,
 };
+
+export function useInventoryStats() {
+  return useQuery({
+    queryKey: inventoryKeys.stats(),
+    queryFn: () => getInventoryStats(),
+  });
+}
 
 export function useInventory(params: GetInventoryParams) {
   return useQuery({
@@ -34,7 +48,7 @@ export function useInventory(params: GetInventoryParams) {
   });
 }
 
-export function useInventoryItem(id: string) {
+export function useInventoryItem(id: string | number) {
   return useQuery({
     queryKey: inventoryKeys.detail(id),
     queryFn: () => getInventoryItem(id),
@@ -49,6 +63,21 @@ export function useAdjustStock() {
     mutationFn: (input: AdjustStockInput) => adjustStock(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["variants"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useBulkAdjustStock() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: BulkAdjustStockInput) => bulkAdjustStock(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["variants"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     },
   });
 }
@@ -72,12 +101,24 @@ export function useLowStock() {
 }
 
 export function useInventoryTransactions(
-  inventoryId: string,
+  inventoryId: string | number,
   params?: { page?: number; limit?: number; type?: string }
 ) {
   return useQuery({
     queryKey: inventoryKeys.transactions(inventoryId, params),
     queryFn: () => getTransactions(inventoryId, params),
     enabled: !!inventoryId,
+  });
+}
+
+export function useAllInventoryTransactions(params?: {
+  page?: number;
+  limit?: number;
+  type?: string;
+  search?: string;
+}) {
+  return useQuery({
+    queryKey: inventoryKeys.allTransactions(params),
+    queryFn: () => getAllTransactions(params),
   });
 }

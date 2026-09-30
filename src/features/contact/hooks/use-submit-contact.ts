@@ -8,6 +8,7 @@ export function useSubmitContact() {
 
   return useMutation({
     mutationFn: (data: CreateContactInput) => submitContactMessage(data),
+    meta: { skipToast: true },
     onSuccess: () => {
       // Invalidate admin contact queries so newly submitted messages appear in admin list immediately
       queryClient.invalidateQueries({ queryKey: adminContactKeys.all });

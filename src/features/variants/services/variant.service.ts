@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { db } from "@/lib/db/prisma";
 import { ApiError } from "@/lib/api/api-error";
+import { formatTitleCase } from "@/lib/utils";
 import { variantRepository } from "../repositories/variant.repository";
 import { productRepository } from "@/features/products/repositories/product.repository";
 import { userRepository } from "@/features/users/repositories/user.repository";
@@ -42,7 +43,12 @@ type VariantUnitPriceWithRelations = {
   createdAt: Date;
   updatedAt: Date;
   product_units?: { uuid: string | null; name: string; code: string; type?: string | null } | null;
-  inventories?: { quantity_available: number; quantity_reserved: number } | null;
+  inventories?: {
+    id: bigint;
+    quantity_available: number;
+    quantity_reserved: number;
+    reorderLevel?: number;
+  } | null;
 };
 
 export function formatUnitPriceResponse(
@@ -72,7 +78,10 @@ export function formatUnitPriceResponse(
     unitCode: item.product_units?.code,
     isDefault: Boolean(item.is_default),
     isActive: Boolean(item.isActive),
-    stock: item.inventories?.quantity_available,
+    stock: item.inventories?.quantity_available !== undefined ? Number(item.inventories.quantity_available) : undefined,
+    inventoryId: item.inventories?.id ? Number(item.inventories.id) : undefined,
+    reservedQuantity: item.inventories?.quantity_reserved !== undefined ? Number(item.inventories.quantity_reserved) : 0,
+    reorderLevel: item.inventories?.reorderLevel !== undefined ? Number(item.inventories.reorderLevel) : 5,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
@@ -127,6 +136,13 @@ function formatAdminVariantResponse(
     0
   );
 
+  // A variant is out of stock if it has pack sizes and total stock is 0,
+  // or if explicitly marked out of stock in the DB.
+  const isOutOfStock =
+    unitPrices.length > 0
+      ? totalStock === 0 || Boolean(variant.out_of_stock)
+      : Boolean(variant.out_of_stock);
+
   return {
     id: variantUuid,
     productId: productUuid,
@@ -140,7 +156,7 @@ function formatAdminVariantResponse(
     isFeatured: Boolean(variant.is_featured),
     primaryImage,
     isActive: Boolean(variant.isActive),
-    outOfStock: Boolean(variant.out_of_stock),
+    outOfStock: isOutOfStock,
     createdAt: variant.createdAt,
     updatedAt: variant.updatedAt,
     unitPrices,
@@ -150,6 +166,7 @@ function formatAdminVariantResponse(
     basePrice: defaultUnitPrice?.basePrice,
     salePrice: defaultUnitPrice?.basePrice,
     stock: unitPrices.length > 0 ? totalStock : undefined,
+    inventoryId: defaultUnitPrice?.inventoryId,
     unitId: defaultUnitPrice?.unitId,
     unitValue: defaultUnitPrice?.unitValue,
     unitName: defaultUnitPrice?.unitName,
@@ -187,16 +204,16 @@ export const variantService = {
 
     // 3. Create Variant (item-level only; unit/price combos are managed
     // separately via variantUnitPriceService)
-    const existingVariantsCount = await db.productVariant.count({
-      where: { productId: product.id, deleted_at: null },
-    });
-    const isFirstVariant = existingVariantsCount === 0;
-    const isDefault = (data as any).isDefault !== undefined ? (data as any).isDefault : isFirstVariant;
+    const hasDefaultVariant =
+      (await db.productVariant.count({
+        where: { productId: product.id, is_default: true, deleted_at: null },
+      })) > 0;
+    const isDefault = Boolean((data as any).isDefault || !hasDefaultVariant);
 
     const variant = await variantRepository.create({
       uuid: crypto.randomUUID(),
       productId: product.id,
-      variant_name: data.variantName,
+      variant_name: formatTitleCase(data.variantName),
       slug: variantSlug,
       short_description: data.shortDescription ?? null,
       description: data.description ?? null,
@@ -204,7 +221,7 @@ export const variantService = {
       is_featured: data.isFeatured ?? false,
       is_default: isDefault,
       isActive: data.isActive !== undefined ? data.isActive : true,
-      out_of_stock: data.outOfStock !== undefined ? data.outOfStock : false,
+      out_of_stock: data.outOfStock !== undefined ? data.outOfStock : true,
       created_by: adminId,
       updated_by: adminId,
     });
@@ -392,6 +409,19 @@ export const variantService = {
     const adminId = await getAdminInternalId(adminEmail);
     await variantRepository.softDeleteByUuid(variantUuid, adminId);
 
+    if (existing.is_default) {
+      const remainingVariant = await db.productVariant.findFirst({
+        where: { productId: product.id, deleted_at: null },
+        orderBy: { createdAt: "asc" },
+      });
+      if (remainingVariant) {
+        await db.productVariant.update({
+          where: { id: remainingVariant.id },
+          data: { is_default: true },
+        });
+      }
+    }
+
     return {
       success: true,
       message: "Variant deleted successfully",
@@ -424,7 +454,7 @@ function buildVariantUpdateData(
     updateData.updated_by = adminId;
   }
   if (data.variantName !== undefined) {
-    updateData.variant_name = data.variantName;
+    updateData.variant_name = formatTitleCase(data.variantName);
   }
   if (data.shortDescription !== undefined) {
     updateData.short_description = data.shortDescription;

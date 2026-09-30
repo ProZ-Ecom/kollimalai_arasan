@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { db } from "@/lib/db/prisma";
 import { ApiError } from "@/lib/api/api-error";
+import { formatTitleCase } from "@/lib/utils";
 import { productRepository } from "../repositories/product.repository";
 import { categoryRepository } from "@/features/categories/repositories/category.repository";
 import { brandRepository } from "@/features/brands/repositories/brand.repository";
@@ -153,10 +154,12 @@ export const productService = {
       throw ApiError.conflict(`An active product with slug '${data.slug}' already exists`);
     }
 
+    const formattedName = formatTitleCase(data.name);
+
     // 5. Check duplicate name
-    const existingName = await productRepository.findByName(data.name);
+    const existingName = await productRepository.findByName(formattedName);
     if (existingName) {
-      throw ApiError.conflict(`An active product with name '${data.name}' already exists`);
+      throw ApiError.conflict(`An active product with name '${formattedName}' already exists`);
     }
 
     const created = await productRepository.create({
@@ -164,7 +167,7 @@ export const productService = {
       categoryId: category.id,
       brandId: brand.id,
       hsn_code_id: resolvedHsnCodeId,
-      name: data.name,
+      name: formattedName,
       slug: data.slug, // Frontend-supplied slug preserved without modification
       status: true, // Static reserved field - always true
       isActive: true, // Active status
@@ -393,11 +396,12 @@ export const productService = {
 
     // Check duplicate name if name changes
     if (data.name !== undefined && data.name !== existing.name) {
-      const nameConflict = await productRepository.findByName(data.name, uuid);
+      const formattedName = formatTitleCase(data.name);
+      const nameConflict = await productRepository.findByName(formattedName, uuid);
       if (nameConflict) {
-        throw ApiError.conflict(`An active product with name '${data.name}' already exists`);
+        throw ApiError.conflict(`An active product with name '${formattedName}' already exists`);
       }
-      updateData.name = data.name;
+      updateData.name = formattedName;
     }
 
     const updated = await productRepository.updateByUuid(uuid, updateData);

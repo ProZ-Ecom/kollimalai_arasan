@@ -31,12 +31,14 @@ export function ProfileDetailsTab({
   useEffect(() => {
     if (profile) {
       setName(profile.name || "");
-      setPhone(profile.phone || "");
+      const cleanPhone = profile.phone ? profile.phone.replace(/\D/g, "").slice(-10) : "";
+      setPhone(cleanPhone);
       setEmail(profile.email || "");
       setDob(profile.dob ? profile.dob.slice(0, 10) : "");
       setGender(profile.gender || "");
       setIsWhatsapp(profile.isWhatsapp || false);
-      setWhatsappNo(profile.whatsappNo || "");
+      const cleanWhatsapp = profile.whatsappNo ? profile.whatsappNo.replace(/\D/g, "").slice(-10) : "";
+      setWhatsappNo(cleanWhatsapp);
     }
   }, [profile]);
 
@@ -59,6 +61,7 @@ export function ProfileDetailsTab({
 
     const payload = {
       name: name.trim() || undefined,
+      phone: phone.trim() || null,
       dob: dob || null,
       gender: (gender || null) as "male" | "female" | "other" | null,
       isWhatsapp,
@@ -79,7 +82,7 @@ export function ProfileDetailsTab({
     }
 
     try {
-      await updateMutation.mutateAsync(payload);
+      await updateMutation.mutateAsync(validationResult.data);
 
       setMessage({ type: "success", text: "Profile updated successfully!" });
     } catch (err: unknown) {
@@ -91,13 +94,16 @@ export function ProfileDetailsTab({
   const handleReset = () => {
     if (profile) {
       setName(profile.name || "");
-      setPhone(profile.phone || "");
+      const cleanPhone = profile.phone ? profile.phone.replace(/\D/g, "").slice(-10) : "";
+      setPhone(cleanPhone);
       setEmail(profile.email || "");
       setDob(profile.dob ? profile.dob.slice(0, 10) : "");
       setGender(profile.gender || "");
       setIsWhatsapp(profile.isWhatsapp || false);
-      setWhatsappNo(profile.whatsappNo || "");
+      const cleanWhatsapp = profile.whatsappNo ? profile.whatsappNo.replace(/\D/g, "").slice(-10) : "";
+      setWhatsappNo(cleanWhatsapp);
       setMessage(null);
+      setFieldErrors({});
     }
   };
 
@@ -188,11 +194,43 @@ export function ProfileDetailsTab({
             </span>
             <input
               type="tel"
+              inputMode="numeric"
+              maxLength={10}
               value={phone}
-              readOnly
-              placeholder="Registered mobile number"
-              className="border border-theme-border-input rounded-lg px-3.5 py-3 text-xs sm:text-sm text-theme-text-primary bg-theme-surface-alt cursor-not-allowed min-h-[44px]"
+              onChange={(e) => {
+                const numeric = e.target.value.replace(/\D/g, "").slice(0, 10);
+                handleFieldChange(setPhone, "phone", numeric);
+              }}
+              onKeyDown={(e) => {
+                if (
+                  [
+                    "Backspace",
+                    "Delete",
+                    "Tab",
+                    "Escape",
+                    "Enter",
+                    "ArrowLeft",
+                    "ArrowRight",
+                    "ArrowUp",
+                    "ArrowDown",
+                  ].includes(e.key) ||
+                  (e.ctrlKey && ["a", "c", "v", "x", "z"].includes(e.key.toLowerCase())) ||
+                  (e.metaKey && ["a", "c", "v", "x", "z"].includes(e.key.toLowerCase()))
+                ) {
+                  return;
+                }
+                if (!/^[0-9]$/.test(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+              placeholder="Enter 10-digit mobile number"
+              className={`border rounded-lg px-3.5 py-3 text-xs sm:text-sm text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors min-h-[44px] ${
+                fieldErrors.phone ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+              }`}
             />
+            {fieldErrors.phone && (
+              <span className="text-[11px] text-red-600">{fieldErrors.phone}</span>
+            )}
           </label>
 
           <label className="flex flex-col gap-2">
@@ -204,7 +242,7 @@ export function ProfileDetailsTab({
               value={email}
               readOnly
               placeholder="Registered email address"
-              className="border border-theme-border-input rounded-lg px-3.5 py-3 text-xs sm:text-sm text-theme-text-primary bg-theme-surface-alt cursor-not-allowed min-h-[44px]"
+              className="border border-theme-border-input rounded-lg px-3.5 py-3 text-xs sm:text-sm text-theme-text-muted bg-theme-surface-alt cursor-default min-h-[44px] select-all"
             />
           </label>
 
@@ -262,9 +300,36 @@ export function ProfileDetailsTab({
               <div className="flex flex-col gap-1 mt-2">
                 <input
                   type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
                   value={whatsappNo}
-                  onChange={(e) => handleFieldChange(setWhatsappNo, "whatsappNo", e.target.value)}
-                  placeholder="+91 WhatsApp Number"
+                  onChange={(e) => {
+                    const numeric = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    handleFieldChange(setWhatsappNo, "whatsappNo", numeric);
+                  }}
+                  onKeyDown={(e) => {
+                    if (
+                      [
+                        "Backspace",
+                        "Delete",
+                        "Tab",
+                        "Escape",
+                        "Enter",
+                        "ArrowLeft",
+                        "ArrowRight",
+                        "ArrowUp",
+                        "ArrowDown",
+                      ].includes(e.key) ||
+                      (e.ctrlKey && ["a", "c", "v", "x", "z"].includes(e.key.toLowerCase())) ||
+                      (e.metaKey && ["a", "c", "v", "x", "z"].includes(e.key.toLowerCase()))
+                    ) {
+                      return;
+                    }
+                    if (!/^[0-9]$/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="Enter 10-digit WhatsApp number"
                   className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors ${
                     fieldErrors.whatsappNo ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
                   }`}

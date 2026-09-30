@@ -322,7 +322,7 @@ export default function ContactPage() {
                       <input
                         id="contact-name"
                         type="text"
-                        placeholder="e.g. Anand Kumar"
+                        placeholder="Enter your name"
                         value={formData.name}
                         onChange={(e) => handleInputChange("name", e.target.value)}
                         className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm font-medium transition-colors bg-white focus:outline-hidden focus:ring-2 ${
@@ -427,11 +427,6 @@ export default function ContactPage() {
                       error={fieldErrors.subject}
                       className="rounded-xl border-neutral-200 py-3 text-sm font-medium"
                     />
-                    {fieldErrors.subject && (
-                      <p className="text-xs text-rose-500 mt-1 font-medium">
-                        {fieldErrors.subject}
-                      </p>
-                    )}
                   </div>
                 </div>
 

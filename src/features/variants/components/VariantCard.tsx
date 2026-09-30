@@ -17,6 +17,7 @@ import {
   Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getImageUrl } from "@/lib/utils";
 
 import type { AdminVariantResponse } from "../types";
 
@@ -27,7 +28,7 @@ export interface VariantCardProps {
   onManageImages?: (variant: AdminVariantResponse) => void;
   onDelete?: (variant: AdminVariantResponse) => void;
   onToggleStatus?: (variant: AdminVariantResponse, nextActive: boolean) => void;
-  onToggleStock?: (variant: AdminVariantResponse, nextOutOfStock: boolean) => void;
+  onToggleStock?: (variant: AdminVariantResponse) => void;
   onPreview?: (variant: AdminVariantResponse) => void;
   showAdminActions?: boolean;
 }
@@ -77,7 +78,7 @@ export function VariantCard({
       : "bg-emerald-50 text-emerald-800 border-emerald-200";
 
   const displayImage = !imageError && variant.primaryImage
-    ? variant.primaryImage
+    ? getImageUrl(variant.primaryImage)
     : resolveFallbackImage(variant.productName || variant.variantName);
 
   return (
@@ -118,9 +119,9 @@ export function VariantCard({
             onToggleStock ? (
               <button
                 type="button"
-                onClick={() => onToggleStock(variant, false)}
+                onClick={() => onToggleStock(variant)}
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-xs bg-rose-600 text-white backdrop-blur-md hover:bg-rose-700 transition-colors cursor-pointer"
-                title="Click to mark In Stock"
+                title="Click to adjust stock"
               >
                 Out of Stock
               </button>
@@ -223,16 +224,16 @@ export function VariantCard({
                 size="icon"
                 className={`h-8 w-8 rounded-lg shadow-xs ${
                   variant.outOfStock
-                    ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                    : "bg-rose-100 text-rose-800 hover:bg-rose-200"
+                    ? "bg-rose-100 text-rose-800 hover:bg-rose-200"
+                    : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
                 }`}
-                onClick={() => onToggleStock(variant, !variant.outOfStock)}
-                title={variant.outOfStock ? "Mark In Stock" : "Mark Out of Stock"}
+                onClick={() => onToggleStock(variant)}
+                title="Adjust Inventory Stock"
               >
                 {variant.outOfStock ? (
-                  <Package className="h-4 w-4" />
-                ) : (
                   <PackageX className="h-4 w-4" />
+                ) : (
+                  <Package className="h-4 w-4" />
                 )}
               </Button>
             )}
@@ -275,7 +276,7 @@ export function VariantCard({
               title="View Variant Details"
             >
               <h3
-                className="text-xs sm:text-sm font-bold text-[var(--neutral-900)] leading-snug line-clamp-2 uppercase group-hover/link:text-[var(--color-secondary-700)] transition-colors"
+                className="text-xs sm:text-sm font-bold text-[var(--neutral-900)] leading-snug line-clamp-2 capitalize group-hover/link:text-[var(--color-secondary-700)] transition-colors"
                 title={variant.variantName}
               >
                 {variant.variantName}
@@ -283,7 +284,7 @@ export function VariantCard({
             </Link>
           ) : (
             <h3
-              className="text-xs sm:text-sm font-bold text-[var(--neutral-900)] leading-snug line-clamp-2 uppercase group-hover:text-[var(--color-secondary-700)] transition-colors"
+              className="text-xs sm:text-sm font-bold text-[var(--neutral-900)] leading-snug line-clamp-2 capitalize group-hover:text-[var(--color-secondary-700)] transition-colors"
               title={variant.variantName}
             >
               {variant.variantName}

@@ -102,11 +102,11 @@ export const variantUnitPriceService = {
       throw ApiError.conflict("This item already has a price for that unit and measurement");
     }
 
-    const existingPricesCount = await db.variantUnitPrice.count({
-      where: { variant_id: variant.id, deleted_at: null },
+    const existingDefaultCount = await db.variantUnitPrice.count({
+      where: { variant_id: variant.id, is_default: true, deleted_at: null },
     });
-    const isFirstPrice = existingPricesCount === 0;
-    const isDefault = data.isDefault !== undefined ? data.isDefault : isFirstPrice;
+    // Auto-default if explicitly requested OR if no existing price is marked default
+    const isDefault = Boolean(data.isDefault || existingDefaultCount === 0);
 
     if (isDefault) {
       await variantUnitPriceRepository.unsetDefaultForVariant(variant.id);
@@ -125,28 +125,27 @@ export const variantUnitPriceService = {
       updated_by: adminId,
     });
 
-    if (data.stock !== undefined) {
-      // Run inventory upsert + out_of_stock sync atomically so the variant
-      // status is always consistent with its actual stock totals.
-      await db.$transaction(async (tx) => {
-        await tx.inventory.upsert({
-          where: { variantUnitPriceId: created.id },
-          create: {
-            variantUnitPriceId: created.id,
-            quantity_available: data.stock!,
-            quantity_reserved: 0,
-            is_active: true,
-            created_by: adminId,
-            updated_by: adminId,
-          },
-          update: {
-            quantity_available: data.stock!,
-            updated_by: adminId,
-          },
-        });
-        await variantUnitPriceRepository.syncVariantOutOfStockStatus(tx, variant.id);
+    // stock is optional — defaults to 0 if not provided, syncing out_of_stock automatically
+    const initialStock = data.stock ?? 0;
+
+    await db.$transaction(async (tx) => {
+      await tx.inventory.upsert({
+        where: { variantUnitPriceId: created.id },
+        create: {
+          variantUnitPriceId: created.id,
+          quantity_available: initialStock,
+          quantity_reserved: 0,
+          is_active: true,
+          created_by: adminId,
+          updated_by: adminId,
+        },
+        update: {
+          quantity_available: initialStock,
+          updated_by: adminId,
+        },
       });
-    }
+      await variantUnitPriceRepository.syncVariantOutOfStockStatus(tx, variant.id);
+    });
 
     const withDetails = await variantUnitPriceRepository.findByUuid(created.uuid);
     return formatUnitPriceResponse(variantUuid, withDetails || created);
@@ -217,7 +216,40 @@ export const variantUnitPriceService = {
     }
 
     if (typeof data.isDefault === "boolean") {
-      updateData.is_default = data.isDefault;
+      if (data.isDefault) {
+        await variantUnitPriceRepository.unsetDefaultForVariant(variant.id, existing.id);
+        updateData.is_default = true;
+      } else {
+        const otherDefaults = await db.variantUnitPrice.count({
+          where: {
+            variant_id: variant.id,
+            id: { not: existing.id },
+            is_default: true,
+            deleted_at: null,
+          },
+        });
+        if (otherDefaults === 0) {
+          const firstOther = await db.variantUnitPrice.findFirst({
+            where: {
+              variant_id: variant.id,
+              id: { not: existing.id },
+              deleted_at: null,
+            },
+            orderBy: { createdAt: "asc" },
+          });
+          if (firstOther) {
+            await db.variantUnitPrice.update({
+              where: { id: firstOther.id },
+              data: { is_default: true },
+            });
+            updateData.is_default = false;
+          } else {
+            updateData.is_default = true;
+          }
+        } else {
+          updateData.is_default = false;
+        }
+      }
     }
 
     if (typeof data.isActive === "boolean") {
@@ -257,6 +289,20 @@ export const variantUnitPriceService = {
 
     const adminId = await getAdminInternalId(adminEmail);
     await variantUnitPriceRepository.softDeleteByUuid(unitPriceUuid, adminId);
+
+    // If the deleted price was default, auto default any one remaining price
+    if (existing.is_default) {
+      const remainingPrice = await db.variantUnitPrice.findFirst({
+        where: { variant_id: variant.id, deleted_at: null },
+        orderBy: { createdAt: "asc" },
+      });
+      if (remainingPrice) {
+        await db.variantUnitPrice.update({
+          where: { id: remainingPrice.id },
+          data: { is_default: true },
+        });
+      }
+    }
 
     return { success: true, message: "Unit price deleted successfully" };
   },

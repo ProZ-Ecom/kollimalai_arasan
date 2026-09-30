@@ -103,8 +103,8 @@ export default function AdminCustomersPage() {
 
     if (verificationFilter === "email_verified") {
       params.emailVerified = true;
-    } else if (verificationFilter === "phone_verified") {
-      params.phoneVerified = true;
+    } else if (verificationFilter === "unverified") {
+      params.emailVerified = false;
     }
 
     return params;
@@ -188,8 +188,8 @@ export default function AdminCustomersPage() {
                 {item.customerId
                   ? `ID: ${item.customerId}`
                   : item.id
-                  ? `ID: ${item.id.slice(0, 8)}...`
-                  : "-"}
+                    ? `ID: ${item.id.slice(0, 8)}...`
+                    : "-"}
               </p>
             </div>
           </Link>
@@ -251,12 +251,6 @@ export default function AdminCustomersPage() {
                 Email
               </span>
             )}
-            {item.phoneVerified ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success-700 bg-success-50 px-2 py-0.5 rounded-full">
-                <CheckCircle2 className="h-3 w-3" />
-                Phone
-              </span>
-            ) : null}
           </div>
         );
       },
@@ -424,7 +418,7 @@ export default function AdminCustomersPage() {
           title="Verified Accounts"
           value={isLoadingCounts ? "—" : (customerCounts?.verified ?? 0)}
           icon={ShieldCheck}
-          description="Email or phone verified"
+          description="Email verified accounts"
         />
       </div>
 
@@ -474,7 +468,7 @@ export default function AdminCustomersPage() {
                 options={[
                   { value: "all", label: "All Verification" },
                   { value: "email_verified", label: "Email Verified" },
-                  { value: "phone_verified", label: "Phone Verified" },
+                  { value: "unverified", label: "Not Verified" },
                 ]}
                 placeholder="Verification"
                 className="h-10 rounded-xl text-xs font-medium"
@@ -518,12 +512,13 @@ export default function AdminCustomersPage() {
       </div>
 
       {/* Data Table Container */}
-      <div className="flex-1 flex flex-col min-h-[420px] w-full rounded-2xl overflow-hidden bg-white shadow-xs">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col w-full">
         <DataTable
           columns={columns}
           data={customers}
+          tableClassName="min-w-[1250px]"
           pageSize={pageSize}
-          pageSizeOptions={[10, 20, 30, 50]}
+          pageSizeOptions={[5, 10, 20, 50]}
           page={meta?.page ?? page}
           totalPages={
             meta?.totalPages ??
@@ -535,7 +530,7 @@ export default function AdminCustomersPage() {
             setPageSize(newSize);
             setPage(1);
           }}
-          className="bg-white border-0"
+          className="bg-white border border-neutral-200"
           emptyMessage="No customers found matching your criteria."
         />
       </div>
@@ -552,12 +547,10 @@ export default function AdminCustomersPage() {
         }
         description={
           isTargetBlocked
-            ? `Are you sure you want to unblock ${
-                statusTargetCustomer?.name || "this customer"
-              }? Their account will be reactivated, allowing them to sign in and place new orders.`
-            : `Are you sure you want to block ${
-                statusTargetCustomer?.name || "this customer"
-              }? This will deactivate their account and prevent them from signing in or placing new orders.`
+            ? `Are you sure you want to unblock ${statusTargetCustomer?.name || "this customer"
+            }? Their account will be reactivated, allowing them to sign in and place new orders.`
+            : `Are you sure you want to block ${statusTargetCustomer?.name || "this customer"
+            }? This will deactivate their account and prevent them from signing in or placing new orders.`
         }
         confirmText={
           isUpdatingStatus
@@ -565,8 +558,8 @@ export default function AdminCustomersPage() {
               ? "Unblocking..."
               : "Blocking..."
             : isTargetBlocked
-            ? "Unblock Customer"
-            : "Block Customer"
+              ? "Unblock Customer"
+              : "Block Customer"
         }
         cancelText="Cancel"
         variant={isTargetBlocked ? "default" : "destructive"}

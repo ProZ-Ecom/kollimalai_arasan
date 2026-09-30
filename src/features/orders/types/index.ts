@@ -64,13 +64,27 @@ export interface OrderDeliveryStaffDto {
   phone: string | null;
 }
 
+export interface OrderDeliveryPartnerDto {
+  id: string;
+  name: string;
+  code: string;
+  contactNumber: string | null;
+}
+
 export interface OrderDeliveryDto {
   isAssigned: boolean;
   assignmentStatus: string | null;
   deliveryId: string | null;
   staff: OrderDeliveryStaffDto | null;
   assignedAt: Date | string | null;
+  trackingNumber?: string | null;
+  deliveryPartnerId?: string | null;
+  deliveryPartner?: OrderDeliveryPartnerDto | null;
+  status?: string | null;
+  shippedAt?: Date | string | null;
+  deliveryNotes?: string | null;
 }
+
 
 export interface OrderListItemResponse {
   id: string; // order.uuid

@@ -29,8 +29,8 @@ const SORT_OPTIONS: {
 
 function ProductCatalogSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 animate-in fade-in duration-200">
-      {[1, 2, 3, 4, 5, 6,7,8,9].map((n) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-5 sm:gap-6 animate-in fade-in duration-200">
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
         <div
           key={n}
           className="bg-white rounded-2xl border border-[#E5E5E5]/80 p-3.5 flex flex-col justify-between overflow-hidden shadow-2xs space-y-3"
@@ -112,7 +112,7 @@ export default function ShopAllPage() {
     maxPrice: maxPrice < 1000 ? maxPrice : undefined,
     sortBy: activeSort.sortBy,
     sortOrder: activeSort.sortOrder,
-    onlyDefault: true,
+    inStock: stockStatus === "in_stock" ? true : stockStatus === "out_of_stock" ? false : undefined,
   });
 
   const meta = variantsResponse?.meta;
@@ -233,7 +233,7 @@ export default function ShopAllPage() {
             {selectedCategoryIds.length === 1 && currentCategory && (
               <>
                 <ChevronRight className="w-3.5 h-3.5" />
-                <span className="font-bold text-[#101010]">
+                <span className="font-bold text-[#101010] capitalize">
                   {currentCategory.name}
                 </span>
               </>
@@ -253,7 +253,7 @@ export default function ShopAllPage() {
               <Sparkles className="h-3.5 w-3.5 text-[#F8BE15]" />
               Authentic Collection
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#101010] font-serif tracking-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#101010] font-serif tracking-tight capitalize">
               {pageTitle}
             </h1>
             <p className="mt-2 text-xs sm:text-sm text-[#5A5A5A] max-w-2xl mx-auto leading-relaxed">
@@ -264,7 +264,7 @@ export default function ShopAllPage() {
       </div>
 
       <div className="w-full bg-white">
-        <div className="container mx-auto px-4 py-6 sm:py-10 max-w-7xl bg-white">
+        <div className="container mx-auto px-4 py-6 sm:py-10 max-w-screen-2xl bg-white">
           {/* Mobile Filter Toggle Button */}
           <div className="lg:hidden mb-6 flex items-center justify-between gap-3 bg-white border border-[#E5E5E5] rounded-xl p-3 shadow-xs">
             <button
@@ -393,14 +393,14 @@ export default function ShopAllPage() {
 
                   <CustomerProductGrid
                     variants={displayedVariants}
-                    columns={3}
+                    columns={4}
                     onResetFilters={hasActiveFilters ? handleResetFilters : undefined}
                   />
 
                   {/* Shimmer cards appended at the bottom while next infinite scroll page loads */}
                   {isFetching && page > 1 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mt-6 animate-in fade-in duration-200">
-                      {[1, 2, 3].map((n) => (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-5 sm:gap-6 mt-6 animate-in fade-in duration-200">
+                      {[1, 2, 3, 4].map((n) => (
                         <div
                           key={`append-skel-${n}`}
                           className="bg-white rounded-2xl border border-[#E5E5E5]/80 p-3.5 flex flex-col justify-between overflow-hidden shadow-2xs space-y-3"

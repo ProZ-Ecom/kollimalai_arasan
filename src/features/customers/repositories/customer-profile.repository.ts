@@ -18,13 +18,17 @@ export function formatCustomerProfile(
     referral_code: string | null;
     created_at: Date;
     updated_at: Date;
-    users_customer_profiles_user_idTousers?: { uuid: string | null } | null;
+    users_customer_profiles_user_idTousers?: {
+      uuid: string | null;
+      name?: string | null;
+      email?: string | null;
+      phone?: string | null;
+    } | null;
   }
 ): CustomerProfileResponse {
   const profileUuid = profile.uuid || String(profile.id);
-  const userUuid =
-    profile.users_customer_profiles_user_idTousers?.uuid ||
-    String(profile.user_id);
+  const userRel = profile.users_customer_profiles_user_idTousers;
+  const userUuid = userRel?.uuid || String(profile.user_id);
 
   let formattedDob: string | null = null;
   if (profile.dob) {
@@ -34,9 +38,9 @@ export function formatCustomerProfile(
   return {
     id: profileUuid,
     userId: userUuid,
-    name: profile.name ?? null,
-    email: profile.email ?? null,
-    phone: profile.phone ?? null,
+    name: profile.name ?? userRel?.name ?? null,
+    email: profile.email ?? userRel?.email ?? null,
+    phone: profile.phone ?? userRel?.phone ?? null,
     isWhatsapp: Boolean(profile.is_whatsapp),
     whatsappNo: profile.whatsapp_no ?? null,
     dob: formattedDob,
@@ -48,6 +52,15 @@ export function formatCustomerProfile(
   };
 }
 
+const userRelationSelect = {
+  select: {
+    uuid: true,
+    name: true,
+    email: true,
+    phone: true,
+  },
+};
+
 export const customerProfileRepository = {
   async findByUserId(userId: bigint | number) {
     const profile = await db.customer_profiles.findFirst({
@@ -56,11 +69,7 @@ export const customerProfileRepository = {
         is_active: true,
       },
       include: {
-        users_customer_profiles_user_idTousers: {
-          select: {
-            uuid: true,
-          },
-        },
+        users_customer_profiles_user_idTousers: userRelationSelect,
       },
     });
 
@@ -74,11 +83,7 @@ export const customerProfileRepository = {
         is_active: true,
       },
       include: {
-        users_customer_profiles_user_idTousers: {
-          select: {
-            uuid: true,
-          },
-        },
+        users_customer_profiles_user_idTousers: userRelationSelect,
       },
     });
 
@@ -89,11 +94,7 @@ export const customerProfileRepository = {
     const created = await db.customer_profiles.create({
       data,
       include: {
-        users_customer_profiles_user_idTousers: {
-          select: {
-            uuid: true,
-          },
-        },
+        users_customer_profiles_user_idTousers: userRelationSelect,
       },
     });
 
@@ -111,11 +112,7 @@ export const customerProfileRepository = {
       where: { id: existing.id },
       data,
       include: {
-        users_customer_profiles_user_idTousers: {
-          select: {
-            uuid: true,
-          },
-        },
+        users_customer_profiles_user_idTousers: userRelationSelect,
       },
     });
 

@@ -13,8 +13,6 @@ import {
   LogOut,
   Smartphone,
   ShieldCheck,
-  Zap,
-  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -407,36 +405,6 @@ export default function AdminWhatsAppPage() {
                 </Button>
               </div>
             )}
-          </div>
-
-          {/* Card 2: Anti-Ban & Performance Highlights */}
-          <div className="bg-white rounded-2xl border border-neutral-200/80 shadow-xs p-5 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-              Anti-Ban & Engine Safeguards
-            </h3>
-            <div className="space-y-2.5">
-              <div className="flex items-start gap-2.5 text-xs text-neutral-600">
-                <Zap className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                <span>
-                  <strong className="text-neutral-900 font-semibold">Zero Chat History Sync:</strong>{" "}
-                  Never downloads old personal messages, saving 80% RAM (~35MB total).
-                </span>
-              </div>
-              <div className="flex items-start gap-2.5 text-xs text-neutral-600">
-                <Clock className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                <span>
-                  <strong className="text-neutral-900 font-semibold">Human Typing Simulation:</strong>{" "}
-                  Adds 1.5s–2.5s jitter and active typing presence before sending.
-                </span>
-              </div>
-              <div className="flex items-start gap-2.5 text-xs text-neutral-600">
-                <ShieldCheck className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <span>
-                  <strong className="text-neutral-900 font-semibold">Next.js Singleton Lock:</strong>{" "}
-                  Prevents duplicate sockets from opening during hot reloads.
-                </span>
-              </div>
-            </div>
           </div>
         </div>
 

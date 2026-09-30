@@ -58,13 +58,13 @@ export function WishlistCard({
       <CardContent className="p-4 flex flex-col justify-between flex-1">
         <div>
           <Link href={productUrl}>
-            <h3 className="font-semibold text-theme-text-primary text-sm line-clamp-1 hover:text-theme-primary transition-colors">
+            <h3 className="font-semibold text-theme-text-primary text-sm line-clamp-1 hover:text-theme-primary transition-colors capitalize">
               {item.product.name}
             </h3>
           </Link>
 
           {item.variantName && (
-            <p className="text-xs text-theme-text-subtle mt-0.5 font-medium">
+            <p className="text-xs text-theme-text-subtle mt-0.5 font-medium capitalize">
               {item.variantName}
             </p>
           )}

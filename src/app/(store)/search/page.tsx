@@ -110,6 +110,7 @@ function SearchResultsContent() {
     maxPrice: maxPrice < 1000 ? maxPrice : undefined,
     sortBy: activeSort.sortBy,
     sortOrder: activeSort.sortOrder,
+    inStock: inStockParam,
   });
 
   const meta = variantsResponse?.meta;
@@ -413,7 +414,7 @@ function SearchResultsContent() {
                 <div className={isFetching && page === 1 ? "opacity-60 transition-opacity duration-200" : "transition-opacity duration-200"}>
                   <CustomerProductGrid
                     variants={displayedVariants}
-                    columns={3}
+                    columns={4}
                     onResetFilters={hasActiveFilters ? handleResetFilters : undefined}
                   />
 

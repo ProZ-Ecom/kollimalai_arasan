@@ -230,7 +230,7 @@ export default function AdminContactsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col space-y-4 sm:space-y-6">
+    <div className="flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
 
       <AdminPageHeader
         title="Contact Inquiries"
@@ -361,10 +361,11 @@ export default function AdminContactsPage() {
       </div>
 
       {/* Data Table Container */}
-      <div className="flex-1 flex flex-col min-h-[420px] w-full rounded-2xl overflow-hidden bg-white shadow-xs">
+      <div className="flex-1 min-h-0 flex flex-col w-full">
         <DataTable
           columns={columns}
           data={contacts}
+          tableClassName="min-w-[1100px]"
           pageSize={pageSize}
           pageSizeOptions={[10, 20, 30, 50]}
           page={meta?.page ?? page}
@@ -378,7 +379,7 @@ export default function AdminContactsPage() {
             setPageSize(newSize);
             setPage(1);
           }}
-          className="bg-white border-0"
+          className="bg-white border border-neutral-200"
           emptyMessage="No contact messages found matching your criteria."
         />
       </div>

@@ -179,11 +179,12 @@ export default function AdminRolesPage() {
           </Button>
         }
       />
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <AdminContent className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           <DataTable
             columns={columns}
             data={roles}
+            tableClassName="min-w-[950px]"
             searchKey="name"
             searchPlaceholder="Search roles..."
             pageSize={20}

@@ -45,7 +45,8 @@ export function CustomerVariantCard({ variant }: CustomerVariantCardProps) {
     });
   }, [variant.unitPrices, variant.outOfStock]);
 
-  const defaultUnit = variant.unitPrices?.find((u) => u.isDefault);
+  const defaultUnit =
+    variant.unitPrices?.find((u) => u.isDefault) || variant.unitPrices?.[0];
   const [selectedUnitPriceId, setSelectedUnitPriceId] = React.useState(
     defaultUnit?.id || packVariants[0]?.id || ""
   );

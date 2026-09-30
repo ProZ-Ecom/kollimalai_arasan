@@ -3,10 +3,7 @@ import type { NextAuthConfig } from "next-auth";
 /** Edge-safe Auth.js settings for middleware. */
 export const authConfig = {
   trustHost: true,
-  secret:
-    process.env.AUTH_SECRET ||
-    process.env.NEXTAUTH_SECRET ||
-    "kollimalai-arasan@2026",
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   providers: [],
   session: {
     strategy: "jwt",

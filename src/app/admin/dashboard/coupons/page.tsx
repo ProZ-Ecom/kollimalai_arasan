@@ -52,16 +52,21 @@ export default function AdminCouponsPage() {
     defaultValues: {
       code: "",
       type: "PERCENTAGE",
-      value: 0,
+      value: undefined as unknown as number,
       isActive: true,
     },
   });
 
   useEffect(() => {
     if (editingCoupon) {
+      const normalizedType =
+        editingCoupon.type?.toUpperCase() === "FLAT" ||
+        editingCoupon.type?.toUpperCase() === "FIXED"
+          ? "FIXED"
+          : "PERCENTAGE";
       reset({
         code: editingCoupon.code,
-        type: editingCoupon.type as "PERCENTAGE" | "FIXED",
+        type: normalizedType,
         value: editingCoupon.value,
         minOrderAmount: editingCoupon.minOrderAmount ?? undefined,
         maxDiscount: editingCoupon.maxDiscount ?? undefined,
@@ -75,7 +80,12 @@ export default function AdminCouponsPage() {
           : undefined,
       });
     } else {
-      reset({ code: "", type: "PERCENTAGE", value: 0, isActive: true });
+      reset({
+        code: "",
+        type: "PERCENTAGE",
+        value: undefined as unknown as number,
+        isActive: true,
+      });
     }
   }, [editingCoupon, reset]);
 
@@ -201,11 +211,12 @@ export default function AdminCouponsPage() {
           </Button>
         }
       />
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <AdminContent className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           <DataTable
             columns={columns}
             data={coupons}
+            tableClassName="min-w-[1100px]"
             searchKey="code"
             searchPlaceholder="Search coupons..."
             searchValue={search}

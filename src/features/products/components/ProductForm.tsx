@@ -9,13 +9,15 @@ import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import { FormImageUpload } from "@/components/forms/form-image-upload";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
+import { formatTitleCase } from "@/lib/utils";
 
 const productFormSchema = z.object({
   name: z
     .string()
     .trim()
     .min(1, "Product name is required")
-    .max(200, "Product name cannot exceed 200 characters"),
+    .max(100, "Product name cannot exceed 100 characters")
+    .transform(formatTitleCase),
   slug: z
     .string()
     .trim()
@@ -180,6 +182,7 @@ function ProductForm({
     const finalSlug = `${slugPrefix}${extraSlug.trim()}`;
     await onSubmit({
       ...formData,
+      name: formatTitleCase(formData.name),
       brandId: finalBrandId,
       slug: finalSlug,
       hsnCodeId: formData.hsnCodeId ? formData.hsnCodeId : null,
@@ -206,6 +209,7 @@ function ProductForm({
             name="name"
             label="Product Name"
             placeholder="e.g. Kollimalai Black Pepper, Seeraga Samba Rice"
+            isTitleCase
             required
           />
 
@@ -296,7 +300,7 @@ function ProductForm({
           {/* Helper message / live preview / error */}
           <div className="mt-1.5 min-h-[18px]">
             {extraSlugError || methods.formState.errors.slug?.message ? (
-              <p className="text-xs text-red-500 font-medium">
+              <p className="text-xs text-theme-status-can-fg font-medium">
                 {extraSlugError || methods.formState.errors.slug?.message}
               </p>
             ) : (

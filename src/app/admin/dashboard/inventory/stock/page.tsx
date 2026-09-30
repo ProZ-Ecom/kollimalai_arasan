@@ -203,11 +203,12 @@ export default function InventoryStockPage() {
           <Button onClick={() => setCreateOpen(true)}>Add Inventory</Button>
         }
       />
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <AdminContent className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           <DataTable
             columns={columns}
             data={inventoryData}
+            tableClassName="min-w-[950px]"
             className="bg-white border border-neutral-200"
           />
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export function SettingsTab() {
   const [prefs, setPrefs] = useState({
@@ -13,30 +14,57 @@ export function SettingsTab() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordMsg, setPasswordMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPasswordMsg(null);
+    setInlineError(null);
+    setSuccessMsg(null);
 
     if (!currentPassword) {
-      setPasswordMsg({ type: "error", text: "Please enter your current password." });
+      setInlineError("Please enter your current password.");
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordMsg({ type: "error", text: "New password must be at least 6 characters long." });
+      setInlineError("New password must be at least 6 characters long.");
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordMsg({ type: "error", text: "Passwords do not match." });
+      setInlineError("Passwords do not match.");
       return;
     }
 
-    // Success feedback
-    setPasswordMsg({ type: "success", text: "Password changed successfully." });
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    try {
+      setIsSubmitting(true);
+      const res = await fetch("/api/customer/profile/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setInlineError(data?.error?.message || data?.message || "Failed to update password.");
+        return;
+      }
+
+      setSuccessMsg("Password changed successfully.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch {
+      setInlineError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const notificationOptions = [
@@ -114,68 +142,116 @@ export function SettingsTab() {
         </div>
 
         <form onSubmit={handlePasswordSubmit} className="p-5 sm:p-6 space-y-4">
-          {passwordMsg && (
-            <div
-              className={`p-3 rounded-lg text-xs font-medium ${
-                passwordMsg.type === "success"
-                  ? "bg-theme-status-del-bg text-theme-status-del-fg"
-                  : "bg-theme-status-can-bg text-theme-status-can-fg"
-              }`}
-            >
-              {passwordMsg.text}
+          {successMsg && (
+            <div className="p-3 rounded-lg text-xs font-medium bg-theme-status-del-bg text-theme-status-del-fg">
+              {successMsg}
             </div>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <label className="flex flex-col gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted">
-                Current Password
-              </span>
-              <input
-                type="password"
-                required
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
-                className="border border-theme-border-input rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px]"
-              />
-            </label>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="settings-current-pwd" className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted">
+                Current Password <span className="text-red-600 font-bold">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="settings-current-pwd"
+                  type={showCurrent ? "text" : "password"}
+                  required
+                  disabled={isSubmitting}
+                  value={currentPassword}
+                  onChange={(e) => {
+                    setCurrentPassword(e.target.value);
+                    if (inlineError) setInlineError(null);
+                  }}
+                  placeholder="Enter current password"
+                  className="w-full border border-theme-border-input rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] focus:border-theme-primary transition-colors disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrent(!showCurrent)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors p-1"
+                  aria-label={showCurrent ? "Hide current password" : "Show current password"}
+                >
+                  {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
 
-            <label className="flex flex-col gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted">
-                New Password
-              </span>
-              <input
-                type="password"
-                required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
-                className="border border-theme-border-input rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px]"
-              />
-            </label>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="settings-new-pwd" className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted">
+                New Password <span className="text-red-600 font-bold">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="settings-new-pwd"
+                  type={showNew ? "text" : "password"}
+                  required
+                  disabled={isSubmitting}
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    if (inlineError) setInlineError(null);
+                  }}
+                  placeholder="Enter new password (min 6 chars)"
+                  className="w-full border border-theme-border-input rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] focus:border-theme-primary transition-colors disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNew(!showNew)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors p-1"
+                  aria-label={showNew ? "Hide new password" : "Show new password"}
+                >
+                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
 
-            <label className="flex flex-col gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted">
-                Confirm Password
-              </span>
-              <input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
-                className="border border-theme-border-input rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px]"
-              />
-            </label>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="settings-confirm-pwd" className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted">
+                Confirm Password <span className="text-red-600 font-bold">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="settings-confirm-pwd"
+                  type={showConfirm ? "text" : "password"}
+                  required
+                  disabled={isSubmitting}
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (inlineError) setInlineError(null);
+                  }}
+                  placeholder="Re-enter new password"
+                  className={`w-full border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] focus:border-theme-primary transition-colors disabled:opacity-50 ${
+                    inlineError ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors p-1"
+                  aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
+                >
+                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {inlineError && (
+                <span className="text-[11px] text-red-600 font-medium">
+                  {inlineError}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="pt-2">
             <button
               type="submit"
-              className="bg-theme-secondary hover:bg-theme-secondary-hover text-theme-secondary-fg text-xs font-semibold uppercase tracking-wider py-3.5 px-7 rounded-lg transition-colors cursor-pointer min-h-[44px]"
+              disabled={isSubmitting}
+              className="bg-theme-secondary hover:bg-theme-secondary-hover text-theme-secondary-fg text-xs font-semibold uppercase tracking-wider py-3.5 px-7 rounded-lg transition-colors cursor-pointer min-h-[44px] disabled:opacity-50 flex items-center gap-2"
             >
-              Update Password
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin text-current" />}
+              {isSubmitting ? "Updating..." : "Update Password"}
             </button>
           </div>
         </form>

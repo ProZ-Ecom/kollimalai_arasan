@@ -100,7 +100,7 @@ export default function InventoryHistoryPage() {
         title="Inventory History"
         description="View all inventory transactions"
       />
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
+      <AdminContent className="flex-1 min-h-0 flex flex-col">
         <div className="flex-shrink-0 mb-4 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1 max-w-md">
             <input
@@ -113,18 +113,18 @@ export default function InventoryHistoryPage() {
           </div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-semibold text-neutral-600 whitespace-nowrap">Filter by type:</label>
-            <Select
-              wrapperClassName="w-44"
-              size="sm"
-              className="h-10 rounded-xl text-xs"
-              value={params.type ?? ""}
-              onValueChange={(val) =>
-                setParams((prev) => ({
-                  ...prev,
-                  type: val || undefined,
-                  page: 1,
-                }))
-              }
+            <div className="w-44">
+              <Select
+                size="sm"
+                className="h-10 rounded-xl text-xs"
+                value={params.type ?? ""}
+                onValueChange={(val) =>
+                  setParams((prev) => ({
+                    ...prev,
+                    type: val || undefined,
+                    page: 1,
+                  }))
+                }
               options={[
                 { value: "", label: "All Types" },
                 { value: "PURCHASE", label: "Purchase" },
@@ -135,15 +135,17 @@ export default function InventoryHistoryPage() {
                 { value: "TRANSFER", label: "Transfer" },
               ]}
             />
+            </div>
           </div>
 
           {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} />}
         </div>
 
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           <DataTable
             columns={columns}
             data={transactionData}
+            tableClassName="min-w-[950px]"
             className="bg-white border border-neutral-200"
           />
         </div>

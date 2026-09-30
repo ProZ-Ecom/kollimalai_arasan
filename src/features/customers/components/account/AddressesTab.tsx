@@ -14,6 +14,8 @@ import {
 } from "../../validations/customer-address.schema";
 import type { CustomerAddressResponse } from "../../types/customer-address.types";
 import { CustomDropdown } from "./CustomDropdown";
+import { usePincodeLookup } from "../../hooks/use-pincode-lookup";
+import { CheckCircle2, Loader2, Lock } from "lucide-react";
 
 const LABEL_OPTIONS = [
   { value: "home", label: "Home" },
@@ -102,6 +104,16 @@ export function AddressesTab() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
 
+  // India Post PIN code verification hook
+  const {
+    isVerifying: isPincodeVerifying,
+    verificationError: pincodeVerificationError,
+    postalData: pincodePostalData,
+    isVerified: isPincodeVerified,
+    verifyPincode,
+    resetPincodeVerification,
+  } = usePincodeLookup();
+
   // Custom dropdown open state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -133,7 +145,53 @@ export function AddressesTab() {
   }, []);
 
   const handleFieldChange = (field: keyof AddressFormData, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let cleanVal = value;
+    if (field === "phone" && typeof value === "string") {
+      cleanVal = value.replace(/\D/g, "").slice(0, 10);
+    } else if (field === "pincode" && typeof value === "string") {
+      const cleanPin = value.replace(/\D/g, "").slice(0, 6);
+      cleanVal = cleanPin;
+
+      if (cleanPin.length === 6) {
+        verifyPincode(cleanPin).then((result) => {
+          if (result) {
+            setFormData((prev) => ({
+              ...prev,
+              pincode: cleanPin,
+              city: result.district || result.city,
+              state: result.state,
+            }));
+            if (editingId) {
+              setDirtyFields((prev) =>
+                new Set(prev).add("pincode").add("city").add("state")
+              );
+            }
+            setFieldErrors((prev) => {
+              const next = { ...prev };
+              delete next.pincode;
+              delete next.city;
+              delete next.state;
+              return next;
+            });
+          } else {
+            setFieldErrors((prev) => ({
+              ...prev,
+              pincode: "Invalid PIN code. No records found in India Post database.",
+            }));
+            setFormData((prev) => ({
+              ...prev,
+              pincode: cleanPin,
+              city: "",
+              state: "",
+            }));
+          }
+        });
+      } else {
+        resetPincodeVerification();
+      }
+    }
+
+    setFormData((prev) => ({ ...prev, [field]: cleanVal }));
     if (editingId) {
       setDirtyFields((prev) => new Set(prev).add(field));
     }
@@ -171,6 +229,12 @@ export function AddressesTab() {
     setFieldErrors({});
     setServerError(null);
     setIsAdding(true);
+
+    if (address.pincode && address.pincode.length === 6) {
+      verifyPincode(address.pincode);
+    } else {
+      resetPincodeVerification();
+    }
   };
 
   const handleCancel = () => {
@@ -180,6 +244,7 @@ export function AddressesTab() {
     setFieldErrors({});
     setServerError(null);
     setIsDropdownOpen(false);
+    resetPincodeVerification();
     setFormData({
       label: "home",
       fullName: "",
@@ -204,6 +269,27 @@ export function AddressesTab() {
 
     setFieldErrors({});
     setServerError(null);
+
+    // Force valid India Post PIN code verification before submitting
+    const cleanPin = formData.pincode.replace(/\D/g, "");
+    if (cleanPin.length !== 6 || cleanPin.startsWith("0")) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        pincode: "PIN code must be a valid 6-digit Indian postal code",
+      }));
+      return;
+    }
+
+    if (!isPincodeVerified) {
+      const verified = await verifyPincode(cleanPin);
+      if (!verified) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          pincode: "Invalid PIN code. No records found in India Post database.",
+        }));
+        return;
+      }
+    }
 
     if (editingId) {
       // EDIT MODE: If no fields were touched, exit gracefully
@@ -403,10 +489,13 @@ export function AddressesTab() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Full Name */}
             <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-theme-text-primary">
+                Full Name <span className="text-red-600 font-bold">*</span>
+              </label>
               <input
                 type="text"
                 disabled={isSubmitting}
-                placeholder="Full Name (e.g. Ashok Kumar) *"
+                placeholder="Enter your name"
                 value={formData.fullName}
                 onChange={(e) => handleFieldChange("fullName", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
@@ -420,10 +509,13 @@ export function AddressesTab() {
 
             {/* Phone Number */}
             <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-theme-text-primary">
+                Phone Number <span className="text-red-600 font-bold">*</span>
+              </label>
               <input
                 type="tel"
                 disabled={isSubmitting}
-                placeholder="Phone (10-digit, e.g. 9876543210) *"
+                placeholder="10-digit mobile number"
                 value={formData.phone}
                 onChange={(e) => handleFieldChange("phone", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
@@ -443,29 +535,94 @@ export function AddressesTab() {
               disabled={isSubmitting}
             />
 
-            {/* PIN Code */}
+            {/* PIN Code with India Post Live Lookup */}
             <div className="flex flex-col gap-1">
-              <input
-                type="text"
-                disabled={isSubmitting}
-                placeholder="PIN Code (6 digits, e.g. 637001) *"
-                value={formData.pincode}
-                onChange={(e) => handleFieldChange("pincode", e.target.value)}
-                className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.pincode ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
-                }`}
-              />
-              {fieldErrors.pincode && (
-                <span className="text-[11px] text-red-600">{fieldErrors.pincode}</span>
-              )}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-theme-text-secondary">
+                  PIN Code (6 digits) *
+                </span>
+                {isPincodeVerifying && (
+                  <span className="flex items-center gap-1 text-[10px] text-theme-primary font-medium">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Checking...
+                  </span>
+                )}
+                {isPincodeVerified && pincodePostalData && (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-semibold">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Verified
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  disabled={isSubmitting}
+                  maxLength={6}
+                  placeholder="PIN Code (e.g. 607106) *"
+                  value={formData.pincode}
+                  onChange={(e) => handleFieldChange("pincode", e.target.value)}
+                  className={`w-full border rounded-lg px-3.5 pr-9 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
+                    fieldErrors.pincode || pincodeVerificationError
+                      ? "border-red-500 bg-red-50/20"
+                      : isPincodeVerified
+                      ? "border-emerald-500"
+                      : "border-theme-border-input"
+                  }`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                  {isPincodeVerifying ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-theme-primary" />
+                  ) : isPincodeVerified ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  ) : null}
+                </div>
+              </div>
+              {fieldErrors.pincode || pincodeVerificationError ? (
+                <span className="text-[11px] text-red-600">
+                  {fieldErrors.pincode || pincodeVerificationError}
+                </span>
+              ) : isPincodeVerified && pincodePostalData ? (
+                <span className="text-[11px] text-emerald-600 font-medium">
+                  ✓ Verified: {pincodePostalData.district}, {pincodePostalData.state}
+                </span>
+              ) : null}
             </div>
+
+            {/* Locality / Post Office Selection (when multiple post offices exist) */}
+            {pincodePostalData?.postOffices && pincodePostalData.postOffices.length > 0 && (
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <label className="text-[11px] font-semibold text-theme-text-secondary">
+                  Select Post Office / Locality ({pincodePostalData.postOffices.length} found in India Post)
+                </label>
+                <select
+                  disabled={isSubmitting}
+                  value={formData.addressLine2}
+                  onChange={(e) => handleFieldChange("addressLine2", e.target.value)}
+                  className="w-full border border-theme-border-input rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-white focus:border-theme-primary transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <option value="">-- Choose your nearest Post Office / Area --</option>
+                  {pincodePostalData.postOffices.map((po) => (
+                    <option key={po.name} value={po.name}>
+                      {po.name} ({po.branchType} • {po.deliveryStatus})
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10px] text-theme-text-muted">
+                  Auto-fills your locality for faster, accurate postal delivery.
+                </span>
+              </div>
+            )}
 
             {/* Address Line 1 */}
             <div className="flex flex-col gap-1 sm:col-span-2">
+              <label className="text-xs font-semibold text-theme-text-primary">
+                Address Line 1 <span className="text-red-600 font-bold">*</span>
+              </label>
               <input
                 type="text"
                 disabled={isSubmitting}
-                placeholder="Address Line 1 (Door no., Building, Street) *"
+                placeholder="Door no., Building, Street"
                 value={formData.addressLine1}
                 onChange={(e) => handleFieldChange("addressLine1", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
@@ -479,10 +636,13 @@ export function AddressesTab() {
 
             {/* Address Line 2 */}
             <div className="flex flex-col gap-1 sm:col-span-2">
+              <label className="text-xs font-semibold text-theme-text-primary">
+                Address Line 2
+              </label>
               <input
                 type="text"
                 disabled={isSubmitting}
-                placeholder="Address Line 2 (Area, Colony, Sector)"
+                placeholder="Area, Colony, Sector"
                 value={formData.addressLine2}
                 onChange={(e) => handleFieldChange("addressLine2", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
@@ -496,6 +656,9 @@ export function AddressesTab() {
 
             {/* Landmark */}
             <div className="flex flex-col gap-1 sm:col-span-2">
+              <label className="text-xs font-semibold text-theme-text-primary">
+                Landmark
+              </label>
               <input
                 type="text"
                 disabled={isSubmitting}
@@ -508,16 +671,32 @@ export function AddressesTab() {
 
             {/* City */}
             <div className="flex flex-col gap-1">
-              <input
-                type="text"
-                disabled={isSubmitting}
-                placeholder="City *"
-                value={formData.city}
-                onChange={(e) => handleFieldChange("city", e.target.value)}
-                className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.city ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
-                }`}
-              />
+              <label className="text-xs font-semibold text-theme-text-primary">
+                City <span className="text-red-600 font-bold">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  readOnly={isPincodeVerified}
+                  disabled={isSubmitting}
+                  placeholder={isPincodeVerified ? formData.city : "City (Enter PIN Code)"}
+                  value={formData.city}
+                  onChange={(e) => handleFieldChange("city", e.target.value)}
+                  className={`w-full border rounded-lg px-3.5 py-2.5 text-xs transition-colors ${
+                    isPincodeVerified
+                      ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 cursor-not-allowed border-theme-border"
+                      : fieldErrors.city
+                      ? "border-red-500 bg-red-50/20 text-theme-text-primary"
+                      : "border-theme-border-input bg-theme-surface-warm text-theme-text-primary focus:border-theme-primary"
+                  } disabled:opacity-50`}
+                />
+                {isPincodeVerified && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted">
+                    <Lock className="h-3 w-3" />
+                    <span>Verified</span>
+                  </div>
+                )}
+              </div>
               {fieldErrors.city && (
                 <span className="text-[11px] text-red-600">{fieldErrors.city}</span>
               )}
@@ -525,16 +704,32 @@ export function AddressesTab() {
 
             {/* State */}
             <div className="flex flex-col gap-1">
-              <input
-                type="text"
-                disabled={isSubmitting}
-                placeholder="State *"
-                value={formData.state}
-                onChange={(e) => handleFieldChange("state", e.target.value)}
-                className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.state ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
-                }`}
-              />
+              <label className="text-xs font-semibold text-theme-text-primary">
+                State <span className="text-red-600 font-bold">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  readOnly={isPincodeVerified}
+                  disabled={isSubmitting}
+                  placeholder={isPincodeVerified ? formData.state : "State (Enter PIN Code)"}
+                  value={formData.state}
+                  onChange={(e) => handleFieldChange("state", e.target.value)}
+                  className={`w-full border rounded-lg px-3.5 py-2.5 text-xs transition-colors ${
+                    isPincodeVerified
+                      ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 cursor-not-allowed border-theme-border"
+                      : fieldErrors.state
+                      ? "border-red-500 bg-red-50/20 text-theme-text-primary"
+                      : "border-theme-border-input bg-theme-surface-warm text-theme-text-primary focus:border-theme-primary"
+                  } disabled:opacity-50`}
+                />
+                {isPincodeVerified && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted">
+                    <Lock className="h-3 w-3" />
+                    <span>Verified</span>
+                  </div>
+                )}
+              </div>
               {fieldErrors.state && (
                 <span className="text-[11px] text-red-600">{fieldErrors.state}</span>
               )}
@@ -588,99 +783,101 @@ export function AddressesTab() {
         </form>
       )}
 
-      {/* Address Cards Grid */}
-      {addresses.length === 0 && !isAdding ? (
-        <div className="bg-theme-surface border border-theme-border rounded-2xl p-10 text-center shadow-2xs">
-          <p className="text-sm text-theme-text-muted">No saved delivery addresses found.</p>
-          <button
-            type="button"
-            onClick={() => setIsAdding(true)}
-            className="bg-theme-secondary hover:bg-theme-secondary-hover text-theme-secondary-fg text-xs font-semibold uppercase tracking-wider py-3 px-6 rounded-lg transition-colors cursor-pointer mt-4 min-h-[44px]"
-          >
-            Add Address
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {addresses.map((a: CustomerAddressResponse) => {
-            const labelUpper = (a.label || "Delivery").toUpperCase();
-            const isBilling = a.addressType === "billing";
+      {/* Address Cards Grid - hidden when adding or editing */}
+      {!isAdding && !editingId && (
+        addresses.length === 0 ? (
+          <div className="bg-theme-surface border border-theme-border rounded-2xl p-10 text-center shadow-2xs">
+            <p className="text-sm text-theme-text-muted">No saved delivery addresses found.</p>
+            <button
+              type="button"
+              onClick={() => setIsAdding(true)}
+              className="bg-theme-secondary hover:bg-theme-secondary-hover text-theme-secondary-fg text-xs font-semibold uppercase tracking-wider py-3 px-6 rounded-lg transition-colors cursor-pointer mt-4 min-h-[44px]"
+            >
+              Add Address
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {addresses.map((a: CustomerAddressResponse) => {
+              const labelUpper = (a.label || "Delivery").toUpperCase();
+              const isBilling = a.addressType === "billing";
 
-            return (
-              <div
-                key={a.id}
-                className="bg-theme-surface border border-theme-border rounded-xl p-5 flex flex-col justify-between gap-3 shadow-2xs hover:border-theme-primary/30 transition-all"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-theme-primary">
-                      {labelUpper}
-                    </span>
-                    <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                      isBilling
-                        ? "bg-purple-100 text-purple-700"
-                        : "bg-blue-100 text-blue-700"
-                    }`}>
-                      {a.addressType || "shipping"}
-                    </span>
-                    {a.isDefault && (
-                      <span className="bg-theme-status-out-bg text-theme-status-out-fg text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full">
-                        Default
+              return (
+                <div
+                  key={a.id}
+                  className="bg-theme-surface border border-theme-border rounded-xl p-5 flex flex-col justify-between gap-3 shadow-2xs hover:border-theme-primary/30 transition-all"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-theme-primary">
+                        {labelUpper}
                       </span>
+                      <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                        isBilling
+                          ? "bg-purple-100 text-purple-700"
+                          : "bg-blue-100 text-blue-700"
+                      }`}>
+                        {a.addressType || "shipping"}
+                      </span>
+                      {a.isDefault && (
+                        <span className="bg-theme-status-out-bg text-theme-status-out-fg text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full">
+                          Default
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-xs sm:text-sm font-semibold text-theme-text-primary">
+                      {a.fullName}
+                    </div>
+                    <div className="text-xs text-theme-text-subtle font-light leading-relaxed">
+                      {a.addressLine1}
+                      {a.addressLine2 ? `, ${a.addressLine2}` : ""}
+                      {a.landmark ? ` (Near ${a.landmark})` : ""}, {a.city} — {a.pincode}, {a.state}
+                    </div>
+                    <div className="text-xs text-theme-text-muted font-medium">
+                      {a.phone}
+                    </div>
+                  </div>
+
+                  {/* Card Action Buttons: Set as Default, Edit & Delete */}
+                  <div className="flex items-center gap-4 pt-2 border-t border-theme-border-subtle text-xs">
+                    {!a.isDefault && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateMutation.mutate({
+                            uuid: a.id,
+                            data: { isDefault: true },
+                          })
+                        }
+                        disabled={updateMutation.isPending || deleteMutation.isPending}
+                        className="font-medium text-theme-primary hover:text-theme-secondary cursor-pointer transition-colors disabled:opacity-50"
+                      >
+                        Set as Default
+                      </button>
                     )}
-                  </div>
-
-                  <div className="text-xs sm:text-sm font-semibold text-theme-text-primary">
-                    {a.fullName}
-                  </div>
-                  <div className="text-xs text-theme-text-subtle font-light leading-relaxed">
-                    {a.addressLine1}
-                    {a.addressLine2 ? `, ${a.addressLine2}` : ""}
-                    {a.landmark ? ` (Near ${a.landmark})` : ""}, {a.city} — {a.pincode}, {a.state}
-                  </div>
-                  <div className="text-xs text-theme-text-muted font-medium">
-                    {a.phone}
-                  </div>
-                </div>
-
-                {/* Card Action Buttons: Set as Default, Edit & Delete */}
-                <div className="flex items-center gap-4 pt-2 border-t border-theme-border-subtle text-xs">
-                  {!a.isDefault && (
                     <button
                       type="button"
-                      onClick={() =>
-                        updateMutation.mutate({
-                          uuid: a.id,
-                          data: { isDefault: true },
-                        })
-                      }
                       disabled={updateMutation.isPending || deleteMutation.isPending}
-                      className="font-medium text-theme-primary hover:text-theme-secondary cursor-pointer transition-colors disabled:opacity-50"
+                      onClick={() => handleStartEdit(a)}
+                      className="font-medium text-theme-secondary hover:text-theme-primary cursor-pointer transition-colors ml-auto disabled:opacity-50"
                     >
-                      Set as Default
+                      Edit
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    disabled={updateMutation.isPending || deleteMutation.isPending}
-                    onClick={() => handleStartEdit(a)}
-                    className="font-medium text-theme-secondary hover:text-theme-primary cursor-pointer transition-colors ml-auto disabled:opacity-50"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    disabled={updateMutation.isPending || deleteMutation.isPending}
-                    onClick={() => deleteMutation.mutate(a.id)}
-                    className="font-medium text-theme-status-can-fg hover:text-red-700 cursor-pointer transition-colors disabled:opacity-50"
-                  >
-                    Delete
-                  </button>
+                    <button
+                      type="button"
+                      disabled={updateMutation.isPending || deleteMutation.isPending}
+                      onClick={() => deleteMutation.mutate(a.id)}
+                      className="font-medium text-theme-status-can-fg hover:text-red-700 cursor-pointer transition-colors disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )
       )}
     </div>
   );

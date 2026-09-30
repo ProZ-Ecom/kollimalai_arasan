@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -35,6 +35,7 @@ import {
   MessageCircle,
   Megaphone,
   Trash2,
+  Boxes,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
@@ -72,6 +73,7 @@ const sidebarItems: SidebarItem[] = [
       { label: "Categories", href: "/admin/dashboard/categories", icon: FolderTree },
       { label: "Products", href: "/admin/dashboard/products", icon: Package },
       { label: "Items", href: "/admin/dashboard/variants", icon: Layers },
+      { label: "Inventory", href: "/admin/dashboard/inventory", icon: Boxes },
       { label: "Reviews", href: "/admin/dashboard/reviews", icon: Star },
       { label: "Brands", href: "/admin/dashboard/brands", icon: Crown },
       // { label: "Attributes", href: "/admin/dashboard/attributes", icon: Tag },
@@ -178,6 +180,7 @@ function SidebarItemComponent({
   collapsed?: boolean;
   onExpandSidebar?: () => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(() => {
     if (item.children) {
       return item.children.some(
@@ -210,10 +213,20 @@ function SidebarItemComponent({
       );
     }
 
+    const handleToggle = () => {
+      const nextOpen = !isOpen;
+      setIsOpen(nextOpen);
+      if (nextOpen) {
+        setTimeout(() => {
+          containerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 50);
+      }
+    };
+
     return (
-      <div>
+      <div ref={containerRef}>
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleToggle}
           className={cn(
             "group flex w-full items-center gap-2.5 rounded-lg py-2 pl-2 pr-3 text-sm font-medium transition-all duration-200 cursor-pointer",
             isActive ? activeRowClasses : inactiveRowClasses

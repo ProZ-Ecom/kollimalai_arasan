@@ -50,7 +50,13 @@ import {
   Loader2,
   ExternalLink,
   PlayCircle,
+  ArrowLeftRight,
 } from "lucide-react";
+import { toast } from "@/components/ui/Toast";
+import { AdjustStockModal } from "@/features/inventory/components";
+import { getInventoryByUnitPrice } from "@/features/inventory/api/get-inventory";
+import type { InventoryListItem } from "@/features/inventory/types";
+import type { VariantUnitPriceResponse } from "@/features/variants/types";
 
 export default function AdminVariantDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -99,6 +105,16 @@ export default function AdminVariantDetailsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [imagePendingDeleteId, setImagePendingDeleteId] = useState<string | null>(null);
+
+  // Adjust Stock Modal State
+  const [adjustInventoryItem, setAdjustInventoryItem] =
+    useState<InventoryListItem | null>(null);
+  const [isAdjustStockModalOpen, setIsAdjustStockModalOpen] = useState(false);
+  const [packPickerVariant, setPackPickerVariant] =
+    useState<AdminVariantResponse | null>(null);
+  const [isPackPickerOpen, setIsPackPickerOpen] = useState(false);
+  const [loadingUnitPriceId, setLoadingUnitPriceId] = useState<string | null>(null);
+  const [isLoadingStock, setIsLoadingStock] = useState(false);
 
   // 4. Reference Units for the Edit Modal
   const { data: unitsData } = useUnits({ pageSize: 100 });
@@ -197,18 +213,55 @@ export default function AdminVariantDetailsPage() {
     }
   };
 
-  // Toggle In Stock / Out of Stock Handler
-  const handleToggleStock = async () => {
-    if (!variant || !canonicalProductUuid) return;
+  const openAdjustForUnitPrice = async (
+    targetVariant: AdminVariantResponse,
+    unitPrice: VariantUnitPriceResponse
+  ) => {
     try {
-      await updateVariantMutation.mutateAsync({
-        productUuid: canonicalProductUuid,
-        variantUuid: variant.id,
-        data: { outOfStock: !variant.outOfStock },
-      });
-      refetchVariant();
-    } catch (err) {
-      console.error("Failed to toggle variant stock", err);
+      setLoadingUnitPriceId(unitPrice.id);
+      const invItem = await getInventoryByUnitPrice(unitPrice.id);
+      if (!invItem) {
+        toast.error("Could not load inventory record for this item.");
+        return;
+      }
+      const enrichedItem: InventoryListItem = {
+        ...invItem,
+        imageUrl: invItem.imageUrl || targetVariant.primaryImage || null,
+        productName: invItem.productName || targetVariant.productName || targetVariant.variantName,
+        variantName: invItem.variantName || targetVariant.variantName,
+      };
+      setAdjustInventoryItem(enrichedItem);
+      setIsPackPickerOpen(false);
+      setIsAdjustStockModalOpen(true);
+    } catch (err: any) {
+      console.error("Failed to load inventory for unit price", err);
+      toast.error("Failed to load inventory", err?.message || "Please try again.");
+    } finally {
+      setLoadingUnitPriceId(null);
+    }
+  };
+
+  const handleStockClick = async () => {
+    if (!variant) return;
+    const prices = variant.unitPrices || [];
+    if (prices.length === 0) {
+      toast.error(
+        "No pack sizes available",
+        "Please add at least one unit price / pack size before adjusting inventory stock."
+      );
+      return;
+    }
+
+    if (prices.length === 1) {
+      try {
+        setIsLoadingStock(true);
+        await openAdjustForUnitPrice(variant, prices[0]);
+      } finally {
+        setIsLoadingStock(false);
+      }
+    } else {
+      setPackPickerVariant(variant);
+      setIsPackPickerOpen(true);
     }
   };
 
@@ -324,14 +377,14 @@ export default function AdminVariantDetailsPage() {
             <>
               <Link
                 href={`/admin/dashboard/products/${canonicalProductUuid}`}
-                className="hover:text-secondary-600 transition-colors truncate max-w-[150px] sm:max-w-xs"
+                className="hover:text-secondary-600 transition-colors truncate max-w-[150px] sm:max-w-xs capitalize"
               >
                 {variant.productName}
               </Link>
               <span className="opacity-40">/</span>
             </>
           )}
-          <span className="text-neutral-900 font-semibold truncate max-w-[200px] sm:max-w-md">
+          <span className="text-neutral-900 font-semibold truncate max-w-[200px] sm:max-w-md capitalize">
             {variant.variantName}
           </span>
         </div>
@@ -364,7 +417,7 @@ export default function AdminVariantDetailsPage() {
           {/* Title & Metadata */}
           <div className="flex flex-col gap-1.5 min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 truncate">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 truncate capitalize">
                 {variant.variantName}
               </h1>
 
@@ -452,19 +505,27 @@ export default function AdminVariantDetailsPage() {
 
             <div className="w-px h-4 bg-cream-border" />
 
-            <label
-              className="flex items-center gap-2 cursor-pointer"
-              title={variant.outOfStock ? "Mark as in stock" : "Mark as out of stock"}
+            <button
+              type="button"
+              onClick={handleStockClick}
+              disabled={isLoadingStock}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border cursor-pointer transition-all hover:opacity-85 disabled:opacity-60 disabled:cursor-not-allowed ${
+                !variant.outOfStock
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-rose-50 text-rose-700 border-rose-200"
+              }`}
+              title="Click to adjust warehouse stock"
             >
-              <Switch
-                checked={!variant.outOfStock}
-                onCheckedChange={handleToggleStock}
-                disabled={updateVariantMutation.isPending}
-              />
-              <span className="text-xs font-bold text-neutral-700 whitespace-nowrap">
-                {!variant.outOfStock ? "In Stock" : "Out of Stock"}
-              </span>
-            </label>
+              {isLoadingStock ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : !variant.outOfStock ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              ) : (
+                <XCircle className="w-3.5 h-3.5 text-rose-600" />
+              )}
+              <span>{!variant.outOfStock ? "In Stock" : "Out of Stock"}</span>
+              <ArrowLeftRight className="w-3 h-3 opacity-60 ml-0.5" />
+            </button>
           </div>
 
           {/* Action Buttons Row */}
@@ -913,6 +974,86 @@ export default function AdminVariantDetailsPage() {
         variant={variant}
         isOpen={isPreviewModalOpen}
         onClose={() => setIsPreviewModalOpen(false)}
+      />
+
+      {/* PACK SIZE PICKER MODAL */}
+      <FormModal
+        open={isPackPickerOpen}
+        onClose={() => {
+          setIsPackPickerOpen(false);
+          setPackPickerVariant(null);
+        }}
+        title={`Adjust Stock: ${packPickerVariant?.variantName || "Item"}`}
+        description="Select which pack size / unit you want to adjust in warehouse inventory"
+        size="md"
+      >
+        {packPickerVariant && (
+          <div className="space-y-3">
+            {(packPickerVariant.unitPrices || []).map((up) => {
+              const isLoadingThis = loadingUnitPriceId === up.id;
+              const isOut = (up.stock ?? 0) === 0;
+              return (
+                <div
+                  key={up.id}
+                  className="flex items-center justify-between p-3.5 rounded-xl border border-cream-border bg-white hover:bg-cream-50/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-cream-100 border border-cream-border flex items-center justify-center shrink-0">
+                      <Package className="w-5 h-5 text-neutral-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-neutral-900">
+                          {up.measurement.value} {up.measurement.unit}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            !isOut
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-rose-50 text-rose-700 border-rose-200"
+                          }`}
+                        >
+                          {!isOut ? `${up.stock ?? 0} in stock` : "Out of stock"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-neutral-500 font-mono mt-0.5">
+                        <span>SKU: {up.sku || "—"}</span>
+                        <span>•</span>
+                        <span>₹{up.basePrice}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    onClick={() => openAdjustForUnitPrice(packPickerVariant, up)}
+                    disabled={isLoadingThis}
+                    className="bg-secondary-600 hover:bg-secondary-700 text-white font-semibold text-xs h-8 px-3.5 rounded-lg shrink-0 cursor-pointer"
+                  >
+                    {isLoadingThis ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      "Adjust"
+                    )}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </FormModal>
+
+      {/* ADJUST STOCK MODAL */}
+      <AdjustStockModal
+        open={isAdjustStockModalOpen}
+        onClose={() => {
+          setIsAdjustStockModalOpen(false);
+          setAdjustInventoryItem(null);
+        }}
+        item={adjustInventoryItem}
+        onSuccess={() => {
+          refetchVariant();
+        }}
       />
     </div>
   );

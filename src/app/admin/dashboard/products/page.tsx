@@ -209,12 +209,13 @@ export default function AdminProductsPage() {
       cell: ({ row }) => (
         <Link
           href={`/admin/dashboard/products/${row.original.id}`}
-          className="group block cursor-pointer"
+          className="group block cursor-pointer max-w-[280px]"
+          title={row.original.name}
         >
-          <p className="font-semibold text-secondary-600 underline-offset-2 group-hover:underline transition-colors">
+          <p className="font-semibold text-secondary-600 underline-offset-2 group-hover:underline transition-colors capitalize truncate">
             {row.original.name}
           </p>
-          <p className="text-xs text-[var(--color-neutral-500)] mt-0.5">
+          <p className="text-xs text-[var(--color-neutral-500)] mt-0.5 truncate">
             {row.original.slug}
           </p>
         </Link>
@@ -224,7 +225,7 @@ export default function AdminProductsPage() {
       accessorKey: "categoryName",
       header: "Category",
       cell: ({ row }) => (
-        <span className="text-[var(--color-neutral-700)]">
+        <span className="text-[var(--color-neutral-700)] capitalize">
           {row.original.categoryName || "—"}
         </span>
       ),
@@ -291,14 +292,14 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex flex-1 min-h-0 min-w-0 flex-col">
       <AdminPageHeader
         title="Product Management"
         description="Manage your product catalog, categories, brands, and taxes."
       />
 
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden  py-1 rounded-2xl">
+      <AdminContent className="flex-1 min-h-0 min-w-0">
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-transparent">
           <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
               <SearchInput
@@ -336,7 +337,7 @@ export default function AdminProductsPage() {
             </Button>
           </div>
 
-          <div className="mt-6 flex-1 min-h-0 overflow-hidden flex flex-col">
+          <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
             <BulkActionsBar
               selectedCount={selectedRows.length}
               entityName="product"
@@ -352,8 +353,9 @@ export default function AdminProductsPage() {
             <DataTable
               columns={columns}
               data={products}
+              tableClassName="min-w-[1050px]"
               pageSize={pageSize}
-              pageSizeOptions={[10, 20, 30, 50]}
+              pageSizeOptions={[5, 10, 20, 50]}
               page={data?.meta?.page ?? page}
               totalPages={data?.meta?.totalPages ?? Math.max(1, Math.ceil((data?.meta?.total ?? products.length) / pageSize))}
               totalItems={data?.meta?.total ?? products.length}
@@ -499,7 +501,7 @@ export default function AdminProductsPage() {
           }
         }}
         title="Delete Product"
-        description="Are you sure you want to delete this product? Deleting this product will automatically deactivate and remove all associated variants, unit prices, and inventory items from both the admin dashboard and the customer storefront. This action cannot be undone."
+        description="Are you sure you want to delete this product? This action cannot be undone."
         confirmText="Delete Product"
         variant="destructive"
         isLoading={deleteMutation.isPending}

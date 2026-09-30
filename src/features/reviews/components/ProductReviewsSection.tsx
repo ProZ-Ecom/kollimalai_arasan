@@ -142,10 +142,17 @@ export function ProductReviewsSection({
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div
+            className={`grid gap-6 lg:gap-8 ${
+              displayedReviews.length === 1
+                ? "grid-cols-1 max-w-sm mx-auto w-full"
+                : displayedReviews.length === 2
+                ? "grid-cols-1 md:grid-cols-2 max-w-2xl mx-auto w-full"
+                : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+            }`}
+          >
             {displayedReviews.map((review: PublicReviewItem) => {
               const initials = getInitials(review.customerName);
-              const location = review.title || "Verified Customer";
 
               return (
                 <div
@@ -154,7 +161,7 @@ export function ProductReviewsSection({
                 >
                   <div>
                     {/* Star Rating */}
-                    <div className="flex items-center gap-1 text-primary-500 mb-5">
+                    <div className="flex items-center gap-1 text-primary-500 mb-3">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star
                           key={i}
@@ -166,6 +173,13 @@ export function ProductReviewsSection({
                         />
                       ))}
                     </div>
+
+                    {/* Review Title */}
+                    {review.title && (
+                      <h4 className="text-sm font-bold text-neutral-900 mb-2">
+                        {review.title}
+                      </h4>
+                    )}
 
                     {/* Comment Quote */}
                     <p className="text-neutral-700 text-sm sm:text-[14.5px] leading-relaxed italic font-normal">
@@ -186,12 +200,6 @@ export function ProductReviewsSection({
                       <span className="text-xs text-secondary-700 font-medium flex items-center gap-1 mt-0.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-secondary-600 shrink-0" />
                         <span>Verified Buyer</span>
-                        {location && (
-                          <>
-                            <span className="text-neutral-300 mx-0.5">•</span>
-                            <span className="text-neutral-500 truncate">{location}</span>
-                          </>
-                        )}
                       </span>
                     </div>
                   </div>

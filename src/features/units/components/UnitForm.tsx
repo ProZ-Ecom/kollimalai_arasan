@@ -43,7 +43,7 @@ export function UnitForm({
   submitLabel = "Save Unit",
 }: UnitFormProps) {
   const methods = useForm<UnitFormData>({
-    resolver: zodResolver(createAdminUnitSchema),
+    resolver: zodResolver(createAdminUnitSchema) as any,
     mode: "onChange",
     reValidateMode: "onChange",
     defaultValues: {
@@ -52,7 +52,10 @@ export function UnitForm({
       type: initialData?.type || "weight",
       baseUnitId: initialData?.baseUnitId ?? null,
       conversionFactor: initialData?.conversionFactor ?? 1,
-      sortOrder: initialData?.sortOrder ?? 0,
+      sortOrder:
+        initialData?.sortOrder !== undefined && initialData?.sortOrder !== null
+          ? initialData.sortOrder
+          : ("" as any),
     },
   });
 
@@ -101,8 +104,11 @@ const filteredBaseUnits = baseUnits.filter(
   return (
     <FormProvider {...methods}>
       <form
-        onSubmit={methods.handleSubmit(async (data) => {
-          await onSubmit(data);
+        onSubmit={methods.handleSubmit(async (data: any) => {
+          await onSubmit({
+            ...data,
+            sortOrder: Number(data.sortOrder || 0),
+          });
         })}
         className="space-y-6"
       >

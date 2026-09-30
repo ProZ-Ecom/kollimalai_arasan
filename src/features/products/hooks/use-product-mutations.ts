@@ -84,6 +84,7 @@ export function useCreateProductImages() {
       const { createAdminProductImages } = await import("../api/get-products");
       return createAdminProductImages(productUuid, images);
     },
+    meta: { skipToast: true },
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: productKeys.all });
       queryClient.invalidateQueries({
@@ -109,6 +110,7 @@ export function useUpdateProductImage() {
       const { updateAdminProductImage } = await import("../api/get-products");
       return updateAdminProductImage(productUuid, imageId, data);
     },
+    meta: { skipToast: true },
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: productKeys.all });
       queryClient.invalidateQueries({
@@ -132,6 +134,7 @@ export function useSetPrimaryProductImage() {
       const { setPrimaryAdminProductImage } = await import("../api/get-products");
       return setPrimaryAdminProductImage(productUuid, imageId);
     },
+    meta: { skipToast: true },
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: productKeys.all });
       queryClient.invalidateQueries({
@@ -158,6 +161,7 @@ export function useDeleteProductImage() {
       const { deleteAdminProductImage } = await import("../api/get-products");
       return deleteAdminProductImage(productUuid, imageId);
     },
+    meta: { skipToast: true },
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: productKeys.all });
       queryClient.invalidateQueries({

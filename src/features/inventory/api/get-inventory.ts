@@ -6,6 +6,8 @@ import type {
   CreateInventoryInput,
   InventoryListItem,
   InventoryTransactionItem,
+  InventoryStats,
+  BulkAdjustStockInput,
 } from "../types";
 
 export async function getInventory(params: GetInventoryParams) {
@@ -22,11 +24,25 @@ export async function getInventory(params: GetInventoryParams) {
   return response;
 }
 
-export async function getInventoryItem(id: string) {
+export async function getInventoryStats() {
+  const response = await apiClient.get<InventoryStats>(
+    "/api/inventory/stats"
+  );
+  return response;
+}
+
+export async function getInventoryItem(id: string | number) {
   const response = await apiClient.get<InventoryListItem>(
     `/api/inventory/${id}`
   );
   return response;
+}
+
+export async function getInventoryByUnitPrice(unitPriceUuid: string) {
+  const response = await apiClient.get<InventoryListItem>(
+    `/api/inventory/by-unit-price?unitPriceUuid=${unitPriceUuid}`
+  );
+  return response.data;
 }
 
 export async function adjustStock(input: AdjustStockInput) {
@@ -34,6 +50,16 @@ export async function adjustStock(input: AdjustStockInput) {
     "/api/inventory/adjust",
     input
   );
+  return response;
+}
+
+export async function bulkAdjustStock(input: BulkAdjustStockInput) {
+  const response = await apiClient.post<{
+    updatedCount: number;
+    totalRequested: number;
+    results: any[];
+    errors?: any[];
+  }>("/api/inventory/bulk-adjust", input);
   return response;
 }
 
@@ -53,7 +79,7 @@ export async function getLowStock() {
 }
 
 export async function getTransactions(
-  inventoryId: string,
+  inventoryId: string | number,
   params?: { page?: number; limit?: number; type?: string }
 ) {
   const searchParams = new URLSearchParams();
@@ -65,5 +91,24 @@ export async function getTransactions(
     data: InventoryTransactionItem[];
     meta: { page: number; limit: number; total: number; totalPages: number };
   }>(`/api/inventory/${inventoryId}/transactions?${searchParams.toString()}`);
+  return response;
+}
+
+export async function getAllTransactions(params?: {
+  page?: number;
+  limit?: number;
+  type?: string;
+  search?: string;
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.type) searchParams.set("type", params.type);
+  if (params?.search) searchParams.set("search", params.search);
+
+  const response = await apiClient.get<{
+    data: InventoryTransactionItem[];
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }>(`/api/inventory/transactions?${searchParams.toString()}`);
   return response;
 }

@@ -38,7 +38,10 @@ export const blogRepository = {
     ]);
 
     return {
-      data,
+      data: data.map((blog) => ({
+        ...blog,
+        status: blog.is_published ? "PUBLISHED" : "DRAFT",
+      })),
       meta: {
         page,
         limit,

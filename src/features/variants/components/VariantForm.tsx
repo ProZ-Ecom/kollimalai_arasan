@@ -13,6 +13,7 @@ import { FormSelect } from "@/components/forms/form-select";
 import { FormCheckbox } from "@/components/forms/form-checkbox";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { FormVideoUrl } from "@/components/forms/form-video-url";
+import { formatTitleCase } from "@/lib/utils";
 
 // Item-level fields only. Unit + price combinations (sku, unit, base price)
 // are managed separately per (unit) via VariantUnitPriceList, since one item
@@ -26,7 +27,8 @@ const variantFormSchema = z.object({
     .string({ message: "Item name is required" })
     .trim()
     .min(1, "Item name cannot be empty")
-    .max(100, "Item name cannot exceed 100 characters"),
+    .max(100, "Item name cannot exceed 100 characters")
+    .transform(formatTitleCase),
   slug: z
     .string({ message: "Item code is required" })
     .trim()
@@ -226,6 +228,7 @@ function VariantForm({
 
     const submissionPayload: VariantFormValues = {
       ...data,
+      variantName: formatTitleCase(data.variantName),
       slug: finalSlug,
     };
 
@@ -253,6 +256,7 @@ function VariantForm({
               name="variantName"
               label="Item Name"
               placeholder="e.g. Classic Mixture, Butter Cookies"
+              isTitleCase
               required
             />
           </div>
@@ -261,6 +265,7 @@ function VariantForm({
             name="variantName"
             label="Item Name"
             placeholder="e.g. Classic Mixture, Butter Cookies"
+            isTitleCase
             required
           />
         )}

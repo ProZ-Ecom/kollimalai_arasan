@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatTitleCase } from "@/lib/utils";
 
 export const getCategoriesQuerySchema = z.object({
   search: z.string().optional(),
@@ -8,7 +9,12 @@ export const getCategoriesQuerySchema = z.object({
 export type GetCategoriesQueryInput = z.infer<typeof getCategoriesQuerySchema>;
 
 export const createCategorySchema = z.object({
-  name: z.string().min(1, "Category name is required").max(255),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Category name is required")
+    .max(255)
+    .transform(formatTitleCase),
   slug: z
     .string()
     .trim()

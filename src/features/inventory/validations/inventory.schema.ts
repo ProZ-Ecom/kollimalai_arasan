@@ -14,16 +14,17 @@ export const getInventoryQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(10),
   search: z.string().optional(),
   lowStock: z.coerce.boolean().optional(),
+  lowStockThreshold: z.coerce.number().int().min(1).optional(),
+  reserved: z.coerce.boolean().optional(),
   outOfStock: z.coerce.boolean().optional(),
 });
 
 export const adjustStockSchema = z.object({
   inventoryId: z.coerce.number(),
-  type: inventoryTransactionTypeEnum,
-  quantity: z
-    .number()
-    .int()
-    .refine((val) => val !== 0, "Quantity cannot be zero"),
+  type: inventoryTransactionTypeEnum.default("ADJUSTMENT"),
+  quantity: z.number().int().default(0),
+  reorderLevel: z.number().int().min(0).optional(),
+  releaseReserved: z.boolean().optional(),
   notes: z.string().optional(),
 });
 
@@ -34,6 +35,14 @@ export const createInventorySchema = z.object({
   reorderLevel: z.number().int().min(0).optional(),
 });
 
+export const bulkAdjustStockSchema = z.object({
+  inventoryIds: z.array(z.coerce.number()).min(1, "Select at least one inventory item"),
+  type: inventoryTransactionTypeEnum.default("PURCHASE"),
+  quantity: z.number().int().refine((val) => val !== 0, "Quantity cannot be zero"),
+  notes: z.string().optional(),
+});
+
 export type GetInventoryQuery = z.infer<typeof getInventoryQuerySchema>;
 export type AdjustStockInput = z.infer<typeof adjustStockSchema>;
 export type CreateInventoryInput = z.infer<typeof createInventorySchema>;
+export type BulkAdjustStockInput = z.infer<typeof bulkAdjustStockSchema>;

@@ -371,14 +371,14 @@ export function FilterSidebar({
   const sidebarContent = (
     <div className="flex flex-col gap-5 text-[#101010]">
       {/* 1. Header: Title & Clear Filter Button */}
-      <div className="flex items-center justify-between pb-3.5 border-b border-[#EDEDED]">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="w-4 h-4 text-[#007F06]" />
-          <h2 className="text-xs font-black uppercase tracking-wider text-[#101010]">
+      <div className="flex items-center justify-between gap-2 pb-3.5 border-b border-[#EDEDED]">
+        <div className="flex items-center gap-2 min-w-0">
+          <SlidersHorizontal className="w-4 h-4 text-[#007F06] shrink-0" />
+          <h2 className="text-xs font-black uppercase tracking-wider text-[#101010] whitespace-nowrap">
             Filter Products
           </h2>
           {totalResultsCount !== undefined && (
-            <span className="text-[11px] bg-[#F5F5F5] text-[#007F06] px-2 py-0.5 rounded-full font-bold">
+            <span className="text-[11px] bg-[#F5F5F5] text-[#007F06] px-2 py-0.5 rounded-full font-bold whitespace-nowrap shrink-0">
               {totalResultsCount}
             </span>
           )}
@@ -387,15 +387,15 @@ export function FilterSidebar({
         <button
           type="button"
           onClick={handleInternalReset}
-          className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer select-none ${
+          className={`text-xs font-bold flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer select-none ${
             hasActiveFilters
               ? "text-[#007F06] hover:text-[#005A04] hover:underline"
               : "text-[#8A8A8A] hover:text-[#007F06]"
           }`}
           title="Clear all filters"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
-          Clear Filter
+          <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+          <span>Clear Filter</span>
         </button>
       </div>
 
@@ -839,7 +839,7 @@ export function FilterSidebar({
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden lg:block w-72 xl:w-80 shrink-0 bg-white border border-[#E5E5E5] rounded-2xl p-5 xl:p-6 shadow-xs sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-thin ${className}`}
+        className={`hidden lg:block w-[300px] xl:w-80 shrink-0 bg-white border border-[#E5E5E5] rounded-2xl p-5 xl:p-6 shadow-xs sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-thin ${className}`}
       >
         {sidebarContent}
       </aside>

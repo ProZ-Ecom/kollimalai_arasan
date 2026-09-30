@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, Star, Loader2, Tag, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Star, Loader2, Tag, Package, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -77,7 +77,11 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
   };
 
   const startAdd = () => {
-    setForm(emptyRow);
+    const hasDefault = unitPrices.some((up) => up.isDefault);
+    setForm({
+      ...emptyRow,
+      isDefault: !hasDefault,
+    });
     setFormError(null);
     setEditingId(null);
     setIsAdding(true);
@@ -122,20 +126,25 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
       return;
     }
 
-    const stockNum = form.stock.trim() !== "" ? Number(form.stock) : undefined;
-    if (stockNum !== undefined && (Number.isNaN(stockNum) || !Number.isInteger(stockNum) || stockNum < 0)) {
+    const stockNum = form.stock.trim() !== "" ? Number(form.stock) : 0;
+    if (Number.isNaN(stockNum) || !Number.isInteger(stockNum) || stockNum < 0) {
       setFormError("Stock must be a non-negative whole number");
       return;
     }
+
+    const hasExistingDefault = unitPrices.some(
+      (up) => up.isDefault && up.id !== editingId
+    );
+    const resolvedIsDefault = form.isDefault || !hasExistingDefault;
 
     const payload = {
       unitId: form.unitId,
       unitValue,
       sku: form.sku.trim(),
       basePrice,
-      isDefault: form.isDefault,
+      isDefault: resolvedIsDefault,
       isActive: form.isActive,
-      ...(stockNum !== undefined ? { stock: stockNum } : {}),
+      stock: stockNum,
     };
 
     try {
@@ -282,6 +291,11 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
                       {!item.isActive && (
                         <span className="inline-flex px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 text-[10px] font-bold border border-neutral-200">
                           Inactive
+                        </span>
+                      )}
+                      {stockNum === 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-bold border border-rose-200">
+                          Out of Stock
                         </span>
                       )}
                     </div>
@@ -477,6 +491,21 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
                     How many packs of this size you currently have. Leave blank to track manually later.
                     When it reaches 0, this item is auto-marked Out of Stock.
                   </p>
+                  {(!form.stock.trim() || Number(form.stock) === 0) && (
+                    <div className="mt-2.5 flex items-start gap-2.5 p-3 rounded-xl bg-amber-50/90 border border-amber-200/80 text-amber-900 text-xs shadow-2xs animate-in fade-in duration-200">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <p className="font-semibold text-amber-950">
+                          Out of Stock Warning
+                        </p>
+                        <p className="text-amber-800 leading-relaxed">
+                          No stock entered — this pack size will be saved as{" "}
+                          <span className="font-bold text-rose-700">Out of Stock</span>.
+                          You can add inventory stock later anytime from the <strong>Inventory</strong> dashboard.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

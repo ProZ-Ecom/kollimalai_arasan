@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
+import { db } from "@/lib/db/prisma";
 import { ApiError } from "@/lib/api/api-error";
 import { userRepository } from "@/features/users/repositories/user.repository";
 import {
@@ -82,6 +84,18 @@ export const customerProfileService = {
       updateData.name = data.name;
       // Sync user name if updated
       await userRepository.update(user.internalId, { name: data.name });
+    }
+
+    if (data.phone !== undefined) {
+      const formattedPhone = data.phone ? data.phone.trim() : null;
+      if (formattedPhone) {
+        const existingWithPhone = await userRepository.findByPhone(formattedPhone);
+        if (existingWithPhone && existingWithPhone.internalId !== user.internalId) {
+          throw ApiError.badRequest("This mobile number is already registered with another account");
+        }
+      }
+      updateData.phone = formattedPhone;
+      await userRepository.update(user.internalId, { phone: formattedPhone });
     }
 
     if (data.dob !== undefined) {
@@ -196,6 +210,36 @@ export const customerProfileService = {
 
     return {
       profileImage: null,
+    };
+  },
+
+  async changePassword(
+    sessionUserId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await resolveActiveUser(sessionUserId);
+
+    const dbUser = await db.user.findUnique({
+      where: { id: BigInt(user.internalId) },
+      select: { password_hash: true },
+    });
+
+    if (!dbUser || !dbUser.password_hash) {
+      throw ApiError.badRequest("Account does not have a local password set");
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, dbUser.password_hash);
+    if (!isMatch) {
+      throw ApiError.badRequest("Current password is incorrect");
+    }
+
+    const hashedNew = await bcrypt.hash(newPassword, 12);
+    await userRepository.resetPassword(user.internalId, hashedNew);
+
+    return {
+      success: true,
+      message: "Password updated successfully",
     };
   },
 };

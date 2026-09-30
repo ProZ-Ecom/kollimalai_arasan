@@ -496,7 +496,7 @@ export default function AdminProductDetailsPage() {
             {/* Title & Badges */}
             <div className="min-w-0 flex flex-col gap-1.5">
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 capitalize">
                   {product.name}
                 </h1>
                 {/* Active/Inactive badge */}
@@ -519,7 +519,7 @@ export default function AdminProductDetailsPage() {
 
               {/* Category · Brand · Slug · HSN · Created subline */}
               <div className="flex items-center gap-2.5 flex-wrap text-xs sm:text-sm text-neutral-500">
-                <span>{categoryName || "Not Assigned"}</span>
+                <span className="capitalize">{categoryName || "Not Assigned"}</span>
                 <span className="opacity-40">·</span>
                 <span>{brandName || "Not Assigned"}</span>
                 <span className="opacity-40">·</span>
@@ -853,7 +853,7 @@ export default function AdminProductDetailsPage() {
                               )}
                             </div>
                             <div className="min-w-0">
-                              <span className="font-semibold text-neutral-900 group-hover/variant:text-secondary-600 group-hover/variant:underline block leading-snug truncate transition-colors">
+                              <span className="font-semibold text-neutral-900 group-hover/variant:text-secondary-600 group-hover/variant:underline block leading-snug truncate transition-colors capitalize">
                                 {variant.variantName}
                               </span>
                               <span className="font-mono text-[11px] text-neutral-400 block truncate">
@@ -1189,6 +1189,15 @@ export default function AdminProductDetailsPage() {
                 formData.productImage !== primaryProductImage
               ) {
                 await saveProductPrimaryImage(canonicalProductId, formData.productImage);
+              } else if (!formData.productImage && primaryProductImage) {
+                await Promise.all(
+                  productImages.map((img) =>
+                    deleteProductImageMutation.mutateAsync({
+                      productUuid: canonicalProductId,
+                      imageId: img.id,
+                    })
+                  )
+                );
               }
             } catch (err: any) {
               console.error("Failed to update product", err);
@@ -1245,40 +1254,50 @@ export default function AdminProductDetailsPage() {
               productUuid={canonicalProductId}
               variantUuid={newlyCreatedVariant.id}
             />
-            <div className="flex justify-end gap-2">
-              {!hasNewlyCreatedPrices ? (
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsAddVariantOpen(false);
-                    setNewlyCreatedVariant(null);
-                  }}
-                  className="h-10 rounded-xl bg-neutral-100 text-neutral-800 border border-neutral-300 hover:bg-neutral-200 px-5 text-sm font-semibold cursor-pointer"
-                >
-                  Skip for now & Close
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await updateVariantMutation.mutateAsync({
-                        productUuid: canonicalProductId,
-                        variantUuid: newlyCreatedVariant.id,
-                        data: { isActive: true },
-                      });
-                      toast.success("Item Activated", "Item is now active and will appear on the storefront.");
-                    } catch (e) {
-                      console.error("Failed to activate variant:", e);
-                    }
-                    setIsAddVariantOpen(false);
-                    setNewlyCreatedVariant(null);
-                  }}
-                  className="h-10 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] cursor-pointer"
-                >
-                  Save & Activate
-                </Button>
-              )}
+            <div className="flex justify-between items-center gap-2 pt-2 border-t border-neutral-100">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setNewlyCreatedVariant(null)}
+                className="h-10 rounded-xl px-4 text-sm font-medium text-neutral-600 hover:text-neutral-900 border-neutral-300 hover:bg-neutral-50 cursor-pointer"
+              >
+                ← Back to Details
+              </Button>
+              <div className="flex items-center gap-2">
+                {!hasNewlyCreatedPrices ? (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setIsAddVariantOpen(false);
+                      setNewlyCreatedVariant(null);
+                    }}
+                    className="h-10 rounded-xl bg-neutral-100 text-neutral-800 border border-neutral-300 hover:bg-neutral-200 px-5 text-sm font-semibold cursor-pointer"
+                  >
+                    Skip for now & Close
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await updateVariantMutation.mutateAsync({
+                          productUuid: canonicalProductId,
+                          variantUuid: newlyCreatedVariant.id,
+                          data: { isActive: true },
+                        });
+                        toast.success("Item Activated", "Item is now active and will appear on the storefront.");
+                      } catch (e) {
+                        console.error("Failed to activate variant:", e);
+                      }
+                      setIsAddVariantOpen(false);
+                      setNewlyCreatedVariant(null);
+                    }}
+                    className="h-10 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] cursor-pointer"
+                  >
+                    Save & Activate
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}

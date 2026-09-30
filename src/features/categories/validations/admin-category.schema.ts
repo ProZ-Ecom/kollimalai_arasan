@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatTitleCase } from "@/lib/utils";
 
 export const createAdminCategorySchema = z
   .object({
@@ -6,7 +7,8 @@ export const createAdminCategorySchema = z
       .string()
       .trim()
       .min(1, "Category name is required")
-      .max(150, "Category name cannot exceed 150 characters"),
+      .max(150, "Category name cannot exceed 150 characters")
+      .transform(formatTitleCase),
     slug: z
       .string()
       .trim()
@@ -28,7 +30,7 @@ export const createAdminCategorySchema = z
       .max(500, "Icon path cannot exceed 500 characters")
       .optional()
       .nullable(),
-    sortOrder: z
+    sortOrder: z.coerce
       .number()
       .int("Sort order must be an integer")
       .min(0, "Sort order cannot be negative")

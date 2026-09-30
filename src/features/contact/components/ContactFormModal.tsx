@@ -291,7 +291,7 @@ export function ContactFormModal({ open, onClose }: ContactFormModalProps) {
                     <input
                       id="contact-name"
                       type="text"
-                      placeholder="e.g. John Doe"
+                      placeholder="Enter your name"
                       value={formData.name}
                       onChange={(e) => handleChange("name", e.target.value)}
                       disabled={submitContactMutation.isPending}

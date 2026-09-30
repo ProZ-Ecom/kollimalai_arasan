@@ -9,6 +9,8 @@ import {
   placeOrder,
   cancelOrder,
   cancelOrderAdmin,
+  deliverAdminOrder,
+  returnAdminOrder,
   getAdminOrders,
   getAdminOrdersCount,
   getAdminOrder,
@@ -18,7 +20,10 @@ import {
   markOutForDeliveryAdminOrder,
   assignOrderDelivery,
   getCheckoutSummary,
+  getDeliveryPartners,
+  shipOrderCourier,
   type AssignDeliveryInput,
+  type ShipOrderCourierPayload,
 } from "../api/get-orders";
 import type {
   DeliveryMethod,
@@ -105,6 +110,50 @@ export function useCancelOrderAdmin() {
 }
 
 export const useCancelAdminOrder = useCancelOrderAdmin;
+
+export function useDeliverAdminOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string | number; note?: string }) =>
+      deliverAdminOrder(id, note),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: adminOrderKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders", "count"] });
+      queryClient.invalidateQueries({
+        queryKey: adminOrderKeys.detail(variables.id),
+      });
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
+      queryClient.invalidateQueries({ queryKey: deliveryKeys.all });
+    },
+  });
+}
+
+export function useReturnAdminOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      reason,
+      note,
+      amount,
+    }: {
+      id: string | number;
+      reason?: string;
+      note?: string;
+      amount?: number;
+    }) => returnAdminOrder(id, { reason, note, amount }),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: adminOrderKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders", "count"] });
+      queryClient.invalidateQueries({
+        queryKey: adminOrderKeys.detail(variables.id),
+      });
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
+    },
+  });
+}
 
 export function useAdminOrders(params?: AdminOrdersListParams) {
   return useQuery({
@@ -224,4 +273,36 @@ export function useCheckoutSummary(
       }),
   });
 }
+
+export function useDeliveryPartners() {
+  return useQuery({
+    queryKey: ["admin", "delivery-partners"],
+    queryFn: () => getDeliveryPartners(),
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
+  });
+}
+
+export function useShipOrderCourier() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      uuid,
+      payload,
+    }: {
+      uuid: string | number;
+      payload: ShipOrderCourierPayload;
+    }) => shipOrderCourier(uuid, payload),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: adminOrderKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders", "count"] });
+      queryClient.invalidateQueries({
+        queryKey: adminOrderKeys.detail(variables.uuid),
+      });
+      queryClient.invalidateQueries({ queryKey: deliveryKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["customer", "orders"] });
+    },
+  });
+}
+
 

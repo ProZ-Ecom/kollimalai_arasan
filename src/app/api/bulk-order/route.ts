@@ -14,7 +14,7 @@ export const POST = createApiHandler(
 
       return apiSuccess(
         result,
-        "Your bulk order enquiry has been submitted successfully. We will get back to you soon.",
+        "Bulk order submitted successfully",
         201
       );
     },

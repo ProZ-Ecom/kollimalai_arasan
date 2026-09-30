@@ -54,7 +54,13 @@ export class ApiError extends Error {
 }
 
 export function isApiError(error: unknown): error is ApiError {
-  return error instanceof ApiError;
+  if (error instanceof ApiError) return true;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    ("statusCode" in error || (error as any).name === "ApiError") &&
+    typeof (error as any).statusCode === "number"
+  );
 }
 
 export function handlePrismaError(error: unknown): ApiError {

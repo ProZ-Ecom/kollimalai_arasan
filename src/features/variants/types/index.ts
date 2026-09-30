@@ -54,6 +54,9 @@ export interface VariantUnitPriceResponse {
   isDefault: boolean;
   isActive: boolean;
   stock?: number;
+  inventoryId?: number;
+  reservedQuantity?: number;
+  reorderLevel?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +88,7 @@ export interface AdminVariantResponse {
   /** @deprecated selling price is now computed on the frontend from basePrice minus any active offer */
   salePrice?: number;
   stock?: number;
+  inventoryId?: number;
   unitId?: string;
   unitValue?: number;
   unitName?: string;

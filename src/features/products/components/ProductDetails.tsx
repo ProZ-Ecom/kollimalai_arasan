@@ -425,7 +425,7 @@ function ProductDetails({ product }: ProductDetailsProps) {
               {product.category && (
                 <Link
                   href={`/categories/${product.category.id}`}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#007F06]/10 text-[#007F06] hover:bg-[#007F06]/20 transition-colors"
+                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#007F06]/10 text-[#007F06] hover:bg-[#007F06]/20 transition-colors capitalize"
                 >
                   {product.category.name}
                 </Link>
@@ -449,11 +449,11 @@ function ProductDetails({ product }: ProductDetailsProps) {
 
           {/* Titles & Review Social Proof */}
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-neutral-900 tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-neutral-900 tracking-tight leading-tight capitalize">
               {product.name}
             </h1>
             {variantSubtitle && (
-              <p className="text-base sm:text-lg text-neutral-600 font-medium mt-1">
+              <p className="text-base sm:text-lg text-neutral-600 font-medium mt-1 capitalize">
                 {variantSubtitle}
               </p>
             )}

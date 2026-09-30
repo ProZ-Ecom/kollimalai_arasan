@@ -353,8 +353,8 @@ export default function AdminOffersPage() {
               onClick={() => setStatusTarget(offer)}
               className={
                 offer.isActive
-                  ? "h-8 w-8 text-amber-600 hover:bg-amber-50"
-                  : "h-8 w-8 text-emerald-600 hover:bg-emerald-50"
+                  ? "h-8 w-8 text-emerald-600 hover:bg-emerald-50"
+                  : "h-8 w-8 text-slate-400 hover:bg-slate-100"
               }
               title={offer.isActive ? "Deactivate offer" : "Activate offer"}
             >
@@ -512,10 +512,11 @@ export default function AdminOffersPage() {
           </div>
 
           {/* Table */}
-          <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="mt-6 flex min-h-0 flex-1 flex-col">
             <DataTable
               columns={columns}
               data={offers}
+              tableClassName="min-w-[1100px]"
               pageSize={pageSize}
               pageSizeOptions={[10, 20, 30, 50]}
               page={data?.meta?.page ?? page}

@@ -113,8 +113,8 @@ export function AdminBulkOrderDetailModal({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-sm">
           <div className="p-3.5 rounded-xl border border-neutral-200 bg-white space-y-1">
-            <p className="text-xs font-mono font-medium uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5 text-neutral-400" />
+            <p className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600 flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5 text-neutral-500" />
               Email Address
             </p>
             <div className="flex items-center justify-between gap-2 pt-0.5">
@@ -134,8 +134,8 @@ export function AdminBulkOrderDetailModal({
           </div>
 
           <div className="p-3.5 rounded-xl border border-neutral-200 bg-white space-y-1">
-            <p className="text-xs font-mono font-medium uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5 text-neutral-400" />
+            <p className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600 flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5 text-neutral-500" />
               Phone Number
             </p>
             <div className="flex items-center justify-between gap-2 pt-0.5">
@@ -154,8 +154,8 @@ export function AdminBulkOrderDetailModal({
 
           {item.companyName && (
             <div className="p-3.5 rounded-xl border border-neutral-200 bg-white space-y-1">
-              <p className="text-xs font-mono font-medium uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-                <Building2 className="h-3.5 w-3.5 text-neutral-400" />
+              <p className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600 flex items-center gap-1.5">
+                <Building2 className="h-3.5 w-3.5 text-neutral-500" />
                 Company / Business
               </p>
               <span className="font-medium text-neutral-900 text-sm">
@@ -165,8 +165,8 @@ export function AdminBulkOrderDetailModal({
           )}
 
           <div className="p-3.5 rounded-xl border border-neutral-200 bg-white space-y-1">
-            <p className="text-xs font-mono font-medium uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-              <Hash className="h-3.5 w-3.5 text-neutral-400" />
+            <p className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600 flex items-center gap-1.5">
+              <Hash className="h-3.5 w-3.5 text-neutral-500" />
               Quantity Requested
             </p>
             <span className="font-medium text-neutral-900 text-sm">
@@ -177,8 +177,8 @@ export function AdminBulkOrderDetailModal({
 
         <div className="rounded-xl border border-neutral-200 bg-white p-4 sm:p-5 space-y-3">
           <div>
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-              <Package className="h-3.5 w-3.5 text-neutral-400" />
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600 flex items-center gap-1.5">
+              <Package className="h-3.5 w-3.5 text-neutral-500" />
               Product Interest
             </span>
             <h4 className="text-base font-bold text-neutral-900 mt-0.5 leading-snug">
@@ -188,7 +188,7 @@ export function AdminBulkOrderDetailModal({
 
           {item.message && (
             <div className="border-t border-neutral-100 pt-3">
-              <span className="text-xs font-mono font-semibold uppercase tracking-wider text-neutral-400">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600">
                 Additional Requirements
               </span>
               <div className="mt-2 p-3.5 rounded-xl bg-neutral-50 border border-neutral-200/80 text-sm text-neutral-800 whitespace-pre-wrap leading-relaxed">
@@ -199,7 +199,7 @@ export function AdminBulkOrderDetailModal({
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-white p-4 sm:p-5 space-y-3">
-          <span className="text-xs font-mono font-semibold uppercase tracking-wider text-neutral-400">
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600">
             Follow-up Comment
           </span>
           <textarea

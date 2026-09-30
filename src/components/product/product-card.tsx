@@ -45,13 +45,13 @@ function ProductCard({ product }: ProductCardProps) {
 
       <CardContent className="p-4">
         <Link href={`/products/${product.slug}`}>
-          <h3 className="font-semibold line-clamp-1 hover:text-primary transition-colors">
+          <h3 className="font-semibold line-clamp-1 hover:text-primary transition-colors capitalize">
             {product.name}
           </h3>
         </Link>
 
         {product.category && (
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 capitalize">
             {product.category.name}
           </p>
         )}

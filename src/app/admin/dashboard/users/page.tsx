@@ -23,13 +23,24 @@ import { FormModal } from "@/components/common/FormModal";
 import { Plus, Pencil, Trash2, KeyRound } from "lucide-react";
 import {
   createUserSchema,
+  updateUserSchema,
   resetPasswordSchema,
   type CreateUserSchemaInput,
+  type UpdateUserSchemaInput,
 } from "@/features/users/validations/user.schema";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { UserListItem } from "@/features/users/types";
 
 type ModalMode = "create" | "edit" | "resetPassword" | null;
+
+interface UserFormValues {
+  name: string;
+  email: string;
+  password?: string;
+  phone?: string;
+  roleId?: number;
+  status: "active" | "inactive" | "banned";
+}
 
 export default function AdminUsersPage() {
   const [modalMode, setModalMode] = useState<ModalMode>(null);
@@ -51,8 +62,8 @@ export default function AdminUsersPage() {
     watch,
     setValue,
     formState: { errors },
-  } = useForm<CreateUserSchemaInput>({
-    resolver: zodResolver(createUserSchema),
+  } = useForm<UserFormValues>({
+    resolver: zodResolver(modalMode === "edit" ? updateUserSchema : createUserSchema) as any,
     defaultValues: {
       name: "",
       email: "",
@@ -95,7 +106,7 @@ export default function AdminUsersPage() {
     }
   }, [modalMode, selectedUser, reset]);
 
-  const onSubmit = (formData: CreateUserSchemaInput) => {
+  const onSubmit = (formData: any) => {
     if (modalMode === "edit" && selectedUser) {
       const { password: _, ...updateData } = formData;
       updateMutation.mutate(
@@ -144,7 +155,7 @@ export default function AdminUsersPage() {
       case "active":
         return "success";
       case "inactive":
-        return "secondary";
+        return "warning";
       case "banned":
       case "blocked":
         return "destructive";
@@ -254,11 +265,12 @@ export default function AdminUsersPage() {
           </Button>
         }
       />
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <AdminContent className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           <DataTable
             columns={columns}
             data={users}
+            tableClassName="min-w-[1050px]"
             searchKey="name"
             searchPlaceholder="Search users..."
             pageSize={20}
@@ -268,6 +280,7 @@ export default function AdminUsersPage() {
       </AdminContent>
 
       <FormModal
+        key={modalMode ?? "closed"}
         open={modalMode === "create" || modalMode === "edit"}
         onClose={handleCloseModal}
         title={modalMode === "edit" ? "Edit User" : "Add User"}

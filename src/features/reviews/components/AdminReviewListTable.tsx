@@ -124,6 +124,7 @@ export function AdminReviewListTable({
       reviewId: review.id,
       isApproved,
     });
+    refetch();
   };
 
   const handleConfirmDelete = async () => {
@@ -135,6 +136,7 @@ export function AdminReviewListTable({
     if (reviews.length === 1 && page > 1) {
       setPage(page - 1);
     }
+    refetch();
   };
 
   const columns: ColumnDef<ReviewResponse, unknown>[] = [
@@ -438,6 +440,7 @@ export function AdminReviewListTable({
           <DataTable
             columns={columns}
             data={reviews}
+            tableClassName="min-w-[1150px]"
             page={meta?.page ?? page}
             pageSize={meta?.limit ?? pageSize}
             totalItems={meta?.total ?? reviews.length}
@@ -463,6 +466,9 @@ export function AdminReviewListTable({
             setSelectedReview(null);
           }}
           onDeleted={() => {
+            refetch();
+          }}
+          onStatusChanged={() => {
             refetch();
           }}
         />

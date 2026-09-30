@@ -28,11 +28,11 @@ function Breadcrumb({ items, className }: BreadcrumbProps) {
         <React.Fragment key={index}>
           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
           {item.href ? (
-            <Link href={item.href} className="hover:text-primary transition-colors">
+            <Link href={item.href} className="hover:text-primary transition-colors capitalize">
               {item.label}
             </Link>
           ) : (
-            <span className="text-gray-900 font-semibold truncate max-w-[240px] md:max-w-md">
+            <span className="text-gray-900 font-semibold truncate max-w-[240px] md:max-w-md capitalize">
               {item.label}
             </span>
           )}

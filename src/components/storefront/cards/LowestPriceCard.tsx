@@ -99,7 +99,7 @@ export function LowestPriceCard({
 
       {/* Name */}
       <Link href={`/products/${product.productId}`} className="block mt-3">
-        <h3 className="font-bold text-sm text-secondary-500 leading-tight line-clamp-2 hover:text-secondary-600 transition-colors">
+        <h3 className="font-bold text-sm text-secondary-500 leading-tight line-clamp-2 hover:text-secondary-600 transition-colors capitalize">
           {product.name}
         </h3>
       </Link>

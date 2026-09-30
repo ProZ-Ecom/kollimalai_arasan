@@ -7,6 +7,7 @@ import {
   getContactAcknowledgementEmailTemplate,
   getContactReplyEmailTemplate,
 } from "./templates/contact-email.template";
+import { getBulkOrderAcknowledgementEmailTemplate } from "./templates/bulk-order-email.template";
 
 export const emailService = {
   getFromAddress() {
@@ -157,6 +158,55 @@ export const emailService = {
       return true;
     } catch (error) {
       console.error("[EMAIL SERVICE] Error sending contact reply email:", error);
+      return false;
+    }
+  },
+
+  async sendBulkOrderAcknowledgementEmail(params: {
+    to: string;
+    name: string;
+    phone: string;
+    companyName?: string | null;
+    productInterest?: string | null;
+    quantity: number;
+    message?: string | null;
+  }): Promise<boolean> {
+    const { subject, html, text } = getBulkOrderAcknowledgementEmailTemplate({
+      name: params.name,
+      phone: params.phone,
+      companyName: params.companyName,
+      productInterest: params.productInterest,
+      quantity: params.quantity,
+      message: params.message,
+    });
+
+    const from = this.getFromAddress();
+    const transporter = this.getTransporter();
+
+    if (!transporter) {
+      console.warn(
+        "[EMAIL SERVICE] SMTP is not configured; bulk order acknowledgement email was not sent."
+      );
+      return false;
+    }
+
+    try {
+      const info = await transporter.sendMail({
+        from,
+        to: params.to,
+        subject,
+        text,
+        html,
+      });
+      console.log(
+        `[EMAIL SERVICE] Bulk order acknowledgement email sent to ${params.to} (MessageId: ${info.messageId})`
+      );
+      return true;
+    } catch (error) {
+      console.error(
+        "[EMAIL SERVICE] Error sending bulk order acknowledgement email:",
+        error
+      );
       return false;
     }
   },
