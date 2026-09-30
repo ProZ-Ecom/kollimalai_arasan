@@ -170,14 +170,14 @@ export default function AdminCategoriesPage() {
       : null;
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex flex-1 min-h-0 min-w-0 flex-col">
       {/* <AdminBreadcrumb items={[{ label: "Categories" }]} /> */}
       <AdminPageHeader
         title="Categories"
         description="Manage your product categories"
       />
-      <AdminContent className="flex-1 min-h-0 flex flex-col">
-        <div className="flex flex-1 flex-col py-1 rounded-2xl min-h-0">
+      <AdminContent className="flex-1 min-h-0 min-w-0">
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-transparent">
           {/* Stats Cards */}
           {/* <div className="flex-shrink-0 flex gap-4 overflow-x-auto overscroll-x-contain pb-2">
             <StatsCard
@@ -228,7 +228,7 @@ export default function AdminCategoriesPage() {
           </div>
 
           {/* Table Container */}
-          <div className="mt-6 flex-1 min-h-0 flex flex-col">
+          <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
             <BulkActionsBar
               selectedCount={selectedRows.length}
               entityName="category"
@@ -246,7 +246,7 @@ export default function AdminCategoriesPage() {
               data={categories}
               tableClassName="min-w-[950px]"
               pageSize={pageSize}
-              pageSizeOptions={[10, 20, 30, 50]}
+              pageSizeOptions={[5, 10, 20, 50]}
               page={data?.meta?.page ?? page}
               totalPages={data?.meta?.totalPages ?? Math.max(1, Math.ceil((data?.meta?.total ?? categories.length) / pageSize))}
               totalItems={data?.meta?.total ?? categories.length}
