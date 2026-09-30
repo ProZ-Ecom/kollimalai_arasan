@@ -282,7 +282,7 @@ export function CategorySection({
 
       {/* Main Slider Track */}
       <div className="relative md:flex md:items-center md:gap-3 lg:gap-5 w-full">
-        {/* Left Arrow Button */}
+
         {needsScroll && (
           <button
             type="button"
