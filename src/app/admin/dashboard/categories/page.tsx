@@ -380,13 +380,41 @@ export default function AdminCategoriesPage() {
             isLoading={updateMutation.isPending}
             submitLabel="Update Category"
             onSubmit={async (data) => {
-              const payload = {
-                name: data.name,
-                slug: data.slug,
-                description: data.description,
-                icon: data.image,
-                sortOrder: Number(data.sortOrder || 0),
-              };
+              const payload: Record<string, unknown> = {};
+
+              const cleanName = data.name?.trim();
+              if (cleanName && cleanName !== selectedCategory.name?.trim()) {
+                payload.name = cleanName;
+              }
+
+              const cleanSlug = data.slug?.trim();
+              if (cleanSlug && cleanSlug !== selectedCategory.slug?.trim()) {
+                payload.slug = cleanSlug;
+              }
+
+              const cleanDesc = data.description?.trim() ?? "";
+              const currentDesc = selectedCategory.description?.trim() ?? "";
+              if (cleanDesc !== currentDesc) {
+                payload.description = cleanDesc;
+              }
+
+              const cleanImage = data.image?.trim();
+              const currentImage = (selectedCategory.icon || selectedCategory.image || "").trim();
+              if (cleanImage && cleanImage !== currentImage) {
+                payload.image = cleanImage;
+              }
+
+              const newSortOrder = Number(data.sortOrder || 0);
+              const currentSortOrder = Number(selectedCategory.sortOrder || 0);
+              if (newSortOrder !== currentSortOrder) {
+                payload.sortOrder = newSortOrder;
+              }
+
+              if (Object.keys(payload).length === 0) {
+                setIsEditOpen(false);
+                setSelectedCategory(null);
+                return;
+              }
 
               try {
                 await updateMutation.mutateAsync({

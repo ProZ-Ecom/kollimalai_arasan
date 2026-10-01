@@ -50,7 +50,7 @@ export function ProductPriceEditModal({
   onSuccess,
 }: ProductPriceEditModalProps) {
   const queryClient = useQueryClient();
-  const updateMutation = useUpdateVariantUnitPrice();
+  const updateMutation = useUpdateVariantUnitPrice({ meta: { skipToast: true } });
 
   const [isSaving, setIsSaving] = React.useState(false);
   const [prices, setPrices] = React.useState<Record<string, string>>({});

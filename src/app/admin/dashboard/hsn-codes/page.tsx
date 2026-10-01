@@ -225,13 +225,28 @@ export default function AdminHsnCodesPage() {
             isLoading={updateMutation.isPending}
             submitLabel="Update HSN Code"
             onSubmit={async (formData) => {
+              const payload: Record<string, unknown> = {};
+              if (formData.code?.trim() !== (selectedHsn.code || "").trim()) {
+                payload.code = formData.code.trim();
+              }
+              const formDesc = formData.description?.trim() || null;
+              const origDesc = selectedHsn.description?.trim() || null;
+              if (formDesc !== origDesc) {
+                payload.description = formDesc;
+              }
+              if (formData.gstRateId !== selectedHsn.gstRateId) {
+                payload.gstRateId = formData.gstRateId;
+              }
+
+              if (Object.keys(payload).length === 0) {
+                setIsEditOpen(false);
+                setSelectedHsn(null);
+                return;
+              }
+
               await updateMutation.mutateAsync({
                 uuid: selectedHsn.id,
-                data: {
-                  code: formData.code,
-                  description: formData.description || null,
-                  gstRateId: formData.gstRateId,
-                },
+                data: payload,
               });
 
               setIsEditOpen(false);

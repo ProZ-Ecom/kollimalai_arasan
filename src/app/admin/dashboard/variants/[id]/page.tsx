@@ -887,18 +887,53 @@ export default function AdminVariantDetailsPage() {
           isLoading={updateVariantMutation.isPending}
           submitLabel="Save Changes"
           onSubmit={async (formData) => {
+            const payload: Record<string, unknown> = {};
+            if (
+              formData.variantName?.trim() !==
+              (variant.variantName || "").trim()
+            ) {
+              payload.variantName = formData.variantName.trim();
+            }
+            if (
+              formData.slug?.trim() !==
+              (variant.slug || "").trim()
+            ) {
+              payload.slug = formData.slug.trim();
+            }
+            const formShortDesc =
+              formData.shortDescription?.trim() || null;
+            const origShortDesc =
+              variant.shortDescription?.trim() || null;
+            if (formShortDesc !== origShortDesc) {
+              payload.shortDescription = formShortDesc;
+            }
+            const formDesc = formData.description?.trim() || null;
+            const origDesc = variant.description?.trim() || null;
+            if (formDesc !== origDesc) {
+              payload.description = formDesc;
+            }
+            const formVideo = formData.videoUrl?.trim() || null;
+            const origVideo = variant.videoUrl?.trim() || null;
+            if (formVideo !== origVideo) {
+              payload.videoUrl = formVideo;
+            }
+            if (
+              formData.isFeatured !== undefined &&
+              formData.isFeatured !== (variant.isFeatured ?? false)
+            ) {
+              payload.isFeatured = formData.isFeatured;
+            }
+
+            if (Object.keys(payload).length === 0) {
+              setIsEditModalOpen(false);
+              return;
+            }
+
             try {
               await updateVariantMutation.mutateAsync({
                 productUuid: canonicalProductUuid,
                 variantUuid: variant.id,
-                data: {
-                  variantName: formData.variantName,
-                  slug: formData.slug,
-                  shortDescription: formData.shortDescription || null,
-                  description: formData.description || null,
-                  videoUrl: formData.videoUrl || null,
-                  isFeatured: formData.isFeatured,
-                },
+                data: payload,
               });
               setIsEditModalOpen(false);
               refetchVariant();

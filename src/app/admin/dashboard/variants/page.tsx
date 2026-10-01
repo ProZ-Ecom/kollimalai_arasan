@@ -1099,14 +1099,48 @@ export default function AdminVariantsPage() {
                 isLoading={updateMutation.isPending}
                 submitLabel="Update Details"
                 onSubmit={async (formData) => {
-                  const payload = {
-                    variantName: formData.variantName,
-                    slug: formData.slug,
-                    shortDescription: formData.shortDescription || null,
-                    description: formData.description || null,
-                    videoUrl: formData.videoUrl || null,
-                    isFeatured: formData.isFeatured,
-                  };
+                  const payload: Record<string, unknown> = {};
+                  if (
+                    formData.variantName?.trim() !==
+                    (selectedVariant.variantName || "").trim()
+                  ) {
+                    payload.variantName = formData.variantName.trim();
+                  }
+                  if (
+                    formData.slug?.trim() !==
+                    (selectedVariant.slug || "").trim()
+                  ) {
+                    payload.slug = formData.slug.trim();
+                  }
+                  const formShortDesc =
+                    formData.shortDescription?.trim() || null;
+                  const origShortDesc =
+                    selectedVariant.shortDescription?.trim() || null;
+                  if (formShortDesc !== origShortDesc) {
+                    payload.shortDescription = formShortDesc;
+                  }
+                  const formDesc = formData.description?.trim() || null;
+                  const origDesc = selectedVariant.description?.trim() || null;
+                  if (formDesc !== origDesc) {
+                    payload.description = formDesc;
+                  }
+                  const formVideo = formData.videoUrl?.trim() || null;
+                  const origVideo = selectedVariant.videoUrl?.trim() || null;
+                  if (formVideo !== origVideo) {
+                    payload.videoUrl = formVideo;
+                  }
+                  if (
+                    formData.isFeatured !== undefined &&
+                    formData.isFeatured !== (selectedVariant.isFeatured ?? false)
+                  ) {
+                    payload.isFeatured = formData.isFeatured;
+                  }
+
+                  if (Object.keys(payload).length === 0) {
+                    setIsEditOpen(false);
+                    setSelectedVariant(null);
+                    return;
+                  }
 
                   await updateMutation.mutateAsync({
                     productUuid: selectedVariant.productId,

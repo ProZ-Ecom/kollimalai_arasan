@@ -66,8 +66,32 @@ export default function AdminPermissionsPage() {
 
   const onSubmit = (formData: CreatePermissionSchemaInput) => {
     if (editingPermission) {
+      const updatePayload: Partial<CreatePermissionSchemaInput> = {};
+
+      const cleanName = formData.name?.trim();
+      if (cleanName && cleanName !== editingPermission.name?.trim()) {
+        updatePayload.name = cleanName;
+      }
+
+      const cleanModule = formData.module?.trim();
+      if (cleanModule && cleanModule !== editingPermission.module?.trim()) {
+        updatePayload.module = cleanModule;
+      }
+
+      const cleanDesc = formData.description?.trim() ?? "";
+      const currentDesc = editingPermission.description?.trim() ?? "";
+      if (cleanDesc !== currentDesc) {
+        updatePayload.description = cleanDesc;
+      }
+
+      if (Object.keys(updatePayload).length === 0) {
+        setModalOpen(false);
+        setEditingPermission(null);
+        return;
+      }
+
       updateMutation.mutate(
-        { id: editingPermission.id, data: formData },
+        { id: editingPermission.id, data: updatePayload },
         {
           onSuccess: () => {
             setModalOpen(false);
