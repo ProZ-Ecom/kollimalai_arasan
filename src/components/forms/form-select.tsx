@@ -11,6 +11,16 @@ interface FormSelectProps {
   placeholder?: string;
   description?: string;
   required?: boolean;
+  onSearchChange?: (query: string) => void;
+  searchDebounceMs?: number;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoading?: boolean;
+  isLoadingMore?: boolean;
+  showSearch?: boolean;
+  selectedLabel?: string;
+  disabled?: boolean;
+  className?: string;
 }
 
 function FormSelect({
@@ -20,6 +30,16 @@ function FormSelect({
   placeholder,
   description,
   required,
+  onSearchChange,
+  searchDebounceMs,
+  onLoadMore,
+  hasMore,
+  isLoading,
+  isLoadingMore,
+  showSearch,
+  selectedLabel,
+  disabled,
+  className,
 }: FormSelectProps) {
   const { control } = useFormContext();
 
@@ -40,6 +60,16 @@ function FormSelect({
             options={options}
             placeholder={placeholder}
             error={fieldState.error?.message}
+            onSearchChange={onSearchChange}
+            searchDebounceMs={searchDebounceMs}
+            onLoadMore={onLoadMore}
+            hasMore={hasMore}
+            isLoading={isLoading}
+            isLoadingMore={isLoadingMore}
+            showSearch={showSearch}
+            selectedLabel={selectedLabel}
+            disabled={disabled}
+            className={className}
           />
           {description && !fieldState.error && (
             <p className="text-xs text-muted-foreground">{description}</p>

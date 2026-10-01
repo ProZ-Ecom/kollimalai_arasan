@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import * as XLSX from "xlsx";
 import { db } from "@/lib/db/prisma";
 import { slugify } from "@/lib/utils";
@@ -99,10 +100,35 @@ function makeUniqueSlug(base: string, existing: Set<string>): string {
 
 // ─── Parse Excel ─────────────────────────────────────────────────────────────
 
+interface RawUnifiedRow {
+  category?: string;
+  category_name?: string;
+  product_name?: string;
+  product_sku?: string;
+  product_description?: string;
+  description?: string;
+  brand?: string;
+  hsn_code?: string;
+  variant_name?: string;
+  unit?: string;
+  unit_value?: number | string;
+  variant_sku?: string;
+  sku?: string;
+  price?: number | string;
+  base_price?: number | string;
+  sale_price?: number | string;
+  stock_qty?: number | string;
+  stock?: number | string;
+  reorder_level?: number | string;
+  is_default?: string;
+}
+
 function parseExcelBuffer(buffer: Buffer): {
   categories: RawCategoryRow[];
   products: RawProductRow[];
   variants: RawVariantRow[];
+  isUnified: boolean;
+  totalSourceRows: number;
 } {
   const workbook = XLSX.read(buffer, { type: "buffer" });
 
@@ -112,10 +138,156 @@ function parseExcelBuffer(buffer: Buffer): {
     return XLSX.utils.sheet_to_json<T>(sheet, { defval: "" });
   };
 
+  const sheetNames = workbook.SheetNames;
+  const isMultiSheet =
+    sheetNames.includes("Categories") &&
+    sheetNames.includes("Products") &&
+    sheetNames.includes("Variants");
+
+  if (isMultiSheet) {
+    const categories = parseSheet<RawCategoryRow>("Categories");
+    const products = parseSheet<RawProductRow>("Products");
+    const variants = parseSheet<RawVariantRow>("Variants");
+    return {
+      categories,
+      products,
+      variants,
+      isUnified: false,
+      totalSourceRows: categories.length + products.length + variants.length,
+    };
+  }
+
+  // ── Unified Single Sheet Format ──
+  // Determine primary sheet: look for "Catalog", "Products", or the first non-instruction sheet
+  let dataSheetName = sheetNames.find((n) => {
+    const lower = n.toLowerCase();
+    return (
+      (lower.includes("catalog") || lower.includes("product") || lower.includes("item")) &&
+      !lower.includes("instruction")
+    );
+  });
+
+  if (!dataSheetName) {
+    dataSheetName =
+      sheetNames.find((n) => !n.toLowerCase().includes("instruction")) ||
+      sheetNames[0];
+  }
+
+  const rawRows = parseSheet<RawUnifiedRow>(dataSheetName);
+  const categories: RawCategoryRow[] = [];
+  const products: RawProductRow[] = [];
+  const variants: RawVariantRow[] = [];
+
+  const seenCatNames = new Set<string>();
+  const seenProdSkus = new Set<string>();
+
+  let lastCategory = "";
+  let lastProductSku = "";
+  let lastProductName = "";
+  let lastProductDesc = "";
+  let lastBrand = "";
+  let lastHsn = "";
+
+  for (let idx = 0; idx < rawRows.length; idx++) {
+    const row = rawRows[idx];
+
+    let cat = safeStr(row.category || row.category_name);
+    let pSku = safeStr(row.product_sku);
+    let pName = safeStr(row.product_name);
+    let pDesc = safeStr(row.product_description || row.description);
+    let brand = safeStr(row.brand);
+    let hsn = safeStr(row.hsn_code);
+
+    if (pSku) {
+      lastProductSku = pSku;
+      if (cat) lastCategory = cat;
+      if (pName) lastProductName = pName;
+      if (pDesc) lastProductDesc = pDesc;
+      if (brand) lastBrand = brand;
+      if (hsn) lastHsn = hsn;
+    } else if (lastProductSku) {
+      pSku = lastProductSku;
+      if (!cat) cat = lastCategory;
+      if (!pName) pName = lastProductName;
+      if (!pDesc) pDesc = lastProductDesc;
+      if (!brand) brand = lastBrand;
+      if (!hsn) hsn = lastHsn;
+    }
+
+    // 1. Categories extraction
+    if (cat) {
+      let catName = cat;
+      let parentCat: string | undefined = undefined;
+      if (cat.includes(">")) {
+        const parts = cat.split(">").map((s) => s.trim());
+        parentCat = parts[0];
+        catName = parts[1];
+        if (parentCat && !seenCatNames.has(parentCat.toLowerCase())) {
+          seenCatNames.add(parentCat.toLowerCase());
+          categories.push({
+            category_name: parentCat,
+            description: "",
+            sort_order: categories.length + 1,
+          });
+        }
+      }
+
+      if (!seenCatNames.has(catName.toLowerCase())) {
+        seenCatNames.add(catName.toLowerCase());
+        categories.push({
+          category_name: catName,
+          parent_category: parentCat,
+          description: "",
+          sort_order: categories.length + 1,
+        });
+      }
+      cat = catName;
+    }
+
+    // 2. Products extraction
+    if (pSku && !seenProdSkus.has(pSku.toUpperCase())) {
+      seenProdSkus.add(pSku.toUpperCase());
+      products.push({
+        category_name: cat,
+        product_name: pName || pSku,
+        sku: pSku,
+        base_price: safeNum(row.price || row.base_price, 0),
+        sale_price: safeNum(row.sale_price, 0) > 0 ? safeNum(row.sale_price) : undefined,
+        description: pDesc,
+        brand,
+        hsn_code: hsn,
+      });
+    }
+
+    // 3. Variant extraction
+    const vSku = safeStr(row.variant_sku || row.sku);
+    const vName = safeStr(row.variant_name) || "Standard";
+    const unit = safeStr(row.unit);
+    const unitValue = safeNum(row.unit_value, 0);
+    const price = safeNum(row.price || row.base_price, 0);
+    const stockQty = safeNum(row.stock_qty || row.stock, 0);
+    const reorderLevel = safeNum(row.reorder_level, 10);
+    const isDefault = safeStr(row.is_default);
+
+    variants.push({
+      product_sku: pSku,
+      variant_name: vName,
+      unit,
+      unit_value: unitValue,
+      variant_sku: vSku,
+      price,
+      stock_qty: stockQty,
+      reorder_level: reorderLevel,
+      is_default: isDefault,
+    });
+  }
+
   return {
-    categories: parseSheet<RawCategoryRow>("Categories"),
-    products: parseSheet<RawProductRow>("Products"),
-    variants: parseSheet<RawVariantRow>("Variants"),
+    categories,
+    products,
+    variants,
+    isUnified: true,
+    totalSourceRows: rawRows.length,
   };
 }
 
@@ -131,8 +303,15 @@ export const bulkImportService = {
     adminUserId?: bigint | null,
     dryRun = false
   ): Promise<ImportResult> {
-    const { categories: rawCats, products: rawProds, variants: rawVars } =
-      parseExcelBuffer(buffer);
+    const {
+      categories: rawCats,
+      products: rawProds,
+      variants: rawVars,
+      isUnified,
+      totalSourceRows,
+    } = parseExcelBuffer(buffer);
+
+    const sheetNameLabel = isUnified ? "Catalog" : undefined;
 
     const rejected: ImportRowResult[] = [];
     const preview: ImportPreviewItem[] = [];
@@ -197,6 +376,15 @@ export const bulkImportService = {
       select: { slug: true },
     });
     for (const p of existingProductSlugs) usedProdSlugs.add(p.slug);
+
+    const usedVarSlugs = new Set<string>();
+    const existingVariantSlugs = await db.productVariant.findMany({
+      where: { deleted_at: null },
+      select: { slug: true },
+    });
+    for (const v of existingVariantSlugs) {
+      if (v.slug) usedVarSlugs.add(v.slug);
+    }
 
     type ValidProduct = {
       sku: string;
@@ -267,6 +455,7 @@ export const bulkImportService = {
     const validUnitList = dbUnits.map((u) => u.code).join(", ");
 
     const seenVarSkus = new Set<string>();
+    const seenVarUnitValue = new Set<string>();
     const defaultSetFor = new Set<string>(); // product SKUs that already have a default
 
     for (let i = 0; i < rawVars.length; i++) {
@@ -295,7 +484,20 @@ export const bulkImportService = {
       if (existingVarSkus.has(variantSku)) { rejected.push({ row: i + 2, sheet: "Variants", status: "rejected", name: variantSku, reason: `Variant SKU "${variantSku}" already exists in database` }); continue; }
       if (seenVarSkus.has(variantSku)) { rejected.push({ row: i + 2, sheet: "Variants", status: "rejected", name: variantSku, reason: `Duplicate variant_sku "${variantSku}" in sheet` }); continue; }
 
+      const unitValKey = `${productSku}::${variantName.toLowerCase()}::${unit}::${unitValue}`;
+      if (seenVarUnitValue.has(unitValKey)) {
+        rejected.push({
+          row: i + 2,
+          sheet: "Variants",
+          status: "rejected",
+          name: variantSku,
+          reason: `Duplicate measurement ${unitValue}${unit} for variant "${variantName}" under product ${productSku}`,
+        });
+        continue;
+      }
+
       seenVarSkus.add(variantSku);
+      seenVarUnitValue.add(unitValKey);
       existingVarSkus.add(variantSku);
       if (isDefault) defaultSetFor.add(productSku);
 
@@ -327,8 +529,12 @@ export const bulkImportService = {
       });
     }
 
-    const totalRows = rawCats.length + rawProds.length + rawVars.length;
-    const successCount = validCats.length + validProds.length + validVars.length;
+    const totalRows = isUnified
+      ? totalSourceRows
+      : rawCats.length + rawProds.length + rawVars.length;
+    const successCount = isUnified
+      ? validVars.length
+      : validCats.length + validProds.length + validVars.length;
 
     // Return early if dry run (preview only)
     if (dryRun) {
@@ -353,6 +559,7 @@ export const bulkImportService = {
         }
         const created = await tx.productCategory.create({
           data: {
+            uuid: crypto.randomUUID(),
             name: cat.name,
             slug: cat.slug,
             description: cat.description,
@@ -381,6 +588,7 @@ export const bulkImportService = {
         const catId = categoryMap.get(prod.categoryName.toLowerCase());
         const createdProd = await tx.product.create({
           data: {
+            uuid: crypto.randomUUID(),
             name: prod.name,
             slug: prod.slug,
             sku: prod.sku,
@@ -398,54 +606,77 @@ export const bulkImportService = {
         // Variants for this product
         const vars = varsByProductSku.get(prod.sku) ?? [];
 
-        // Ensure at least one is_default
-        if (vars.length > 0 && !vars.some((v) => v.isDefault)) {
-          vars[0].isDefault = true;
+        // Group subvariants by variant_name (3-tier architecture: Product -> Variant -> UnitPrice)
+        const variantsByName = new Map<string, typeof vars>();
+        for (const v of vars) {
+          const key = v.variantName.toLowerCase();
+          if (!variantsByName.has(key)) variantsByName.set(key, []);
+          variantsByName.get(key)!.push(v);
         }
 
-        for (const v of vars) {
-          const unitId = unitMap.get(v.unit);
-          if (!unitId) continue; // Skip if unit not found in DB
+        let isFirstVariant = true;
+        for (const [, subvariants] of variantsByName) {
+          const first = subvariants[0];
+          const variantSlug = makeUniqueSlug(
+            `${prod.slug}-${first.variantName}`,
+            usedVarSlugs
+          );
 
-          const variantSlug = slugify(`${prod.slug}-${v.variantName}`).slice(0, 250);
+          let isVariantDefault = subvariants.some((sv) => sv.isDefault);
+          if (isFirstVariant && !vars.some((v) => v.isDefault)) {
+            isVariantDefault = true;
+          }
+          isFirstVariant = false;
 
           const createdVariant = await tx.productVariant.create({
             data: {
+              uuid: crypto.randomUUID(),
               productId: createdProd.id,
-              variant_name: v.variantName,
+              variant_name: first.variantName,
               slug: variantSlug,
-              is_default: v.isDefault,
+              is_default: isVariantDefault,
               isActive: true,
               created_by: adminUserId ?? null,
               updated_by: adminUserId ?? null,
             },
           });
 
-          const createdVup = await tx.variantUnitPrice.create({
-            data: {
-              variant_id: createdVariant.id,
-              unit_id: unitId,
-              unit_value: v.unitValue,
-              sku: v.variantSku,
-              base_price: v.price,
-              is_default: v.isDefault,
-              isActive: true,
-              created_by: adminUserId ?? null,
-              updated_by: adminUserId ?? null,
-            },
-          });
+          // Ensure at least one subvariant in this variant is marked default
+          if (!subvariants.some((sv) => sv.isDefault)) {
+            subvariants[0].isDefault = true;
+          }
 
-          await tx.inventory.create({
-            data: {
-              variantUnitPriceId: createdVup.id,
-              quantity_available: v.stockQty,
-              quantity_reserved: 0,
-              reorderLevel: v.reorderLevel,
-              is_active: true,
-              created_by: adminUserId ?? null,
-              updated_by: adminUserId ?? null,
-            },
-          });
+          for (const sv of subvariants) {
+            const unitId = unitMap.get(sv.unit);
+            if (!unitId) continue; // Skip if unit not found in DB
+
+            const createdVup = await tx.variantUnitPrice.create({
+              data: {
+                uuid: crypto.randomUUID(),
+                variant_id: createdVariant.id,
+                unit_id: unitId,
+                unit_value: sv.unitValue,
+                sku: sv.variantSku,
+                base_price: sv.price,
+                is_default: sv.isDefault,
+                isActive: true,
+                created_by: adminUserId ?? null,
+                updated_by: adminUserId ?? null,
+              },
+            });
+
+            await tx.inventory.create({
+              data: {
+                variantUnitPriceId: createdVup.id,
+                quantity_available: sv.stockQty,
+                quantity_reserved: 0,
+                reorderLevel: sv.reorderLevel,
+                is_active: true,
+                created_by: adminUserId ?? null,
+                updated_by: adminUserId ?? null,
+              },
+            });
+          }
         }
       }
     });

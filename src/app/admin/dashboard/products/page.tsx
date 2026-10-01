@@ -14,6 +14,7 @@ import {
 import { useCategories } from "@/features/categories/hooks";
 import { useBrands } from "@/features/brands/hooks";
 import { useHsnCodes } from "@/features/hsn-codes/hooks";
+import { useInfiniteCategoriesSelect } from "@/hooks/use-infinite-select";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
 import { toast } from "@/components/ui/Toast";
@@ -71,7 +72,15 @@ export default function AdminProductsPage() {
 
   // Reference queries for categories filter & modal form dropdowns
   const isModalOpen = isCreateOpen || isEditOpen;
-  const { data: categoriesData } = useCategories({ pageSize: 100 });
+  const categoryFilterSelect = useInfiniteCategoriesSelect({
+    includeAllOption: true,
+    allOptionLabel: "All Categories",
+    pageSize: 20,
+  });
+  const { data: categoriesData } = useCategories(
+    { pageSize: 100 },
+    { enabled: isModalOpen }
+  );
   const { data: brandsData } = useBrands(
     { limit: 100 },
     { enabled: isModalOpen }
@@ -132,23 +141,15 @@ export default function AdminProductsPage() {
   const hsnCodes = hsnData?.data ?? [];
 
   // Filter Options for category dropdown in toolbar
-  const categoryFilterOptions = useMemo(() => {
-    return [
-      { value: "", label: "All Categories" },
-      ...categories.map((c: any) => ({
-        value: String(c.uuid || c.id),
-        label: c.name,
-      })),
-    ];
-  }, [categories]);
+  const categoryFilterOptions = categoryFilterSelect.options;
 
   const activeCategoryName = useMemo(() => {
     if (!selectedCategoryFilter) return null;
-    const match = categories.find(
-      (c: any) => String(c.uuid || c.id) === selectedCategoryFilter
+    const match = categoryFilterSelect.options.find(
+      (c) => c.value === selectedCategoryFilter
     );
-    return match?.name || null;
-  }, [selectedCategoryFilter, categories]);
+    return match?.label || null;
+  }, [selectedCategoryFilter, categoryFilterSelect.options]);
 
   const filterNotice = useMemo(() => {
     const parts: string[] = [];
@@ -319,7 +320,12 @@ export default function AdminProductsPage() {
                     setSelectedCategoryFilter(e.target.value);
                     setPage(1);
                   }}
-                  options={categoryFilterOptions}
+                  options={categoryFilterSelect.options}
+                  onSearchChange={categoryFilterSelect.onSearchChange}
+                  onLoadMore={categoryFilterSelect.onLoadMore}
+                  hasMore={categoryFilterSelect.hasMore}
+                  isLoading={categoryFilterSelect.isLoading}
+                  isLoadingMore={categoryFilterSelect.isLoadingMore}
                   placeholder="All Categories"
                   className="h-11 rounded-xl"
                 />

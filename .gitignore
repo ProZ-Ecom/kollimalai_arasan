@@ -54,3 +54,6 @@ next-env.d.ts
 .kiro/
 *.md
 *.log
+
+# local seed scripts
+scripts/seed-50-products-70-items.cjs
