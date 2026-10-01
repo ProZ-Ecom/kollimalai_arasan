@@ -208,7 +208,7 @@ export default function BulkImportPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "kollimalai_import_template.xlsx";
+    a.download = "kollimalai_catalog_import_template.xlsx";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -242,7 +242,7 @@ export default function BulkImportPage() {
       />
 
       <AdminContent>
-        <div className="max-w-4xl space-y-6">
+        <div className="w space-y-6">
           {/* ── Upload Zone ── */}
           {stage === "idle" || stage === "error" ? (
             <div
@@ -250,13 +250,12 @@ export default function BulkImportPage() {
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onClick={() => fileInputRef.current?.click()}
-              className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 cursor-pointer transition-all ${
-                isDragging
-                  ? "border-green-500 bg-green-50"
-                  : file
+              className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 cursor-pointer transition-all ${isDragging
+                ? "border-green-500 bg-green-50"
+                : file
                   ? "border-green-400 bg-green-50/50"
                   : "border-neutral-300 bg-neutral-50 hover:border-green-400 hover:bg-green-50/40"
-              }`}
+                }`}
             >
               <input
                 ref={fileInputRef}
@@ -430,11 +429,10 @@ export default function BulkImportPage() {
                             {prod.variants.map((v, j) => (
                               <div
                                 key={j}
-                                className={`rounded-lg border px-3 py-2 text-xs ${
-                                  v.isDefault
-                                    ? "border-green-300 bg-green-50"
-                                    : "border-neutral-200 bg-neutral-50"
-                                }`}
+                                className={`rounded-lg border px-3 py-2 text-xs ${v.isDefault
+                                  ? "border-green-300 bg-green-50"
+                                  : "border-neutral-200 bg-neutral-50"
+                                  }`}
                               >
                                 <p className="font-semibold text-neutral-700">
                                   {v.variantName}{" "}
