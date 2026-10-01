@@ -215,7 +215,7 @@ export function SettingsTab() {
                 htmlFor="settings-current-pwd"
                 className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted"
               >
-                Current Password <span className="text-red-600 font-bold">*</span>
+                Current Password <span className="text-error-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
@@ -227,10 +227,11 @@ export function SettingsTab() {
                     setCurrentPassword(e.target.value);
                     clearFieldError("currentPassword");
                   }}
+                  aria-invalid={!!fieldErrors.currentPassword}
                   placeholder="Enter current password"
                   className={`w-full border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] transition-colors disabled:opacity-50 ${
                     fieldErrors.currentPassword
-                      ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                      ? "border-error-500 bg-error-50/20 focus:border-error-500"
                       : "border-theme-border-input focus:border-theme-primary"
                   }`}
                 />
@@ -244,7 +245,7 @@ export function SettingsTab() {
                 </button>
               </div>
               {fieldErrors.currentPassword && (
-                <span className="text-[11px] text-red-600 font-medium">
+                <span className="text-[11px] text-error-600 font-medium">
                   {fieldErrors.currentPassword}
                 </span>
               )}
@@ -256,7 +257,7 @@ export function SettingsTab() {
                 htmlFor="settings-new-pwd"
                 className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted"
               >
-                New Password <span className="text-red-600 font-bold">*</span>
+                New Password <span className="text-error-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
@@ -268,10 +269,11 @@ export function SettingsTab() {
                     setNewPassword(e.target.value);
                     clearFieldError("newPassword");
                   }}
+                  aria-invalid={!!fieldErrors.newPassword}
                   placeholder="Enter new password (min 6 chars)"
                   className={`w-full border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] transition-colors disabled:opacity-50 ${
                     fieldErrors.newPassword
-                      ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                      ? "border-error-500 bg-error-50/20 focus:border-error-500"
                       : "border-theme-border-input focus:border-theme-primary"
                   }`}
                 />
@@ -285,7 +287,7 @@ export function SettingsTab() {
                 </button>
               </div>
               {fieldErrors.newPassword && (
-                <span className="text-[11px] text-red-600 font-medium">
+                <span className="text-[11px] text-error-600 font-medium">
                   {fieldErrors.newPassword}
                 </span>
               )}
@@ -297,7 +299,7 @@ export function SettingsTab() {
                 htmlFor="settings-confirm-pwd"
                 className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted"
               >
-                Confirm Password <span className="text-red-600 font-bold">*</span>
+                Confirm Password <span className="text-error-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
@@ -309,10 +311,11 @@ export function SettingsTab() {
                     setConfirmPassword(e.target.value);
                     clearFieldError("confirmPassword");
                   }}
+                  aria-invalid={!!fieldErrors.confirmPassword}
                   placeholder="Re-enter new password"
                   className={`w-full border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] transition-colors disabled:opacity-50 ${
                     fieldErrors.confirmPassword
-                      ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                      ? "border-error-500 bg-error-50/20 focus:border-error-500"
                       : "border-theme-border-input focus:border-theme-primary"
                   }`}
                 />
@@ -326,7 +329,7 @@ export function SettingsTab() {
                 </button>
               </div>
               {fieldErrors.confirmPassword && (
-                <span className="text-[11px] text-red-600 font-medium">
+                <span className="text-[11px] text-error-600 font-medium">
                   {fieldErrors.confirmPassword}
                 </span>
               )}

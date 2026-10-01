@@ -314,7 +314,7 @@ function VariantForm({
           <div
             className={`flex items-stretch rounded-lg border transition-all ${
               extraSlugError || methods.formState.errors.slug
-                ? "border-red-500 ring-2 ring-red-500/10"
+                ? "border-error-500 ring-2 ring-error-500/20"
                 : "border-neutral-200 focus-within:border-secondary-600 focus-within:ring-2 focus-within:ring-secondary-600/20"
             } bg-white overflow-hidden`}
           >
@@ -351,7 +351,7 @@ function VariantForm({
           {/* Helper message / live preview / error */}
           <div className="mt-1.5 min-h-[18px]">
             {extraSlugError || methods.formState.errors.slug?.message ? (
-              <p className="text-xs text-red-500 font-medium">
+              <p className="mt-1 text-xs text-error-600 font-medium">
                 {extraSlugError || methods.formState.errors.slug?.message}
               </p>
             ) : (

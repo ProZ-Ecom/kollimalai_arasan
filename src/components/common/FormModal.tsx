@@ -14,6 +14,8 @@ interface FormModalProps {
   footer?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl" | "full";
   className?: string;
+  contentClassName?: string;
+  overflowVisible?: boolean;
 }
 
 const sizeStyles: Record<string, string> = {
@@ -33,6 +35,8 @@ function FormModal({
   footer,
   size = "md",
   className,
+  contentClassName,
+  overflowVisible = false,
 }: FormModalProps) {
   const overlayRef = React.useRef<HTMLDivElement>(null);
 
@@ -67,6 +71,7 @@ function FormModal({
         onClick={(e) => e.stopPropagation()}
         className={cn(
           "relative w-full rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh]",
+          overflowVisible && "overflow-visible",
           "animate-in zoom-in-95 duration-200",
           sizeStyles[size],
           className
@@ -93,7 +98,13 @@ function FormModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
+        <div
+          className={cn(
+            "flex-1 p-6 scrollbar-thin",
+            overflowVisible ? "overflow-visible" : "overflow-y-auto",
+            contentClassName
+          )}
+        >
           {children}
         </div>
 

@@ -8,6 +8,7 @@ import type {
   CreateInventoryInput,
   InventoryTransactionItem,
   InventoryStats,
+  BulkAdjustStockInput,
 } from "../types";
 
 function mapToInventoryListItem(item: any): InventoryListItem {
@@ -288,6 +289,36 @@ export const inventoryService = {
         createdAt: txn ? txn.createdAt : new Date(),
       };
     });
+  },
+
+  async bulkAdjustStock(input: BulkAdjustStockInput) {
+    if (!input.inventoryIds || input.inventoryIds.length === 0) {
+      throw ApiError.badRequest("No inventory items selected");
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const invId of input.inventoryIds) {
+      try {
+        const res = await this.adjustStock({
+          inventoryId: invId,
+          type: input.type || "PURCHASE",
+          quantity: input.quantity,
+          notes: input.notes ? `BULK: ${input.notes}` : "Bulk restock",
+        });
+        results.push(res);
+      } catch (err: any) {
+        errors.push({ inventoryId: invId, error: err.message || "Failed to adjust stock" });
+      }
+    }
+
+    return {
+      updatedCount: results.length,
+      totalRequested: input.inventoryIds.length,
+      results,
+      errors: errors.length > 0 ? errors : undefined,
+    };
   },
 
   async createInventory(input: CreateInventoryInput) {

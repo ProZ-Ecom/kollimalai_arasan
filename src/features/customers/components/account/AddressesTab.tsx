@@ -490,7 +490,7 @@ export function AddressesTab() {
             {/* Full Name */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-theme-text-primary">
-                Full Name <span className="text-red-600 font-bold">*</span>
+                Full Name <span className="text-error-600 font-bold">*</span>
               </label>
               <input
                 type="text"
@@ -499,18 +499,18 @@ export function AddressesTab() {
                 value={formData.fullName}
                 onChange={(e) => handleFieldChange("fullName", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.fullName ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                  fieldErrors.fullName ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
                 }`}
               />
               {fieldErrors.fullName && (
-                <span className="text-[11px] text-red-600">{fieldErrors.fullName}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.fullName}</span>
               )}
             </div>
 
             {/* Phone Number */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-theme-text-primary">
-                Phone Number <span className="text-red-600 font-bold">*</span>
+                Phone Number <span className="text-error-600 font-bold">*</span>
               </label>
               <input
                 type="tel"
@@ -519,11 +519,11 @@ export function AddressesTab() {
                 value={formData.phone}
                 onChange={(e) => handleFieldChange("phone", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.phone ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                  fieldErrors.phone ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
                 }`}
               />
               {fieldErrors.phone && (
-                <span className="text-[11px] text-red-600">{fieldErrors.phone}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.phone}</span>
               )}
             </div>
 
@@ -569,7 +569,7 @@ export function AddressesTab() {
                   onChange={(e) => handleFieldChange("pincode", e.target.value)}
                   className={`w-full border rounded-lg px-3.5 pr-9 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
                     fieldErrors.pincode || pincodeVerificationError
-                      ? "border-red-500 bg-red-50/20"
+                      ? "border-error-500 bg-error-50/20"
                       : isPincodeVerified
                       ? "border-emerald-500"
                       : "border-theme-border-input"
@@ -584,7 +584,7 @@ export function AddressesTab() {
                 </div>
               </div>
               {fieldErrors.pincode || pincodeVerificationError ? (
-                <span className="text-[11px] text-red-600">
+                <span className="text-[11px] text-error-600 font-medium">
                   {fieldErrors.pincode || pincodeVerificationError}
                 </span>
               ) : isPincodeVerified && pincodePostalData ? (
@@ -622,7 +622,7 @@ export function AddressesTab() {
             {/* Address Line 1 */}
             <div className="flex flex-col gap-1 sm:col-span-2">
               <label className="text-xs font-semibold text-theme-text-primary">
-                Address Line 1 <span className="text-red-600 font-bold">*</span>
+                Address Line 1 <span className="text-error-600 font-bold">*</span>
               </label>
               <input
                 type="text"
@@ -631,11 +631,11 @@ export function AddressesTab() {
                 value={formData.addressLine1}
                 onChange={(e) => handleFieldChange("addressLine1", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.addressLine1 ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                  fieldErrors.addressLine1 ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
                 }`}
               />
               {fieldErrors.addressLine1 && (
-                <span className="text-[11px] text-red-600">{fieldErrors.addressLine1}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.addressLine1}</span>
               )}
             </div>
 
@@ -651,11 +651,11 @@ export function AddressesTab() {
                 value={formData.addressLine2}
                 onChange={(e) => handleFieldChange("addressLine2", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.addressLine2 ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                  fieldErrors.addressLine2 ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
                 }`}
               />
               {fieldErrors.addressLine2 && (
-                <span className="text-[11px] text-red-600">{fieldErrors.addressLine2}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.addressLine2}</span>
               )}
             </div>
 
@@ -677,7 +677,7 @@ export function AddressesTab() {
             {/* City */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-theme-text-primary">
-                City <span className="text-red-600 font-bold">*</span>
+                City <span className="text-error-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
@@ -689,7 +689,7 @@ export function AddressesTab() {
                   onChange={(e) => handleFieldChange("city", e.target.value)}
                   className={`w-full border rounded-lg px-3.5 pr-20 py-2.5 text-xs transition-colors ${
                     fieldErrors.city
-                      ? "border-red-500 bg-red-50/20 text-theme-text-primary"
+                      ? "border-error-500 bg-error-50/20 text-theme-text-primary"
                       : "border-theme-border-input bg-theme-surface-warm text-theme-text-primary cursor-not-allowed select-none"
                   } disabled:opacity-50`}
                 />
@@ -701,14 +701,14 @@ export function AddressesTab() {
                 )}
               </div>
               {fieldErrors.city && (
-                <span className="text-[11px] text-red-600">{fieldErrors.city}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.city}</span>
               )}
             </div>
 
             {/* State */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-theme-text-primary">
-                State <span className="text-red-600 font-bold">*</span>
+                State <span className="text-error-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
@@ -720,7 +720,7 @@ export function AddressesTab() {
                   onChange={(e) => handleFieldChange("state", e.target.value)}
                   className={`w-full border rounded-lg px-3.5 pr-20 py-2.5 text-xs transition-colors ${
                     fieldErrors.state
-                      ? "border-red-500 bg-red-50/20 text-theme-text-primary"
+                      ? "border-error-500 bg-error-50/20 text-theme-text-primary"
                       : "border-theme-border-input bg-theme-surface-warm text-theme-text-primary cursor-not-allowed select-none"
                   } disabled:opacity-50`}
                 />
@@ -732,7 +732,7 @@ export function AddressesTab() {
                 )}
               </div>
               {fieldErrors.state && (
-                <span className="text-[11px] text-red-600">{fieldErrors.state}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.state}</span>
               )}
             </div>
 

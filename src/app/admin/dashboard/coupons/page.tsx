@@ -211,11 +211,12 @@ export default function AdminCouponsPage() {
           </Button>
         }
       />
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <AdminContent className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           <DataTable
             columns={columns}
             data={coupons}
+            tableClassName="min-w-[1100px]"
             searchKey="code"
             searchPlaceholder="Search coupons..."
             searchValue={search}

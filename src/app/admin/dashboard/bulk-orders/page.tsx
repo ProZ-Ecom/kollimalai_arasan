@@ -299,12 +299,13 @@ export default function AdminBulkOrdersPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-[420px] w-full rounded-2xl overflow-hidden bg-white shadow-xs">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col w-full">
         <DataTable
           columns={columns}
           data={enquiries}
+          tableClassName="min-w-[1150px]"
           pageSize={pageSize}
-          pageSizeOptions={[10, 20, 30, 50]}
+          pageSizeOptions={[5, 10, 20, 50]}
           page={meta?.page ?? page}
           totalPages={
             meta?.totalPages ??
@@ -316,7 +317,7 @@ export default function AdminBulkOrdersPage() {
             setPageSize(newSize);
             setPage(1);
           }}
-          className="bg-white border-0"
+          className="bg-white border border-neutral-200"
           emptyMessage="No bulk order enquiries found matching your criteria."
         />
       </div>

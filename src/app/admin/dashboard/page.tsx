@@ -11,10 +11,17 @@ import {
   CreditCard,
   Clock,
   AlertTriangle,
+  AlertCircle,
   Calendar,
   RefreshCw,
   Plus,
   Boxes,
+  Package,
+  Layers,
+  ShoppingBag,
+  IndianRupee,
+  Zap,
+  CheckCircle2,
   FileBarChart,
   Tag,
   ExternalLink,
@@ -104,57 +111,150 @@ export default function AdminDashboardPage() {
       />
 
       <AdminContent className="mt-4 space-y-6">
-        {/* Executive Key Metric Cards (8 KPIs) */}
+        {/* Executive Key Metric Cards (8 KPIs matching exact screenshot design) */}
         <div className="grid gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
+          {/* 1. TOTAL PRODUCTS */}
           <StatsCard
-            title={`${stats.periodLabel} Revenue`}
-            value={formatPrice(summary.periodRevenue)}
-            icon={DollarSign}
-            description={`${stats.periodLabel} gross sales`}
-            trend={summary.revenueTrend}
+            title="TOTAL PRODUCTS"
+            value={summary.totalProducts}
+            unit="Items"
+            icon={Package}
+            iconColor="mint"
+            footer={
+              <div className="flex items-center gap-1.5 text-emerald-600 font-medium">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>{summary.totalProducts} catalog items active</span>
+              </div>
+            }
           />
+
+          {/* 2. CATEGORIES */}
           <StatsCard
-            title={`${stats.periodLabel} Orders`}
-            value={summary.periodOrders}
-            icon={ShoppingCart}
-            description={`${summary.totalOrdersAllTime} all-time orders`}
-            trend={summary.ordersTrend}
+            title="CATEGORIES"
+            value={summary.totalCategories}
+            unit="Clusters"
+            icon={Layers}
+            iconColor="violet"
+            footer={
+              <div className="flex items-center gap-1.5 text-neutral-600 font-medium truncate">
+                <span className="h-2 w-2 rounded-full bg-[#7048E8] shrink-0" />
+                <span className="truncate">
+                  {summary.topCategoryNames || "Sweets, Savouries & Millets"}
+                </span>
+              </div>
+            }
           />
+
+          {/* 3. ACTIVE CUSTOMERS */}
           <StatsCard
-            title="Net Realized Inflow"
-            value={formatPrice(summary.netRealizedRevenue)}
-            icon={TrendingUp}
-            description={`${summary.realizationRate}% conversion rate`}
-          />
-          <StatsCard
-            title="Average Order Value"
-            value={formatPrice(summary.averageOrderValue)}
-            icon={CreditCard}
-            description="Per completed order"
-          />
-          <StatsCard
-            title="Pending Fulfillment"
-            value={summary.pendingOrders}
-            icon={Clock}
-            description="Orders awaiting action"
-          />
-          <StatsCard
-            title="Today's Activity"
-            value={summary.todayOrders}
-            icon={Calendar}
-            description={`${formatPrice(summary.todayRevenue)} captured today`}
-          />
-          <StatsCard
-            title="Critical Inventory"
-            value={summary.lowStockCount}
-            icon={AlertTriangle}
-            description={`${summary.outOfStockCount} items out of stock`}
-          />
-          <StatsCard
-            title="Total Customers"
+            title="ACTIVE CUSTOMERS"
             value={summary.totalCustomers}
             icon={Users}
-            description={`${summary.totalProducts} active products`}
+            iconColor="cyan"
+            footer={
+              <div className="flex items-center gap-1 text-emerald-600 font-medium">
+                <TrendingUp className="h-3.5 w-3.5" />
+                <span>+0% from last month</span>
+              </div>
+            }
+          />
+
+          {/* 4. TOTAL ORDERS */}
+          <StatsCard
+            title="TOTAL ORDERS"
+            value={summary.totalOrdersAllTime}
+            icon={ShoppingBag}
+            iconColor="fuchsia"
+            footer={
+              <div className="flex items-center gap-1 text-neutral-600 font-medium">
+                <span className="font-bold text-emerald-600">
+                  {summary.fulfillmentSuccessRate ?? 100}%
+                </span>
+                <span>fulfillment success rate</span>
+              </div>
+            }
+          />
+
+          {/* 5. GROSS REVENUE */}
+          <StatsCard
+            title="GROSS REVENUE"
+            value={formatPrice(summary.periodRevenue ?? summary.totalRevenueAllTime ?? 0)}
+            icon={IndianRupee}
+            iconColor="mint"
+            footer={
+              <div className="flex items-center gap-1.5 text-neutral-600 font-medium flex-wrap">
+                <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+                  +{summary.revenueTrend?.value ?? 0}%
+                </span>
+                <span className="text-neutral-500">vs previous month</span>
+                {summary.settlementFromRazorpay !== undefined && (
+                  <span className="text-[11px] text-neutral-400 font-normal ml-auto">
+                    (Settled: {formatPrice(summary.settlementFromRazorpay)})
+                  </span>
+                )}
+              </div>
+            }
+          />
+
+          {/* 6. PENDING ORDERS */}
+          <StatsCard
+            title="PENDING ORDERS"
+            value={summary.pendingOrders}
+            unit="Orders"
+            icon={Clock}
+            iconColor="amber"
+            footer={
+              <div className="flex items-center gap-1.5 text-amber-600 font-medium">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  {summary.pendingOrders === 0
+                    ? "All orders dispatched"
+                    : `${summary.pendingOrders} awaiting dispatch`}
+                </span>
+              </div>
+            }
+          />
+
+          {/* 7. STOCK WARNINGS */}
+          <StatsCard
+            title="STOCK WARNINGS"
+            value={summary.lowStockCount}
+            unit="Products"
+            icon={AlertTriangle}
+            iconColor="rose"
+            footer={
+              <div className="flex items-center gap-1.5 font-medium">
+                <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
+                <span
+                  className={
+                    summary.lowStockCount === 0
+                      ? "text-rose-600"
+                      : "text-rose-700 font-semibold"
+                  }
+                >
+                  {summary.lowStockCount === 0
+                    ? "Inventory levels optimal"
+                    : `${summary.lowStockCount} items need restock`}
+                </span>
+              </div>
+            }
+          />
+
+          {/* 8. TODAY'S ORDERS */}
+          <StatsCard
+            title="TODAY'S ORDERS"
+            value={summary.todayOrders}
+            unit="Orders"
+            icon={Zap}
+            iconColor="emerald"
+            footer={
+              <div className="flex items-center gap-1 text-neutral-600 font-medium truncate">
+                <span className="font-bold text-emerald-600">
+                  {formatPrice(summary.todayRevenue)}
+                </span>
+                <span>collected (+0% vs avg)</span>
+              </div>
+            }
           />
         </div>
 

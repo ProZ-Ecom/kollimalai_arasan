@@ -54,13 +54,14 @@ function FormPasswordInput({
               {...field}
               {...props}
               type={showPassword ? "text" : "password"}
+              aria-invalid={!!fieldState.error}
               className={cn(
                 "flex h-10 w-full rounded-lg border bg-white px-3 py-2 pr-10 text-sm outline-none transition-all duration-200",
                 "focus:outline-none focus:border-secondary-600 focus:ring-2 focus:ring-secondary-600/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-600/20",
                 leftIcon && "pl-10",
                 "placeholder:text-neutral-400 text-neutral-900",
                 fieldState.error
-                  ? "border-error-600 focus:border-error-600 focus:ring-error-600/20 focus-visible:border-error-600 focus-visible:ring-error-600/20"
+                  ? "border-error-500 focus:border-error-500 focus:ring-error-500/20 focus-visible:border-error-500 focus-visible:ring-error-500/20 bg-error-50/10"
                   : "border-neutral-200 hover:border-neutral-300",
                 className
               )}
@@ -80,7 +81,7 @@ function FormPasswordInput({
           </div>
 
           {fieldState.error && (
-            <p className="text-sm text-red-500">
+            <p className="mt-1 text-xs text-error-600 font-medium">
               {fieldState.error.message}
             </p>
           )}

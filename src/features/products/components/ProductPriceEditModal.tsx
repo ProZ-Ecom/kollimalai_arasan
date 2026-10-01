@@ -355,13 +355,13 @@ export function ProductPriceEditModal({
                             disabled={isSaving}
                             className={`block w-full rounded-lg border py-1.5 pl-8 pr-2 text-xs font-semibold outline-none transition-colors ${
                               currentError
-                                ? "border-red-400 bg-red-50/30 text-red-900 focus:border-red-500"
+                                ? "border-error-500 bg-error-50/20 text-neutral-900 focus:border-error-500"
                                 : "border-cream-border-hover focus:border-secondary-600 focus:bg-white"
                             }`}
                           />
                         </div>
                         {currentError && (
-                          <p className="mt-0.5 text-[10px] text-red-600 font-medium">{currentError}</p>
+                          <p className="mt-0.5 text-[10px] text-error-600 font-medium">{currentError}</p>
                         )}
                       </td>
                     </tr>

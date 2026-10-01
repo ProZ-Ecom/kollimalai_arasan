@@ -88,4 +88,11 @@ export interface CreateInventoryInput {
   warehouseLocation?: string;
 }
 
+export interface BulkAdjustStockInput {
+  inventoryIds: number[];
+  type?: InventoryTransactionType;
+  quantity: number;
+  notes?: string;
+}
+
 export type LowStockResult = InventoryListItem[];

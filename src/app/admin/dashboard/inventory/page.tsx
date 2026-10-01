@@ -3,11 +3,12 @@
 import { useState } from "react";
 import {
   Boxes,
-  Plus,
   RefreshCw,
   AlertTriangle,
   History,
   SlidersHorizontal,
+  Layers,
+  PlusCircle,
 } from "lucide-react";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import {
@@ -28,6 +29,7 @@ import {
   InventoryKpiCards,
   InventoryStockTable,
   AdjustStockModal,
+  BulkRestockModal,
   InventoryHistoryTab,
 } from "@/features/inventory/components";
 import type { InventoryListItem } from "@/features/inventory/types";
@@ -49,11 +51,17 @@ export default function InventoryDashboardPage() {
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState<number>(1);
-  const pageSize = 12;
+  const [pageSize, setPageSize] = useState<number>(10);
 
-  // Selected item for modal
+  // Selected item for single adjust modal
   const [adjustItem, setAdjustItem] = useState<InventoryListItem | null>(null);
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+
+  // Multi-selection for bulk restock
+  const [selectedItemsMap, setSelectedItemsMap] = useState<
+    Record<number, InventoryListItem>
+  >({});
+  const [isBulkRestockModalOpen, setIsBulkRestockModalOpen] = useState(false);
 
   // Filter history by specific item
   const [historyFilterItem, setHistoryFilterItem] =
@@ -94,6 +102,43 @@ export default function InventoryDashboardPage() {
   const inventoryData = (inventoryResponse as any)?.data;
   const items: InventoryListItem[] = inventoryData?.data ?? [];
   const meta = inventoryData?.meta;
+
+  const selectedIds = Object.keys(selectedItemsMap).map(Number);
+  const selectedItems = Object.values(selectedItemsMap);
+
+  const handleToggleSelect = (id: number) => {
+    const item = items.find((i) => i.id === id) || selectedItemsMap[id];
+    if (!item) return;
+    setSelectedItemsMap((prev) => {
+      const next = { ...prev };
+      if (next[id]) {
+        delete next[id];
+      } else {
+        next[id] = item;
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (items.length === 0) return;
+    const allPageSelected = items.every((i) => !!selectedItemsMap[i.id]);
+    setSelectedItemsMap((prev) => {
+      const next = { ...prev };
+      if (allPageSelected) {
+        items.forEach((i) => delete next[i.id]);
+      } else {
+        items.forEach((i) => {
+          next[i.id] = i;
+        });
+      }
+      return next;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedItemsMap({});
+  };
 
   const hasActiveFilters =
     search.trim() !== "" || statusFilter !== "all" || activeTab !== "stock";
@@ -147,7 +192,7 @@ export default function InventoryDashboardPage() {
 
       <AdminPageHeader
         title="Inventory Management"
-        description="Real-time warehouse stock tracking, reorder thresholds, and audit movement"
+        description="Real-time warehouse stock tracking, bulk restock, and audit movement"
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -163,12 +208,24 @@ export default function InventoryDashboardPage() {
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
               Refresh
             </Button>
-            {items.length > 0 && (
+            {selectedIds.length > 0 && (
               <Button
                 type="button"
                 size="sm"
+                onClick={() => setIsBulkRestockModalOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
+              >
+                <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
+                Bulk Restock ({selectedIds.length})
+              </Button>
+            )}
+            {items.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => handleOpenAdjust(items[0])}
-                className="bg-secondary-600 hover:bg-secondary-700 text-white font-bold text-xs shadow-xs"
+                className="text-secondary-700 border-secondary-200 hover:bg-secondary-50 font-bold text-xs shadow-xs"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
                 Quick Adjust Stock
@@ -178,7 +235,7 @@ export default function InventoryDashboardPage() {
         }
       />
 
-      <AdminContent className="space-y-6">
+      <AdminContent className="space-y-6 pb-24">
         {/* KPI Metric Cards */}
         <InventoryKpiCards
           stats={stats}
@@ -283,6 +340,50 @@ export default function InventoryDashboardPage() {
           )}
         </div>
 
+        {/* Bulk Action Sticky Banner when items are selected */}
+        {selectedIds.length > 0 && activeTab !== "history" && (
+          <div className="bg-gradient-to-r from-secondary-900 to-secondary-800 text-white rounded-2xl p-3.5 sm:px-5 shadow-lg flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-secondary-700/80 border border-secondary-600 flex items-center justify-center text-secondary-200 shrink-0">
+                <Layers className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>
+                    {selectedIds.length}{" "}
+                    {selectedIds.length === 1 ? "product" : "products"} selected
+                  </span>
+                  <span className="text-secondary-300 text-[11px] font-normal hidden sm:inline">
+                    • Ready for bulk stock update
+                  </span>
+                </p>
+                <p className="text-[11px] text-secondary-300 truncate hidden md:block">
+                  Apply identical restock quantity (e.g. 50 units) across all selected products at once.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                className="px-3 py-1.5 text-xs font-medium text-secondary-200 hover:text-white hover:bg-secondary-700/60 rounded-lg transition-colors cursor-pointer"
+              >
+                Clear Selection
+              </button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setIsBulkRestockModalOpen(true)}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-md border-0 gap-1.5 px-4"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Bulk Restock ({selectedIds.length})
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Content based on Active Tab */}
         {activeTab === "history" ? (
           <InventoryHistoryTab
@@ -302,45 +403,86 @@ export default function InventoryDashboardPage() {
             onRetry={() => refetchInventory()}
           />
         ) : (
-          <div className="space-y-4">
+          <div className="w-full">
             <InventoryStockTable
               items={items}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onToggleSelectAll={handleToggleSelectAll}
               onAdjustStock={handleOpenAdjust}
               onViewHistory={handleViewHistoryForItem}
-            />
+              footer={
+                meta ? (
+                  <div className="px-4 py-3 sm:px-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500">
+                    <div className="flex items-center gap-3.5 flex-wrap w-full sm:w-auto justify-between sm:justify-start">
+                      <span>
+                        Showing{" "}
+                        <strong className="text-neutral-800">
+                          {meta.total === 0 ? 0 : (meta.page - 1) * meta.limit + 1}
+                        </strong>{" "}
+                        to{" "}
+                        <strong className="text-neutral-800">
+                          {Math.min(meta.page * meta.limit, meta.total)}
+                        </strong>{" "}
+                        of <strong className="text-neutral-800">{meta.total}</strong> products
+                      </span>
 
-            {/* Pagination */}
-            {meta && meta.totalPages > 1 && (
-              <div className="px-4 py-3 bg-white rounded-2xl border border-cream-border shadow-xs flex items-center justify-between text-xs text-neutral-500">
-                <span>
-                  Showing page <strong className="text-neutral-800">{meta.page}</strong> of{" "}
-                  <strong className="text-neutral-800">{meta.totalPages}</strong> (
-                  {meta.total} total items)
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={meta.page <= 1}
-                    className="h-8 text-xs font-semibold"
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-                    disabled={meta.page >= meta.totalPages}
-                    className="h-8 text-xs font-semibold"
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
+                      {/* Rows per page selector chips */}
+                      <div className="flex items-center gap-2 pl-3 border-l border-cream-border/80">
+                        <span className="text-neutral-500 text-xs font-medium">Show:</span>
+                        <div className="flex items-center gap-1">
+                          {[5, 10, 20, 50].map((size) => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => {
+                                setPageSize(size);
+                                setPage(1);
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer font-mono ${
+                                pageSize === size
+                                  ? "bg-secondary-600 text-white shadow-2xs"
+                                  : "bg-neutral-50 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 border border-cream-border"
+                              }`}
+                            >
+                              {size}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Page Navigation */}
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                      <span className="text-xs text-neutral-500 mr-1 whitespace-nowrap">
+                        Page <strong className="text-neutral-800">{meta.page}</strong> of{" "}
+                        <strong className="text-neutral-800">{meta.totalPages || 1}</strong>
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={meta.page <= 1}
+                        className="h-8 px-3 text-xs font-semibold cursor-pointer"
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+                        disabled={meta.page >= meta.totalPages}
+                        className="h-8 px-3 text-xs font-semibold cursor-pointer"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                ) : null
+              }
+            />
           </div>
         )}
 
@@ -353,6 +495,18 @@ export default function InventoryDashboardPage() {
             setAdjustItem(null);
           }}
           onSuccess={() => {
+            refetchInventory();
+            refetchStats();
+          }}
+        />
+
+        {/* Bulk Restock Modal */}
+        <BulkRestockModal
+          items={selectedItems}
+          open={isBulkRestockModalOpen}
+          onClose={() => setIsBulkRestockModalOpen(false)}
+          onSuccess={() => {
+            setSelectedItemsMap({});
             refetchInventory();
             refetchStats();
           }}

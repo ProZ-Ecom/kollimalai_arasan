@@ -183,11 +183,12 @@ export default function AdminBlogsPage() {
           </Button>
         }
       />
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <AdminContent className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           <DataTable
             columns={columns}
             data={blogs}
+            tableClassName="min-w-[1050px]"
             searchKey="title"
             searchPlaceholder="Search blogs..."
             pageSize={20}

@@ -335,10 +335,11 @@ export default function AdminFaqsPage() {
           )}
 
           {/* Data Table */}
-          <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="mt-6 flex min-h-0 flex-1 flex-col">
             <DataTable
               columns={columns}
               data={faqs}
+              tableClassName="min-w-[1000px]"
               pageSize={pageSize}
               pageSizeOptions={[10, 20, 30, 50]}
               page={data?.meta?.page ?? page}

@@ -29,6 +29,9 @@ export interface DashboardSummary {
   todayRevenue: number;
   lowStockCount: number;
   outOfStockCount: number;
+  topCategoryNames?: string;
+  settlementFromRazorpay?: number;
+  fulfillmentSuccessRate?: number;
 }
 
 export interface DashboardFinancials {

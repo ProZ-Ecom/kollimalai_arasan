@@ -1,13 +1,27 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+export type StatsCardColor =
+  | "mint"
+  | "violet"
+  | "cyan"
+  | "fuchsia"
+  | "amber"
+  | "rose"
+  | "emerald"
+  | "default";
+
 interface StatsCardProps {
   title: string;
   value: string | number;
+  unit?: string;
   icon?: LucideIcon;
+  iconColor?: StatsCardColor;
+  footer?: ReactNode;
   description?: string;
   trend?: {
     value: number;
@@ -16,53 +30,98 @@ interface StatsCardProps {
   className?: string;
 }
 
-function StatsCard({ title, value, icon: Icon, description, trend, className }: StatsCardProps) {
+const COLOR_CLASSES: Record<StatsCardColor, { bg: string; text: string }> = {
+  mint: { bg: "bg-[#EAFBF3]", text: "text-[#0DA665]" },
+  violet: { bg: "bg-[#F1EDFE]", text: "text-[#7048E8]" },
+  cyan: { bg: "bg-[#E6F8F8]", text: "text-[#0C9898]" },
+  fuchsia: { bg: "bg-[#FDF0FD]", text: "text-[#A627BD]" },
+  amber: { bg: "bg-[#FFF6E5]", text: "text-[#D97706]" },
+  rose: { bg: "bg-[#FDECEC]", text: "text-[#E03131]" },
+  emerald: { bg: "bg-[#EAFBF3]", text: "text-[#0DA665]" },
+  default: { bg: "bg-neutral-100", text: "text-neutral-600" },
+};
+
+function StatsCard({
+  title,
+  value,
+  unit,
+  icon: Icon,
+  iconColor = "default",
+  footer,
+  description,
+  trend,
+  className,
+}: StatsCardProps) {
+  const colorStyle = COLOR_CLASSES[iconColor] || COLOR_CLASSES.default;
+
   return (
     <div
       className={cn(
-        "h-full min-h-36 rounded-2xl border border-[var(--color-neutral-200)] bg-white px-4 py-3",
+        "flex flex-col justify-between rounded-2xl border border-neutral-200/90 bg-white p-5 shadow-2xs hover:shadow-xs transition-all",
         className
       )}
     >
+      {/* Top Header Row */}
       <div className="flex items-start justify-between">
-        <p className="text-xs font-semibold tracking-wider text-[var(--color-neutral-500)] uppercase">
+        <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
           {title}
         </p>
 
         {Icon && (
-          <div className="rounded-xl bg-[var(--color-neutral-100)] p-3">
-            <Icon className="h-5 w-5 text-[var(--color-neutral-600)]" />
+          <div
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-2xl transition-transform",
+              colorStyle.bg,
+              colorStyle.text
+            )}
+          >
+            <Icon className="h-5 w-5" />
           </div>
         )}
       </div>
 
-      <div className="">
-        <h3 className="text-3xl font-bold text-[var(--color-neutral-900)]">{value}</h3>
+      {/* Value & Unit Row */}
+      <div className="mt-3">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-3xl font-black tracking-tight text-neutral-900">
+            {value}
+          </span>
+          {unit && (
+            <span className="text-sm font-semibold text-neutral-500">
+              {unit}
+            </span>
+          )}
+        </div>
 
-        {(description || trend) && (
-          <div className="mt-3 flex items-center gap-2">
-            {description && (
-              <p className="text-sm text-[var(--color-neutral-500)]">{description}</p>
-            )}
-
-            {trend && (
-              <span
-                className={cn(
-                  "inline-flex items-center text-sm font-medium",
-                  trend.isPositive
-                    ? "text-[var(--color-success-700)]"
-                    : "text-[var(--color-error-700)]"
-                )}
-              >
-                {trend.isPositive ? (
-                  <TrendingUp className="mr-1 h-4 w-4" />
-                ) : (
-                  <TrendingDown className="mr-1 h-4 w-4" />
-                )}
-                {trend.value}%
-              </span>
-            )}
+        {/* Footer Area */}
+        {footer ? (
+          <div className="mt-3.5 flex items-center text-xs font-medium">
+            {footer}
           </div>
+        ) : (
+          (description || trend) && (
+            <div className="mt-3.5 flex items-center gap-2 text-xs font-medium">
+              {description && (
+                <span className="text-neutral-500">{description}</span>
+              )}
+
+              {trend && (
+                <span
+                  className={cn(
+                    "inline-flex items-center text-xs font-semibold",
+                    trend.isPositive ? "text-emerald-600" : "text-rose-600"
+                  )}
+                >
+                  {trend.isPositive ? (
+                    <TrendingUp className="mr-1 h-3.5 w-3.5" />
+                  ) : (
+                    <TrendingDown className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  {trend.value}%
+                </span>
+              )}
+            </div>
+          )
         )}
       </div>
     </div>

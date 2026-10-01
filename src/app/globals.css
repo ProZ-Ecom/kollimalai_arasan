@@ -86,7 +86,11 @@
   --color-success-900: #14532d;
 
   /* Error / Danger */
-  --color-danger-base: #fb0000;
+  --color-danger-base: #dc2626;
+  --color-form-error: #dc2626;
+  --color-form-error-border: #ef4444;
+  --color-form-error-bg: #fef2f2;
+  --color-form-error-ring: rgba(220, 38, 38, 0.2);
   --color-error-50: #fef2f2;
   --color-error-100: #fee2e2;
   --color-error-200: #fecaca;
@@ -143,7 +147,7 @@
   --color-theme-status-del-bg: #eaf7ec;
   --color-theme-status-del-fg: #005a04;
   --color-theme-status-can-bg: #fee2e2;
-  --color-theme-status-can-fg: #b91c1c;
+  --color-theme-status-can-fg: #dc2626;
   --color-theme-tag-work-bg: #ede7f6;
   --color-theme-tag-work-fg: #5b4b8a;
 
@@ -273,7 +277,11 @@
     --success-900: #14532d;
 
     /* Danger / Error */
-    --danger-base: #fb0000;
+    --danger-base: #dc2626;
+    --form-error: #dc2626;
+    --form-error-border: #ef4444;
+    --form-error-bg: #fef2f2;
+    --form-error-ring: rgba(220, 38, 38, 0.2);
     --error-50: #fef2f2;
     --error-100: #fee2e2;
     --error-200: #fecaca;
@@ -359,7 +367,7 @@
     --theme-status-del-bg: #eaf7ec;
     --theme-status-del-fg: #005a04;
     --theme-status-can-bg: #fee2e2;
-    --theme-status-can-fg: #b91c1c;
+    --theme-status-can-fg: #dc2626;
     --theme-tag-work-bg: #ede7f6;
     --theme-tag-work-fg: #5b4b8a;
 
@@ -482,13 +490,67 @@ button {
   outline: none;
 }
 
-input:not([type="checkbox"]):not([type="radio"]):focus,
-input:not([type="checkbox"]):not([type="radio"]):focus-visible,
-textarea:focus,
-textarea:focus-visible {
+input:not([type="checkbox"]):not([type="radio"]):not([aria-invalid="true"]):not(.border-red-500):not(.border-error-500):not(.border-error-600):not(.border-error):not(.border-form-error):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([aria-invalid="true"]):not(.border-red-500):not(.border-error-500):not(.border-error-600):not(.border-error):not(.border-form-error):focus-visible,
+textarea:not([aria-invalid="true"]):not(.border-red-500):not(.border-error-500):not(.border-error-600):not(.border-error):not(.border-form-error):focus,
+textarea:not([aria-invalid="true"]):not(.border-red-500):not(.border-error-500):not(.border-error-600):not(.border-error):not(.border-form-error):focus-visible,
+select:not([aria-invalid="true"]):not(.border-red-500):not(.border-error-500):not(.border-error-600):not(.border-error):not(.border-form-error):focus,
+select:not([aria-invalid="true"]):not(.border-red-500):not(.border-error-500):not(.border-error-600):not(.border-error):not(.border-form-error):focus-visible {
   outline: none !important;
   border-color: var(--color-secondary-600) !important;
   box-shadow: 0 0 0 2px rgba(0, 127, 6, 0.15) !important;
+}
+
+/* ================================================================== */
+/* Form Error Field & Message Global Design Styles                     */
+/* Ensures consistent vibrant red styling across all form components  */
+/* ================================================================== */
+
+/* Form Error Message Styles */
+.form-error-message,
+.text-form-error {
+  color: var(--color-form-error, #dc2626);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+/* Form Error Field States */
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"],
+.border-form-error,
+.border-error,
+.border-error-500,
+.border-error-600,
+.border-red-500,
+.is-error {
+  border-color: var(--color-form-error-border, #ef4444) !important;
+}
+
+/* Form Error Field Focus States (Remains Red, Never Green) */
+input[aria-invalid="true"]:focus,
+input[aria-invalid="true"]:focus-visible,
+textarea[aria-invalid="true"]:focus,
+textarea[aria-invalid="true"]:focus-visible,
+select[aria-invalid="true"]:focus,
+select[aria-invalid="true"]:focus-visible,
+.border-form-error:focus,
+.border-form-error:focus-visible,
+.border-error:focus,
+.border-error:focus-visible,
+.border-error-500:focus,
+.border-error-500:focus-visible,
+.border-error-600:focus,
+.border-error-600:focus-visible,
+.border-red-500:focus,
+.border-red-500:focus-visible,
+.is-error:focus,
+.is-error:focus-visible {
+  outline: none !important;
+  border-color: var(--color-form-error-border, #ef4444) !important;
+  box-shadow: 0 0 0 2px var(--color-form-error-ring, rgba(220, 38, 38, 0.2)) !important;
 }
 
 /* ================================================================== */
@@ -564,14 +626,19 @@ textarea:focus-visible {
 
 /* Hide scrollbar but keep scrolling */
 .scrollbar-hide,
-.no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+.no-scrollbar,
+.category-carousel {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar,
-.no-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari */
+.no-scrollbar::-webkit-scrollbar,
+.category-carousel::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari */
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
 
 /* Storefront Button & Utility Styles */

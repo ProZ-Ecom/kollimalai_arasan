@@ -35,6 +35,14 @@ export const createInventorySchema = z.object({
   reorderLevel: z.number().int().min(0).optional(),
 });
 
+export const bulkAdjustStockSchema = z.object({
+  inventoryIds: z.array(z.coerce.number()).min(1, "Select at least one inventory item"),
+  type: inventoryTransactionTypeEnum.default("PURCHASE"),
+  quantity: z.number().int().refine((val) => val !== 0, "Quantity cannot be zero"),
+  notes: z.string().optional(),
+});
+
 export type GetInventoryQuery = z.infer<typeof getInventoryQuerySchema>;
 export type AdjustStockInput = z.infer<typeof adjustStockSchema>;
 export type CreateInventoryInput = z.infer<typeof createInventorySchema>;
+export type BulkAdjustStockInput = z.infer<typeof bulkAdjustStockSchema>;

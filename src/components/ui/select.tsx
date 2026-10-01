@@ -167,7 +167,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 
     return (
       <div
-        className={cn("w-full relative", isOpen && "z-30", wrapperClassName)}
+        className={cn("w-full relative", wrapperClassName, isOpen && "z-[60]")}
         ref={containerRef}
         onKeyDown={handleKeyDown}
       >
@@ -215,12 +215,13 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             isOpen
               ? "border-theme-primary ring-2 ring-theme-primary/20 bg-theme-surface"
               : "border-theme-border hover:border-theme-border-accent hover:bg-theme-surface-warm",
-            error && "border-theme-status-can-fg focus:border-theme-status-can-fg focus:ring-theme-status-can-fg/20",
+            error && "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10",
             disabled && "cursor-not-allowed bg-theme-surface-alt opacity-60 hover:border-theme-border",
             className
           )}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
+          aria-invalid={!!error}
         >
           <div className="flex items-center gap-2 truncate">
             {leftIcon && (
@@ -255,7 +256,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {isOpen && (
           <div
             className={cn(
-              "absolute left-0 right-0 z-[60] overflow-hidden rounded-xl border border-theme-border bg-theme-surface shadow-lg animate-in zoom-in-95 duration-150 min-w-[140px]",
+              "absolute left-0 right-0 z-[100] overflow-hidden rounded-xl border border-theme-border bg-theme-surface shadow-2xl animate-in zoom-in-95 duration-150 min-w-[140px]",
               dropdownPosition === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5",
               contentClassName
             )}
@@ -324,7 +325,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         )}
 
         {/* Error message */}
-        {error && <p className="mt-1 text-xs text-theme-status-can-fg font-medium">{error}</p>}
+        {error && <p className="mt-1 text-xs text-error-600 font-medium">{error}</p>}
       </div>
     );
   }

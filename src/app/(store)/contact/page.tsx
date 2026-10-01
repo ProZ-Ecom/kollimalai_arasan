@@ -295,9 +295,9 @@ export default function ContactPage() {
 
               {/* General Error Banner */}
               {generalError && (
-                <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-950 flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-                  <p className="text-sm text-rose-800 leading-relaxed">
+                <div className="mb-6 rounded-2xl border border-error-200 bg-error-50 p-4 text-error-950 flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-error-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-error-800 leading-relaxed">
                     {generalError}
                   </p>
                 </div>
@@ -313,7 +313,7 @@ export default function ContactPage() {
                       htmlFor="contact-name"
                       className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5"
                     >
-                      Your Name <span className="text-rose-500">*</span>
+                      Your Name <span className="text-error-600 font-bold">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
@@ -325,15 +325,16 @@ export default function ContactPage() {
                         placeholder="Enter your name"
                         value={formData.name}
                         onChange={(e) => handleInputChange("name", e.target.value)}
+                        aria-invalid={!!fieldErrors.name}
                         className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm font-medium transition-colors bg-white focus:outline-hidden focus:ring-2 ${
                           fieldErrors.name
-                            ? "border-rose-400 focus:ring-rose-200"
+                            ? "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10"
                             : "border-neutral-200 focus:border-secondary-500 focus:ring-secondary-100"
                         }`}
                       />
                     </div>
                     {fieldErrors.name && (
-                      <p className="text-xs text-rose-500 mt-1 font-medium">
+                      <p className="text-xs text-error-600 mt-1 font-medium">
                         {fieldErrors.name}
                       </p>
                     )}
@@ -345,7 +346,7 @@ export default function ContactPage() {
                       htmlFor="contact-phone"
                       className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5"
                     >
-                      Phone Number <span className="text-rose-500">*</span>
+                      Phone Number <span className="text-error-600 font-bold">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
@@ -357,15 +358,16 @@ export default function ContactPage() {
                         placeholder="e.g. 9876543210"
                         value={formData.phone}
                         onChange={(e) => handleInputChange("phone", e.target.value)}
+                        aria-invalid={!!fieldErrors.phone}
                         className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm font-medium transition-colors bg-white focus:outline-hidden focus:ring-2 ${
                           fieldErrors.phone
-                            ? "border-rose-400 focus:ring-rose-200"
+                            ? "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10"
                             : "border-neutral-200 focus:border-secondary-500 focus:ring-secondary-100"
                         }`}
                       />
                     </div>
                     {fieldErrors.phone && (
-                      <p className="text-xs text-rose-500 mt-1 font-medium">
+                      <p className="text-xs text-error-600 mt-1 font-medium">
                         {fieldErrors.phone}
                       </p>
                     )}
@@ -380,7 +382,7 @@ export default function ContactPage() {
                       htmlFor="contact-email"
                       className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5"
                     >
-                      Email Address <span className="text-rose-500">*</span>
+                      Email Address <span className="text-error-600 font-bold">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
@@ -392,15 +394,16 @@ export default function ContactPage() {
                         placeholder="name@example.com"
                         value={formData.email}
                         onChange={(e) => handleInputChange("email", e.target.value)}
+                        aria-invalid={!!fieldErrors.email}
                         className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm font-medium transition-colors bg-white focus:outline-hidden focus:ring-2 ${
                           fieldErrors.email
-                            ? "border-rose-400 focus:ring-rose-200"
+                            ? "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10"
                             : "border-neutral-200 focus:border-secondary-500 focus:ring-secondary-100"
                         }`}
                       />
                     </div>
                     {fieldErrors.email && (
-                      <p className="text-xs text-rose-500 mt-1 font-medium">
+                      <p className="text-xs text-error-600 mt-1 font-medium">
                         {fieldErrors.email}
                       </p>
                     )}
@@ -412,7 +415,7 @@ export default function ContactPage() {
                       htmlFor="contact-subject"
                       className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5"
                     >
-                      Subject / Topic <span className="text-rose-500">*</span>
+                      Subject / Topic <span className="text-error-600 font-bold">*</span>
                     </label>
                     <Select
                       id="contact-subject"
@@ -436,7 +439,7 @@ export default function ContactPage() {
                     htmlFor="contact-message"
                     className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5"
                   >
-                    Your Message <span className="text-rose-500">*</span>
+                    Your Message <span className="text-error-600 font-bold">*</span>
                   </label>
                   <textarea
                     id="contact-message"
@@ -444,14 +447,15 @@ export default function ContactPage() {
                     placeholder="Please describe your question or requirement in detail..."
                     value={formData.message}
                     onChange={(e) => handleInputChange("message", e.target.value)}
+                    aria-invalid={!!fieldErrors.message}
                     className={`w-full px-4 py-3 rounded-xl border text-sm font-medium transition-colors bg-white focus:outline-hidden focus:ring-2 resize-y ${
                       fieldErrors.message
-                        ? "border-rose-400 focus:ring-rose-200"
+                        ? "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10"
                         : "border-neutral-200 focus:border-secondary-500 focus:ring-secondary-100"
                     }`}
                   />
                   {fieldErrors.message && (
-                    <p className="text-xs text-rose-500 mt-1 font-medium">
+                    <p className="text-xs text-error-600 mt-1 font-medium">
                       {fieldErrors.message}
                     </p>
                   )}

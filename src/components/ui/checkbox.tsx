@@ -53,7 +53,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
           )}
         </label>
 
-        {error && <span className="text-xs text-error-500">{error}</span>}
+        {error && <span className="text-xs text-error-600 font-medium">{error}</span>}
       </div>
     );
   }

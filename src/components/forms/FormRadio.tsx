@@ -42,7 +42,7 @@ const FormRadio = React.forwardRef<HTMLInputElement, FormRadioProps>(
               "peer-checked:border-secondary-600 peer-checked:[&>span]:scale-100",
               "peer-focus-visible:ring-2 peer-focus-visible:ring-secondary-600/30",
               "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-              error && "border-error-600",
+              error && "border-error-500",
               className
             )}
           >
@@ -64,7 +64,7 @@ const FormRadio = React.forwardRef<HTMLInputElement, FormRadioProps>(
           {description && (
             <p className="text-sm text-gray-500">{description}</p>
           )}
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-xs text-error-600 font-medium mt-1">{error}</p>}
         </div>
       </div>
     );

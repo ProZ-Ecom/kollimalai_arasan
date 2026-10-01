@@ -38,6 +38,8 @@ export function AdjustStockModal({
   onClose,
   onSuccess,
 }: AdjustStockModalProps) {
+  const [mode, setMode] = useState<"delta" | "target">("delta");
+  const [targetQty, setTargetQty] = useState<number>(0);
   const [type, setType] = useState<InventoryTransactionType>("PURCHASE");
   const [deltaQty, setDeltaQty] = useState<number>(0);
   const [reorderLevel, setReorderLevel] = useState<number>(5);
@@ -50,21 +52,26 @@ export function AdjustStockModal({
     if (item) {
       setReorderLevel(item.reorderLevel > 0 ? item.reorderLevel : 5);
       setDeltaQty(0);
+      setTargetQty(item.availableQuantity);
       setReleaseReserved(false);
       setNotes("");
+      setMode("delta");
     }
   }, [item]);
 
   const currentAvailable = item?.availableQuantity ?? 0;
   const currentReserved = item?.reservedQuantity ?? 0;
 
-  // Compute final quantity based on operation type
+  // Compute final quantity based on operation mode and type
   const effectiveChange = useMemo(() => {
+    if (mode === "target") {
+      return targetQty - currentAvailable;
+    }
     if (type === "DAMAGE" || type === "TRANSFER") {
       return -Math.abs(deltaQty);
     }
     return deltaQty;
-  }, [type, deltaQty]);
+  }, [mode, targetQty, type, deltaQty, currentAvailable]);
 
   const newAvailable = Math.max(
     0,
@@ -90,7 +97,7 @@ export function AdjustStockModal({
   ];
 
   const hasModifications =
-    deltaQty !== 0 ||
+    effectiveChange !== 0 ||
     reorderLevel !== (item?.reorderLevel || 5) ||
     releaseReserved;
 
@@ -110,10 +117,21 @@ export function AdjustStockModal({
       return;
     }
 
+    // Determine appropriate transaction type if setting direct target
+    let submitType = type;
+    if (mode === "target") {
+      submitType =
+        effectiveChange < 0
+          ? type === "PURCHASE"
+            ? "ADJUSTMENT"
+            : type
+          : "PURCHASE";
+    }
+
     try {
       await adjustStockMutation.mutateAsync({
         inventoryId: item.id,
-        type,
+        type: submitType,
         quantity: effectiveChange,
         reorderLevel,
         releaseReserved: releaseReserved ? true : undefined,
@@ -140,7 +158,7 @@ export function AdjustStockModal({
     >
       {item && (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Item Preview Card */}
+
           <div className="flex items-center gap-3.5 p-3.5 bg-cream-50/70 border border-cream-border rounded-xl">
             <div className="w-12 h-12 rounded-lg bg-cream-100 border border-cream-border flex items-center justify-center overflow-hidden shrink-0 relative">
               {item.imageUrl ? (
@@ -221,11 +239,10 @@ export function AdjustStockModal({
                   key={preset.label}
                   type="button"
                   onClick={() => setReorderLevel(preset.val)}
-                  className={`px-2 py-1 text-xs font-bold font-mono rounded-lg border transition-all cursor-pointer ${
-                    reorderLevel === preset.val
+                  className={`px-2 py-1 text-xs font-bold font-mono rounded-lg border transition-all cursor-pointer ${reorderLevel === preset.val
                       ? "bg-amber-600 text-white border-amber-700 shadow-xs"
                       : "bg-white text-neutral-700 border-amber-200 hover:border-amber-400 hover:bg-amber-50"
-                  }`}
+                    }`}
                 >
                   {preset.label}
                 </button>
@@ -280,69 +297,144 @@ export function AdjustStockModal({
 
           {/* Section 3: Stock Quantity Adjustment */}
           <div className="space-y-3 pt-1 border-t border-cream-border/70">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-neutral-700">
-                Adjustment Reason / Movement Type
-              </label>
-              <Select
-                options={transactionTypeOptions}
-                value={type}
-                onValueChange={(val) => setType(val as InventoryTransactionType)}
-                size="md"
-              />
+            {/* Mode Selector Tabs */}
+            <div className="flex items-center p-1 bg-cream-100/80 rounded-xl border border-cream-border gap-1">
+              <button
+                type="button"
+                onClick={() => setMode("delta")}
+                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === "delta"
+                    ? "bg-white text-secondary-800 shadow-2xs border border-cream-border/70"
+                    : "text-neutral-600 hover:text-neutral-900"
+                  }`}
+              >
+                +/- Add or Deduct Quantity
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("target");
+                  setTargetQty(currentAvailable);
+                }}
+                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === "target"
+                    ? "bg-white text-secondary-800 shadow-2xs border border-cream-border/70"
+                    : "text-neutral-600 hover:text-neutral-900"
+                  }`}
+              >
+                Set Exact Total Stock (e.g. 30, 20, 0)
+              </button>
             </div>
 
-            {/* Quick Increment Preset Chips */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-neutral-700">
-                  Add / Deduct Quantity (Leave 0 to only change limits)
+            {mode === "delta" ? (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-neutral-700">
+                    Adjustment Reason / Movement Type
+                  </label>
+                  <Select
+                    options={transactionTypeOptions}
+                    value={type}
+                    onValueChange={(val) => setType(val as InventoryTransactionType)}
+                    size="md"
+                  />
+                </div>
+
+                {/* Quick Increment Preset Chips */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-neutral-700">
+                      Add / Deduct Quantity (Leave 0 to only change limits)
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {quickPresets.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => {
+                          if (preset.val < 0) {
+                            setType("DAMAGE");
+                            setDeltaQty(Math.abs(preset.val));
+                          } else {
+                            if (type === "DAMAGE" || type === "TRANSFER") {
+                              setType("PURCHASE");
+                            }
+                            setDeltaQty(preset.val);
+                          }
+                        }}
+                        className="px-2.5 py-1 text-xs font-bold font-mono rounded-lg border border-cream-border bg-white text-neutral-700 hover:border-secondary-500 hover:text-secondary-700 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative mt-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={deltaQty || ""}
+                      onChange={(e) => setDeltaQty(Number(e.target.value) || 0)}
+                      className="w-full h-10 px-3.5 text-sm font-mono font-bold text-neutral-900 bg-white border border-cream-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary-500/20 focus:border-secondary-500 transition-colors"
+                      placeholder="0 (Enter units to adjust)..."
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-neutral-700 block">
+                  New Desired Stock Available (Total units on shelf)
                 </label>
-              </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={targetQty}
+                    onChange={(e) =>
+                      setTargetQty(Math.max(0, parseInt(e.target.value, 10) || 0))
+                    }
+                    className="w-full h-11 px-3.5 text-base font-mono font-bold text-neutral-900 bg-white border border-cream-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary-500/20 focus:border-secondary-500 transition-colors"
+                    placeholder="Enter target units, e.g. 30, 20, 0..."
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-neutral-400">
+                    units
+                  </span>
+                </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
-                {quickPresets.map((preset) => (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    onClick={() => {
-                      if (preset.val < 0) {
-                        setType("DAMAGE");
-                        setDeltaQty(Math.abs(preset.val));
-                      } else {
-                        if (type === "DAMAGE" || type === "TRANSFER") {
-                          setType("PURCHASE");
-                        }
-                        setDeltaQty(preset.val);
-                      }
-                    }}
-                    className="px-2.5 py-1 text-xs font-bold font-mono rounded-lg border border-cream-border bg-white text-neutral-700 hover:border-secondary-500 hover:text-secondary-700 transition-colors shadow-2xs cursor-pointer"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+                {/* Quick Shortcuts for Target Stock */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                  <span className="text-[11px] text-neutral-500 font-medium">Quick values:</span>
+                  {[0, 10, 20, 30, 50, 100].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setTargetQty(num)}
+                      className={`px-2 py-0.5 text-xs font-mono font-bold rounded-md border cursor-pointer transition-all ${targetQty === num
+                          ? "bg-secondary-600 text-white border-secondary-600"
+                          : num === 0
+                            ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                            : "bg-white text-neutral-700 border-cream-border hover:bg-cream-50"
+                        }`}
+                    >
+                      {num === 0 ? "0 (Out of Stock)" : num}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-neutral-500">
+                  Directly enter the final count you want (e.g., 30, 20, or 0). The system automatically calculates the difference.
+                </p>
               </div>
-
-              <div className="relative mt-2">
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={deltaQty || ""}
-                  onChange={(e) => setDeltaQty(Number(e.target.value) || 0)}
-                  className="w-full h-10 px-3.5 text-sm font-mono font-bold text-neutral-900 bg-white border border-cream-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary-500/20 focus:border-secondary-500 transition-colors"
-                  placeholder="0 (Enter units to adjust)..."
-                />
-              </div>
-            </div>
+            )}
 
             {/* Live Balance Preview Banner */}
             <div
-              className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
-                isNegativeStock
+              className={`p-3 rounded-xl border flex items-center justify-between text-xs ${isNegativeStock
                   ? "bg-rose-50 border-rose-200 text-rose-800"
                   : "bg-secondary-50/70 border-secondary-200 text-secondary-900"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2">
                 {isNegativeStock ? (

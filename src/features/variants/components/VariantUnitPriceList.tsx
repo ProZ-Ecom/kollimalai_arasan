@@ -532,7 +532,7 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
               </div>
 
               {formError && (
-                <p className="text-xs text-red-500 font-medium">{formError}</p>
+                <p className="mt-1 text-xs text-error-600 font-medium">{formError}</p>
               )}
 
               <div className="flex items-center justify-end gap-2 pt-1">

@@ -18,6 +18,7 @@ import type {
   CancelOrderInput,
   ReturnOrderInput,
   OrderStatusTransitionInput,
+  ShipOrderCourierInput,
 } from "../validations/order.schema";
 import type { orders_order_status } from "@/generated/prisma";
 
@@ -460,13 +461,69 @@ export const orderService = {
       throw ApiError.notFound("Order not found");
     }
 
-    if (order.order_status !== "delivered") {
-      throw ApiError.badRequest("Only delivered orders can be returned");
+    if (!["delivered", "shipped", "out_for_delivery"].includes(order.order_status)) {
+      throw ApiError.badRequest(
+        `Cannot process return for order with status '${order.order_status}'. Only delivered, shipped, or out for delivery orders can be returned.`
+      );
     }
 
-    return orderRepository.returnOrderTransaction({
+    const returnedOrder = await orderRepository.returnOrderTransaction({
       orderId: order.id,
       note: input?.note || "Return processed by admin",
+      changedBy: adminUser.internalId,
+    });
+
+    // In case of refund: if order was paid, attempt refund via payment gateway
+    if (order.payment_status === "paid" || order.payment_status === "partial_refund") {
+      try {
+        const { razorpayService } = await import("@/features/payment/services/razorpay.service");
+        await razorpayService.refundPayment({
+          orderId: order.id,
+          amount: input?.amount,
+          reason: input?.reason || input?.note || "Admin return and refund",
+        });
+      } catch (refundError: any) {
+        console.error(
+          `[Refund Error] Auto-refund failed for admin-returned order ${order.orderNumber}:`,
+          refundError?.message || refundError
+        );
+      }
+    }
+
+    return returnedOrder;
+  },
+
+  async deliverAdminOrder(
+    adminSessionUserId: string,
+    uuid: string,
+    input?: { note?: string }
+  ): Promise<OrderDetailResponse> {
+    const adminUser = await userRepository.findById(adminSessionUserId);
+    if (!adminUser || !adminUser.internalId) {
+      throw ApiError.unauthorized("Session expired. Please log in again.");
+    }
+
+    const order = await db.order.findFirst({
+      where: {
+        uuid,
+        is_active: true,
+      },
+    });
+
+    if (!order) {
+      throw ApiError.notFound("Order not found");
+    }
+
+    if (["delivered", "cancelled", "returned"].includes(order.order_status)) {
+      throw ApiError.badRequest(
+        `Cannot deliver order that is already '${order.order_status}'`
+      );
+    }
+
+    return orderRepository.updateOrderStatusWithHistory({
+      orderId: order.id,
+      status: "delivered",
+      note: input?.note || "Order marked as delivered by admin",
       changedBy: adminUser.internalId,
     });
   },
@@ -554,6 +611,136 @@ export const orderService = {
       "packed",
       input
     );
+  },
+
+  async shipOrderWithCourier(
+    adminSessionUserId: string,
+    uuid: string,
+    input: ShipOrderCourierInput
+  ): Promise<OrderDetailResponse> {
+    const adminUser = await userRepository.findById(adminSessionUserId);
+    const adminId = adminUser?.internalId ?? null;
+
+    const isNumeric = /^\d+$/.test(uuid);
+    const order = await db.order.findFirst({
+      where: {
+        is_active: true,
+        OR: [
+          { uuid },
+          { orderNumber: uuid },
+          ...(isNumeric ? [{ id: BigInt(uuid) }] : []),
+        ],
+      },
+    });
+
+    if (!order) {
+      throw ApiError.notFound("Order not found");
+    }
+
+    if (["cancelled", "delivered", "returned"].includes(order.order_status)) {
+      throw ApiError.badRequest(
+        `Cannot ship order with status '${order.order_status}'`
+      );
+    }
+
+    // Resolve delivery partner
+    const isPartnerNumeric =
+      typeof input.deliveryPartnerId === "number" ||
+      /^\d+$/.test(String(input.deliveryPartnerId));
+
+    const partner = await db.delivery_partners.findFirst({
+      where: {
+        is_active: true,
+        OR: [
+          ...(isPartnerNumeric
+            ? [{ id: BigInt(input.deliveryPartnerId) }]
+            : []),
+          { code: String(input.deliveryPartnerId) },
+        ],
+      },
+    });
+
+    if (!partner) {
+      throw ApiError.notFound("Delivery partner not found or is inactive");
+    }
+
+    const trackingNum = input.trackingNumber.trim();
+    const cleanNotes = input.notes?.trim() || null;
+
+    await db.$transaction(async (tx) => {
+      // Find active shipment for this order
+      const existingShipment = await tx.shipments.findFirst({
+        where: {
+          order_id: order.id,
+          is_active: true,
+        },
+        orderBy: { id: "desc" },
+      });
+
+      if (existingShipment) {
+        await tx.shipments.update({
+          where: { id: existingShipment.id },
+          data: {
+            delivery_partner_id: partner.id,
+            tracking_number: trackingNum,
+            status: "in_transit",
+            assignment_status: "assigned",
+            shipped_at: new Date(),
+            delivery_notes: cleanNotes || existingShipment.delivery_notes,
+            updated_by: adminId,
+            updated_at: new Date(),
+          },
+        });
+      } else {
+        await tx.shipments.create({
+          data: {
+            uuid: crypto.randomUUID(),
+            order_id: order.id,
+            delivery_partner_id: partner.id,
+            tracking_number: trackingNum,
+            status: "in_transit",
+            assignment_status: "assigned",
+            shipped_at: new Date(),
+            delivery_notes: cleanNotes,
+            created_by: adminId,
+            updated_by: adminId,
+          },
+        });
+      }
+
+      // Update order status to 'shipped'
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          order_status: "shipped",
+          updated_by: adminId,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Add status history
+      const historyNote = cleanNotes
+        ? `Shipped via ${partner.name} (AWB: ${trackingNum}) - ${cleanNotes}`
+        : `Shipped via ${partner.name} (AWB: ${trackingNum})`;
+
+      await tx.order_status_history.create({
+        data: {
+          order_id: order.id,
+          status: "shipped",
+          note: historyNote,
+          created_by: adminId,
+        },
+      });
+    });
+
+    const updated = await orderRepository.findCustomerOrderByUuid(
+      order.userId,
+      order.uuid || String(order.id)
+    );
+    if (!updated) {
+      throw ApiError.internal("Failed to retrieve updated order");
+    }
+    return updated;
   },
 
   async getOrders(userId: number | string | bigint, params: any = {}) {

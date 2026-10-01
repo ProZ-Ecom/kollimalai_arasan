@@ -494,6 +494,10 @@ export const razorpayService = {
       },
     });
 
+    const isPartial = params.amount
+      ? Math.round(params.amount * 100) < Math.round(Number(successPayment.amount) * 100)
+      : false;
+
     // Record refund transaction
     await db.$transaction(async (tx) => {
       await tx.paymentTransaction.create({
@@ -508,21 +512,40 @@ export const razorpayService = {
         },
       });
 
+      await tx.refunds.create({
+        data: {
+          order_id: params.orderId,
+          payment_id: successPayment.id,
+          amount: refundAmountInPaise / 100,
+          reason: params.reason || "Refund processed by admin",
+          status: "completed",
+          processed_at: new Date(),
+          created_by: successPayment.created_by,
+          updated_by: successPayment.updated_by,
+        },
+      });
+
       await tx.payment.update({
         where: { id: successPayment.id },
         data: {
-          status: "refunded",
+          status: isPartial ? "success" : "refunded",
         },
       });
 
       await tx.order.update({
         where: { id: params.orderId },
         data: {
-          payment_status: "refunded",
+          payment_status: isPartial ? "partial_refund" : "refunded",
         },
       });
     });
 
+    return {
+      success: true,
+      refundId: refund.id,
+      amount: refundAmountInPaise / 100,
+      isPartial,
+    };
   },
 };
 
