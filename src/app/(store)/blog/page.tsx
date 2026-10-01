@@ -118,9 +118,9 @@ export default function BlogListPage() {
   const totalCount = data?.meta?.total ?? 0;
 
   const companyName = company?.companyName?.trim() || "Kollimalai Arasan";
-  const blogTagline = company?.tagline?.trim() || `Stories, Tips & Spice Wisdom`;
+  const blogTagline = (company as any)?.tagline?.trim() || `Stories, Tips & Spice Wisdom`;
   const blogDescription =
-    company?.description?.trim() ||
+    (company as any)?.description?.trim() ||
     `Discover recipes, health benefits, and behind-the-scenes stories from our farming community.`;
 
   return (

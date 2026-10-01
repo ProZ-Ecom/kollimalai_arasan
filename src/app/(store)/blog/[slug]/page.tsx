@@ -94,8 +94,8 @@ export default function BlogDetailPage({
 
   const companyName = company?.companyName?.trim() || "Kollimalai Arasan";
   const companyTagline =
-    company?.tagline?.trim() ||
-    company?.description?.trim() ||
+    (company as any)?.tagline?.trim() ||
+    (company as any)?.description?.trim() ||
     "Stories, tips and wisdom from our farming community.";
 
   if (isLoading) return <BlogDetailSkeleton />;
