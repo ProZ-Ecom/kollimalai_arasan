@@ -25,11 +25,13 @@ import {
   FileBarChart,
   Tag,
   ExternalLink,
+  Landmark,
 } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { ErrorState } from "@/components/ui/error-state";
 import { useDashboardStats } from "@/features/dashboard/hooks";
 import type { DashboardPeriod } from "@/features/dashboard/api/get-stats";
+import { useRazorpaySettlements } from "@/features/payment/hooks/use-razorpay-settlements";
 import { formatPrice } from "@/lib/utils";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import { AdminPageHeader, AdminContent } from "@/components/admin/AdminPageHeader";
@@ -53,6 +55,7 @@ export default function AdminDashboardPage() {
   const { data: session } = useSession();
   const [period, setPeriod] = useState<DashboardPeriod>("month");
   const { data: stats, isLoading, isFetching, error, refetch } = useDashboardStats(period);
+  const { data: settlementData, isLoading: settlementLoading } = useRazorpaySettlements(30);
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -175,22 +178,33 @@ export default function AdminDashboardPage() {
             }
           />
 
-          {/* 5. GROSS REVENUE */}
+          {/* 5. RAZORPAY SETTLEMENT */}
           <StatsCard
-            title="GROSS REVENUE"
-            value={formatPrice(summary.periodRevenue ?? summary.totalRevenueAllTime ?? 0)}
-            icon={IndianRupee}
+            title="RAZORPAY SETTLEMENT"
+            value={
+              settlementLoading
+                ? "Loading..."
+                : formatPrice(settlementData?.settlementSummary?.netReceived ?? 0)
+            }
+            icon={Landmark}
             iconColor="mint"
             footer={
               <div className="flex items-center gap-1.5 text-neutral-600 font-medium flex-wrap">
-                <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
-                  +{summary.revenueTrend?.value ?? 0}%
-                </span>
-                <span className="text-neutral-500">vs previous month</span>
-                {summary.settlementFromRazorpay !== undefined && (
-                  <span className="text-[11px] text-neutral-400 font-normal ml-auto">
-                    (Settled: {formatPrice(summary.settlementFromRazorpay)})
-                  </span>
+                {settlementLoading ? (
+                  <span className="text-neutral-400 text-[11px]">Fetching from Razorpay...</span>
+                ) : settlementData ? (
+                  <>
+                    <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[11px] font-bold text-rose-600 border border-rose-200">
+                      Fees: {formatPrice(settlementData.settlementSummary.totalFees)}
+                    </span>
+                    <span className="text-neutral-500">
+                      {settlementData.settlementSummary.lastSettledOn
+                        ? `Last settled ${new Date(settlementData.settlementSummary.lastSettledOn).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`
+                        : `${settlementData.settlementSummary.settlementCount} settlement(s)`}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-neutral-400 text-[11px]">No settlement data</span>
                 )}
               </div>
             }

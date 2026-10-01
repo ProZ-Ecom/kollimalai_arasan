@@ -21,7 +21,10 @@ export function useBlogs(params?: GetBlogsParams) {
 export function useBlog(slugOrId: string | null) {
   return useQuery({
     queryKey: blogKeys.detail(slugOrId ?? ""),
-    queryFn: () => getBlog(slugOrId!),
+    queryFn: async () => {
+      const response = await getBlog(slugOrId!);
+      return response.data ?? null;
+    },
     enabled: !!slugOrId,
   });
 }
