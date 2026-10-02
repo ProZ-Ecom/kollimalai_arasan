@@ -16,6 +16,13 @@ const hanken = Hanken_Grotesk({
 export const metadata: Metadata = {
   title: "Kollimalai Arasan - Pure Spices & Natural Products",
   description: "Authentic Kolli Hills spices and natural products: Black pepper, cardamom, cloves, and traditional harvest delivered to your doorstep.",
+  icons: {
+    icon: [
+      { url: "/logo.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({
