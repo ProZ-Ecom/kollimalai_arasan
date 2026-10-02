@@ -10,10 +10,12 @@ import { FormInput } from "@/components/forms/form-input";
 import { FormTextarea } from "@/components/forms/form-textarea";
 import { FormRichText } from "@/components/forms/form-rich-text";
 import { FormSelect } from "@/components/forms/form-select";
+import type { SelectOption } from "@/components/ui/select";
 import { FormCheckbox } from "@/components/forms/form-checkbox";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { FormVideoUrl } from "@/components/forms/form-video-url";
 import { formatTitleCase } from "@/lib/utils";
+import { useInfiniteProductsSelect } from "@/hooks/use-infinite-select";
 
 // Item-level fields only. Unit + price combinations (sku, unit, base price)
 // are managed separately per (unit) via VariantUnitPriceList, since one item
@@ -50,11 +52,7 @@ const variantFormSchema = z.object({
 
 export type VariantFormValues = z.infer<typeof variantFormSchema>;
 
-export interface SelectOption {
-  value: string;
-  label: string;
-  slug?: string; // Product Code
-}
+export type { SelectOption };
 
 export type UnitFormItem = UnitOption | (SelectOption & {
   id?: string;
@@ -85,12 +83,32 @@ function VariantForm({
   isLoading = false,
   submitLabel = "Save Item",
 }: VariantFormProps) {
+  const initialProductId = fixedProductId || initialData?.productId || "";
+
+  const infiniteProducts = useInfiniteProductsSelect({
+    pageSize: 20,
+    initialSelectedId: initialProductId,
+    initialSelectedOption: products.find((p) => p.value === initialProductId),
+  });
+
+  const effectiveProductOptions = useMemo(() => {
+    // If actively searching, strictly show search results (empty if no matches)
+    if (infiniteProducts.search.trim()) {
+      return infiniteProducts.options;
+    }
+    // If infinite products has items, use them; if not yet loaded and products passed, fallback
+    if (infiniteProducts.options.length > 0) {
+      return infiniteProducts.options;
+    }
+    return products || [];
+  }, [infiniteProducts.options, infiniteProducts.search, products]);
+
   // Helper to compute prefix from Product Code / Slug
   const computePrefix = (prodId?: string): string => {
     if (fixedProductSlug) {
       return `${fixedProductSlug.toUpperCase().trim()}_`;
     }
-    const p = products.find((item) => item.value === prodId);
+    const p = effectiveProductOptions.find((item) => item.value === prodId);
     const pSlug = p?.slug?.trim() || "";
     if (pSlug) {
       return `${pSlug.toUpperCase()}_`;
@@ -98,7 +116,6 @@ function VariantForm({
     return "";
   };
 
-  const initialProductId = fixedProductId || initialData?.productId || "";
   const initialPrefix = computePrefix(initialProductId);
 
   const extractInitialExtraSlug = (fullSlug?: string, prefix?: string): string => {
@@ -152,7 +169,7 @@ function VariantForm({
   // Dynamic non-editable prefix based on currently selected Product
   const slugPrefix = useMemo(
     () => computePrefix(selectedProductId || fixedProductId),
-    [selectedProductId, fixedProductId, fixedProductSlug, products]
+    [selectedProductId, fixedProductId, fixedProductSlug, effectiveProductOptions]
   );
 
   // Sync combined variant code into form state whenever prefix or extraSlug updates
@@ -192,10 +209,7 @@ function VariantForm({
     }
   }, [initialData, fixedProductId, initialPrefix, methods]);
 
-  const productOptions = useMemo(
-    () => products,
-    [products]
-  );
+  const productOptions = effectiveProductOptions;
 
   const handleExtraSlugChange = (raw: string) => {
     // Format variant code: uppercase, convert spaces to underscore, allow special characters
@@ -249,6 +263,11 @@ function VariantForm({
               label="Product"
               placeholder="Select product"
               options={productOptions}
+              onSearchChange={infiniteProducts.onSearchChange}
+              onLoadMore={infiniteProducts.onLoadMore}
+              hasMore={infiniteProducts.hasMore}
+              isLoading={infiniteProducts.isLoading}
+              isLoadingMore={infiniteProducts.isLoadingMore}
               required
             />
 

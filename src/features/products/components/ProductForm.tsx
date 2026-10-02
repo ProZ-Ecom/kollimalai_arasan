@@ -7,9 +7,11 @@ import { z } from "zod";
 import { Info } from "lucide-react";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
+import type { SelectOption } from "@/components/ui/select";
 import { FormImageUpload } from "@/components/forms/form-image-upload";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { formatTitleCase } from "@/lib/utils";
+import { useInfiniteCategoriesSelect } from "@/hooks/use-infinite-select";
 
 const productFormSchema = z.object({
   name: z
@@ -38,17 +40,13 @@ const productFormSchema = z.object({
 
 export type ProductFormValues = z.infer<typeof productFormSchema>;
 
-export interface ProductOption {
-  value: string;
-  label: string;
-  slug?: string;
-}
+export type ProductOption = SelectOption;
 
 interface ProductFormProps {
   initialData?: Partial<ProductFormValues>;
   initialImageUrl?: string | null;
   isEditing?: boolean;
-  categories: ProductOption[];
+  categories?: ProductOption[];
   brands?: ProductOption[];
   hsnCodes: ProductOption[];
   onSubmit: (data: ProductFormValues) => Promise<void>;
@@ -70,9 +68,29 @@ function ProductForm({
   const defaultBrandId =
     initialData?.brandId || (brands && brands.length > 0 ? brands[0].value : "");
 
+  const initialCatId = initialData?.categoryId || "";
+
+  const infiniteCategories = useInfiniteCategoriesSelect({
+    pageSize: 20,
+    initialSelectedId: initialCatId,
+    initialSelectedOption: categories.find((c) => c.value === initialCatId),
+  });
+
+  const effectiveCategoryOptions = useMemo(() => {
+    // If actively searching, strictly show search results (empty if no matches)
+    if (infiniteCategories.search.trim()) {
+      return infiniteCategories.options;
+    }
+    // If infinite categories has items, use them; if not yet loaded and categories passed, fallback
+    if (infiniteCategories.options.length > 0) {
+      return infiniteCategories.options;
+    }
+    return categories || [];
+  }, [infiniteCategories.options, infiniteCategories.search, categories]);
+
   // Helper to compute prefix from category code/slug
   const computePrefix = (catVal?: string): string => {
-    const c = categories.find((item) => item.value === catVal);
+    const c = effectiveCategoryOptions.find((item) => item.value === catVal);
     const cSlug = c?.slug?.trim() || "";
 
     if (cSlug) {
@@ -81,7 +99,6 @@ function ProductForm({
     return "";
   };
 
-  const initialCatId = initialData?.categoryId || "";
   const initialPrefix = computePrefix(initialCatId);
 
   const extractInitialExtraSlug = (fullSlug?: string, prefix?: string): string => {
@@ -189,7 +206,7 @@ function ProductForm({
     });
   };
 
-  const categoryOptions = categories;
+  const categoryOptions = effectiveCategoryOptions;
   const hsnCodeOptions = useMemo(() => {
     return [
       { value: "", label: "None / Not Applicable" },
@@ -218,6 +235,11 @@ function ProductForm({
             label="Category"
             placeholder="Select category"
             options={categoryOptions}
+            onSearchChange={infiniteCategories.onSearchChange}
+            onLoadMore={infiniteCategories.onLoadMore}
+            hasMore={infiniteCategories.hasMore}
+            isLoading={infiniteCategories.isLoading}
+            isLoadingMore={infiniteCategories.isLoadingMore}
             required
           />
         </div>

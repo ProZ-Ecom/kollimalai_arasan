@@ -12,8 +12,8 @@ import {
   useBulkDeleteVariants,
 } from "@/features/variants/hooks";
 import { toast } from "@/components/ui/Toast";
-import { useProducts } from "@/features/products/hooks";
 import { useUnits } from "@/features/units/hooks";
+import { useInfiniteProductsSelect } from "@/hooks/use-infinite-select";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
 import {
@@ -135,8 +135,12 @@ export default function AdminVariantsPage() {
   });
 
   // Reference queries
-  const { data: productsData } = useProducts({ pageSize: 100 });
   const { data: unitsData } = useUnits({ pageSize: 100 });
+  const productFilterSelect = useInfiniteProductsSelect({
+    includeAllOption: true,
+
+    pageSize: 20,
+  });
 
   const createMutation = useCreateVariant();
   const updateMutation = useUpdateVariant();
@@ -156,7 +160,6 @@ export default function AdminVariantsPage() {
   const isCreatedVariantOutOfStock = hasCreatedPrices && createdVariantTotalStock === 0;
 
   const variants = data?.data ?? [];
-  const products = productsData?.data ?? [];
   const units = unitsData?.data ?? [];
 
   const totalItems = data?.meta?.total ?? variants.length;
@@ -165,25 +168,14 @@ export default function AdminVariantsPage() {
 
   // Options for form dropdowns & filter
   const productOptions = useMemo(() => {
-    return products.map((p: any) => ({
-      value: p.id,
-      label: p.name,
-      slug: p.slug,
-    }));
-  }, [products]);
-
-  const productFilterOptions = useMemo(() => {
-    return [
-      { value: "", label: "All Products" },
-      ...productOptions,
-    ];
-  }, [productOptions]);
+    return productFilterSelect.options.filter((p) => p.value !== "");
+  }, [productFilterSelect.options]);
 
   const activeProductName = useMemo(() => {
     if (!selectedProductFilter) return null;
-    const match = products.find((p: any) => String(p.id) === selectedProductFilter);
-    return match?.name || null;
-  }, [selectedProductFilter, products]);
+    const match = productFilterSelect.options.find((p) => p.value === selectedProductFilter);
+    return match?.label || null;
+  }, [selectedProductFilter, productFilterSelect.options]);
 
   const filterNotice = useMemo(() => {
     const parts: string[] = [];
@@ -404,8 +396,8 @@ export default function AdminVariantsPage() {
             disabled={isLoadingThis}
             title="Click to adjust stock & inventory"
             className={`group inline-flex items-center justify-between min-w-[132px] h-8 px-3 rounded-md text-xs font-bold border bg-white cursor-pointer shadow-xs transition-all hover:shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 ${!isOutOfStock
-                ? "text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                : "text-rose-700 border-rose-300 hover:bg-rose-50"
+              ? "text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+              : "text-rose-700 border-rose-300 hover:bg-rose-50"
               }`}
           >
             <span className="flex items-center gap-1.5 whitespace-nowrap">
@@ -441,8 +433,8 @@ export default function AdminVariantsPage() {
             disabled={isRowPending}
             title={isActive ? "Click to set Inactive" : "Click to set Active"}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer border transition-all hover:opacity-80 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed ${isActive
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                : "bg-neutral-100 text-neutral-600 border-neutral-200 hover:bg-neutral-200"
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+              : "bg-neutral-100 text-neutral-600 border-neutral-200 hover:bg-neutral-200"
               }`}
           >
             {isRowPending ? (
@@ -552,8 +544,16 @@ export default function AdminVariantsPage() {
               <div className="w-full sm:w-64">
                 <Select
                   value={selectedProductFilter}
-                  onChange={(e) => setSelectedProductFilter(e.target.value)}
-                  options={productFilterOptions}
+                  onChange={(e) => {
+                    setSelectedProductFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  options={productFilterSelect.options}
+                  onSearchChange={productFilterSelect.onSearchChange}
+                  onLoadMore={productFilterSelect.onLoadMore}
+                  hasMore={productFilterSelect.hasMore}
+                  isLoading={productFilterSelect.isLoading}
+                  isLoadingMore={productFilterSelect.isLoadingMore}
                   placeholder="All Products"
                   className="h-11 rounded-xl"
                 />
@@ -850,7 +850,6 @@ export default function AdminVariantsPage() {
 
         {createStep === 1 && (
           <VariantForm
-            products={productOptions}
             isLoading={createMutation.isPending}
             submitLabel="Next: Units & Pricing"
             onSubmit={async (formData) => {
@@ -1263,11 +1262,10 @@ export default function AdminVariantsPage() {
                           {up.measurement.value} {up.measurement.unit}
                         </span>
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                            !isOut
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${!isOut
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                               : "bg-rose-50 text-rose-700 border-rose-200"
-                          }`}
+                            }`}
                         >
                           {!isOut ? `${up.stock ?? 0} in stock` : "Out of stock"}
                         </span>

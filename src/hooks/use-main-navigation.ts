@@ -19,6 +19,7 @@ const STATIC_LEADING: MainNavItem[] = [
 
 const STATIC_TRAILING: MainNavItem[] = [
   { label: "About Us", href: "/about" },
+  { label: "Blog", href: "/blog" },
   { label: "Contact", href: "/contact" },
 ];
 
