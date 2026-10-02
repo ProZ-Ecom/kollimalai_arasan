@@ -16,11 +16,22 @@ import { LockKeyhole, Mail, AlertCircle, User } from "lucide-react";
 import Link from "next/link";
 import { Checkbox } from "@/components/ui/checkbox";
 
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const authError = searchParams.get("error");
   const loginMutation = useLogin();
+
+  const getErrorMessage = (error: string | null) => {
+    if (!error) return null;
+    if (error === "AccessDenied") return "Your account has been deactivated or blocked.";
+    if (error === "OAuthCallbackError" || error === "OAuthSignin")
+      return "Failed to authenticate with Google. Please try again.";
+    return "Authentication failed. Please try again.";
+  };
 
   const methods = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -97,57 +108,76 @@ function LoginForm() {
         </div>
       }
     >
-      <FormProvider {...methods}>
-        <form
-          onSubmit={methods.handleSubmit(onSubmit)}
-          className="space-y-5 md:space-y-6"
-        >
-          {/* Server Error */}
-          {methods.formState.errors.root?.message && (
-            <div className="flex items-center gap-2 rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-600">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {methods.formState.errors.root.message}
-            </div>
-          )}
-
-          <FormInput
-            name="email"
-            label="Email Address"
-            type="email"
-            placeholder="Enter your email"
-            autoComplete="email"
-            leftIcon={<Mail size={18} />}
-            required
-          />
-
-          <FormPasswordInput
-            name="password"
-            label="Password"
-            placeholder="Enter your password"
-            leftIcon={<LockKeyhole size={18} />}
-            required
-          />
-
-          <div className="flex items-center justify-end">
-            {/* <Checkbox label="Remember Me" className="border-neutral-300" /> */}
-
-            <Link
-              href="/forgot-password"
-              className="text-sm font-medium text-secondary-600 hover:underline"
-            >
-              Forgot Password?
-            </Link>
+      <div className="space-y-4">
+        {/* URL Error (e.g. Google OAuth error) */}
+        {authError && (
+          <div className="flex items-center gap-2 rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-600">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {getErrorMessage(authError)}
           </div>
+        )}
 
-          <FormSubmitButton
-            size="xl"
-            disabled={loginMutation.isPending}
-            className="mt-2 h-12 md:h-14 w-full rounded-lg bg-gradient-to-r from-secondary-600 to-secondary-700 text-sm font-medium text-white shadow-sm transition-all hover:from-secondary-700 hover:to-secondary-800 hover:shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
+        {/* Google One-Click Login */}
+        <GoogleAuthButton callbackUrl={callbackUrl} text="Continue with Google" />
+
+        {/* Divider */}
+        <div className="relative flex items-center justify-center py-1">
+          <div className="w-full border-t border-neutral-200" />
+          <span className="absolute bg-white px-3 text-xs font-medium uppercase tracking-wider text-neutral-400">
+            Or sign in with email
+          </span>
+        </div>
+
+        <FormProvider {...methods}>
+          <form
+            onSubmit={methods.handleSubmit(onSubmit)}
+            className="space-y-4 md:space-y-5"
           >
-            {loginMutation.isPending ? <Spinner size="sm" className="text-white" /> : "Sign In"}
-          </FormSubmitButton>
-        </form>
-      </FormProvider>
+            {/* Server Error */}
+            {methods.formState.errors.root?.message && (
+              <div className="flex items-center gap-2 rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-600">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {methods.formState.errors.root.message}
+              </div>
+            )}
+
+            <FormInput
+              name="email"
+              label="Email Address"
+              type="email"
+              placeholder="Enter your email"
+              autoComplete="email"
+              leftIcon={<Mail size={18} />}
+              required
+            />
+
+            <FormPasswordInput
+              name="password"
+              label="Password"
+              placeholder="Enter your password"
+              leftIcon={<LockKeyhole size={18} />}
+              required
+            />
+
+            <div className="flex items-center justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-sm font-medium text-secondary-600 hover:underline"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+
+            <FormSubmitButton
+              size="xl"
+              disabled={loginMutation.isPending}
+              className="mt-2 h-12 md:h-14 w-full rounded-lg bg-gradient-to-r from-secondary-600 to-secondary-700 text-sm font-medium text-white shadow-sm transition-all hover:from-secondary-700 hover:to-secondary-800 hover:shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
+            >
+              {loginMutation.isPending ? <Spinner size="sm" className="text-white" /> : "Sign In"}
+            </FormSubmitButton>
+          </form>
+        </FormProvider>
+      </div>
     </AuthFormLayout>
   );
 }
