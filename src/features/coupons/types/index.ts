@@ -8,9 +8,9 @@ export interface CouponListItem {
   usageLimit: number | null;
   usedCount: number;
   isActive: boolean;
-  startsAt: Date | null;
-  expiresAt: Date | null;
-  createdAt: Date;
+  startsAt: Date | string | null;
+  expiresAt: Date | string | null;
+  createdAt: Date | string;
 }
 
 export interface GetCouponsParams {
@@ -33,8 +33,8 @@ export interface CreateCouponInput {
   maxDiscount?: number;
   usageLimit?: number;
   isActive?: boolean;
-  startsAt?: Date;
-  expiresAt?: Date;
+  startsAt?: string | Date;
+  expiresAt?: string | Date;
 }
 
 export interface UpdateCouponInput extends Partial<CreateCouponInput> {}

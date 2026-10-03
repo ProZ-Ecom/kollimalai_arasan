@@ -135,9 +135,19 @@ export function OfferForm({
   const endsAt = (useWatch({ control, name: "endsAt" }) ?? "") as string;
   const isActive = Boolean(useWatch({ control, name: "isActive" }));
 
-  // When offer type changes, clear/revalidate dependent fields
+  // When offer type changes, clear dependent field errors so newly switched inputs remain pristine
+  const isFirstMount = React.useRef(true);
+  const prevTypeRef = React.useRef(type);
+
   React.useEffect(() => {
-    methods.trigger(["value", "buyQuantity", "getQuantity", "maxDiscountAmount"]);
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    if (prevTypeRef.current !== type) {
+      prevTypeRef.current = type;
+      methods.clearErrors(["value", "buyQuantity", "getQuantity", "maxDiscountAmount"]);
+    }
   }, [type, methods]);
 
   // The picker's own Category/Product dropdowns are navigation, not offer
