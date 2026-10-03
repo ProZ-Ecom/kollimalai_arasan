@@ -91,8 +91,69 @@ export default function AdminCouponsPage() {
 
   const onSubmit = (formData: CreateCouponSchemaInput) => {
     if (editingCoupon) {
+      const normalizedType =
+        editingCoupon.type?.toUpperCase() === "FLAT" ||
+        editingCoupon.type?.toUpperCase() === "FIXED"
+          ? "FIXED"
+          : "PERCENTAGE";
+
+      const origStartsAt = editingCoupon.startsAt
+        ? new Date(editingCoupon.startsAt).toISOString().split("T")[0]
+        : undefined;
+      const origExpiresAt = editingCoupon.expiresAt
+        ? new Date(editingCoupon.expiresAt).toISOString().split("T")[0]
+        : undefined;
+
+      const payload: Partial<CreateCouponSchemaInput> = {};
+
+      if (formData.code?.trim() !== (editingCoupon.code || "").trim()) {
+        payload.code = formData.code.trim();
+      }
+      if (formData.type !== normalizedType) {
+        payload.type = formData.type;
+      }
+      if (Number(formData.value) !== Number(editingCoupon.value)) {
+        payload.value = Number(formData.value);
+      }
+      if (
+        formData.minOrderAmount !== undefined &&
+        Number(formData.minOrderAmount) !== Number(editingCoupon.minOrderAmount)
+      ) {
+        payload.minOrderAmount = Number(formData.minOrderAmount);
+      }
+      if (
+        formData.maxDiscount !== undefined &&
+        Number(formData.maxDiscount) !== Number(editingCoupon.maxDiscount)
+      ) {
+        payload.maxDiscount = Number(formData.maxDiscount);
+      }
+      if (
+        formData.usageLimit !== undefined &&
+        Number(formData.usageLimit) !== Number(editingCoupon.usageLimit)
+      ) {
+        payload.usageLimit = Number(formData.usageLimit);
+      }
+      if (
+        formData.isActive !== undefined &&
+        formData.isActive !== editingCoupon.isActive
+      ) {
+        payload.isActive = formData.isActive;
+      }
+      if (formData.startsAt !== origStartsAt) {
+        payload.startsAt = formData.startsAt;
+      }
+      if (formData.expiresAt !== origExpiresAt) {
+        payload.expiresAt = formData.expiresAt;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        setModalOpen(false);
+        setEditingCoupon(null);
+        return;
+      }
+
       updateMutation.mutate(
-        { id: editingCoupon.id, data: formData },
+        { id: editingCoupon.id, data: payload },
         {
           onSuccess: () => {
             setModalOpen(false);

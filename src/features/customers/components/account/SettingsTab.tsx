@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { changeCustomerPasswordSchema } from "../../validations/customer-profile.schema";
 
 export function SettingsTab() {
   const [prefs, setPrefs] = useState({
@@ -11,6 +12,7 @@ export function SettingsTab() {
     restock: true,
   });
 
+  // Password fields
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -19,25 +21,46 @@ export function SettingsTab() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const [inlineError, setInlineError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const clearFieldError = (fieldName: string) => {
+    if (fieldErrors[fieldName]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[fieldName];
+        return next;
+      });
+    }
+    if (formError) setFormError(null);
+  };
+
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setInlineError(null);
+    setFieldErrors({});
+    setFormError(null);
     setSuccessMsg(null);
 
-    if (!currentPassword) {
-      setInlineError("Please enter your current password.");
-      return;
-    }
-    if (newPassword.length < 6) {
-      setInlineError("New password must be at least 6 characters long.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setInlineError("Passwords do not match.");
+    const validationResult = changeCustomerPasswordSchema.safeParse({
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
+
+    if (!validationResult.success) {
+      const newErrors: Record<string, string> = {};
+      validationResult.error.issues.forEach((issue) => {
+        const fieldName = String(issue.path[0] || "general");
+        if (!newErrors[fieldName]) {
+          newErrors[fieldName] = issue.message;
+        }
+      });
+      setFieldErrors(newErrors);
+      if (newErrors.general) {
+        setFormError(newErrors.general);
+      }
       return;
     }
 
@@ -46,22 +69,51 @@ export function SettingsTab() {
       const res = await fetch("/api/customer/profile/password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify({
+          currentPassword: validationResult.data.currentPassword,
+          newPassword: validationResult.data.newPassword,
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setInlineError(data?.error?.message || data?.message || "Failed to update password.");
+        const msg =
+          data?.error?.message ||
+          data?.message ||
+          "Failed to update password.";
+
+        const lowerMsg = msg.toLowerCase();
+        if (lowerMsg.includes("current password")) {
+          setFieldErrors({ currentPassword: msg });
+        } else if (lowerMsg.includes("new password")) {
+          setFieldErrors({ newPassword: msg });
+        } else if (data?.errors && Array.isArray(data.errors)) {
+          const apiFieldErrors: Record<string, string> = {};
+          data.errors.forEach((errStr: string) => {
+            const [field, ...rest] = errStr.split(":");
+            if (field && rest.length > 0) {
+              apiFieldErrors[field.trim()] = rest.join(":").trim();
+            }
+          });
+          if (Object.keys(apiFieldErrors).length > 0) {
+            setFieldErrors(apiFieldErrors);
+          } else {
+            setFormError(msg);
+          }
+        } else {
+          setFormError(msg);
+        }
         return;
       }
 
-      setSuccessMsg("Password changed successfully.");
+      setSuccessMsg(data?.message || "Password updated successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setFieldErrors({});
     } catch {
-      setInlineError("An unexpected error occurred. Please try again.");
+      setFormError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -141,104 +193,144 @@ export function SettingsTab() {
           </h2>
         </div>
 
-        <form onSubmit={handlePasswordSubmit} className="p-5 sm:p-6 space-y-4">
+        <form onSubmit={handlePasswordSubmit} className="p-5 sm:p-6 space-y-4" noValidate>
           {successMsg && (
-            <div className="p-3 rounded-lg text-xs font-medium bg-theme-status-del-bg text-theme-status-del-fg">
-              {successMsg}
+            <div className="p-3.5 rounded-lg text-xs font-medium bg-theme-status-del-bg text-theme-status-del-fg flex items-center gap-2 border border-theme-status-del-fg/20">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {formError && (
+            <div className="p-3.5 rounded-lg text-xs font-medium bg-theme-status-can-bg text-theme-status-can-fg flex items-center gap-2 border border-theme-status-can-fg/20">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{formError}</span>
             </div>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Current Password */}
             <div className="flex flex-col gap-2">
-              <label htmlFor="settings-current-pwd" className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted">
-                Current Password <span className="text-red-600 font-bold">*</span>
+              <label
+                htmlFor="settings-current-pwd"
+                className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted"
+              >
+                Current Password <span className="text-error-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
                   id="settings-current-pwd"
                   type={showCurrent ? "text" : "password"}
-                  required
                   disabled={isSubmitting}
                   value={currentPassword}
                   onChange={(e) => {
                     setCurrentPassword(e.target.value);
-                    if (inlineError) setInlineError(null);
+                    clearFieldError("currentPassword");
                   }}
+                  aria-invalid={!!fieldErrors.currentPassword}
                   placeholder="Enter current password"
-                  className="w-full border border-theme-border-input rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] focus:border-theme-primary transition-colors disabled:opacity-50"
+                  className={`w-full border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] transition-colors disabled:opacity-50 ${
+                    fieldErrors.currentPassword
+                      ? "border-error-500 bg-error-50/20 focus:border-error-500"
+                      : "border-theme-border-input focus:border-theme-primary"
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrent(!showCurrent)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors p-1 cursor-pointer"
                   aria-label={showCurrent ? "Hide current password" : "Show current password"}
                 >
                   {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {fieldErrors.currentPassword && (
+                <span className="text-[11px] text-error-600 font-medium">
+                  {fieldErrors.currentPassword}
+                </span>
+              )}
             </div>
 
+            {/* New Password */}
             <div className="flex flex-col gap-2">
-              <label htmlFor="settings-new-pwd" className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted">
-                New Password <span className="text-red-600 font-bold">*</span>
+              <label
+                htmlFor="settings-new-pwd"
+                className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted"
+              >
+                New Password <span className="text-error-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
                   id="settings-new-pwd"
                   type={showNew ? "text" : "password"}
-                  required
                   disabled={isSubmitting}
                   value={newPassword}
                   onChange={(e) => {
                     setNewPassword(e.target.value);
-                    if (inlineError) setInlineError(null);
+                    clearFieldError("newPassword");
                   }}
+                  aria-invalid={!!fieldErrors.newPassword}
                   placeholder="Enter new password (min 6 chars)"
-                  className="w-full border border-theme-border-input rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] focus:border-theme-primary transition-colors disabled:opacity-50"
+                  className={`w-full border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] transition-colors disabled:opacity-50 ${
+                    fieldErrors.newPassword
+                      ? "border-error-500 bg-error-50/20 focus:border-error-500"
+                      : "border-theme-border-input focus:border-theme-primary"
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowNew(!showNew)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors p-1 cursor-pointer"
                   aria-label={showNew ? "Hide new password" : "Show new password"}
                 >
                   {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {fieldErrors.newPassword && (
+                <span className="text-[11px] text-error-600 font-medium">
+                  {fieldErrors.newPassword}
+                </span>
+              )}
             </div>
 
+            {/* Confirm Password */}
             <div className="flex flex-col gap-2">
-              <label htmlFor="settings-confirm-pwd" className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted">
-                Confirm Password <span className="text-red-600 font-bold">*</span>
+              <label
+                htmlFor="settings-confirm-pwd"
+                className="text-[11px] font-semibold uppercase tracking-wider text-theme-text-muted"
+              >
+                Confirm Password <span className="text-error-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
                   id="settings-confirm-pwd"
                   type={showConfirm ? "text" : "password"}
-                  required
                   disabled={isSubmitting}
                   value={confirmPassword}
                   onChange={(e) => {
                     setConfirmPassword(e.target.value);
-                    if (inlineError) setInlineError(null);
+                    clearFieldError("confirmPassword");
                   }}
+                  aria-invalid={!!fieldErrors.confirmPassword}
                   placeholder="Re-enter new password"
-                  className={`w-full border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                    inlineError ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                  className={`w-full border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm min-h-[44px] transition-colors disabled:opacity-50 ${
+                    fieldErrors.confirmPassword
+                      ? "border-error-500 bg-error-50/20 focus:border-error-500"
+                      : "border-theme-border-input focus:border-theme-primary"
                   }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors p-1 cursor-pointer"
                   aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
                 >
                   {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {inlineError && (
-                <span className="text-[11px] text-red-600 font-medium">
-                  {inlineError}
+              {fieldErrors.confirmPassword && (
+                <span className="text-[11px] text-error-600 font-medium">
+                  {fieldErrors.confirmPassword}
                 </span>
               )}
             </div>

@@ -58,7 +58,7 @@ export type GetOffersQueryInput = z.infer<typeof getOffersQuerySchema>;
 // Create / update
 // ---------------------------------------------------------------------------
 
-const offerBaseSchema = z.object({
+const offerCoreFields = {
   name: z.string().trim().min(1, "Offer name is required").max(150),
   code: optionalText(50),
   level: z.enum(OFFER_LEVELS, { message: "Select an offer level" }),
@@ -69,8 +69,7 @@ const offerBaseSchema = z.object({
   minQuantity: z.coerce
     .number()
     .int("Minimum quantity must be a whole number")
-    .min(1, "Minimum quantity must be at least 1")
-    .default(1),
+    .min(1, "Minimum quantity must be at least 1"),
   maxQuantity: optionalNumber,
   minCartValue: optionalNumber,
   maxDiscountAmount: optionalNumber,
@@ -78,15 +77,16 @@ const offerBaseSchema = z.object({
     .number()
     .int("Priority must be a whole number")
     .min(0, "Priority cannot be negative")
-    .max(1000, "Priority cannot exceed 1000")
-    .default(0),
+    .max(1000, "Priority cannot exceed 1000"),
   terms: optionalText(5000),
   startsAt: dateString,
   endsAt: dateString,
-  isActive: z.boolean().default(true),
-  productIds: z.array(uuid).default([]),
-  itemIds: z.array(uuid).default([]),
-});
+  isActive: z.boolean(),
+  productIds: z.array(uuid),
+  itemIds: z.array(uuid),
+};
+
+const offerBaseSchema = z.object(offerCoreFields);
 
 type OfferBaseShape = z.infer<typeof offerBaseSchema>;
 
@@ -249,7 +249,15 @@ function applyOfferRules<T extends Partial<OfferBaseShape>>(
   }
 }
 
-export const createOfferSchema = offerBaseSchema.superRefine(applyOfferRules);
+export const createOfferSchema = offerBaseSchema
+  .extend({
+    minQuantity: offerCoreFields.minQuantity.default(1),
+    priority: offerCoreFields.priority.default(0),
+    isActive: offerCoreFields.isActive.default(true),
+    productIds: offerCoreFields.productIds.default([]),
+    itemIds: offerCoreFields.itemIds.default([]),
+  })
+  .superRefine(applyOfferRules);
 export type CreateOfferSchemaInput = z.input<typeof createOfferSchema>;
 export type CreateOfferSchemaOutput = z.output<typeof createOfferSchema>;
 

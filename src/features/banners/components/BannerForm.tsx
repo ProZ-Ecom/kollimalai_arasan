@@ -382,14 +382,14 @@ export function BannerForm({
           </div>
         </section>
 
-        {showSubmitBlockedNotice && (
+        {/* {showSubmitBlockedNotice && (
           <div className="flex items-start gap-2 rounded-xl border border-theme-status-can-fg/30 bg-theme-status-can-bg p-3">
             <AlertCircle className="mt-px h-4 w-4 shrink-0 text-theme-status-can-fg" />
             <p className="text-xs font-medium text-theme-status-can-fg">
               Please fix the highlighted fields before saving.
             </p>
           </div>
-        )}
+        )} */}
 
         {/* ACTIONS */}
         <div className="flex flex-col-reverse gap-2 border-t border-theme-border pt-4 sm:flex-row sm:items-center sm:justify-between">

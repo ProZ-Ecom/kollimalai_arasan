@@ -723,8 +723,8 @@ export default function CheckoutPage() {
       )}
 
       {checkoutError && (
-        <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 shrink-0 text-red-600 mt-0.5" />
+        <div className="mb-6 rounded-2xl border border-error-200 bg-error-50 p-4 text-sm text-error-700 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 shrink-0 text-error-600 mt-0.5" />
           <div className="flex-1">
             <p className="font-semibold">Unable to complete checkout</p>
             <p className="text-xs mt-0.5">{checkoutError}</p>
@@ -861,7 +861,7 @@ export default function CheckoutPage() {
                 </div>
 
                 {addressFormError && (
-                  <div className="rounded-lg bg-red-50 border border-red-200 p-2.5 text-xs text-red-600">
+                  <div className="rounded-lg bg-error-50 border border-error-200 p-2.5 text-xs text-error-600 font-medium">
                     {addressFormError}
                   </div>
                 )}
@@ -869,7 +869,7 @@ export default function CheckoutPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
                     <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
-                      Recipient Name <span className="text-red-500 font-bold ml-0.5">*</span>
+                      Recipient Name <span className="text-error-600 font-bold ml-0.5">*</span>
                     </label>
                     <input
                       type="text"
@@ -879,13 +879,14 @@ export default function CheckoutPage() {
                         handleAddressFieldChange("fullName", e.target.value)
                       }
                       onBlur={() => handleAddressFieldBlur("fullName")}
+                      aria-invalid={touchedAddressFields.fullName && !!addressFieldErrors.fullName}
                       className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${touchedAddressFields.fullName && addressFieldErrors.fullName
-                        ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                        ? "border-error-500 bg-error-50/20 focus:border-error-500"
                         : "border-theme-border-input focus:border-theme-primary"
                         }`}
                     />
                     {touchedAddressFields.fullName && addressFieldErrors.fullName && (
-                      <p className="mt-1 text-xs text-red-500 font-medium">
+                      <p className="mt-1 text-xs text-error-600 font-medium">
                         {addressFieldErrors.fullName}
                       </p>
                     )}
@@ -893,7 +894,7 @@ export default function CheckoutPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
-                      Phone Number (10 digits) <span className="text-red-500 font-bold ml-0.5">*</span>
+                      Phone Number (10 digits) <span className="text-error-600 font-bold ml-0.5">*</span>
                     </label>
                     <input
                       type="tel"
@@ -905,13 +906,14 @@ export default function CheckoutPage() {
                         handleAddressFieldChange("phone", e.target.value)
                       }
                       onBlur={() => handleAddressFieldBlur("phone")}
+                      aria-invalid={touchedAddressFields.phone && !!addressFieldErrors.phone}
                       className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${touchedAddressFields.phone && addressFieldErrors.phone
-                        ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                        ? "border-error-500 bg-error-50/20 focus:border-error-500"
                         : "border-theme-border-input focus:border-theme-primary"
                         }`}
                     />
                     {touchedAddressFields.phone && addressFieldErrors.phone && (
-                      <p className="mt-1 text-xs text-red-500 font-medium">
+                      <p className="mt-1 text-xs text-error-600 font-medium">
                         {addressFieldErrors.phone}
                       </p>
                     )}
@@ -921,7 +923,7 @@ export default function CheckoutPage() {
                   <div className="sm:col-span-2">
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-xs font-semibold text-theme-text-secondary">
-                        PIN Code (6 digits) <span className="text-red-500 font-bold ml-0.5">*</span>
+                        PIN Code (6 digits) <span className="text-error-600 font-bold ml-0.5">*</span>
                       </label>
                       {isPincodeVerifying && (
                         <span className="flex items-center gap-1 text-[11px] text-theme-primary font-medium">
@@ -947,9 +949,10 @@ export default function CheckoutPage() {
                           handleAddressFieldChange("pincode", e.target.value)
                         }
                         onBlur={() => handleAddressFieldBlur("pincode")}
+                        aria-invalid={touchedAddressFields.pincode && !!(addressFieldErrors.pincode || pincodeVerificationError)}
                         className={`w-full min-h-[44px] rounded-xl border bg-white px-3 pr-10 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
                           touchedAddressFields.pincode && (addressFieldErrors.pincode || pincodeVerificationError)
-                            ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                            ? "border-error-500 bg-error-50/20 focus:border-error-500"
                             : isPincodeVerified
                             ? "border-emerald-500 focus:border-emerald-600"
                             : "border-theme-border-input focus:border-theme-primary"
@@ -964,7 +967,7 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                     {(touchedAddressFields.pincode && addressFieldErrors.pincode) || pincodeVerificationError ? (
-                      <p className="mt-1 text-xs text-red-500 font-medium">
+                      <p className="mt-1 text-xs text-error-600 font-medium">
                         {addressFieldErrors.pincode || pincodeVerificationError}
                       </p>
                     ) : (
@@ -1000,7 +1003,7 @@ export default function CheckoutPage() {
 
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
-                      Flat / House No., Building, Street <span className="text-red-500 font-bold ml-0.5">*</span>
+                      Flat / House No., Building, Street <span className="text-error-600 font-bold ml-0.5">*</span>
                     </label>
                     <input
                       type="text"
@@ -1010,13 +1013,14 @@ export default function CheckoutPage() {
                         handleAddressFieldChange("addressLine1", e.target.value)
                       }
                       onBlur={() => handleAddressFieldBlur("addressLine1")}
+                      aria-invalid={touchedAddressFields.addressLine1 && !!addressFieldErrors.addressLine1}
                       className={`w-full min-h-[44px] rounded-xl border bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${touchedAddressFields.addressLine1 && addressFieldErrors.addressLine1
-                        ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                        ? "border-error-500 bg-error-50/20 focus:border-error-500"
                         : "border-theme-border-input focus:border-theme-primary"
                         }`}
                     />
                     {touchedAddressFields.addressLine1 && addressFieldErrors.addressLine1 && (
-                      <p className="mt-1 text-xs text-red-500 font-medium">
+                      <p className="mt-1 text-xs text-error-600 font-medium">
                         {addressFieldErrors.addressLine1}
                       </p>
                     )}
@@ -1039,7 +1043,7 @@ export default function CheckoutPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
-                      City / District <span className="text-red-500 font-bold ml-0.5">*</span>
+                      City / District <span className="text-error-600 font-bold ml-0.5">*</span>
                     </label>
                     <div className="relative">
                       <input
@@ -1051,11 +1055,12 @@ export default function CheckoutPage() {
                           handleAddressFieldChange("city", e.target.value)
                         }
                         onBlur={() => handleAddressFieldBlur("city")}
+                        aria-invalid={!isPincodeVerified && touchedAddressFields.city && !!addressFieldErrors.city}
                         className={`w-full min-h-[44px] rounded-xl border px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
                           isPincodeVerified
                             ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 cursor-not-allowed border-theme-border"
                             : touchedAddressFields.city && addressFieldErrors.city
-                            ? "border-red-500 bg-red-50/20 focus:border-red-500"
+                            ? "border-error-500 bg-error-50/20 focus:border-error-500"
                             : "border-theme-border-input focus:border-theme-primary bg-white"
                         }`}
                       />
@@ -1067,7 +1072,7 @@ export default function CheckoutPage() {
                       )}
                     </div>
                     {touchedAddressFields.city && addressFieldErrors.city && (
-                      <p className="mt-1 text-xs text-red-500 font-medium">
+                      <p className="mt-1 text-xs text-error-600 font-medium">
                         {addressFieldErrors.city}
                       </p>
                     )}
@@ -1075,7 +1080,7 @@ export default function CheckoutPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
-                      State <span className="text-red-500 font-bold ml-0.5">*</span>
+                      State <span className="text-error-600 font-bold ml-0.5">*</span>
                     </label>
                     <div className="relative">
                       <input

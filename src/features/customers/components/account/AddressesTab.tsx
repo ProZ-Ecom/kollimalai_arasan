@@ -490,7 +490,7 @@ export function AddressesTab() {
             {/* Full Name */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-theme-text-primary">
-                Full Name <span className="text-red-600 font-bold">*</span>
+                Full Name <span className="text-error-600 font-bold">*</span>
               </label>
               <input
                 type="text"
@@ -499,18 +499,18 @@ export function AddressesTab() {
                 value={formData.fullName}
                 onChange={(e) => handleFieldChange("fullName", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.fullName ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                  fieldErrors.fullName ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
                 }`}
               />
               {fieldErrors.fullName && (
-                <span className="text-[11px] text-red-600">{fieldErrors.fullName}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.fullName}</span>
               )}
             </div>
 
             {/* Phone Number */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-theme-text-primary">
-                Phone Number <span className="text-red-600 font-bold">*</span>
+                Phone Number <span className="text-error-600 font-bold">*</span>
               </label>
               <input
                 type="tel"
@@ -519,28 +519,33 @@ export function AddressesTab() {
                 value={formData.phone}
                 onChange={(e) => handleFieldChange("phone", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.phone ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                  fieldErrors.phone ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
                 }`}
               />
               {fieldErrors.phone && (
-                <span className="text-[11px] text-red-600">{fieldErrors.phone}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.phone}</span>
               )}
             </div>
 
             {/* Custom Dropdown for Address Label */}
-            <CustomDropdown
-              options={LABEL_OPTIONS}
-              value={formData.label}
-              onChange={(val) => handleFieldChange("label", val)}
-              disabled={isSubmitting}
-            />
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-semibold text-theme-text-secondary">
+                Address Label <span className="text-[10px] font-normal text-theme-text-muted">(Optional)</span>
+              </label>
+              <CustomDropdown
+                options={LABEL_OPTIONS}
+                value={formData.label}
+                onChange={(val) => handleFieldChange("label", val)}
+                disabled={isSubmitting}
+              />
+            </div>
 
             {/* PIN Code with India Post Live Lookup */}
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-theme-text-secondary">
-                  PIN Code (6 digits) *
-                </span>
+                <label className="text-[11px] font-semibold text-theme-text-secondary">
+                  PIN Code (6 digits) <span className="text-danger-base font-bold ml-0.5">*</span>
+                </label>
                 {isPincodeVerifying && (
                   <span className="flex items-center gap-1 text-[10px] text-theme-primary font-medium">
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -559,12 +564,12 @@ export function AddressesTab() {
                   type="text"
                   disabled={isSubmitting}
                   maxLength={6}
-                  placeholder="PIN Code (e.g. 607106) *"
+                  placeholder="e.g. 607106"
                   value={formData.pincode}
                   onChange={(e) => handleFieldChange("pincode", e.target.value)}
                   className={`w-full border rounded-lg px-3.5 pr-9 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
                     fieldErrors.pincode || pincodeVerificationError
-                      ? "border-red-500 bg-red-50/20"
+                      ? "border-error-500 bg-error-50/20"
                       : isPincodeVerified
                       ? "border-emerald-500"
                       : "border-theme-border-input"
@@ -579,7 +584,7 @@ export function AddressesTab() {
                 </div>
               </div>
               {fieldErrors.pincode || pincodeVerificationError ? (
-                <span className="text-[11px] text-red-600">
+                <span className="text-[11px] text-error-600 font-medium">
                   {fieldErrors.pincode || pincodeVerificationError}
                 </span>
               ) : isPincodeVerified && pincodePostalData ? (
@@ -617,7 +622,7 @@ export function AddressesTab() {
             {/* Address Line 1 */}
             <div className="flex flex-col gap-1 sm:col-span-2">
               <label className="text-xs font-semibold text-theme-text-primary">
-                Address Line 1 <span className="text-red-600 font-bold">*</span>
+                Address Line 1 <span className="text-error-600 font-bold">*</span>
               </label>
               <input
                 type="text"
@@ -626,11 +631,11 @@ export function AddressesTab() {
                 value={formData.addressLine1}
                 onChange={(e) => handleFieldChange("addressLine1", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.addressLine1 ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                  fieldErrors.addressLine1 ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
                 }`}
               />
               {fieldErrors.addressLine1 && (
-                <span className="text-[11px] text-red-600">{fieldErrors.addressLine1}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.addressLine1}</span>
               )}
             </div>
 
@@ -646,11 +651,11 @@ export function AddressesTab() {
                 value={formData.addressLine2}
                 onChange={(e) => handleFieldChange("addressLine2", e.target.value)}
                 className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50 ${
-                  fieldErrors.addressLine2 ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                  fieldErrors.addressLine2 ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
                 }`}
               />
               {fieldErrors.addressLine2 && (
-                <span className="text-[11px] text-red-600">{fieldErrors.addressLine2}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.addressLine2}</span>
               )}
             </div>
 
@@ -662,7 +667,7 @@ export function AddressesTab() {
               <input
                 type="text"
                 disabled={isSubmitting}
-                placeholder="Landmark (Optional, e.g. Near Bus Stand)"
+                placeholder="e.g. Near Bus Stand, opposite Temple"
                 value={formData.landmark}
                 onChange={(e) => handleFieldChange("landmark", e.target.value)}
                 className="border border-theme-border-input rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors disabled:opacity-50"
@@ -672,66 +677,62 @@ export function AddressesTab() {
             {/* City */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-theme-text-primary">
-                City <span className="text-red-600 font-bold">*</span>
+                City <span className="text-error-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  readOnly={isPincodeVerified}
+                  readOnly
                   disabled={isSubmitting}
                   placeholder={isPincodeVerified ? formData.city : "City (Enter PIN Code)"}
                   value={formData.city}
                   onChange={(e) => handleFieldChange("city", e.target.value)}
-                  className={`w-full border rounded-lg px-3.5 py-2.5 text-xs transition-colors ${
-                    isPincodeVerified
-                      ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 cursor-not-allowed border-theme-border"
-                      : fieldErrors.city
-                      ? "border-red-500 bg-red-50/20 text-theme-text-primary"
-                      : "border-theme-border-input bg-theme-surface-warm text-theme-text-primary focus:border-theme-primary"
+                  className={`w-full border rounded-lg px-3.5 pr-20 py-2.5 text-xs transition-colors ${
+                    fieldErrors.city
+                      ? "border-error-500 bg-error-50/20 text-theme-text-primary"
+                      : "border-theme-border-input bg-theme-surface-warm text-theme-text-primary cursor-not-allowed select-none"
                   } disabled:opacity-50`}
                 />
                 {isPincodeVerified && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted">
-                    <Lock className="h-3 w-3" />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted select-none pointer-events-none">
+                    <Lock className="h-3 w-3 text-theme-text-muted" />
                     <span>Verified</span>
                   </div>
                 )}
               </div>
               {fieldErrors.city && (
-                <span className="text-[11px] text-red-600">{fieldErrors.city}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.city}</span>
               )}
             </div>
 
             {/* State */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-theme-text-primary">
-                State <span className="text-red-600 font-bold">*</span>
+                State <span className="text-error-600 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  readOnly={isPincodeVerified}
+                  readOnly
                   disabled={isSubmitting}
                   placeholder={isPincodeVerified ? formData.state : "State (Enter PIN Code)"}
                   value={formData.state}
                   onChange={(e) => handleFieldChange("state", e.target.value)}
-                  className={`w-full border rounded-lg px-3.5 py-2.5 text-xs transition-colors ${
-                    isPincodeVerified
-                      ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 cursor-not-allowed border-theme-border"
-                      : fieldErrors.state
-                      ? "border-red-500 bg-red-50/20 text-theme-text-primary"
-                      : "border-theme-border-input bg-theme-surface-warm text-theme-text-primary focus:border-theme-primary"
+                  className={`w-full border rounded-lg px-3.5 pr-20 py-2.5 text-xs transition-colors ${
+                    fieldErrors.state
+                      ? "border-error-500 bg-error-50/20 text-theme-text-primary"
+                      : "border-theme-border-input bg-theme-surface-warm text-theme-text-primary cursor-not-allowed select-none"
                   } disabled:opacity-50`}
                 />
                 {isPincodeVerified && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted">
-                    <Lock className="h-3 w-3" />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted select-none pointer-events-none">
+                    <Lock className="h-3 w-3 text-theme-text-muted" />
                     <span>Verified</span>
                   </div>
                 )}
               </div>
               {fieldErrors.state && (
-                <span className="text-[11px] text-red-600">{fieldErrors.state}</span>
+                <span className="text-[11px] text-error-600 font-medium">{fieldErrors.state}</span>
               )}
             </div>
 

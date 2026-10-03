@@ -28,6 +28,7 @@ export const blogService = {
     }
 
     const isPublished = data.status === "PUBLISHED";
+    const isActive = data.status !== "ARCHIVED";
     return blogRepository.create({
       title: data.title,
       slug,
@@ -35,6 +36,7 @@ export const blogService = {
       featured_image: data.image ?? undefined,
       author: data.authorId ? { connect: { id: data.authorId } } : undefined,
       is_published: isPublished,
+      is_active: isActive,
       publishedAt: isPublished ? new Date() : null,
     });
   },
@@ -65,7 +67,9 @@ export const blogService = {
 
     if (data.status !== undefined) {
       const isPublished = data.status === "PUBLISHED";
+      const isActive = data.status !== "ARCHIVED";
       updateData.is_published = isPublished;
+      updateData.is_active = isActive;
       if (isPublished && !existing.is_published) {
         updateData.publishedAt = new Date();
       }

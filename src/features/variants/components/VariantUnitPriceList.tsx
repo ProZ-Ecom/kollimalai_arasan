@@ -149,12 +149,42 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
 
     try {
       if (editingId) {
-        await updateMutation.mutateAsync({
-          productUuid,
-          variantUuid,
-          unitPriceUuid: editingId,
-          data: payload,
-        });
+        const originalItem = unitPrices.find((up) => up.id === editingId);
+        const updatePayload: Record<string, unknown> = {};
+        if (originalItem) {
+          if (form.unitId !== originalItem.unitId) {
+            updatePayload.unitId = form.unitId;
+          }
+          if (unitValue !== Number(originalItem.unitValue)) {
+            updatePayload.unitValue = unitValue;
+          }
+          if (form.sku.trim() !== (originalItem.sku || "").trim()) {
+            updatePayload.sku = form.sku.trim();
+          }
+          if (basePrice !== Number(originalItem.basePrice)) {
+            updatePayload.basePrice = basePrice;
+          }
+          if (resolvedIsDefault !== originalItem.isDefault) {
+            updatePayload.isDefault = resolvedIsDefault;
+          }
+          if (form.isActive !== originalItem.isActive) {
+            updatePayload.isActive = form.isActive;
+          }
+          if (stockNum !== (originalItem.stock ?? 0)) {
+            updatePayload.stock = stockNum;
+          }
+        } else {
+          Object.assign(updatePayload, payload);
+        }
+
+        if (Object.keys(updatePayload).length > 0) {
+          await updateMutation.mutateAsync({
+            productUuid,
+            variantUuid,
+            unitPriceUuid: editingId,
+            data: updatePayload,
+          });
+        }
       } else {
         await createMutation.mutateAsync({
           productUuid,
@@ -242,12 +272,11 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
 
         {!showForm && (
           <Button
-            variant="ghost"
             size="sm"
             onClick={startAdd}
-            className="h-8 text-xs font-semibold text-secondary-700 hover:text-secondary-900 hover:bg-secondary-50 cursor-pointer"
+            className="h-8 rounded-lg bg-[var(--color-secondary-600)] px-3.5 text-xs font-semibold text-white hover:bg-[var(--color-secondary-700)] cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5 mr-1" />
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
             <span>Add unit + price</span>
           </Button>
         )}
@@ -532,7 +561,7 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
               </div>
 
               {formError && (
-                <p className="text-xs text-red-500 font-medium">{formError}</p>
+                <p className="mt-1 text-xs text-error-600 font-medium">{formError}</p>
               )}
 
               <div className="flex items-center justify-end gap-2 pt-1">

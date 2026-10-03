@@ -82,8 +82,46 @@ export default function AdminBlogsPage() {
 
   const onSubmit = (formData: CreateBlogSchemaInput) => {
     if (editingBlog) {
+      const payload: Partial<CreateBlogSchemaInput> = {};
+
+      if (formData.title?.trim() !== (editingBlog.title || "").trim()) {
+        payload.title = formData.title.trim();
+      }
+      if (formData.content?.trim() !== (editingBlog.content || "").trim()) {
+        payload.content = formData.content.trim();
+      }
+      const formExcerpt = formData.excerpt?.trim() || "";
+      const origExcerpt = editingBlog.excerpt?.trim() || "";
+      if (formExcerpt !== origExcerpt) {
+        payload.excerpt = formExcerpt;
+      }
+      const formImage = formData.image?.trim() || "";
+      const origImage = editingBlog.image?.trim() || "";
+      if (formImage !== origImage) {
+        payload.image = formImage;
+      }
+      if (formData.status && formData.status !== editingBlog.status) {
+        payload.status = formData.status;
+      }
+      const formMetaTitle = formData.metaTitle?.trim() || "";
+      const origMetaTitle = editingBlog.metaTitle?.trim() || "";
+      if (formMetaTitle !== origMetaTitle) {
+        payload.metaTitle = formMetaTitle;
+      }
+      const formMetaDesc = formData.metaDescription?.trim() || "";
+      const origMetaDesc = editingBlog.metaDescription?.trim() || "";
+      if (formMetaDesc !== origMetaDesc) {
+        payload.metaDescription = formMetaDesc;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        setModalOpen(false);
+        setEditingBlog(null);
+        return;
+      }
+
       updateMutation.mutate(
-        { id: editingBlog.id, data: formData },
+        { id: editingBlog.id, data: payload },
         {
           onSuccess: () => {
             setModalOpen(false);
@@ -141,7 +179,7 @@ export default function AdminBlogsPage() {
       cell: ({ row }) =>
         row.original.publishedAt
           ? new Date(row.original.publishedAt).toLocaleDateString("en-IN")
-          : "—",
+          : "Not Published",
     },
     {
       id: "actions",

@@ -61,6 +61,7 @@ export function useAdjustStock() {
 
   return useMutation({
     mutationFn: (input: AdjustStockInput) => adjustStock(input),
+    meta: { skipToast: true },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
       queryClient.invalidateQueries({ queryKey: ["variants"] });
@@ -74,6 +75,7 @@ export function useBulkAdjustStock() {
 
   return useMutation({
     mutationFn: (input: BulkAdjustStockInput) => bulkAdjustStock(input),
+    meta: { skipToast: true },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
       queryClient.invalidateQueries({ queryKey: ["variants"] });

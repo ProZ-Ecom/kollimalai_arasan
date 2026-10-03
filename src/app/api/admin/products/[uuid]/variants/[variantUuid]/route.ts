@@ -20,6 +20,7 @@ export const GET = createApiHandler(
         productUuid,
         variantUuid
       );
+      
       return apiSuccess(variant, "Variant fetched successfully");
     },
   },

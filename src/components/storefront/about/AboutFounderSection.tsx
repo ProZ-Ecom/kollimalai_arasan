@@ -42,9 +42,9 @@ export function AboutFounderSection() {
                 </p>
               </div>
 
-              <div className="italic text-2xl sm:text-3xl text-about-signature tracking-wide select-none font-semibold">
+              {/* <div className="italic text-2xl sm:text-3xl text-about-signature tracking-wide select-none font-semibold">
                 R. Rajesh
-              </div>
+              </div> */}
             </div>
           </div>
 

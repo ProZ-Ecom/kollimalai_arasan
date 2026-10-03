@@ -1173,15 +1173,31 @@ export default function AdminProductDetailsPage() {
           submitLabel="Save Changes"
           onSubmit={async (formData: ProductFormValues) => {
             try {
-              const payload = {
-                ...formData,
-                hsnCodeId: formData.hsnCodeId || null,
-                productImage: formData.productImage || null,
-              };
-              await updateProductMutation.mutateAsync({
-                uuid: canonicalProductId,
-                data: payload as any,
-              });
+              const payload: Record<string, unknown> = {};
+              if (formData.name?.trim() !== (product.name || "").trim()) {
+                payload.name = formData.name.trim();
+              }
+              if (formData.slug?.trim() !== (product.slug || "").trim()) {
+                payload.slug = formData.slug.trim();
+              }
+              if (formData.categoryId !== (product.categoryId || "")) {
+                payload.categoryId = formData.categoryId;
+              }
+              if (formData.brandId !== (product.brandId || "")) {
+                payload.brandId = formData.brandId;
+              }
+              const formHsn = formData.hsnCodeId || null;
+              const origHsn = product.hsnCodeId || null;
+              if (formHsn !== origHsn) {
+                payload.hsnCodeId = formHsn;
+              }
+
+              if (Object.keys(payload).length > 0) {
+                await updateProductMutation.mutateAsync({
+                  uuid: canonicalProductId,
+                  data: payload as any,
+                });
+              }
               setIsEditProductOpen(false);
 
               if (
@@ -1358,18 +1374,53 @@ export default function AdminProductDetailsPage() {
                 submitLabel="Update Item"
                 onSubmit={async (formData: VariantFormValues) => {
                   try {
-                    await updateVariantMutation.mutateAsync({
-                      productUuid: canonicalProductId,
-                      variantUuid: editingVariant.id,
-                      data: {
-                        variantName: formData.variantName,
-                        slug: formData.slug,
-                        shortDescription: formData.shortDescription || null,
-                        description: formData.description || null,
-                        videoUrl: formData.videoUrl || null,
-                        isFeatured: formData.isFeatured,
-                      },
-                    });
+                    const payload: Record<string, unknown> = {};
+                    if (
+                      formData.variantName?.trim() !==
+                      (editingVariant.variantName || "").trim()
+                    ) {
+                      payload.variantName = formData.variantName.trim();
+                    }
+                    if (
+                      formData.slug?.trim() !==
+                      (editingVariant.slug || "").trim()
+                    ) {
+                      payload.slug = formData.slug.trim();
+                    }
+                    const formShortDesc =
+                      formData.shortDescription?.trim() || null;
+                    const origShortDesc =
+                      editingVariant.shortDescription?.trim() || null;
+                    if (formShortDesc !== origShortDesc) {
+                      payload.shortDescription = formShortDesc;
+                    }
+                    const formDesc =
+                      formData.description?.trim() || null;
+                    const origDesc =
+                      editingVariant.description?.trim() || null;
+                    if (formDesc !== origDesc) {
+                      payload.description = formDesc;
+                    }
+                    const formVideo = formData.videoUrl?.trim() || null;
+                    const origVideo =
+                      editingVariant.videoUrl?.trim() || null;
+                    if (formVideo !== origVideo) {
+                      payload.videoUrl = formVideo;
+                    }
+                    if (
+                      formData.isFeatured !== undefined &&
+                      formData.isFeatured !== (editingVariant.isFeatured ?? false)
+                    ) {
+                      payload.isFeatured = formData.isFeatured;
+                    }
+
+                    if (Object.keys(payload).length > 0) {
+                      await updateVariantMutation.mutateAsync({
+                        productUuid: canonicalProductId,
+                        variantUuid: editingVariant.id,
+                        data: payload,
+                      });
+                    }
                     setEditingVariant(null);
                   } catch (err: any) {
                     console.error("Failed to update Item", err);

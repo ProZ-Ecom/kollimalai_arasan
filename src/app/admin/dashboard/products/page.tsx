@@ -445,19 +445,40 @@ export default function AdminProductsPage() {
             isLoading={updateMutation.isPending}
             submitLabel="Update Product"
             onSubmit={async (formData) => {
-              const payload = {
-                name: formData.name,
-                slug: formData.slug,
-                categoryId: formData.categoryId,
-                brandId: formData.brandId,
-                hsnCodeId: formData.hsnCodeId || null,
-                productImage: formData.productImage || null,
-              };
+              const payload: Record<string, unknown> = {};
 
-              await updateMutation.mutateAsync({
-                uuid: selectedProduct.id,
-                data: payload,
-              });
+              const cleanName = formData.name?.trim();
+              if (cleanName && cleanName !== selectedProduct.name?.trim()) {
+                payload.name = cleanName;
+              }
+
+              const cleanSlug = formData.slug?.trim();
+              if (cleanSlug && cleanSlug !== selectedProduct.slug?.trim()) {
+                payload.slug = cleanSlug;
+              }
+
+              if (formData.categoryId && formData.categoryId !== selectedProduct.categoryId) {
+                payload.categoryId = formData.categoryId;
+              }
+
+              const newBrandId = formData.brandId ?? null;
+              const currentBrandId = selectedProduct.brandId ?? null;
+              if (newBrandId !== currentBrandId) {
+                payload.brandId = newBrandId;
+              }
+
+              const newHsnCodeId = formData.hsnCodeId ?? null;
+              const currentHsnCodeId = (selectedProduct as any).hsnCodeId ?? null;
+              if (newHsnCodeId !== currentHsnCodeId) {
+                payload.hsnCodeId = newHsnCodeId;
+              }
+
+              if (Object.keys(payload).length > 0) {
+                await updateMutation.mutateAsync({
+                  uuid: selectedProduct.id,
+                  data: payload as any,
+                });
+              }
 
               setIsEditOpen(false);
 

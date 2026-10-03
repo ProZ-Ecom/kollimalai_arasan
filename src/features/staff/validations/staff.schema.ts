@@ -7,7 +7,10 @@ export const createStaffSchema = z
       .trim()
       .min(1, "Name is required")
       .max(150, "Name cannot exceed 150 characters")
-      .regex(/^[a-zA-Z\s'.-]+$/, "Name can only contain letters, spaces, hyphens, apostrophes, and dots"),
+      .regex(
+        /^[a-zA-Z\s'-]+$/,
+        "Name can only contain alphabetical characters, spaces, hyphens, and apostrophes"
+      ),
     email: z
       .string({ message: "Email is required" })
       .trim()
@@ -38,6 +41,10 @@ export const updateStaffSchema = z
       .trim()
       .min(1, "Name cannot be empty")
       .max(150, "Name cannot exceed 150 characters")
+      .regex(
+        /^[a-zA-Z\s'-]+$/,
+        "Name can only contain alphabetical characters, spaces, hyphens, and apostrophes"
+      )
       .optional(),
     email: z
       .string()
@@ -100,6 +107,10 @@ export const updateStaffProfileSchema = z
       .trim()
       .min(1, "Name cannot be empty")
       .max(150, "Name cannot exceed 150 characters")
+      .regex(
+        /^[a-zA-Z\s'-]+$/,
+        "Name can only contain alphabetical characters, spaces, hyphens, and apostrophes"
+      )
       .optional(),
     email: z
       .string()

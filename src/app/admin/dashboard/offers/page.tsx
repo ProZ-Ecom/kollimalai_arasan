@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Calendar, Eye, Pencil, Plus, Power, Tag, Trash2, X } from "lucide-react";
+import { Calendar, Eye, Pencil, Plus, Power, PowerOff, Tag, Trash2, X } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -163,10 +163,108 @@ export default function AdminOffersPage() {
   const handleUpdate = async (formData: CreateOfferSchemaInput) => {
     if (!editingOffer) return;
     setFormError(null);
+
+    const payload: Record<string, unknown> = {};
+
+    if (formData.name?.trim() !== (editingOffer.name || "").trim()) {
+      payload.name = formData.name.trim();
+    }
+    const formCode = formData.code?.trim() || null;
+    const origCode = editingOffer.code?.trim() || null;
+    if (formCode !== origCode) {
+      payload.code = formCode;
+    }
+    if (formData.level !== editingOffer.level) {
+      payload.level = formData.level;
+    }
+    if (formData.type !== editingOffer.type) {
+      payload.type = formData.type;
+    }
+    if (Number(formData.value) !== Number(editingOffer.value)) {
+      payload.value = Number(formData.value);
+    }
+    const numOrNull = (v: unknown) =>
+      v === undefined || v === null || v === "" ? null : Number(v);
+    if (numOrNull(formData.buyQuantity) !== numOrNull(editingOffer.buyQuantity)) {
+      payload.buyQuantity = numOrNull(formData.buyQuantity);
+    }
+    if (numOrNull(formData.getQuantity) !== numOrNull(editingOffer.getQuantity)) {
+      payload.getQuantity = numOrNull(formData.getQuantity);
+    }
+    if (Number(formData.minQuantity) !== Number(editingOffer.minQuantity)) {
+      payload.minQuantity = Number(formData.minQuantity);
+    }
+    if (numOrNull(formData.maxQuantity) !== numOrNull(editingOffer.maxQuantity)) {
+      payload.maxQuantity = numOrNull(formData.maxQuantity);
+    }
+    if (numOrNull(formData.minCartValue) !== numOrNull(editingOffer.minCartValue)) {
+      payload.minCartValue = numOrNull(formData.minCartValue);
+    }
+    if (
+      numOrNull(formData.maxDiscountAmount) !==
+      numOrNull(editingOffer.maxDiscountAmount)
+    ) {
+      payload.maxDiscountAmount = numOrNull(formData.maxDiscountAmount);
+    }
+    if (Number(formData.priority) !== Number(editingOffer.priority)) {
+      payload.priority = Number(formData.priority);
+    }
+    const formTerms = formData.terms?.trim() || null;
+    const origTerms = editingOffer.terms?.trim() || null;
+    if (formTerms !== origTerms) {
+      payload.terms = formTerms;
+    }
+
+    const formStartsAt = formData.startsAt;
+    const origStartsAt = editingOffer.startsAt
+      ? new Date(editingOffer.startsAt).toISOString().slice(0, 10)
+      : "";
+    if (formStartsAt !== origStartsAt) {
+      payload.startsAt = formStartsAt;
+    }
+
+    const formEndsAt = formData.endsAt;
+    const origEndsAt = editingOffer.endsAt
+      ? new Date(editingOffer.endsAt).toISOString().slice(0, 10)
+      : "";
+    if (formEndsAt !== origEndsAt) {
+      payload.endsAt = formEndsAt;
+    }
+
+    if (
+      formData.isActive !== undefined &&
+      formData.isActive !== editingOffer.isActive
+    ) {
+      payload.isActive = formData.isActive;
+    }
+
+    const formProductIds = (formData.productIds || []).slice().sort().join(",");
+    const origProductIds = (editingOffer.products?.map((p) => p.id) || [])
+      .slice()
+      .sort()
+      .join(",");
+    if (formProductIds !== origProductIds) {
+      payload.productIds = formData.productIds || [];
+    }
+
+    const formItemIds = (formData.itemIds || []).slice().sort().join(",");
+    const origItemIds = (editingOffer.items?.map((i) => i.id) || [])
+      .slice()
+      .sort()
+      .join(",");
+    if (formItemIds !== origItemIds) {
+      payload.itemIds = formData.itemIds || [];
+    }
+
+    if (Object.keys(payload).length === 0) {
+      setEditingOffer(null);
+      return;
+    }
+
     try {
       await updateMutation.mutateAsync({
         id: editingOffer.id,
-        data: formData as Record<string, unknown>,
+        data: payload,
       });
       toast.success("Offer updated", `"${formData.name}" has been saved.`);
       setEditingOffer(null);
@@ -353,12 +451,16 @@ export default function AdminOffersPage() {
               onClick={() => setStatusTarget(offer)}
               className={
                 offer.isActive
-                  ? "h-8 w-8 text-emerald-600 hover:bg-emerald-50"
-                  : "h-8 w-8 text-slate-400 hover:bg-slate-100"
+                  ? "h-8 w-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                  : "h-8 w-8 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
               }
-              title={offer.isActive ? "Deactivate offer" : "Activate offer"}
+              title={offer.isActive ? "Active — Click to deactivate" : "Inactive — Click to activate"}
             >
-              <Power className="h-4 w-4" />
+              {offer.isActive ? (
+                <Power className="h-4 w-4 text-emerald-600" />
+              ) : (
+                <PowerOff className="h-4 w-4 text-neutral-400" />
+              )}
             </Button>
             <Button
               variant="ghost"

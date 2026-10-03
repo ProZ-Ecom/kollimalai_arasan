@@ -207,13 +207,13 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
             "rounded-lg border border-neutral-200 bg-white transition-all",
             "focus-within:border-secondary-600 focus-within:ring-2 focus-within:ring-secondary-600/20",
             "hover:border-neutral-300",
-            error && "border-error-600 focus-within:border-error-600 focus-within:ring-error-600/20"
+            error && "border-error-500 focus-within:border-error-500 focus-within:ring-2 focus-within:ring-error-500/20"
           )}
         >
           {editor && <Toolbar editor={editor} />}
           <EditorContent editor={editor} />
         </div>
-        {error && <p className="mt-1 text-sm text-error-600">{error}</p>}
+        {error && <p className="mt-1 text-xs text-error-600 font-medium">{error}</p>}
       </div>
     );
   }
