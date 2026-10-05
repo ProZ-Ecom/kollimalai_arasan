@@ -46,7 +46,7 @@ function BrandForm({
           <FormInput
             name="name"
             label="Brand Name"
-            placeholder="Enter brand name"
+            placeholder="e.g. Kollimalai Arasan"
             required
           />
 
@@ -62,7 +62,7 @@ function BrandForm({
         <FormTextarea
           name="description"
           label="Description"
-          placeholder="Enter brand description"
+          placeholder="e.g. 100% pure & natural hill produce directly from farmers of Kolli Hills"
         />
 
         {/* <FormImageUpload

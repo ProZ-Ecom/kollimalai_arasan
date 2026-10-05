@@ -179,7 +179,7 @@ export default function WhatsAppTemplatesPage() {
             No templates in this category
           </h3>
           <p className="text-xs text-neutral-500 max-w-md mx-auto">
-            Create custom templates tailored for festival combos, weekend sales, or new snack launches.
+            Create custom templates tailored for festival combos, weekend sales, or new harvest launches.
           </p>
           <Button
             onClick={() => setIsModalOpen(true)}
@@ -317,7 +317,7 @@ export default function WhatsAppTemplatesPage() {
               size="sm"
               value={newTmplName}
               onChange={(e) => setNewTmplName(e.target.value)}
-              placeholder="e.g. Diwali Sweets 20% Special"
+              placeholder="e.g. Kolli Hills Spices & Honey 20% Special"
             />
           </div>
 

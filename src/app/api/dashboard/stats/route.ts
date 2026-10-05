@@ -501,7 +501,7 @@ async function getStats(period: DashboardPeriod = "month") {
 
   const topCategoryNames =
     categoriesListRaw.map((c) => c.name).join(", ") ||
-    "Sweets, Savouries & Millets";
+    "Spices, Honey & Millets";
   const netRazorpaySettlement = Math.max(
     0,
     Number(razorpayPaymentsRaw._sum.amount ?? 0) -

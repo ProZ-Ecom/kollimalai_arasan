@@ -205,12 +205,12 @@ export interface StorefrontUnitPrice {
 
 /**
  * A single storefront item card. This corresponds to one ProductVariant
- * (e.g. "Mango Mysore Pak"), which can have any number of independently
+ * (e.g. "Pure Wild Honey"), which can have any number of independently
  * priced pack sizes (unitPrices) - not a fixed 50g/100g pair.
  */
 export interface StorefrontProduct {
   id: string; // ProductVariant UUID (item-level)
-  productId: string; // Parent Product UUID (e.g. "Mysore Paks")
+  productId: string; // Parent Product UUID (e.g. "Natural Honey")
   name: string;
   image: string;
   outOfStock?: boolean;

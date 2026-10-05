@@ -274,7 +274,7 @@ function VariantForm({
             <FormInput
               name="variantName"
               label="Item Name"
-              placeholder="e.g. Classic Mixture, Butter Cookies"
+              placeholder="e.g. Pure Wild Honey, Black Pepper Whole"
               isTitleCase
               required
             />
@@ -283,7 +283,7 @@ function VariantForm({
           <FormInput
             name="variantName"
             label="Item Name"
-            placeholder="e.g. Classic Mixture, Butter Cookies"
+            placeholder="e.g. Pure Wild Honey, Black Pepper Whole"
             isTitleCase
             required
           />
@@ -362,7 +362,7 @@ function VariantForm({
               type="text"
               value={extraSlug}
               onChange={(e) => handleExtraSlugChange(e.target.value)}
-              placeholder="e.g. CLASSIC_MIX"
+              placeholder="e.g. WILD_HONEY"
               className="flex-1 min-w-0 px-3 py-2 text-sm text-neutral-900 bg-transparent outline-none font-mono placeholder:text-neutral-400 placeholder:font-sans uppercase"
             />
           </div>

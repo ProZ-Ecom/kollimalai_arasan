@@ -486,7 +486,7 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
                     type="text"
                     value={form.sku}
                     onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
-                    placeholder="e.g. MIXTURE-500G"
+                    placeholder="e.g. HONEY-500G"
                     className="w-full h-10 px-3 rounded-lg border border-neutral-200 text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-secondary-600/20 focus:border-secondary-600"
                   />
                   <p className="text-[11px] text-neutral-400 mt-1">

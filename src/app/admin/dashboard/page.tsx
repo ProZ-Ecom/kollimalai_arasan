@@ -142,7 +142,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center gap-1.5 text-neutral-600 font-medium truncate">
                 <span className="h-2 w-2 rounded-full bg-[#7048E8] shrink-0" />
                 <span className="truncate">
-                  {summary.topCategoryNames || "Sweets, Savouries & Millets"}
+                  {summary.topCategoryNames || "Spices, Honey & Millets"}
                 </span>
               </div>
             }

@@ -176,7 +176,7 @@ function OrdersContent() {
             </span>
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-theme-text-subtle">
-            Track and manage your authentic South Indian snack orders.
+            Track and manage your authentic Kolli Hills orders.
           </p>
         </div>
 

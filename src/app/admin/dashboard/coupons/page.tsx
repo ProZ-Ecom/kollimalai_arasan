@@ -359,7 +359,7 @@ export default function AdminCouponsPage() {
             <input
               {...register("code")}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              placeholder="e.g. SUMMER20"
+              placeholder="e.g. KOLLI15"
             />
             {errors.code && (
               <p className="mt-1 text-sm text-error-600">{errors.code.message}</p>
