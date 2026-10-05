@@ -271,7 +271,7 @@ function DataTable<TData, TValue>({
       )}
     >
       {searchKey && (
-        <div className="flex items-center gap-2 p-3 pb-0 flex-shrink-0">
+        <div className="flex items-center gap-2 p-3.5 sm:p-4 border-b border-neutral-200/80 bg-white flex-shrink-0">
           <SearchInput
             placeholder={searchPlaceholder}
             defaultValue={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}

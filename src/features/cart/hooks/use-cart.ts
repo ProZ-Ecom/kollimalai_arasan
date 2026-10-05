@@ -21,6 +21,7 @@ export function useAddToCart() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { skipToast: true },
     mutationFn: (input: AddToCartInput) => addToCart(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cartKeys.all });
@@ -38,6 +39,7 @@ export function useUpdateCart() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { skipToast: true },
     mutationFn: ({
       itemId,
       ...data
@@ -54,6 +56,7 @@ export function useRemoveCartItem() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { skipToast: true },
     mutationFn: (itemId: string | number) => removeCartItem(itemId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cartKeys.all });

@@ -84,8 +84,9 @@ export function ReturnRefundModal({
 
   const handleAmountChange = (val: string) => {
     setSelectedPreset("custom");
-    setRefundAmount(val);
-    const num = parseFloat(val);
+    const clean = val.replace(/^0+(?=\d)/, "");
+    setRefundAmount(clean);
+    const num = parseFloat(clean);
     if (isNaN(num) || num <= 0) {
       setValidationError("Refund amount must be greater than ₹0.");
     } else if (num > totalAmount) {
@@ -216,6 +217,11 @@ export function ReturnRefundModal({
               min="1"
               max={totalAmount}
               value={refundAmount}
+              onFocus={(e) => {
+                if (e.target.value === "0" || e.target.value === "0.00") {
+                  e.target.select();
+                }
+              }}
               onChange={(e) => handleAmountChange(e.target.value)}
               className="w-full pl-8 pr-16 py-2 rounded-lg border border-neutral-300 text-neutral-900 font-bold text-base focus:border-secondary-600 focus:ring-1 focus:ring-secondary-600 outline-none"
               placeholder="0.00"

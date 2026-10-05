@@ -28,10 +28,6 @@ export function useUpdateCompany() {
     onSuccess: (updatedCompany) => {
       queryClient.setQueryData(companyKeys.all, updatedCompany);
       queryClient.invalidateQueries({ queryKey: companyKeys.all });
-      toast.success("Success", "Company details updated successfully.");
-    },
-    onError: (error: Error) => {
-      toast.error("Update Failed", error.message || "Failed to update company details.");
     },
   });
 }
@@ -47,10 +43,6 @@ export function useUploadCompanyLogo() {
     onSuccess: (result) => {
       queryClient.setQueryData(companyKeys.all, result.company);
       queryClient.invalidateQueries({ queryKey: companyKeys.all });
-      toast.success("Logo Uploaded", "Company logo updated successfully.");
-    },
-    onError: (error: Error) => {
-      toast.error("Upload Failed", error.message || "Failed to upload company logo.");
     },
   });
 }

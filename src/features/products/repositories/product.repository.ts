@@ -290,13 +290,80 @@ export const productRepository = {
     const existing = await this.findByUuid(uuid);
     if (!existing) return null;
 
-    return db.product.update({
-      where: { id: existing.id },
-      data: {
-        isActive: false,
-        deleted_at: new Date(),
-        ...(adminId ? { updated_by: adminId } : {}),
-      },
+    const now = new Date();
+
+    return db.$transaction(async (tx) => {
+      const updatedProduct = await tx.product.update({
+        where: { id: existing.id },
+        data: {
+          isActive: false,
+          status: false,
+          deleted_at: now,
+          ...(adminId ? { updated_by: adminId } : {}),
+        },
+      });
+
+      const relatedVariants = await tx.productVariant.findMany({
+        where: { productId: existing.id, deleted_at: null },
+        select: { id: true },
+      });
+
+      let unitPriceIds: bigint[] = [];
+
+      if (relatedVariants.length > 0) {
+        const variantIds = relatedVariants.map((v) => v.id);
+
+        await tx.productVariant.updateMany({
+          where: { id: { in: variantIds } },
+          data: {
+            isActive: false,
+            deleted_at: now,
+            ...(adminId ? { updated_by: adminId } : {}),
+          },
+        });
+
+        const relatedUnitPrices = await tx.variantUnitPrice.findMany({
+          where: { variant_id: { in: variantIds } },
+          select: { id: true },
+        });
+
+        unitPriceIds = relatedUnitPrices.map((u) => u.id);
+
+        if (unitPriceIds.length > 0) {
+          await tx.variantUnitPrice.updateMany({
+            where: { id: { in: unitPriceIds } },
+            data: {
+              isActive: false,
+              deleted_at: now,
+              ...(adminId ? { updated_by: adminId } : {}),
+            },
+          });
+        }
+      }
+
+      // Delete offer links
+      await tx.offer_products.deleteMany({
+        where: { product_id: existing.id },
+      });
+
+      if (unitPriceIds.length > 0) {
+        await tx.offer_items.deleteMany({
+          where: { variant_unit_price_id: { in: unitPriceIds } },
+        });
+      }
+
+      // Deactivate/soft-delete empty product/item offers
+      await tx.offer.updateMany({
+        where: { level: "product", offer_products: { none: {} }, deleted_at: null },
+        data: { deleted_at: now, isActive: false, ...(adminId ? { updated_by: adminId } : {}) },
+      });
+
+      await tx.offer.updateMany({
+        where: { level: "item", offer_items: { none: {} }, deleted_at: null },
+        data: { deleted_at: now, isActive: false, ...(adminId ? { updated_by: adminId } : {}) },
+      });
+
+      return updatedProduct;
     });
   },
 
@@ -327,6 +394,8 @@ export const productRepository = {
         select: { id: true },
       });
 
+      let unitPriceIds: bigint[] = [];
+
       if (relatedVariants.length > 0) {
         const variantIds = relatedVariants.map((v) => v.id);
 
@@ -339,15 +408,46 @@ export const productRepository = {
           },
         });
 
-        await tx.variantUnitPrice.updateMany({
+        const relatedUnitPrices = await tx.variantUnitPrice.findMany({
           where: { variant_id: { in: variantIds } },
-          data: {
-            isActive: false,
-            deleted_at: now,
-            ...(adminId ? { updated_by: adminId } : {}),
-          },
+          select: { id: true },
+        });
+
+        unitPriceIds = relatedUnitPrices.map((u) => u.id);
+
+        if (unitPriceIds.length > 0) {
+          await tx.variantUnitPrice.updateMany({
+            where: { id: { in: unitPriceIds } },
+            data: {
+              isActive: false,
+              deleted_at: now,
+              ...(adminId ? { updated_by: adminId } : {}),
+            },
+          });
+        }
+      }
+
+      // Delete offer links
+      await tx.offer_products.deleteMany({
+        where: { product_id: { in: productIds } },
+      });
+
+      if (unitPriceIds.length > 0) {
+        await tx.offer_items.deleteMany({
+          where: { variant_unit_price_id: { in: unitPriceIds } },
         });
       }
+
+      // Deactivate/soft-delete empty product/item offers
+      await tx.offer.updateMany({
+        where: { level: "product", offer_products: { none: {} }, deleted_at: null },
+        data: { deleted_at: now, isActive: false, ...(adminId ? { updated_by: adminId } : {}) },
+      });
+
+      await tx.offer.updateMany({
+        where: { level: "item", offer_items: { none: {} }, deleted_at: null },
+        data: { deleted_at: now, isActive: false, ...(adminId ? { updated_by: adminId } : {}) },
+      });
 
       return res;
     });

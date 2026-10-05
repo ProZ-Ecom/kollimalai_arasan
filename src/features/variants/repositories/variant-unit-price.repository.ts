@@ -302,13 +302,28 @@ export const variantUnitPriceRepository = {
     const existing = await this.findByUuid(uuid);
     if (!existing) return null;
 
-    return db.variantUnitPrice.update({
-      where: { id: existing.id },
-      data: {
-        isActive: false,
-        deleted_at: new Date(),
-        ...(adminId ? { updated_by: adminId } : {}),
-      },
+    const now = new Date();
+
+    return db.$transaction(async (tx) => {
+      const updated = await tx.variantUnitPrice.update({
+        where: { id: existing.id },
+        data: {
+          isActive: false,
+          deleted_at: now,
+          ...(adminId ? { updated_by: adminId } : {}),
+        },
+      });
+
+      await tx.offer_items.deleteMany({
+        where: { variant_unit_price_id: existing.id },
+      });
+
+      await tx.offer.updateMany({
+        where: { level: "item", offer_items: { none: {} }, deleted_at: null },
+        data: { deleted_at: now, isActive: false, ...(adminId ? { updated_by: adminId } : {}) },
+      });
+
+      return updated;
     });
   },
 

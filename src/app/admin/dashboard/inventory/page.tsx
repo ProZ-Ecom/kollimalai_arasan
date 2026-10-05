@@ -183,12 +183,12 @@ export default function InventoryDashboardPage() {
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      <AdminBreadcrumb
+      {/* <AdminBreadcrumb
         items={[
           { label: "Dashboard", href: "/admin/dashboard" },
           { label: "Inventory" },
         ]}
-      />
+      /> */}
 
       <AdminPageHeader
         title="Inventory Management"

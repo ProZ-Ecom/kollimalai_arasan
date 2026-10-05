@@ -1491,8 +1491,8 @@ export default function AdminProductDetailsPage() {
           }
         }}
         title="Delete Item"
-        description={`Are you sure you want to delete the Item "${deletingVariant?.variantName}" (${deletingVariant?.sku})? This action cannot be undone.`}
-        confirmText="Delete"
+        description={`Are you sure you want to delete the item "${deletingVariant?.variantName}" (${deletingVariant?.sku})? Deleting this item will also automatically remove all its pack sizes, inventory records, and associated offers.`}
+        confirmText="Delete Item"
         cancelText="Cancel"
         variant="destructive"
         isLoading={deleteVariantMutation.isPending}

@@ -45,6 +45,7 @@ export function useAddToWishlist() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { skipToast: true },
     mutationFn: (variantUnitPriceId: string) => addToWishlist(variantUnitPriceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: wishlistKeys.all });
@@ -59,6 +60,7 @@ export function useRemoveFromWishlist() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { skipToast: true },
     mutationFn: (variantUnitPriceId: string) => removeFromWishlist(variantUnitPriceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: wishlistKeys.all });
@@ -73,6 +75,7 @@ export function useMoveWishlistItemToCart() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { skipToast: true },
     mutationFn: (variantUnitPriceId: string) => moveWishlistItemToCart(variantUnitPriceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: wishlistKeys.all });

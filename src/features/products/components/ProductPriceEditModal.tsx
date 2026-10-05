@@ -91,12 +91,13 @@ export function ProductPriceEditModal({
   }, [open, rows]);
 
   const handlePriceChange = (unitPriceId: string, value: string) => {
-    setPrices((prev) => ({ ...prev, [unitPriceId]: value }));
+    const cleanValue = value.replace(/^0+(?=\d)/, "");
+    setPrices((prev) => ({ ...prev, [unitPriceId]: cleanValue }));
 
-    const numVal = parseFloat(value);
+    const numVal = parseFloat(cleanValue);
     let fieldError: string | undefined = undefined;
 
-    if (value.trim() === "") {
+    if (cleanValue.trim() === "") {
       fieldError = "Required";
     } else if (isNaN(numVal)) {
       fieldError = "Invalid number";
@@ -350,7 +351,13 @@ export function ProductPriceEditModal({
                             type="number"
                             step="any"
                             min="0"
+                            placeholder="0"
                             value={currentValue}
+                            onFocus={(e) => {
+                              if (e.target.value === "0") {
+                                e.target.select();
+                              }
+                            }}
                             onChange={(e) => handlePriceChange(r.unitPriceId, e.target.value)}
                             disabled={isSaving}
                             className={`block w-full rounded-lg border py-1.5 pl-8 pr-2 text-xs font-semibold outline-none transition-colors ${

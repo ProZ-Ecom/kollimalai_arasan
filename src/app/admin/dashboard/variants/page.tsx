@@ -1186,7 +1186,7 @@ export default function AdminVariantsPage() {
           if (deleteTarget) {
             deleteMutation.mutate(deleteTarget, {
               onSuccess: () => {
-                toast.success("Item Deleted", "Product item removed successfully.");
+                toast.success("Item Deleted", "Product item and associated offers removed successfully.");
                 setDeleteTarget(null);
                 refetch();
               },
@@ -1197,8 +1197,8 @@ export default function AdminVariantsPage() {
           }
         }}
         title="Delete Product Item"
-        description="Are you sure you want to delete this product Item? This action cannot be undone."
-        confirmText="Delete"
+        description="Are you sure you want to delete this product item? Deleting this item will also automatically remove all its pack sizes, inventory records, and associated offers."
+        confirmText="Delete Item"
         variant="destructive"
         isLoading={deleteMutation.isPending}
       />
@@ -1214,7 +1214,7 @@ export default function AdminVariantsPage() {
             await bulkDeleteMutation.mutateAsync(idsToDelete);
             toast.success(
               "Items Deleted",
-              `Successfully deleted ${idsToDelete.length} ${idsToDelete.length === 1 ? "item" : "items"}.`
+              `Successfully deleted ${idsToDelete.length} ${idsToDelete.length === 1 ? "item" : "items"} along with their offers.`
             );
             setSelectedRowIds({});
             setSelectedRows([]);
@@ -1225,7 +1225,7 @@ export default function AdminVariantsPage() {
           }
         }}
         title={`Delete ${selectedRows.length} Selected ${selectedRows.length === 1 ? "Item" : "Items"}`}
-        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "item" : "items"}${activeProductName ? ` belonging to "${activeProductName}"` : ""}? This will permanently remove these items, pricing, and inventories. This action cannot be undone.`}
+        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "item" : "items"}${activeProductName ? ` belonging to "${activeProductName}"` : ""}? Deleting these items will also automatically remove all their pack sizes, inventory records, and associated offers.`}
         confirmText={`Delete ${selectedRows.length} ${selectedRows.length === 1 ? "Item" : "Items"}`}
         variant="destructive"
         isLoading={bulkDeleteMutation.isPending}

@@ -314,7 +314,7 @@ function ProductForm({
               type="text"
               value={extraSlug}
               onChange={(e) => handleExtraSlugChange(e.target.value)}
-              placeholder="e.g. BANANA_CHIPS"
+              placeholder="e.g. BLACK_PEPPER"
               className="flex-1 min-w-0 px-3 py-2 text-sm text-neutral-900 bg-transparent outline-none font-mono placeholder:text-neutral-400 placeholder:font-sans uppercase"
             />
           </div>

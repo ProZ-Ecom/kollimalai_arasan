@@ -36,7 +36,7 @@ export function BulkOrderForm() {
       phone: "",
       companyName: "",
       productInterest: "",
-      quantity: 1,
+      quantity: undefined as unknown as number,
       message: "",
     },
   });
