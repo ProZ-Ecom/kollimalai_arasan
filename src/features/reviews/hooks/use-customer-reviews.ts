@@ -16,6 +16,7 @@ export function useSubmitCustomerReview(options?: UseSubmitCustomerReviewOptions
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { skipToast: true },
     mutationFn: (data: CreateReviewInput) => customerReviewsApi.submitReview(data),
     onSuccess: (data) => {
       // Invalidate both variant and product review queries to reflect immediately

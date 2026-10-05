@@ -984,8 +984,8 @@ export default function AdminVariantDetailsPage() {
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleDeleteVariant}
         title="Delete Variant"
-        description={`Are you sure you want to delete the variant "${variant.variantName}" (${variant.sku})? This action cannot be undone.`}
-        confirmText="Delete"
+        description={`Are you sure you want to delete the variant "${variant.variantName}" (${variant.sku})? Deleting this variant will also automatically remove all its pack sizes, inventory records, and associated offers.`}
+        confirmText="Delete Variant"
         cancelText="Cancel"
         variant="destructive"
         isLoading={deleteVariantMutation.isPending}

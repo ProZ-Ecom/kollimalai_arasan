@@ -65,6 +65,7 @@ export function useUpdateReviewStatus() {
     Error,
     { reviewId: string; isApproved: boolean }
   >({
+    meta: { skipToast: true },
     mutationFn: ({ reviewId, isApproved }) =>
       updateReviewStatus(reviewId, isApproved),
     onSuccess: (result, variables) => {
@@ -97,6 +98,7 @@ export function useDeleteAdminReview() {
   const queryClient = useQueryClient();
 
   return useMutation<void, Error, string>({
+    meta: { skipToast: true },
     mutationFn: (reviewId: string) => deleteAdminReview(reviewId),
     onSuccess: (_result, reviewId) => {
       toast.show({

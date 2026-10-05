@@ -159,7 +159,7 @@ function parseExcelBuffer(buffer: Buffer): {
 
   // ── Unified Single Sheet Format ──
   // Determine primary sheet: look for "Catalog", "Products", or the first non-instruction sheet
-  let dataSheetName = sheetNames.find((n) => {
+  let dataSheetName = sheetNames.find((n: string) => {
     const lower = n.toLowerCase();
     return (
       (lower.includes("catalog") || lower.includes("product") || lower.includes("item")) &&
@@ -169,7 +169,7 @@ function parseExcelBuffer(buffer: Buffer): {
 
   if (!dataSheetName) {
     dataSheetName =
-      sheetNames.find((n) => !n.toLowerCase().includes("instruction")) ||
+      sheetNames.find((n: string) => !n.toLowerCase().includes("instruction")) ||
       sheetNames[0];
   }
 

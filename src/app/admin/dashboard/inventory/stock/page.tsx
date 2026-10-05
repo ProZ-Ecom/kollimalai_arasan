@@ -149,7 +149,7 @@ export default function InventoryStockPage() {
     defaultValues: {
       inventoryId: 0,
       type: "ADJUSTMENT",
-      quantity: 0,
+      quantity: undefined as unknown as number,
       notes: "",
     },
   });
@@ -157,9 +157,9 @@ export default function InventoryStockPage() {
   const createForm = useForm<CreateInventoryForm>({
     resolver: zodResolver(createInventoryFormSchema),
     defaultValues: {
-      productId: 0,
+      productId: undefined as unknown as number,
       variantId: undefined,
-      quantity: 0,
+      quantity: undefined as unknown as number,
       reorderLevel: 10,
     },
   });
@@ -272,6 +272,12 @@ export default function InventoryStockPage() {
             </label>
             <input
               type="number"
+              placeholder="0"
+              onFocus={(e) => {
+                if (e.target.value === "0") {
+                  e.target.select();
+                }
+              }}
               className="w-full border rounded-md p-2"
               {...adjustForm.register("quantity", { valueAsNumber: true })}
             />
@@ -323,6 +329,12 @@ export default function InventoryStockPage() {
             <label className="text-sm font-medium">Quantity <span className="text-red-500">*</span></label>
             <input
               type="number"
+              placeholder="0"
+              onFocus={(e) => {
+                if (e.target.value === "0") {
+                  e.target.select();
+                }
+              }}
               className="w-full border rounded-md p-2"
               {...createForm.register("quantity", { valueAsNumber: true })}
             />
@@ -331,6 +343,12 @@ export default function InventoryStockPage() {
             <label className="text-sm font-medium">Reorder Level</label>
             <input
               type="number"
+              placeholder="10"
+              onFocus={(e) => {
+                if (e.target.value === "0" || e.target.value === "10") {
+                  e.target.select();
+                }
+              }}
               className="w-full border rounded-md p-2"
               {...createForm.register("reorderLevel", { valueAsNumber: true })}
             />

@@ -711,8 +711,8 @@ export default function AdminOffersPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         isLoading={deleteMutation.isPending}
-        title="Delete this offer?"
-        description={`"${deleteTarget?.name}" will be removed and will stop applying to carts. Orders already placed keep the discount they were given.`}
+        title="Delete Offer"
+        description={`Are you sure you want to delete the offer "${deleteTarget?.name}"? It will be removed from the offers module and will stop applying discounts to products and items across the store.`}
         confirmText="Delete Offer"
       />
     </div>

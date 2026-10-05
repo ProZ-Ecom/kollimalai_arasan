@@ -288,6 +288,8 @@ export const categoryRepository = {
           select: { id: true },
         });
 
+        let unitPriceIds: bigint[] = [];
+
         if (relatedVariants.length > 0) {
           const variantIds = relatedVariants.map((v) => v.id);
 
@@ -302,15 +304,46 @@ export const categoryRepository = {
           });
 
           // 6. Soft-delete all variant unit prices
-          await tx.variantUnitPrice.updateMany({
+          const relatedUnitPrices = await tx.variantUnitPrice.findMany({
             where: { variant_id: { in: variantIds } },
-            data: {
-              isActive: false,
-              deleted_at: now,
-              ...(adminId ? { updated_by: adminId } : {}),
-            },
+            select: { id: true },
+          });
+
+          unitPriceIds = relatedUnitPrices.map((u) => u.id);
+
+          if (unitPriceIds.length > 0) {
+            await tx.variantUnitPrice.updateMany({
+              where: { id: { in: unitPriceIds } },
+              data: {
+                isActive: false,
+                deleted_at: now,
+                ...(adminId ? { updated_by: adminId } : {}),
+              },
+            });
+          }
+        }
+
+        // 7. Delete offer associations
+        await tx.offer_products.deleteMany({
+          where: { product_id: { in: productIds } },
+        });
+
+        if (unitPriceIds.length > 0) {
+          await tx.offer_items.deleteMany({
+            where: { variant_unit_price_id: { in: unitPriceIds } },
           });
         }
+
+        // 8. Clean up any empty product or item offers
+        await tx.offer.updateMany({
+          where: { level: "product", offer_products: { none: {} }, deleted_at: null },
+          data: { deleted_at: now, isActive: false, ...(adminId ? { updated_by: adminId } : {}) },
+        });
+
+        await tx.offer.updateMany({
+          where: { level: "item", offer_items: { none: {} }, deleted_at: null },
+          data: { deleted_at: now, isActive: false, ...(adminId ? { updated_by: adminId } : {}) },
+        });
       }
 
       return updatedCategory;
@@ -476,6 +509,8 @@ export const categoryRepository = {
           select: { id: true },
         });
 
+        let unitPriceIds: bigint[] = [];
+
         if (relatedVariants.length > 0) {
           const variantIds = relatedVariants.map((v) => v.id);
 
@@ -488,15 +523,46 @@ export const categoryRepository = {
             },
           });
 
-          await tx.variantUnitPrice.updateMany({
+          const relatedUnitPrices = await tx.variantUnitPrice.findMany({
             where: { variant_id: { in: variantIds } },
-            data: {
-              isActive: false,
-              deleted_at: now,
-              ...(adminId ? { updated_by: adminId } : {}),
-            },
+            select: { id: true },
+          });
+
+          unitPriceIds = relatedUnitPrices.map((u) => u.id);
+
+          if (unitPriceIds.length > 0) {
+            await tx.variantUnitPrice.updateMany({
+              where: { id: { in: unitPriceIds } },
+              data: {
+                isActive: false,
+                deleted_at: now,
+                ...(adminId ? { updated_by: adminId } : {}),
+              },
+            });
+          }
+        }
+
+        // Delete offer associations
+        await tx.offer_products.deleteMany({
+          where: { product_id: { in: productIds } },
+        });
+
+        if (unitPriceIds.length > 0) {
+          await tx.offer_items.deleteMany({
+            where: { variant_unit_price_id: { in: unitPriceIds } },
           });
         }
+
+        // Clean up empty product or item offers
+        await tx.offer.updateMany({
+          where: { level: "product", offer_products: { none: {} }, deleted_at: null },
+          data: { deleted_at: now, isActive: false, ...(adminId ? { updated_by: adminId } : {}) },
+        });
+
+        await tx.offer.updateMany({
+          where: { level: "item", offer_items: { none: {} }, deleted_at: null },
+          data: { deleted_at: now, isActive: false, ...(adminId ? { updated_by: adminId } : {}) },
+        });
       }
 
       return { count: categoryIds.length };

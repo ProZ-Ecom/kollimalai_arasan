@@ -517,7 +517,7 @@ export default function AdminProductsPage() {
           if (deleteId) {
             deleteMutation.mutate(deleteId, {
               onSuccess: () => {
-                toast.success("Product Deleted", "Product removed successfully.");
+                toast.success("Product Deleted", "Product and its related items and offers removed successfully.");
                 setDeleteId(null);
                 refetch();
               },
@@ -528,7 +528,7 @@ export default function AdminProductsPage() {
           }
         }}
         title="Delete Product"
-        description="Are you sure you want to delete this product? This action cannot be undone."
+        description="Are you sure you want to delete this product? Deleting this product will also automatically remove all its related variant items, unit pricing, inventory records, and associated offers from both the storefront and offers module."
         confirmText="Delete Product"
         variant="destructive"
         isLoading={deleteMutation.isPending}
@@ -545,7 +545,7 @@ export default function AdminProductsPage() {
             await bulkDeleteMutation.mutateAsync(uuidsToDelete);
             toast.success(
               "Products Deleted",
-              `Successfully deleted ${uuidsToDelete.length} ${uuidsToDelete.length === 1 ? "product" : "products"}.`
+              `Successfully deleted ${uuidsToDelete.length} ${uuidsToDelete.length === 1 ? "product" : "products"} along with their related items and offers.`
             );
             setSelectedRowIds({});
             setSelectedRows([]);
@@ -556,7 +556,7 @@ export default function AdminProductsPage() {
           }
         }}
         title={`Delete ${selectedRows.length} Selected ${selectedRows.length === 1 ? "Product" : "Products"}`}
-        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "product" : "products"}${activeCategoryName ? ` in category "${activeCategoryName}"` : ""}? Deleting will remove these products and all their variants and items. This action cannot be undone.`}
+        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "product" : "products"}${activeCategoryName ? ` in category "${activeCategoryName}"` : ""}? Deleting these products will also automatically remove all their related variant items, unit pricing, inventory records, and associated offers from both the storefront and offers module.`}
         confirmText={`Delete ${selectedRows.length} ${selectedRows.length === 1 ? "Product" : "Products"}`}
         variant="destructive"
         isLoading={bulkDeleteMutation.isPending}

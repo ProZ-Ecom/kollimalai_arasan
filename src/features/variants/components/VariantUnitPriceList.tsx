@@ -345,10 +345,17 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
                         type="number"
                         min="0"
                         step="1"
-                        value={inlineVal}
-                        onChange={(e) =>
-                          setInlineStockValues((prev) => ({ ...prev, [item.id]: e.target.value }))
-                        }
+                        placeholder="0"
+                        value={inlineVal === "0" ? "" : inlineVal}
+                        onFocus={(e) => {
+                          if (e.target.value === "0") {
+                            e.target.select();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                          setInlineStockValues((prev) => ({ ...prev, [item.id]: clean }));
+                        }}
                         onBlur={() => handleInlineStockSave(item)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
@@ -451,7 +458,15 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
                     step="any"
                     min="0"
                     value={form.unitValue}
-                    onChange={(e) => setForm((f) => ({ ...f, unitValue: e.target.value }))}
+                    onFocus={(e) => {
+                      if (e.target.value === "0") {
+                        e.target.select();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                      setForm((f) => ({ ...f, unitValue: clean }));
+                    }}
                     placeholder="e.g. 500"
                     className="w-full h-10 px-3 rounded-lg border border-neutral-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-secondary-600/20 focus:border-secondary-600"
                   />
@@ -489,7 +504,15 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
                     step="any"
                     min="0"
                     value={form.basePrice}
-                    onChange={(e) => setForm((f) => ({ ...f, basePrice: e.target.value }))}
+                    onFocus={(e) => {
+                      if (e.target.value === "0") {
+                        e.target.select();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                      setForm((f) => ({ ...f, basePrice: clean }));
+                    }}
                     placeholder="e.g. 260"
                     className="w-full h-10 px-3 rounded-lg border border-neutral-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-secondary-600/20 focus:border-secondary-600"
                   />
@@ -512,7 +535,15 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
                     step="1"
                     min="0"
                     value={form.stock}
-                    onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+                    onFocus={(e) => {
+                      if (e.target.value === "0") {
+                        e.target.select();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                      setForm((f) => ({ ...f, stock: clean }));
+                    }}
                     placeholder="e.g. 50"
                     className="w-full h-10 px-3 rounded-lg border border-neutral-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-secondary-600/20 focus:border-secondary-600"
                   />
@@ -590,8 +621,8 @@ function VariantUnitPriceList({ productUuid, variantUuid }: VariantUnitPriceList
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         title="Delete Unit Price"
-        description={`Are you sure you want to delete the "${deleteTarget?.sku}" unit price? This action cannot be undone.`}
-        confirmText="Delete"
+        description={`Are you sure you want to delete the "${deleteTarget?.sku}" unit price? Deleting this unit price will also automatically remove it from any active offers.`}
+        confirmText="Delete Unit Price"
         cancelText="Cancel"
         variant="destructive"
         isLoading={deleteMutation.isPending}

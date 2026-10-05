@@ -274,7 +274,7 @@ export default function AdminCategoriesPage() {
           if (deleteId) {
             deleteMutation.mutate(deleteId, {
               onSuccess: () => {
-                toast.success("Category Deleted", "Category deleted successfully.");
+                toast.success("Category Deleted", "Category and related products, items, and offers deleted successfully.");
                 setDeleteId(null);
               },
               onError: (err: any) => {
@@ -284,7 +284,7 @@ export default function AdminCategoriesPage() {
           }
         }}
         title="Delete Category"
-        description="Are you sure you want to delete this category? This action cannot be undone."
+        description="Are you sure you want to delete this category? Deleting this category will also automatically remove all its related products, variant items, unit pricing, and associated active offers from both the storefront and admin panel."
         confirmText="Delete Category"
         variant="destructive"
         isLoading={deleteMutation.isPending}
@@ -303,7 +303,7 @@ export default function AdminCategoriesPage() {
 
             toast.success(
               "Categories Deleted",
-              `Successfully deleted ${idsToDelete.length} ${idsToDelete.length === 1 ? "category" : "categories"}.`
+              `Successfully deleted ${idsToDelete.length} ${idsToDelete.length === 1 ? "category" : "categories"} along with related products, items, and offers.`
             );
             setSelectedRowIds({});
             setSelectedRows([]);
@@ -314,7 +314,7 @@ export default function AdminCategoriesPage() {
           }
         }}
         title={`Delete ${selectedRows.length} Selected ${selectedRows.length === 1 ? "Category" : "Categories"}`}
-        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "category" : "categories"}${search ? ` matching "${search}"` : ""}? Deleting will automatically deactivate and remove all associated products and items from both the admin dashboard and storefront. This action cannot be undone.`}
+        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "category" : "categories"}? Deleting these categories will also automatically remove all their related products, variant items, unit pricing, and associated active offers from both the storefront and admin panel.`}
         confirmText={`Delete ${selectedRows.length} ${selectedRows.length === 1 ? "Category" : "Categories"}`}
         variant="destructive"
         isLoading={bulkDeleteMutation.isPending}

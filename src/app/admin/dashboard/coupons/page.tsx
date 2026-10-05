@@ -19,10 +19,22 @@ import { createCouponSchema, type CreateCouponSchemaInput } from "@/features/cou
 import type { ColumnDef } from "@tanstack/react-table";
 import type { CouponListItem } from "@/features/coupons/types";
 
-const typeBadgeVariant: Record<string, "info" | "success"> = {
+const typeBadgeVariant: Record<string, "info" | "success" | "secondary"> = {
   PERCENTAGE: "info",
+  percentage: "info",
   FIXED: "success",
+  flat: "success",
 };
+
+function formatDateForInput(dateVal: Date | string | null | undefined): string | undefined {
+  if (!dateVal) return undefined;
+  try {
+    const d = new Date(dateVal);
+    return isNaN(d.getTime()) ? undefined : d.toISOString().split("T")[0];
+  } catch {
+    return undefined;
+  }
+}
 
 export default function AdminCouponsPage() {
   const [search, setSearch] = useState("");
@@ -72,12 +84,8 @@ export default function AdminCouponsPage() {
         maxDiscount: editingCoupon.maxDiscount ?? undefined,
         usageLimit: editingCoupon.usageLimit ?? undefined,
         isActive: editingCoupon.isActive,
-        startsAt: editingCoupon.startsAt
-          ? new Date(editingCoupon.startsAt).toISOString().split("T")[0]
-          : undefined,
-        expiresAt: editingCoupon.expiresAt
-          ? new Date(editingCoupon.expiresAt).toISOString().split("T")[0]
-          : undefined,
+        startsAt: formatDateForInput(editingCoupon.startsAt),
+        expiresAt: formatDateForInput(editingCoupon.expiresAt),
       });
     } else {
       reset({
@@ -97,12 +105,8 @@ export default function AdminCouponsPage() {
           ? "FIXED"
           : "PERCENTAGE";
 
-      const origStartsAt = editingCoupon.startsAt
-        ? new Date(editingCoupon.startsAt).toISOString().split("T")[0]
-        : undefined;
-      const origExpiresAt = editingCoupon.expiresAt
-        ? new Date(editingCoupon.expiresAt).toISOString().split("T")[0]
-        : undefined;
+      const origStartsAt = formatDateForInput(editingCoupon.startsAt);
+      const origExpiresAt = formatDateForInput(editingCoupon.expiresAt);
 
       const payload: Partial<CreateCouponSchemaInput> = {};
 
@@ -191,29 +195,42 @@ export default function AdminCouponsPage() {
     {
       accessorKey: "type",
       header: "Type",
-      cell: ({ row }) => (
-        <Badge variant={typeBadgeVariant[row.original.type] ?? "secondary"}>
-          {row.original.type}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const rawType = (row.original.type || "").toLowerCase();
+        const isPercentage = rawType === "percentage";
+        return (
+          <Badge variant={typeBadgeVariant[rawType] ?? (isPercentage ? "info" : "success")}>
+            {isPercentage ? "Percentage" : "Flat"}
+          </Badge>
+        );
+      },
     },
     {
       accessorKey: "value",
       header: "Value",
-      cell: ({ row }) =>
-        row.original.type === "PERCENTAGE"
-          ? `${row.original.value}%`
-          : `₹${row.original.value}`,
+      cell: ({ row }) => {
+        const isPercentage = (row.original.type || "").toLowerCase() === "percentage";
+        return (
+          <span className="font-medium text-neutral-900">
+            {isPercentage
+              ? `${row.original.value}%`
+              : `₹${Number(row.original.value).toLocaleString("en-IN")}`}
+          </span>
+        );
+      },
     },
     {
       id: "usage",
       header: "Usage",
-      cell: ({ row }) => (
-        <span>
-          {row.original.usedCount}
-          {row.original.usageLimit ? ` / ${row.original.usageLimit}` : ""}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const used = row.original.usedCount ?? 0;
+        const limit = row.original.usageLimit;
+        return (
+          <span className="text-neutral-700">
+            {limit != null && limit > 0 ? `${used} / ${limit}` : `${used} / Unlimited`}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "isActive",
@@ -227,10 +244,28 @@ export default function AdminCouponsPage() {
     {
       accessorKey: "expiresAt",
       header: "Expiry",
-      cell: ({ row }) =>
-        row.original.expiresAt
-          ? new Date(row.original.expiresAt).toLocaleDateString("en-IN")
-          : "No expiry",
+      cell: ({ row }) => {
+        if (!row.original.expiresAt) {
+          return <span className="text-neutral-500">No expiry</span>;
+        }
+        try {
+          const d = new Date(row.original.expiresAt);
+          if (isNaN(d.getTime())) {
+            return <span className="text-neutral-500">No expiry</span>;
+          }
+          return (
+            <span className="text-neutral-700">
+              {d.toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+          );
+        } catch {
+          return <span className="text-neutral-500">No expiry</span>;
+        }
+      },
     },
     {
       id: "actions",

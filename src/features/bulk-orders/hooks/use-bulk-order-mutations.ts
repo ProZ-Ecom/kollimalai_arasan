@@ -8,6 +8,7 @@ import type { CreateBulkOrderInput } from "../validations/bulk-order.schema";
 
 export function useSubmitBulkOrderEnquiry() {
   return useMutation<BulkOrderEnquiryResponse, Error, CreateBulkOrderInput>({
+    meta: { skipToast: true },
     mutationFn: submitBulkOrderEnquiry,
     onSuccess: () => {
       toast.success("Bulk order submitted successfully");
