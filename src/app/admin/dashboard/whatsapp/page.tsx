@@ -329,7 +329,9 @@ export default function AdminWhatsAppPage() {
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-neutral-400">
                       <RefreshCw className="h-8 w-8 animate-spin text-emerald-600" />
-                      <span className="text-xs font-medium text-neutral-600">Generating secure QR key...</span>
+                      <span className="text-xs font-medium text-neutral-600">
+                        Generating secure QR key...
+                      </span>
                     </div>
                   )}
                 </div>

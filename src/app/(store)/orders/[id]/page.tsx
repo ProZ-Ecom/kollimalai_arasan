@@ -14,6 +14,8 @@ import {
 import { OrderDetailView } from "@/features/orders/components/OrderDetailView";
 import type { OrderStatus } from "@/features/orders/types";
 
+import { toast } from "@/components/ui/Toast";
+
 const CUSTOMER_CANCELLABLE: OrderStatus[] = ["pending", "confirmed"];
 
 function OrderDetailSkeleton() {
@@ -150,12 +152,29 @@ export default function OrderDetailPage() {
           cancelOrderMutation.mutate(
             { uuid: order.id },
             {
-              onSuccess: () => setCancelOpen(false),
+              onSuccess: () => {
+                setCancelOpen(false);
+                if (order.paymentStatus?.toLowerCase() === "paid") {
+                  toast.success(
+                    "Order cancelled",
+                    "Your refund will be reviewed and credited within 1 week (5–7 business days)."
+                  );
+                } else {
+                  toast.success("Order cancelled successfully");
+                }
+              },
+              onError: (err: any) => {
+                toast.error(err?.message || "Failed to cancel order");
+              },
             }
           );
         }}
         title="Cancel Order"
-        description={`Are you sure you want to cancel order ${order.orderNumber}? Your items will be returned to stock.`}
+        description={
+          order.paymentStatus?.toLowerCase() === "paid"
+            ? `Are you sure you want to cancel order ${order.orderNumber}? As your payment was already received, your refund of ₹${Number(order.totalAmount).toFixed(2)} will be processed and credited within 1 week (5–7 business days).`
+            : `Are you sure you want to cancel order ${order.orderNumber}? Your items will be returned to stock.`
+        }
         confirmText="Cancel Order"
         variant="destructive"
         isLoading={cancelOrderMutation.isPending}

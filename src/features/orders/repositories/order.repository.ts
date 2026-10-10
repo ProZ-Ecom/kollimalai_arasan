@@ -39,6 +39,7 @@ export const orderItemInclude = Prisma.validator<Prisma.OrderItemInclude>()({
       uuid: true,
       sku: true,
       unit_value: true,
+      weight_kg: true,
       // Live sku/unit fallback for display; the authoritative values for an
       // already-placed order are the *_snapshot fields on OrderItem itself.
       product_units: {

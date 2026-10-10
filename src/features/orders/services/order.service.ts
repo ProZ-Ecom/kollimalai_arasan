@@ -1,8 +1,17 @@
+import crypto from "crypto";
 import { db } from "@/lib/db/prisma";
 import { ApiError } from "@/lib/api/api-error";
 import { userRepository } from "@/features/users/repositories/user.repository";
 import { offerService } from "@/features/offers/services/offer.service";
-import { orderRepository } from "../repositories/order.repository";
+import {
+  calculateShippingCharge,
+  calculateVariantWeightKg,
+} from "@/features/shipping/utils/shipping-calculator";
+import {
+  orderRepository,
+  orderDetailInclude,
+  formatOrderDetail,
+} from "../repositories/order.repository";
 import type {
   OrderDetailResponse,
   OrderListItemResponse,
@@ -54,6 +63,7 @@ export const orderService = {
             variant_unit_price: {
               include: {
                 variant: true,
+                product_units: true,
               },
             },
           },
@@ -198,9 +208,17 @@ export const orderService = {
     const paymentStatus: "paid" | "pending" = isPaid ? "paid" : "pending";
     const orderStatus: "confirmed" | "pending" = isPaid ? "confirmed" : "pending";
 
-    // Free delivery is judged on what the customer actually pays, after offers.
-    const payableBeforeShipping = subtotal - offerDiscount;
-    const shippingCharge = payableBeforeShipping >= 499 ? 0 : 49;
+    // Weight-based shipping charge calculation (no free delivery)
+    const courierType = input.courierType || "st_courier";
+    let totalWeightKg = 0;
+    for (const item of cart.items) {
+      const w = calculateVariantWeightKg(item.variant_unit_price);
+      totalWeightKg += w * item.quantity;
+    }
+
+    const shippingResult = calculateShippingCharge(courierType, totalWeightKg);
+    const shippingCharge = shippingResult.shippingCharge;
+    const payableBeforeShipping = Math.max(0, subtotal - offerDiscount);
     const totalAmount = payableBeforeShipping + shippingCharge;
 
     // 5. Execute creation transaction
@@ -340,18 +358,8 @@ export const orderService = {
       changedBy: user.internalId,
     });
 
-    if (order.payment_status === "paid") {
-      try {
-        const { razorpayService } = await import("@/features/payment/services/razorpay.service");
-        await razorpayService.refundPayment({
-          orderId: order.id,
-          reason: input?.note || "Customer order cancellation",
-        });
-      } catch (refundError: any) {
-        console.error(`[Refund Error] Auto-refund failed for cancelled order ${order.orderNumber}:`, refundError?.message || refundError);
-      }
-    }
-
+    // Note: Automatic gateway refund on customer cancellation is disabled.
+    // The refund will be reviewed and approved by the admin.
     return cancelledOrder;
   },
 
@@ -392,18 +400,8 @@ export const orderService = {
       changedBy: adminUser.internalId,
     });
 
-    if (order.payment_status === "paid") {
-      try {
-        const { razorpayService } = await import("@/features/payment/services/razorpay.service");
-        await razorpayService.refundPayment({
-          orderId: order.id,
-          reason: input?.note || "Admin order cancellation",
-        });
-      } catch (refundError: any) {
-        console.error(`[Refund Error] Auto-refund failed for admin-cancelled order ${order.orderNumber}:`, refundError?.message || refundError);
-      }
-    }
-
+    // Note: Automatic gateway refund on admin cancellation is disabled.
+    // Refund must be explicitly processed via Admin Refund Action.
     return cancelledOrder;
   },
 
@@ -440,6 +438,133 @@ export const orderService = {
     });
   },
 
+  async recordPersonalAdminRefund(params: {
+    orderId: bigint;
+    adminInternalId: bigint;
+    amount?: number;
+    paymentMode?: string;
+    referenceId?: string;
+    reason?: string;
+    note?: string;
+  }) {
+    const { orderId, adminInternalId, amount, paymentMode, referenceId, reason, note } = params;
+
+    const order = await db.order.findUniqueOrThrow({
+      where: { id: orderId },
+      include: {
+        payments: {
+          where: { is_active: true },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    const successPayment = order.payments[0];
+    const totalOrderAmount = Number(order.totalAmount);
+    const refundAmount = amount ? Math.min(amount, totalOrderAmount) : totalOrderAmount;
+    const isPartial = refundAmount < totalOrderAmount;
+
+    const modeText = paymentMode || "Personal / Manual Transfer";
+    const refText = referenceId?.trim() ? ` (Ref: ${referenceId.trim()})` : "";
+    const fullReason = `${reason || "Admin recorded personal refund"} [${modeText}${refText}]`;
+
+    await db.$transaction(async (tx) => {
+      // 1. Resolve or create payment record to satisfy schema foreign key
+      let paymentId = successPayment?.id;
+      if (!paymentId) {
+        let manualMethod = await tx.payment_methods.findFirst({
+          where: { code: "MANUAL" },
+        });
+        if (!manualMethod) {
+          manualMethod = await tx.payment_methods.create({
+            data: {
+              code: "MANUAL",
+              name: "Personal / Manual Payment",
+              is_active: true,
+              created_by: adminInternalId,
+              updated_by: adminInternalId,
+            },
+          });
+        }
+        const newPay = await tx.payment.create({
+          data: {
+            orderId,
+            payment_method_id: manualMethod.id,
+            amount: totalOrderAmount,
+            currency: "INR",
+            status: "success",
+            gateway: "MANUAL",
+            created_by: adminInternalId,
+            updated_by: adminInternalId,
+          },
+        });
+        paymentId = newPay.id;
+      }
+
+      // 2. Insert into refunds table
+      await tx.refunds.create({
+        data: {
+          order_id: orderId,
+          payment_id: paymentId,
+          amount: refundAmount,
+          reason: fullReason.slice(0, 255),
+          status: "completed",
+          processed_at: new Date(),
+          created_by: adminInternalId,
+          updated_by: adminInternalId,
+        },
+      });
+
+      // 3. Create payment transaction audit
+      await tx.paymentTransaction.create({
+        data: {
+          paymentId,
+          transaction_type: "refund",
+          amount: refundAmount,
+          status: "refunded",
+          gatewayResponse: {
+            manual: true,
+            method: modeText,
+            referenceId: referenceId?.trim() || null,
+            note: note?.trim() || null,
+            processedAt: new Date().toISOString(),
+          },
+          created_by: adminInternalId,
+          updated_by: adminInternalId,
+        },
+      });
+
+      // 4. Update payment status
+      await tx.payment.update({
+        where: { id: paymentId },
+        data: {
+          status: isPartial ? "success" : "refunded",
+          updated_by: adminInternalId,
+        },
+      });
+
+      // 5. Update order payment status
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          payment_status: isPartial ? "partial_refund" : "refunded",
+          updated_by: adminInternalId,
+        },
+      });
+
+      // 6. Record in order status history
+      await tx.order_status_history.create({
+        data: {
+          order_id: orderId,
+          status: order.order_status,
+          note: `Admin recorded personal refund of ₹${refundAmount.toFixed(2)} via ${modeText}${refText}${note ? `: ${note}` : ""}`,
+          created_by: adminInternalId,
+        },
+      });
+    });
+  },
+
   async returnAdminOrder(
     adminSessionUserId: string,
     uuid: string,
@@ -461,6 +586,29 @@ export const orderService = {
       throw ApiError.notFound("Order not found");
     }
 
+    // If order was cancelled and paid, process admin personal refund directly
+    if (order.order_status === "cancelled") {
+      if (order.payment_status !== "paid" && order.payment_status !== "partial_refund") {
+        throw ApiError.badRequest("This cancelled order has no paid balance to refund.");
+      }
+
+      await this.recordPersonalAdminRefund({
+        orderId: order.id,
+        adminInternalId: adminUser.internalId,
+        amount: input?.amount,
+        paymentMode: input?.paymentMode,
+        referenceId: input?.referenceId,
+        reason: input?.reason || "Admin approved personal refund for cancelled order",
+        note: input?.note,
+      });
+
+      const updated = await db.order.findUniqueOrThrow({
+        where: { id: order.id },
+        include: orderDetailInclude,
+      });
+      return formatOrderDetail(updated);
+    }
+
     if (!["delivered", "shipped", "out_for_delivery"].includes(order.order_status)) {
       throw ApiError.badRequest(
         `Cannot process return for order with status '${order.order_status}'. Only delivered, shipped, or out for delivery orders can be returned.`
@@ -473,18 +621,21 @@ export const orderService = {
       changedBy: adminUser.internalId,
     });
 
-    // In case of refund: if order was paid, attempt refund via payment gateway
+    // In case of refund: if order was paid, record personal refund by admin
     if (order.payment_status === "paid" || order.payment_status === "partial_refund") {
       try {
-        const { razorpayService } = await import("@/features/payment/services/razorpay.service");
-        await razorpayService.refundPayment({
+        await this.recordPersonalAdminRefund({
           orderId: order.id,
+          adminInternalId: adminUser.internalId,
           amount: input?.amount,
-          reason: input?.reason || input?.note || "Admin return and refund",
+          paymentMode: input?.paymentMode,
+          referenceId: input?.referenceId,
+          reason: input?.reason || "Admin return and personal refund",
+          note: input?.note,
         });
       } catch (refundError: any) {
         console.error(
-          `[Refund Error] Auto-refund failed for admin-returned order ${order.orderNumber}:`,
+          `[Refund Error] Recording personal refund failed for admin-returned order ${order.orderNumber}:`,
           refundError?.message || refundError
         );
       }
