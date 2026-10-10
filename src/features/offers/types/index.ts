@@ -31,7 +31,7 @@ export interface OfferProductTarget {
 export interface OfferItemTarget {
   id: string; // VariantUnitPrice UUID - the sellable pack size
   sku: string;
-  label: string; // "Mixture - Spicy - 500 g"
+  label: string; // "Wild Honey - Glass Jar - 500 g"
   measurement: VariantMeasurement;
   basePrice: number;
   productId: string; // Product UUID

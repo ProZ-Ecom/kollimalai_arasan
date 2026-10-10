@@ -279,12 +279,12 @@ export function OfferForm({
             name="name"
             label="Offer Name"
             required
-            placeholder="e.g. Diwali Festival Offer"
+            placeholder="e.g. Kolli Hills Harvest Special"
           />
           <FormInput
             name="code"
             label="Offer / Coupon Code"
-            placeholder="Optional, e.g. DIWALI15"
+            placeholder="Optional, e.g. HARVEST15"
             isSlug={false}
             description="Leave blank for an automatic offer that needs no code."
           />

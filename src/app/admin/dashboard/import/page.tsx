@@ -219,7 +219,7 @@ export default function BulkImportPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Bulk Product Import"
-        description="Import categories, products, and variants from a single Excel file (.xlsx)"
+        description="Import categories, products, and items from a single Excel file (.xlsx)"
         breadcrumbs={
           <AdminBreadcrumb
             items={[
@@ -421,7 +421,7 @@ export default function BulkImportPage() {
                             </p>
                           </div>
                           <span className="shrink-0 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold">
-                            {prod.variants.length} variant{prod.variants.length !== 1 ? "s" : ""}
+                            {prod.variants.length} item{prod.variants.length !== 1 ? "s" : ""}
                           </span>
                         </div>
                         {prod.variants.length > 0 && (

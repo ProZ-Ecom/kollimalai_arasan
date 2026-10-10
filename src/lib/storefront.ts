@@ -16,8 +16,8 @@ export function resolveSnackFallbackImage(_name: string): string {
 }
 
 /**
- * Maps a real customer-catalog variant (one storefront "item", e.g. "Mango
- * Mysore Pak") into the shape the storefront ProductCard renders. Carries
+ * Maps a real customer-catalog variant (one storefront "item", e.g. "Pure
+ * Wild Honey") into the shape the storefront ProductCard renders. Carries
  * every pack size for the item - not a fixed 50g/100g pair - each with its
  * own VariantUnitPrice UUID (what the cart/wishlist APIs key off).
  */

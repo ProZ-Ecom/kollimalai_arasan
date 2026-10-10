@@ -66,7 +66,7 @@ export interface AdminVariantResponse {
   productId: string; // Public Product UUID
   productName: string;
   productSlug: string;
-  variantName: string; // Stored DB variant_name e.g. "Classic Mixture"
+  variantName: string; // Stored DB variant_name e.g. "Standard Pouch"
   slug: string;
   shortDescription: string | null;
   description: string | null;
