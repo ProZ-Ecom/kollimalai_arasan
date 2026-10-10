@@ -138,12 +138,16 @@ export function useReturnAdminOrder() {
       reason,
       note,
       amount,
+      paymentMode,
+      referenceId,
     }: {
       id: string | number;
       reason?: string;
       note?: string;
       amount?: number;
-    }) => returnAdminOrder(id, { reason, note, amount }),
+      paymentMode?: string;
+      referenceId?: string;
+    }) => returnAdminOrder(id, { reason, note, amount, paymentMode, referenceId }),
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: adminOrderKeys.all });
       queryClient.invalidateQueries({ queryKey: ["admin-orders", "count"] });

@@ -38,16 +38,14 @@ export function ProductSection({
     pageSize: 20,
     sortBy: "createdAt",
     sortOrder: "desc",
-    onlyDefault: true,
   });
 
   const uniqueVariants = React.useMemo(() => {
     const raw = response?.data ?? [];
     const map = new Map<string, CustomerVariantListItemDto>();
     for (const v of raw) {
-      const existing = map.get(v.productId);
-      if (!existing || (v.isDefault && !existing.isDefault)) {
-        map.set(v.productId, v);
+      if (!map.has(v.id)) {
+        map.set(v.id, v);
       }
     }
     return Array.from(map.values());

@@ -75,6 +75,7 @@ export function AdminOrderListTable({
     totalAmount: number;
     paymentStatus?: string;
     customerName?: string;
+    orderStatus?: string;
   } | null>(null);
   const [shipCourierOrder, setShipCourierOrder] = useState<{
     id: string;
@@ -431,8 +432,11 @@ export function AdminOrderListTable({
               </button>
             )}
 
-            {/* Quick Process Return / Refund button for delivered orders */}
-            {orderStatus === "delivered" && (
+            {/* Quick Process Return / Refund button for delivered OR cancelled paid orders */}
+            {(orderStatus === "delivered" ||
+              (orderStatus === "cancelled" &&
+                (row.original.paymentStatus === "paid" ||
+                  row.original.paymentStatus === "partial_refund"))) && (
               <button
                 type="button"
                 onClick={() =>
@@ -442,9 +446,14 @@ export function AdminOrderListTable({
                     totalAmount: Number(row.original.totalAmount),
                     paymentStatus: row.original.paymentStatus,
                     customerName: row.original.customer?.name,
+                    orderStatus: row.original.status,
                   })
                 }
-                title="Process Return / Refund"
+                title={
+                  orderStatus === "cancelled"
+                    ? "Approve & Process Refund"
+                    : "Process Return / Refund"
+                }
                 className="grid h-8 w-8 place-items-center rounded-lg border border-purple-300 bg-purple-50 text-xs font-semibold text-purple-700 hover:bg-purple-100 transition-all cursor-pointer"
                 disabled={isTransitionPending}
               >
@@ -717,9 +726,12 @@ export function AdminOrderListTable({
                   )}
 
                 {/* Refund / Return Manual Action for Admin */}
-                {["delivered", "shipped", "out_for_delivery"].includes(
+                {(["delivered", "shipped", "out_for_delivery"].includes(
                   currentDetailStatus || ""
-                ) && (
+                ) ||
+                  (currentDetailStatus === "cancelled" &&
+                    (orderDetail.paymentStatus === "paid" ||
+                      orderDetail.paymentStatus === "partial_refund"))) && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -731,12 +743,15 @@ export function AdminOrderListTable({
                           totalAmount: Number(orderDetail.totalAmount),
                           paymentStatus: orderDetail.paymentStatus,
                           customerName: orderDetail.customer?.name,
+                          orderStatus: orderDetail.status,
                         })
                       }
                       disabled={isTransitionPending}
                     >
                       <RotateCcw className="mr-1.5 h-4 w-4" />
-                      Process Return / Refund
+                      {currentDetailStatus === "cancelled"
+                        ? "Approve / Process Refund"
+                        : "Process Return / Refund"}
                     </Button>
                   )}
 

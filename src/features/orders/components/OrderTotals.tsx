@@ -8,9 +8,18 @@ interface OrderTotalsProps {
   totals: OrderTotals;
   couponLabel?: string | null;
   className?: string;
+  weightDetails?: {
+    formattedWeight: string;
+    courierName?: string;
+  } | null;
 }
 
-export function OrderTotals({ totals, couponLabel, className }: OrderTotalsProps) {
+export function OrderTotals({
+  totals,
+  couponLabel,
+  className,
+  weightDetails,
+}: OrderTotalsProps) {
   return (
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between text-sm">
@@ -24,7 +33,15 @@ export function OrderTotals({ totals, couponLabel, className }: OrderTotalsProps
       </div>
 
       <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Delivery Charge</span>
+        <div>
+          <span className="text-muted-foreground block">Delivery Charge</span>
+          {weightDetails && (
+            <span className="text-[11px] text-muted-foreground block font-normal">
+              Weight: {weightDetails.formattedWeight}
+              {weightDetails.courierName ? ` • ${weightDetails.courierName}` : ""}
+            </span>
+          )}
+        </div>
         <span className="font-medium">
           {totals.shippingAmount === 0
             ? "Free"

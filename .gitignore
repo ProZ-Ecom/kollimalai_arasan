@@ -57,3 +57,6 @@ next-env.d.ts
 
 # local seed scripts
 scripts/seed-50-products-70-items.cjs
+
+# whatsapp baileys session data
+auth_baileys/

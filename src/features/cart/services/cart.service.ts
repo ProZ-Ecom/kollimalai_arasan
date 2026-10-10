@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/api/api-error";
 import { userRepository } from "@/features/users/repositories/user.repository";
 import { formatVariantMeasurement } from "@/features/variants/utils/measurement.util";
 import { offerService } from "@/features/offers/services/offer.service";
+import { calculateVariantWeightKg } from "@/features/shipping/utils/shipping-calculator";
 import { cartRepository } from "../repositories/cart.repository";
 import type {
   AddCartItemInput,
@@ -125,8 +126,13 @@ async function formatCartResponse(
       freeQuantity: line.freeQuantity,
       originalItemTotal: line.originalLineTotal,
       itemTotal: line.finalLineTotal,
+      weightKg: calculateVariantWeightKg(unitPrice),
     };
   });
+
+  const totalWeightKg = Number(
+    items.reduce((sum, item) => sum + (item.weightKg ?? 0.5) * item.quantity, 0).toFixed(3)
+  );
 
   return {
     id: cart.uuid || String(cart.id),
@@ -136,6 +142,7 @@ async function formatCartResponse(
     totalSavings: pricing.totalSavings,
     total: pricing.total,
     totalItems,
+    totalWeightKg,
   };
 }
 

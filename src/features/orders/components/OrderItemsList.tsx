@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { getImageUrl, formatPrice } from "@/lib/utils";
 import { ProductImage } from "@/components/common/ProductImage";
+import { formatMeasurementLabel } from "@/features/variants/utils/measurement.util";
 import type { OrderItemResponse, OrderItemDisplay } from "../types";
 
 interface OrderItemsListProps {
@@ -33,6 +34,10 @@ export function OrderItemsList({
           "totalPrice" in item ? item.totalPrice : item.total || 0;
         const sku = "sku" in item ? item.sku : "";
         const variantText = item.variantName || sku || "";
+        const packSize =
+          "measurement" in item && item.measurement
+            ? formatMeasurementLabel(item.measurement)
+            : "";
 
         return (
           <div key={item.id} className="flex items-center gap-4 py-3">
@@ -47,27 +52,34 @@ export function OrderItemsList({
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-sm text-foreground truncate block">
+              <p className="font-semibold text-sm text-foreground truncate block">
                 {item.productName}
               </p>
               {variantText && (
                 <p className="text-xs text-muted-foreground">{variantText}</p>
               )}
-              <p className="text-xs text-muted-foreground">
-                Qty: {item.quantity}
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                {packSize && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-neutral-100 text-[11px] font-semibold text-neutral-800 border border-neutral-200">
+                    Unit: {packSize}
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground font-medium">
+                  Qty: {item.quantity}
+                </span>
                 {compact && (
-                  <span className="ml-2 font-medium text-foreground">
+                  <span className="ml-1 font-medium text-foreground">
                     {formatPrice(unitPrice)}
                   </span>
                 )}
-              </p>
+              </div>
             </div>
 
             {!compact && (
               <div className="text-right shrink-0">
-                <p className="text-sm font-medium">{formatPrice(totalPrice)}</p>
+                <p className="text-sm font-bold text-foreground">{formatPrice(totalPrice)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {formatPrice(unitPrice)} x {item.quantity}
+                  {formatPrice(unitPrice)} {packSize ? `(${packSize}) ` : ""}× {item.quantity}
                 </p>
               </div>
             )}

@@ -225,7 +225,13 @@ export async function deliverAdminOrder(
 
 export async function returnAdminOrder(
   idOrUuid: string | number,
-  input?: { reason?: string; note?: string; amount?: number }
+  input?: {
+    reason?: string;
+    note?: string;
+    amount?: number;
+    paymentMode?: string;
+    referenceId?: string;
+  }
 ): Promise<OrderDetailResponse> {
   const response = await apiClient.post<OrderDetailResponse>(
     `/api/admin/orders/${idOrUuid}/return`,
@@ -233,6 +239,8 @@ export async function returnAdminOrder(
       reason: input?.reason || "Return / Refund processed by admin",
       note: input?.note || "Processed by admin",
       amount: input?.amount,
+      paymentMode: input?.paymentMode,
+      referenceId: input?.referenceId,
     }
   );
   return response.data!;

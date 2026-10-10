@@ -14,6 +14,67 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // If MSS Courier, bypass ST Courier API and read internal tracking details updated by admin
+    if (courier === "mss" || courier.includes("mettur")) {
+      const { db } = await import("@/lib/db/prisma");
+      const shipment = await db.shipments.findFirst({
+        where: { tracking_number: awb, is_active: true },
+        include: { orders: true, delivery_partners: true },
+        orderBy: { id: "desc" },
+      });
+
+      const currentStatus = shipment?.orders?.order_status || shipment?.status || "shipped";
+      const isDelivered = currentStatus === "delivered";
+
+      return NextResponse.json(
+        {
+          success: true,
+          awb,
+          courier: "Mettur Super Services (MSS)",
+          isMSS: true,
+          summary: {
+            currentStatus: currentStatus.replace(/_/g, " ").toUpperCase(),
+            bookedDate: shipment?.created_at
+              ? new Date(shipment.created_at).toLocaleDateString("en-IN")
+              : null,
+            deliveredDate: shipment?.delivered_at
+              ? new Date(shipment.delivered_at).toLocaleDateString("en-IN")
+              : null,
+            destination: shipment?.delivery_notes || "Destination Office",
+          },
+          checkpoints: [
+            {
+              date: shipment?.created_at
+                ? new Date(shipment.created_at).toLocaleDateString("en-IN")
+                : "",
+              time: shipment?.created_at
+                ? new Date(shipment.created_at).toLocaleTimeString("en-IN")
+                : "",
+              location: "Kolli Hills Origin Hub",
+              status: "Shipment Dispatched via Mettur Super Services",
+              isDelivered: false,
+            },
+            ...(isDelivered
+              ? [
+                  {
+                    date: shipment?.delivered_at
+                      ? new Date(shipment.delivered_at).toLocaleDateString("en-IN")
+                      : "",
+                    time: shipment?.delivered_at
+                      ? new Date(shipment.delivered_at).toLocaleTimeString("en-IN")
+                      : "",
+                    location: shipment?.delivery_notes || "Customer Destination",
+                    status: "Delivered to Consignee",
+                    isDelivered: true,
+                  },
+                ]
+              : []),
+          ],
+        },
+        { status: 200 }
+      );
+    }
+
     // Default to ST Courier tracking
     const result = await fetchSTCourierTracking(awb);
 

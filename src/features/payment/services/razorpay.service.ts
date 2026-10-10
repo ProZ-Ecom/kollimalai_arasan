@@ -4,6 +4,7 @@ import { db } from "@/lib/db/prisma";
 import { userRepository } from "@/features/users/repositories/user.repository";
 import { cartService } from "@/features/cart/services/cart.service";
 import { orderService } from "@/features/orders/services/order.service";
+import { calculateShippingCharge } from "@/features/shipping/utils/shipping-calculator";
 import { getRazorpayClient, getRazorpayPublicKey } from "../config/razorpay.config";
 import { paymentRepository } from "../repositories/payment.repository";
 import type {
@@ -70,7 +71,9 @@ export const razorpayService = {
       }
 
       const payableBeforeShipping = cart.total;
-      const shippingCharge = payableBeforeShipping >= 499 ? 0 : 49;
+      const courierType = input.courierType || "st_courier";
+      const totalWeightKg = cart.totalWeightKg ?? 0.5;
+      const shippingCharge = calculateShippingCharge(courierType, totalWeightKg).shippingCharge;
       const payableAmount = payableBeforeShipping + shippingCharge;
       if (payableAmount <= 0) {
         throw ApiError.badRequest("Invalid cart payable amount.");
@@ -244,6 +247,7 @@ export const razorpayService = {
           billingAddressId: input.billingAddressId || input.shippingAddressId,
           notes: input.notes,
           paymentMethod: "CARD",
+          courierType: input.courierType,
           paymentDetails: {
             gateway: "RAZORPAY",
             isPaid: true,
@@ -457,95 +461,6 @@ export const razorpayService = {
     }
 
     return { received: true, unhandledEvent: eventType };
-  },
-
-  /**
-   * Refund an existing captured Razorpay payment
-   */
-  async refundPayment(params: {
-    orderId: bigint;
-    amount?: number;
-    reason?: string;
-  }) {
-    const successPayment = await db.payment.findFirst({
-      where: {
-        orderId: params.orderId,
-        status: "success",
-        gateway: "RAZORPAY",
-        is_active: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (!successPayment || !successPayment.gateway_payment_id) {
-      throw ApiError.badRequest("No captured Razorpay payment found for this order to refund.");
-    }
-
-    const refundAmountInPaise = params.amount
-      ? Math.round(params.amount * 100)
-      : Math.round(Number(successPayment.amount) * 100);
-
-    const razorpay = getRazorpayClient();
-    const refund = await razorpay.payments.refund(successPayment.gateway_payment_id, {
-      amount: refundAmountInPaise,
-      notes: {
-        orderId: String(params.orderId),
-        reason: params.reason || "Order cancellation refund",
-      },
-    });
-
-    const isPartial = params.amount
-      ? Math.round(params.amount * 100) < Math.round(Number(successPayment.amount) * 100)
-      : false;
-
-    // Record refund transaction
-    await db.$transaction(async (tx) => {
-      await tx.paymentTransaction.create({
-        data: {
-          paymentId: successPayment.id,
-          transaction_type: "refund",
-          amount: refundAmountInPaise / 100,
-          status: "refunded",
-          gatewayResponse: refund as any,
-          created_by: successPayment.created_by,
-          updated_by: successPayment.updated_by,
-        },
-      });
-
-      await tx.refunds.create({
-        data: {
-          order_id: params.orderId,
-          payment_id: successPayment.id,
-          amount: refundAmountInPaise / 100,
-          reason: params.reason || "Refund processed by admin",
-          status: "completed",
-          processed_at: new Date(),
-          created_by: successPayment.created_by,
-          updated_by: successPayment.updated_by,
-        },
-      });
-
-      await tx.payment.update({
-        where: { id: successPayment.id },
-        data: {
-          status: isPartial ? "success" : "refunded",
-        },
-      });
-
-      await tx.order.update({
-        where: { id: params.orderId },
-        data: {
-          payment_status: isPartial ? "partial_refund" : "refunded",
-        },
-      });
-    });
-
-    return {
-      success: true,
-      refundId: refund.id,
-      amount: refundAmountInPaise / 100,
-      isPartial,
-    };
   },
 };
 

@@ -60,8 +60,8 @@ export const features = [
   {
     id: 1,
     image: ICONS.delivery,
-    name: "Free Delivery",
-    footer: "For all orders over ₹3500",
+    name: "Courier Delivery",
+    footer: "Direct from Kolli Hills",
   },
   {
     id: 2,

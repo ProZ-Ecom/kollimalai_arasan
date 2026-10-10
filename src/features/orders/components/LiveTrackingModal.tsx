@@ -44,8 +44,13 @@ export function LiveTrackingModal({
     setError(null);
 
     try {
+      const courierParam =
+        (courierName || "").toLowerCase().includes("mss") ||
+        (courierName || "").toLowerCase().includes("mettur")
+          ? "mss"
+          : "st-courier";
       const res = await fetch(
-        `/api/orders/track?awb=${encodeURIComponent(awbNumber)}&courier=st-courier`
+        `/api/orders/track?awb=${encodeURIComponent(awbNumber)}&courier=${courierParam}`
       );
       const json: TrackingResult = await res.json();
 

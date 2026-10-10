@@ -29,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatPrice, cn } from "@/lib/utils";
 import { formatMeasurementLabel } from "@/features/variants/utils/measurement.util";
+import { ICONS } from "@/constants/storefront";
 import { useCustomerCart } from "@/features/customers/hooks/use-customer-cart";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -110,10 +111,10 @@ export default function CheckoutPage() {
 
   // Selected state
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
-  const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">(
-    "standard"
+  const [courierType, setCourierType] = useState<"st_courier" | "mss">(
+    "st_courier"
   );
-  const [paymentMethod, setPaymentMethod] = useState<"CARD" | "UPI" | "COD">(
+  const [paymentMethod, setPaymentMethod] = useState<"CARD" | "WHATSAPP" | "CALL">(
     "CARD"
   );
   const [orderNotes, setOrderNotes] = useState<string>("");
@@ -333,14 +334,30 @@ export default function CheckoutPage() {
     return "";
   }, [selectedAddressId, addresses]);
 
-  // Pricing calculations
+  // Pricing and weight calculations
   const items = cart?.items || [];
   const subtotal = Number(cart?.subtotal || 0);
   const discount = Number(cart?.totalDiscount ?? cart?.totalSavings ?? 0);
   const payableBeforeShipping = Math.max(0, subtotal - discount);
-  const isFreeDelivery = payableBeforeShipping >= 499;
+
+  // Cart total weight in kg
+  const totalWeightKg = useMemo(() => {
+    if (cart?.totalWeightKg && cart.totalWeightKg > 0) {
+      return cart.totalWeightKg;
+    }
+    const computed = items.reduce(
+      (sum, it) => sum + (it.weightKg ?? 0.5) * it.quantity,
+      0
+    );
+    return Number(computed.toFixed(2));
+  }, [cart?.totalWeightKg, items]);
+
+  const stBillableKg = Math.max(1, Math.ceil(totalWeightKg));
+  const stShippingCharge = stBillableKg * 40;
+  const mssShippingCharge = Math.max(1, Math.ceil(totalWeightKg / 20)) * 200;
+
   const shippingCharge =
-    deliveryMethod === "express" ? 99 : isFreeDelivery ? 0 : 49;
+    courierType === "mss" ? mssShippingCharge : stShippingCharge;
   const grandTotal = payableBeforeShipping + shippingCharge;
 
   // Authentication gate
@@ -509,7 +526,7 @@ export default function CheckoutPage() {
           setIsProcessingPayment(false);
           setCheckoutError(
             stockData?.message ||
-              "Some items in your cart are no longer available. Please update your cart."
+            "Some items in your cart are no longer available. Please update your cart."
           );
           return;
         }
@@ -521,6 +538,7 @@ export default function CheckoutPage() {
       const rzpOrder = await createRazorpayOrderMutation.mutateAsync({
         orderId: "cart",
         shippingAddressId: shippingId,
+        courierType,
       });
 
 
@@ -565,6 +583,7 @@ export default function CheckoutPage() {
               shippingAddressId: shippingId,
               billingAddressId: shippingId,
               notes: orderNotes.trim() || undefined,
+              courierType,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
@@ -608,6 +627,54 @@ export default function CheckoutPage() {
     }
   };
 
+  // WhatsApp Order Handler
+  const handleOrderByWhatsApp = () => {
+    if (!effectiveAddressId) {
+      setCheckoutError("Please select or add a delivery address to place your order.");
+      return;
+    }
+
+    const selectedAddr = addresses.find((a) => a.id === effectiveAddressId);
+    const courierName =
+      courierType === "mss" ? "Mettur Super Services (MSS)" : "ST Courier";
+
+    let msg = `*NEW ORDER INQUIRY - KOLLIMALAI ARASAN*\n\n`;
+    msg += `*Items Ordered:*\n`;
+    items.forEach((it, idx) => {
+      const vText = it.variantName ? ` (${it.variantName})` : "";
+      msg += `${idx + 1}. *${it.productName}*${vText} × ${it.quantity} = ₹${it.itemTotal}\n`;
+    });
+    msg += `\n*Cart Weight:* ${totalWeightKg} kg\n`;
+    msg += `*Subtotal:* ₹${subtotal}\n`;
+    if (discount > 0) {
+      msg += `*Discount:* -₹${discount}\n`;
+    }
+    msg += `*Selected Courier:* ${courierName} (₹${shippingCharge})\n`;
+    msg += `*Total Payable:* ₹${grandTotal}\n\n`;
+
+    if (selectedAddr) {
+      msg += `*Delivery Address:*\n`;
+      msg += `Name: ${selectedAddr.fullName}\n`;
+      msg += `Phone: ${selectedAddr.phone}\n`;
+      msg += `Address: ${selectedAddr.addressLine1}${selectedAddr.addressLine2 ? `, ${selectedAddr.addressLine2}` : ""}\n`;
+      msg += `City, State: ${selectedAddr.city}, ${selectedAddr.state} - ${selectedAddr.pincode}\n\n`;
+    }
+
+    if (orderNotes.trim()) {
+      msg += `*Customer Note:* ${orderNotes.trim()}\n\n`;
+    }
+    msg += `Please confirm my order and share details. Thank you!`;
+
+    const encoded = encodeURIComponent(msg);
+    const waNumber = "918667380899";
+    window.open(`https://wa.me/${waNumber}?text=${encoded}`, "_blank");
+  };
+
+  // Call Order Handler
+  const handleOrderByCall = () => {
+    window.location.href = "tel:+919486150579";
+  };
+
   // Place Order Handler
   const handlePlaceOrder = async () => {
     setCheckoutError(null);
@@ -626,49 +693,17 @@ export default function CheckoutPage() {
       return;
     }
 
-    // 1. Cash on Delivery (COD) flow
-    if (paymentMethod === "COD") {
-      try {
-        const orderRes = await createOrderMutation.mutateAsync({
-          shippingAddressId: effectiveAddressId,
-          paymentMethod: "COD",
-          notes: orderNotes.trim() || undefined,
-          paymentDetails: {
-            method: "COD",
-            status: "pending",
-          },
-        });
-
-        const order =
-          (orderRes as any)?.data?.data ||
-          (orderRes as any)?.data ||
-          orderRes;
-        const orderId = order?.id;
-        const orderNumber = order?.orderNumber;
-
-        setIsOrderPlaced(true);
-        queryClient.invalidateQueries({ queryKey: CUSTOMER_ORDERS_QUERY_KEY, refetchType: "all" });
-        queryClient.invalidateQueries({ queryKey: ["customer", "cart"], refetchType: "all" });
-        queryClient.invalidateQueries({ queryKey: ["cart"], refetchType: "all" });
-
-        const params = new URLSearchParams();
-        if (orderId && String(orderId) !== "undefined" && String(orderId) !== "null") {
-          params.set("orderId", String(orderId));
-        }
-        if (orderNumber && String(orderNumber) !== "undefined" && String(orderNumber) !== "null") {
-          params.set("orderNumber", String(orderNumber));
-        }
-        router.push(`/checkout/success${params.toString() ? `?${params.toString()}` : ""}`);
-      } catch (err: any) {
-        setIsOrderPlaced(false);
-        setCheckoutError(
-          err.message || "Failed to place COD order. Please check details and try again."
-        );
-      }
+    if (paymentMethod === "WHATSAPP") {
+      handleOrderByWhatsApp();
       return;
     }
 
-    // 2. Online Payment (Razorpay) — Opens in-app modal popup
+    if (paymentMethod === "CALL") {
+      handleOrderByCall();
+      return;
+    }
+
+    // Online Payment (Razorpay) — Opens in-app modal popup
     await launchInAppRazorpayPayment(effectiveAddressId);
   };
 
@@ -950,13 +985,12 @@ export default function CheckoutPage() {
                         }
                         onBlur={() => handleAddressFieldBlur("pincode")}
                         aria-invalid={touchedAddressFields.pincode && !!(addressFieldErrors.pincode || pincodeVerificationError)}
-                        className={`w-full min-h-[44px] rounded-xl border bg-white px-3 pr-10 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
-                          touchedAddressFields.pincode && (addressFieldErrors.pincode || pincodeVerificationError)
-                            ? "border-error-500 bg-error-50/20 focus:border-error-500"
-                            : isPincodeVerified
+                        className={`w-full min-h-[44px] rounded-xl border bg-white px-3 pr-10 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${touchedAddressFields.pincode && (addressFieldErrors.pincode || pincodeVerificationError)
+                          ? "border-error-500 bg-error-50/20 focus:border-error-500"
+                          : isPincodeVerified
                             ? "border-emerald-500 focus:border-emerald-600"
                             : "border-theme-border-input focus:border-theme-primary"
-                        }`}
+                          }`}
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
                         {isPincodeVerifying ? (
@@ -1056,13 +1090,12 @@ export default function CheckoutPage() {
                         }
                         onBlur={() => handleAddressFieldBlur("city")}
                         aria-invalid={!isPincodeVerified && touchedAddressFields.city && !!addressFieldErrors.city}
-                        className={`w-full min-h-[44px] rounded-xl border px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
-                          isPincodeVerified
-                            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 cursor-not-allowed border-theme-border"
-                            : touchedAddressFields.city && addressFieldErrors.city
+                        className={`w-full min-h-[44px] rounded-xl border px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${isPincodeVerified
+                          ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 cursor-not-allowed border-theme-border"
+                          : touchedAddressFields.city && addressFieldErrors.city
                             ? "border-error-500 bg-error-50/20 focus:border-error-500"
                             : "border-theme-border-input focus:border-theme-primary bg-white"
-                        }`}
+                          }`}
                       />
                       {isPincodeVerified && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted">
@@ -1091,11 +1124,10 @@ export default function CheckoutPage() {
                         onChange={(e) =>
                           handleAddressFieldChange("state", e.target.value)
                         }
-                        className={`w-full min-h-[44px] rounded-xl border px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${
-                          isPincodeVerified
-                            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 cursor-not-allowed border-theme-border"
-                            : "border-theme-border-input focus:border-theme-primary bg-white"
-                        }`}
+                        className={`w-full min-h-[44px] rounded-xl border px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none transition-colors ${isPincodeVerified
+                          ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 cursor-not-allowed border-theme-border"
+                          : "border-theme-border-input focus:border-theme-primary bg-white"
+                          }`}
                       />
                       {isPincodeVerified && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-theme-text-muted">
@@ -1137,74 +1169,101 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* 2. Delivery Method Card */}
+          {/* 2. Courier Selection Card */}
           <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-xs p-5 sm:p-6">
-            <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-theme-border-subtle">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-theme-surface-alt border border-theme-border text-theme-primary font-bold text-xs">
-                2
-              </span>
-              <h2 className="text-base sm:text-lg font-bold text-theme-text-primary flex items-center gap-2">
-                <Truck className="h-4 w-4 text-theme-secondary" />
-                Shipping & Delivery Method
-              </h2>
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-theme-border-subtle">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-theme-surface-alt border border-theme-border text-theme-primary font-bold text-xs">
+                  2
+                </span>
+                <h2 className="text-base sm:text-lg font-bold text-theme-text-primary flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-theme-secondary" />
+                  Select Courier Partner
+                </h2>
+              </div>
+              <div className="text-xs font-semibold text-theme-text-subtle bg-theme-surface-alt border border-theme-border px-2.5 py-1 rounded-lg">
+                Cart Weight: <span className="font-bold text-theme-text-primary">{totalWeightKg} kg</span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {/* Standard */}
+              {/* ST Courier */}
               <div
-                onClick={() => setDeliveryMethod("standard")}
-                className={`rounded-xl border p-4 cursor-pointer transition-all ${deliveryMethod === "standard"
+                onClick={() => setCourierType("st_courier")}
+                className={`rounded-xl border p-4 cursor-pointer transition-all ${courierType === "st_courier"
                   ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
                   : "border-theme-border bg-theme-surface hover:border-theme-border-accent"
                   }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-theme-text-primary">
-                    Standard Delivery
-                  </span>
-                  <span className="text-xs font-extrabold text-theme-primary">
-                    {isFreeDelivery ? "FREE" : "₹49"}
-                  </span>
-                </div>
-                <p className="text-[11px] text-theme-text-subtle flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  Estimated: 3 - 5 business days
-                </p>
-                {isFreeDelivery && (
-                  <span className="mt-2 inline-block rounded bg-theme-status-del-bg px-2 py-0.5 text-[10px] font-bold text-theme-status-del-fg">
-                    Free Delivery Unlocked!
-                  </span>
-                )}
-              </div>
-
-              {/* Express */}
-              <div
-                onClick={() => setDeliveryMethod("express")}
-                className={`rounded-xl border p-4 cursor-pointer transition-all ${deliveryMethod === "express"
-                  ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
-                  : "border-theme-border bg-theme-surface hover:border-theme-border-accent"
-                  }`}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-theme-text-primary">
-                      Express Fast Delivery
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${courierType === "st_courier"
+                        ? "border-theme-primary bg-theme-primary text-white"
+                        : "border-theme-border-input bg-white"
+                        }`}
+                    >
+                      {courierType === "st_courier" && (
+                        <Check className="h-2.5 w-2.5 stroke-[3]" />
+                      )}
                     </span>
-                    <Sparkles className="h-3 w-3 text-theme-secondary" />
+                    <span className="text-xs font-bold text-theme-text-primary">
+                      ST Courier
+                    </span>
                   </div>
                   <span className="text-xs font-extrabold text-theme-primary">
-                    ₹99
+                    ₹{stShippingCharge}
                   </span>
                 </div>
-                <p className="text-[11px] text-theme-text-subtle flex items-center gap-1">
+                <p className="text-[11px] text-theme-text-subtle pl-6">
+                  Rate: ₹40 per kg ({stBillableKg} kg billable)
+                </p>
+                <p className="text-[11px] text-theme-text-muted pl-6 flex items-center gap-1 mt-1">
                   <Clock className="h-3 w-3" />
-                  Estimated: 1 - 2 business days (Priority)
+                  Est. 2 - 4 days • Automated tracking
+                </p>
+              </div>
+
+              {/* MSS (Mettur Super Services) */}
+              <div
+                onClick={() => setCourierType("mss")}
+                className={`rounded-xl border p-4 cursor-pointer transition-all ${courierType === "mss"
+                  ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
+                  : "border-theme-border bg-theme-surface hover:border-theme-border-accent"
+                  }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${courierType === "mss"
+                        ? "border-theme-primary bg-theme-primary text-white"
+                        : "border-theme-border-input bg-white"
+                        }`}
+                    >
+                      {courierType === "mss" && (
+                        <Check className="h-2.5 w-2.5 stroke-[3]" />
+                      )}
+                    </span>
+                    <span className="text-xs font-bold text-theme-text-primary">
+                      MSS (Mettur Super Services)
+                    </span>
+                  </div>
+                  <span className="text-xs font-extrabold text-theme-primary">
+                    ₹{mssShippingCharge}
+                  </span>
+                </div>
+                <p className="text-[11px] text-theme-text-subtle pl-6">
+                  Flat ₹200 for 1 to 20 kg
+                </p>
+                <p className="text-[11px] text-theme-text-muted pl-6 flex items-center gap-1 mt-1">
+                  <Clock className="h-3 w-3" />
+                  Est. 3 - 5 days • Handled via MSS
                 </p>
               </div>
             </div>
           </div>
 
-          {/* 3. Payment Method Card */}
+          {/* 3. Payment & Ordering Method Card */}
           <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-xs p-5 sm:p-6">
             <div className="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-theme-border-subtle">
               <div className="flex items-center gap-2.5">
@@ -1213,106 +1272,141 @@ export default function CheckoutPage() {
                 </span>
                 <h2 className="text-base sm:text-lg font-bold text-theme-text-primary flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-theme-secondary" />
-                  Payment Method
+                  Payment & Ordering Options
                 </h2>
               </div>
 
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-0.5 text-[11px] font-bold text-emerald-700">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                Razorpay Secured
+                Verified & Secure
               </span>
             </div>
 
-            {/* Payment Method Selector Tabs */}
-            <div className="grid grid-cols-2 gap-3 mb-5">
+            {/* Payment Method Selector Tabs: Online vs WhatsApp vs Call */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+              {/* Online Payment */}
               <button
                 type="button"
                 onClick={() => setPaymentMethod("CARD")}
-                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[64px] ${paymentMethod === "CARD" || paymentMethod === "UPI"
+                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[72px] ${paymentMethod === "CARD"
                   ? "border-theme-primary bg-theme-surface-alt font-bold text-theme-primary shadow-xs ring-1 ring-theme-primary"
                   : "border-theme-border bg-theme-surface text-theme-text-subtle hover:bg-theme-surface-warm"
                   }`}
               >
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-1.5 mb-1">
                   <CreditCard className="h-4 w-4 text-theme-primary" />
-                  <span className="text-xs font-black">UPI / Cards / NetBanking</span>
+                  <span className="text-xs font-black">Pay Online</span>
                 </div>
-                <span className="text-[11px] font-medium text-theme-text-muted">Online via Razorpay</span>
+                <span className="text-[11px] font-medium text-theme-text-muted">
+                  UPI / Cards / NetBanking
+                </span>
               </button>
 
+              {/* Order via WhatsApp */}
               <button
                 type="button"
-                onClick={() => setPaymentMethod("COD")}
-                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[64px] ${paymentMethod === "COD"
-                  ? "border-theme-primary bg-theme-surface-alt font-bold text-theme-primary shadow-xs ring-1 ring-theme-primary"
+                onClick={() => setPaymentMethod("WHATSAPP")}
+                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[72px] ${paymentMethod === "WHATSAPP"
+                  ? "border-emerald-600 bg-emerald-50/80 font-bold text-emerald-800 shadow-xs ring-1 ring-emerald-600"
                   : "border-theme-border bg-theme-surface text-theme-text-subtle hover:bg-theme-surface-warm"
                   }`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <Truck className="h-4 w-4 text-theme-secondary" />
-                  <span className="text-xs font-black">Cash on Delivery</span>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Image
+                    src={ICONS.whatsapp}
+                    alt="WhatsApp"
+                    width={18}
+                    height={18}
+                    className="inline-block"
+                  />
+                  <span className="text-xs font-black text-emerald-800">Order on WhatsApp</span>
                 </div>
-                <span className="text-[11px] font-medium text-theme-text-muted">Pay upon delivery</span>
+                <span className="text-[11px] font-medium text-theme-text-muted">
+                  Instant Chat & Confirm
+                </span>
+              </button>
+
+              {/* Order via Call */}
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("CALL")}
+                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[72px] ${paymentMethod === "CALL"
+                  ? "border-blue-600 bg-blue-50/80 font-bold text-blue-800 shadow-xs ring-1 ring-blue-600"
+                  : "border-theme-border bg-theme-surface text-theme-text-subtle hover:bg-theme-surface-warm"
+                  }`}
+              >
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Phone className="h-4 w-4 text-blue-600" />
+                  <span className="text-xs font-black text-blue-800">Order by Call</span>
+                </div>
+                <span className="text-[11px] font-medium text-theme-text-muted">
+                  +91 94861 50579
+                </span>
               </button>
             </div>
 
-
-            {/* {(paymentMethod === "CARD" || paymentMethod === "UPI") && (
-              <div className="rounded-xl border border-theme-border-subtle bg-theme-surface-alt/60 p-4 sm:p-5 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-xs font-bold text-theme-text-primary">
-                      Official Razorpay Payment Gateway
-                    </h3>
-                    <p className="text-[11px] text-theme-text-subtle mt-0.5">
-                      Fast, safe, and encrypted payment with instant order confirmation.
-                    </p>
-                  </div>
-                  <span className="rounded bg-white border border-theme-border px-2 py-0.5 text-[10px] font-bold text-theme-text-secondary shadow-2xs">
-                    256-bit SSL
+            {/* Explanatory banner based on selected option */}
+            {paymentMethod === "CARD" && (
+              <div className="rounded-xl border border-theme-border-subtle bg-theme-surface-alt/60 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-theme-text-primary flex items-center gap-1.5">
+                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                    Razorpay 256-Bit SSL Secured Payment
+                  </h3>
+                  <span className="text-[10px] bg-white border border-theme-border rounded px-2 py-0.5 font-bold text-theme-text-muted">
+                    Instant Confirmation
                   </span>
                 </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                  <div className="rounded-lg bg-white border border-theme-border/80 px-2.5 py-2 text-center shadow-2xs">
-                    <span className="text-[11px] font-bold text-theme-text-primary block">UPI</span>
-                    <span className="text-[10px] text-theme-text-muted">GPay, PhonePe, Paytm</span>
-                  </div>
-                  <div className="rounded-lg bg-white border border-theme-border/80 px-2.5 py-2 text-center shadow-2xs">
-                    <span className="text-[11px] font-bold text-theme-text-primary block">Cards</span>
-                    <span className="text-[10px] text-theme-text-muted">Visa, Master, RuPay</span>
-                  </div>
-                  <div className="rounded-lg bg-white border border-theme-border/80 px-2.5 py-2 text-center shadow-2xs">
-                    <span className="text-[11px] font-bold text-theme-text-primary block">Net Banking</span>
-                    <span className="text-[10px] text-theme-text-muted">All major Indian banks</span>
-                  </div>
-                  <div className="rounded-lg bg-white border border-theme-border/80 px-2.5 py-2 text-center shadow-2xs">
-                    <span className="text-[11px] font-bold text-theme-text-primary block">Wallets</span>
-                    <span className="text-[10px] text-theme-text-muted">Amazon Pay & more</span>
-                  </div>
-                </div>
-
-                <div className="text-[11px] text-theme-text-subtle bg-white/90 border border-theme-border rounded-xl p-3 flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>
-                    Clicking <strong>&ldquo;Pay {formatPrice(grandTotal)} via Razorpay&rdquo;</strong> will open the secure checkout dialog where you can complete payment seamlessly.
-                  </span>
-                </div>
-              </div>
-            )} */}
-
-            {paymentMethod === "COD" && (
-              <div className="rounded-xl border border-theme-border-subtle bg-theme-surface-alt/60 p-4 sm:p-5 space-y-2">
-                <p className="text-xs font-bold text-theme-text-primary">
-                  Pay with Cash upon Doorstep Delivery
-                </p>
                 <p className="text-[11px] text-theme-text-subtle leading-relaxed">
-                  Please keep exact change ready upon delivery. Our delivery partner will verify and hand over your fresh package with a receipt.
+                  Support all UPI apps (GPay, PhonePe, Paytm), Debit/Credit Cards & NetBanking. Instant automated confirmation.
                 </p>
               </div>
             )}
-          </div>
 
+            {paymentMethod === "WHATSAPP" && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 space-y-3">
+                <div>
+                  <h3 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                    <Image src={ICONS.whatsapp} alt="WhatsApp" width={16} height={16} />
+                    Order Directly on WhatsApp
+                  </h3>
+                  <p className="text-[11px] text-emerald-800 mt-1 leading-relaxed">
+                    Clicking below will format your order details, selected courier ({courierType === "mss" ? "MSS" : "ST Courier"}), and delivery address into a message and open WhatsApp (+91 86673 80899).
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleOrderByWhatsApp}
+                  className="w-full min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2"
+                >
+                  <Image src={ICONS.whatsapp} alt="WhatsApp" width={16} height={16} className="brightness-200" />
+                  Send Order to WhatsApp (+91 86673 80899)
+                </Button>
+              </div>
+            )}
+
+            {paymentMethod === "CALL" && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 space-y-3">
+                <div>
+                  <h3 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                    <Phone className="h-4 w-4 text-blue-600" />
+                    Place Order by Phone Call
+                  </h3>
+                  <p className="text-[11px] text-blue-800 mt-1 leading-relaxed">
+                    Prefer phone ordering? Tap below to call our support team (+91 94861 50579) directly. We will take your order and guide you.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleOrderByCall}
+                  className="w-full min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2"
+                >
+                  <Phone className="h-4 w-4" />
+                  Call Now (+91 94861 50579)
+                </Button>
+              </div>
+            )}
+          </div>
 
           {/* 4. Delivery Instructions */}
           <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-xs p-5 sm:p-6">
@@ -1396,16 +1490,12 @@ export default function CheckoutPage() {
                 )}
 
                 <div className="flex justify-between text-theme-text-subtle items-center">
-                  <span>Shipping & Handling</span>
-                  {shippingCharge === 0 ? (
-                    <span className="rounded bg-theme-status-del-bg px-2 py-0.5 text-[10px] font-bold text-theme-status-del-fg">
-                      FREE
-                    </span>
-                  ) : (
-                    <span className="font-semibold text-theme-text-primary">
-                      {formatPrice(shippingCharge)}
-                    </span>
-                  )}
+                  <span>
+                    Shipping ({courierType === "mss" ? "MSS Courier" : "ST Courier"})
+                  </span>
+                  <span className="font-semibold text-theme-text-primary">
+                    {formatPrice(shippingCharge)}
+                  </span>
                 </div>
 
                 <div className="border-t border-theme-border pt-3 flex justify-between items-baseline">
@@ -1436,10 +1526,14 @@ export default function CheckoutPage() {
                   !effectiveAddressId
                 }
                 className={cn(
-                  "w-full min-h-[48px] rounded-xl font-bold text-sm shadow-md transition-all",
+                  "w-full min-h-[48px] rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2",
                   isAdminUser
                     ? "bg-neutral-200 text-neutral-500 cursor-not-allowed border border-neutral-300 shadow-none hover:bg-neutral-200"
-                    : "bg-theme-primary hover:bg-theme-primary-hover text-white disabled:opacity-50"
+                    : paymentMethod === "WHATSAPP"
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      : paymentMethod === "CALL"
+                        ? "bg-blue-600 hover:bg-blue-700 text-white"
+                        : "bg-theme-primary hover:bg-theme-primary-hover text-white disabled:opacity-50"
                 )}
               >
                 {isAdminUser ? (
@@ -1454,15 +1548,15 @@ export default function CheckoutPage() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Opening Payment Gateway...
                   </>
-                ) : createOrderMutation.isPending ? (
+                ) : paymentMethod === "WHATSAPP" ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Placing Your Order...
+
+                    Order via WhatsApp ({formatPrice(grandTotal)})
                   </>
-                ) : paymentMethod === "COD" ? (
+                ) : paymentMethod === "CALL" ? (
                   <>
-                    <Truck className="mr-2 h-4 w-4" />
-                    Confirm COD Order ({formatPrice(grandTotal)})
+                    <Phone className="mr-2 h-4 w-4" />
+                    Call to Order ({formatPrice(grandTotal)})
                   </>
                 ) : (
                   <>
