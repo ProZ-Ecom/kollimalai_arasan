@@ -88,15 +88,15 @@ export const contacts = [
     id: 1,
     icon: ICONS.call,
     title: "Call",
-    value: "+91 94861 50579",
-    link: "tel:+919486150579",
+    value: "+91 7418188950",
+    link: "tel:+91 7418188950",
   },
   {
     id: 2,
     icon: ICONS.whatsapp,
     title: "WhatsApp",
-    value: "+91 86673 80899",
-    link: "https://wa.me/918667380899",
+    value: "+91 73388 80950",
+    link: "https://wa.me/917338880950",
   },
   {
     id: 3,
@@ -119,7 +119,7 @@ export const footerSocialIcons: FooterSocialIcon[] = [
   { id: 1, icon: ICONS.facebook, name: "facebook", href: "https://www.facebook.com/share/18fDBEXh18/" },
   { id: 2, icon: ICONS.instagram, name: "instagram", href: "#" },
   { id: 3, icon: ICONS.youtube, name: "youtube", href: "https://youtube.com/@kollimalaiarasan?si=CMvlWG_zegPDyt5O" },
-  { id: 4, icon: ICONS.whatsapp1, name: "whatsapp", href: "https://wa.me/918667380899" },
+  { id: 4, icon: ICONS.whatsapp1, name: "whatsapp", href: "https://wa.me/+917338880950" },
 ];
 
 export const readyToAssist = [
@@ -205,12 +205,12 @@ export interface StorefrontUnitPrice {
 
 /**
  * A single storefront item card. This corresponds to one ProductVariant
- * (e.g. "Mango Mysore Pak"), which can have any number of independently
+ * (e.g. "Pure Wild Honey"), which can have any number of independently
  * priced pack sizes (unitPrices) - not a fixed 50g/100g pair.
  */
 export interface StorefrontProduct {
   id: string; // ProductVariant UUID (item-level)
-  productId: string; // Parent Product UUID (e.g. "Mysore Paks")
+  productId: string; // Parent Product UUID (e.g. "Natural Honey")
   name: string;
   image: string;
   outOfStock?: boolean;

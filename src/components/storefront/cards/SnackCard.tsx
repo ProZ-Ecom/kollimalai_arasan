@@ -20,7 +20,7 @@ export interface SnackCardVariant {
 export interface SnackCardProps {
   /** Optional ID or UUID of the product */
   id?: string;
-  /** Title / Name of the snack (e.g. "THENKUZHAL MURUKKU") */
+  /** Title / Name of the product (e.g. "Pure Wild Honey") */
   name?: string;
   /** Subtitle (e.g. Product or Category name) */
   subtitle?: string;
@@ -128,7 +128,7 @@ export function SnackCard({
 }: SnackCardProps) {
   // If product prop is supplied, derive fields from it
   const resolvedId = id || product?.productId || product?.id || "";
-  const resolvedName = name || product?.name || "Traditional Snack";
+  const resolvedName = name || product?.name || "Natural Product";
   const resolvedImage = image || product?.image || "";
   const resolvedHref = href || (resolvedId ? `/products/${resolvedId}` : "#");
 

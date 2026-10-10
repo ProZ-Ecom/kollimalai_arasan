@@ -75,7 +75,7 @@ export function BlogForm({
           <FormInput
             name="title"
             label="Blog Title"
-            placeholder="Enter blog title"
+            placeholder="e.g. Health Benefits of Pure Kolli Hills Wild Honey"
             required
             description="The main title for your article"
           />

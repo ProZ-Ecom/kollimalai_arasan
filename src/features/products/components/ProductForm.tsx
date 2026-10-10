@@ -267,7 +267,7 @@ function ProductForm({
                     <div className="flex items-start gap-2">
                       <Info className="h-4 w-4 text-[var(--color-secondary-600)] shrink-0 mt-0.5" />
                       <p className="leading-relaxed text-[var(--color-neutral-800)]">
-                        Enter product code (special characters allowed, e.g. BANANA_CHIPS). Category code prefix is automatically applied.
+                        Enter product code (special characters allowed, e.g. BLACK_PEPPER). Category code prefix is automatically applied.
                       </p>
                     </div>
                     <button

@@ -282,7 +282,7 @@ export function BannerForm({
               name="title"
               label="Title"
               required
-              placeholder="e.g. Diwali Special Offer"
+              placeholder="e.g. Kolli Hills Fresh Harvest Special"
               description="Shown in the admin list and as image alt text."
               maxLength={150}
             />

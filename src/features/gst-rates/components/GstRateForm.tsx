@@ -69,7 +69,7 @@ export function GstRateForm({
         <FormInput
           name="name"
           label="GST Rate Name"
-          placeholder="GST 18 Percent Standard"
+          placeholder="e.g. GST 5% (Spices & Natural Foods)"
           required
         />
 
