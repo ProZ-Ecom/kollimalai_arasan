@@ -20,6 +20,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
+import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 import { formatDateTime, formatPrice } from "@/lib/utils";
 import {
   useStaffDeliveries,
@@ -45,6 +46,14 @@ export function StaffDeliveryListTable({
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
+
+  const handleClearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setPage(1);
+  };
+
+  const hasActiveFilters = search.trim() !== "" || statusFilter !== "all";
 
   const [viewShipmentId, setViewShipmentId] = useState<string | null>(null);
   const [deliverShipment, setDeliverShipment] = useState<{
@@ -357,8 +366,8 @@ export function StaffDeliveryListTable({
       />
 
       {/* Tabs & Filter Toolbar */}
-      <div className="mt-1 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-1 items-center gap-2">
+      <div className="flex-shrink-0 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
           <SearchInput
             placeholder="Search by order #, customer, phone, city..."
             value={search}
@@ -366,24 +375,13 @@ export function StaffDeliveryListTable({
               setSearch(val.trim());
               setPage(1);
             }}
-            className="w-full max-w-md bg-cream-50 border-cream-border-subtle"
+            className="w-full max-w-md"
           />
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="h-10 px-2.5 rounded-xl border-cream-border bg-white hover:bg-cream-100 cursor-pointer shrink-0"
-            title="Refresh list"
-          >
-            <RotateCcw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
-          </Button>
+          {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} />}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          
-
+        <div className="flex items-center gap-2.5 flex-wrap">
           {/* Status Tabs */}
           <div className="flex items-center gap-2 overflow-x-auto">
             <DeliveryStatusTabs
@@ -392,11 +390,21 @@ export function StaffDeliveryListTable({
               counts={tabCounts}
             />
           </div>
+
+          <Button
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="h-11 px-3.5 rounded-xl border-cream-border bg-white hover:bg-cream-100 text-neutral-700 cursor-pointer shrink-0"
+            title="Refresh list"
+          >
+            <RotateCcw className={`h-4 w-4 ${isFetching ? "animate-spin text-secondary-600" : ""}`} />
+          </Button>
         </div>
       </div>
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col mt-1">
+      <div className="mt-3 sm:mt-5 flex-1 min-h-0 flex flex-col">
         <DataTable
           columns={columns}
           data={displayedDeliveries}

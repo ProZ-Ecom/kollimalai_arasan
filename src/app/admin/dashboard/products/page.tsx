@@ -15,8 +15,12 @@ import { useCategories } from "@/features/categories/hooks";
 import { useBrands } from "@/features/brands/hooks";
 import { useHsnCodes } from "@/features/hsn-codes/hooks";
 import { useInfiniteCategoriesSelect } from "@/hooks/use-infinite-select";
+import { getAdminProducts } from "@/features/products/api/get-products";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { exportToExcel, exportProductsMatrixToExcel } from "@/lib/excel-export";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { toast } from "@/components/ui/Toast";
 import {
   AdminPageHeader,
@@ -334,13 +338,44 @@ export default function AdminProductsPage() {
               {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} />}
             </div>
 
-            <Button
-              onClick={() => setIsCreateOpen(true)}
-              className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)]"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <ExportExcelButton
+                data={products}
+                fetchData={async () => {
+                  try {
+                    const res = await getAdminProducts({
+                      page: 1,
+                      limit: 10000,
+                      search: search || undefined,
+                      categoryId: selectedCategoryFilter || undefined,
+                    });
+                    return res?.data ?? products;
+                  } catch (e) {
+                    console.warn("fetchData failed, falling back to page products:", e);
+                    return products;
+                  }
+                }}
+                totalCount={data?.meta?.total ?? products.length}
+                filename="products_catalog"
+                sheetName="Products"
+                columns={EXPORT_PRESETS.products}
+                onCustomExport={(itemsToExport) => {
+                  exportProductsMatrixToExcel({
+                    filename: "products_catalog",
+                    sheetName: "Products",
+                    products: itemsToExport,
+                  });
+                }}
+              />
+
+              <Button
+                onClick={() => setIsCreateOpen(true)}
+                className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] shadow-xs"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </div>
           </div>
 
           <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
@@ -351,6 +386,13 @@ export default function AdminProductsPage() {
               onClearSelection={() => {
                 setSelectedRowIds({});
                 setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportProductsMatrixToExcel({
+                  filename: "selected_products_catalog",
+                  sheetName: "Selected Products",
+                  products: selectedRows,
+                });
               }}
               onDelete={() => setIsBulkDeleteOpen(true)}
               isDeleting={bulkDeleteMutation.isPending}

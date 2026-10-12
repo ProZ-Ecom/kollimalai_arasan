@@ -2,6 +2,7 @@ import crypto from "crypto";
 import * as XLSX from "xlsx";
 import { db } from "@/lib/db/prisma";
 import { slugify, formatTitleCase } from "@/lib/utils";
+import { handlePrismaError, extractPrismaDuplicateDetails, ApiError } from "@/lib/api/api-error";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,12 +19,15 @@ export interface ImportPreviewItem {
   categoryName: string;
   productName: string;
   sku: string;
+  brand?: string;
   variants: {
     variantName: string;
+    itemCode?: string;
     unit: string;
     unitValue: number;
     variantSku: string;
     price: number;
+    salePrice?: number;
     stockQty: number;
     isDefault: boolean;
   }[];
@@ -45,15 +49,22 @@ interface RawCategoryRow {
   category_name?: string;
   name?: string;
   category?: string;
+  category_code?: string;
+  category_slug?: string;
+  slug?: string;
   parent_category?: string;
   parent?: string;
   description?: string;
+  category_description?: string;
   sort_order?: number | string;
 }
 
 interface RawProductRow {
   category_name?: string;
   category?: string;
+  category_code?: string;
+  category_slug?: string;
+  category_description?: string;
   product_name?: string;
   name?: string;
   product?: string;
@@ -81,6 +92,19 @@ interface RawItemRow {
   name?: string;
   variant_name?: string;
   variant?: string;
+  item_code?: string;
+  item_slug?: string;
+  variant_code?: string;
+  variant_slug?: string;
+  short_description?: string;
+  short_desc?: string;
+  description?: string;
+  item_description?: string;
+  product_description?: string;
+  video_url?: string;
+  video?: string;
+  is_featured?: string | boolean;
+  featured?: string | boolean;
   unit?: string;
   unit_code?: string;
   measurement_unit?: string;
@@ -89,13 +113,13 @@ interface RawItemRow {
   pack_size?: number | string;
   size?: number | string;
   item_sku?: string;
-  item_code?: string;
   variant_sku?: string;
   price?: number | string;
   base_price?: number | string;
   unit_price?: number | string;
   rate?: number | string;
   sale_price?: number | string;
+  offer_price?: number | string;
   stock_qty?: number | string;
   stock?: number | string;
   quantity?: number | string;
@@ -103,8 +127,8 @@ interface RawItemRow {
   reorder_level?: number | string;
   reorder_qty?: number | string;
   min_stock?: number | string;
-  is_default?: string;
-  default?: string;
+  is_default?: string | boolean;
+  default?: string | boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -138,9 +162,10 @@ function makeUniqueSlug(base: string, existing: Set<string>): string {
   if (!slug) slug = "item";
   let attempt = slug;
   let i = 2;
-  while (existing.has(attempt)) {
+  while (existing.has(attempt.toLowerCase()) || existing.has(attempt)) {
     attempt = `${slug}-${i++}`;
   }
+  existing.add(attempt.toLowerCase());
   existing.add(attempt);
   return attempt;
 }
@@ -181,42 +206,86 @@ export const bulkImportService = {
     const validUnitList = dbUnits.map((u) => u.code).join(", ");
 
     const categoryMap = new Map<string, bigint>(); // name (lower) → DB id
+    const categorySlugMap = new Map<string, { id: bigint; name: string }>(); // slug (lower) → DB info
     const usedCatSlugs = new Set<string>();
+    // Query ALL categories (including soft-deleted) to prevent unique slug collisions in MariaDB
     const existingCats = await db.productCategory.findMany({
-      where: { deleted_at: null },
-      select: { id: true, name: true, slug: true },
+      select: { id: true, name: true, slug: true, deleted_at: true },
     });
     for (const cat of existingCats) {
-      categoryMap.set(cat.name.toLowerCase(), cat.id);
+      usedCatSlugs.add(cat.slug.toLowerCase());
       usedCatSlugs.add(cat.slug);
+      if (!cat.deleted_at) {
+        categoryMap.set(cat.name.toLowerCase(), cat.id);
+        categorySlugMap.set(cat.slug.toLowerCase(), { id: cat.id, name: cat.name });
+      }
     }
 
     const existingProductSkus = new Set<string>();
     const usedProdSlugs = new Set<string>();
+    // Query ALL products (including soft-deleted) to avoid unique slug and SKU collisions
     const existingProducts = await db.product.findMany({
-      where: { deleted_at: null },
-      select: { id: true, sku: true, slug: true },
+      select: { id: true, sku: true, slug: true, deleted_at: true },
     });
     for (const p of existingProducts) {
-      if (p.sku) existingProductSkus.add(p.sku.toUpperCase());
-      usedProdSlugs.add(p.slug);
+      if (p.sku) {
+        existingProductSkus.add(p.sku.toUpperCase());
+        existingProductSkus.add(p.sku);
+      }
+      if (p.slug) {
+        usedProdSlugs.add(p.slug.toLowerCase());
+        usedProdSlugs.add(p.slug);
+      }
     }
 
     const existingVariantSkus = new Set<string>();
     const usedVarSlugs = new Set<string>();
+    // Query ALL variants (including soft-deleted) to avoid unique variant slug collisions
     const existingVariants = await db.productVariant.findMany({
-      where: { deleted_at: null },
       select: { slug: true },
     });
     for (const v of existingVariants) {
-      if (v.slug) usedVarSlugs.add(v.slug);
+      if (v.slug) {
+        usedVarSlugs.add(v.slug.toLowerCase());
+        usedVarSlugs.add(v.slug);
+      }
     }
 
     const existingUnitPrices = await db.variantUnitPrice.findMany({
       select: { sku: true },
     });
     for (const v of existingUnitPrices) {
-      existingVariantSkus.add(v.sku.toUpperCase());
+      if (v.sku) {
+        existingVariantSkus.add(v.sku.toUpperCase());
+        existingVariantSkus.add(v.sku);
+      }
+    }
+
+    // Pre-cache ALL brands (including soft-deleted for slugs)
+    const existingBrands = await db.productBrand.findMany({
+      select: { id: true, name: true, slug: true, deleted_at: true },
+    });
+    const brandMap = new Map<string, bigint>();
+    const usedBrandSlugs = new Set<string>();
+    for (const b of existingBrands) {
+      if (!b.deleted_at) {
+        brandMap.set(b.name.toLowerCase(), b.id);
+        brandMap.set(b.slug.toLowerCase(), b.id);
+      }
+      usedBrandSlugs.add(b.slug.toLowerCase());
+      usedBrandSlugs.add(b.slug);
+    }
+    const defaultBrandId =
+      existingBrands.find((b) => !b.deleted_at)?.id ?? existingBrands[0]?.id ?? null;
+
+    // Pre-cache ALL HSN codes (fetch all to prevent duplicate key insertion)
+    const existingHsns = await db.product_hsn_codes.findMany({
+      select: { id: true, code: true },
+    });
+    const hsnMap = new Map<string, bigint>();
+    for (const h of existingHsns) {
+      hsnMap.set(h.code.toLowerCase(), h.id);
+      hsnMap.set(h.code.toUpperCase(), h.id);
     }
 
     const rejected: ImportRowResult[] = [];
@@ -237,10 +306,16 @@ export const bulkImportService = {
     type ValidVariantItem = {
       productSku: string;
       variantName: string;
+      itemCode?: string;
+      shortDescription?: string;
+      description?: string;
+      videoUrl?: string;
+      isFeatured: boolean;
       unit: string;
       unitValue: number;
       variantSku: string;
       price: number;
+      salePrice?: number;
       stockQty: number;
       reorderLevel: number;
       isDefault: boolean;
@@ -251,9 +326,10 @@ export const bulkImportService = {
       name: string;
       slug: string;
       categoryName: string;
+      categoryCode?: string;
+      categoryDesc?: string;
       basePrice: number;
       salePrice?: number;
-      description?: string;
       brand?: string;
       hsnCode?: string;
       variants: ValidVariantItem[];
@@ -289,13 +365,21 @@ export const bulkImportService = {
       const seenVarUnitValue = new Set<string>();
       const invalidProductSkus = new Set<string>();
 
+      // Inheritance trackers
       let lastProductSku = "";
       let lastProductName = "";
       let lastCategory = "";
-      let lastProductDesc = "";
+      let lastCatCode = "";
+      let lastCatDesc = "";
       let lastBrand = "";
       let lastHsn = "";
+
       let lastItemName = "";
+      let lastItemCode = "";
+      let lastShortDesc = "";
+      let lastItemDesc = "";
+      let lastVideoUrl = "";
+      let lastIsFeatured = "";
 
       for (let idx = 0; idx < rawRows.length; idx++) {
         const rawRow = rawRows[idx];
@@ -308,18 +392,42 @@ export const bulkImportService = {
 
         const row = normalizeRowKeys(rawRow);
 
-        // ── Extract Raw Fields (item_name & item_sku supported as primary) ──
+        // ── Extract Raw Fields (Aligned with Form Modals) ──
+        // 1. Category Form Fields
         const rawCategory = safeStr(row.category || row.category_name);
+        const rawCatCode = safeStr(
+          row.category_code || row.category_slug || row.cat_code || row.category_sku
+        );
+        const rawCatDesc = safeStr(
+          row.category_description || row.cat_desc
+        );
+
+        // 2. Product Form Fields
         const rawProdName = safeStr(row.product_name || row.product || row.name);
-        const rawProdSku = safeStr(row.product_sku || row.product_code || row.prod_sku).toUpperCase();
-        const rawProdDesc = safeStr(row.product_description || row.description);
+        const rawProdSku = safeStr(
+          row.product_sku || row.product_code || row.prod_sku || row.sku
+        ).toUpperCase();
         const rawBrand = safeStr(row.brand || row.brand_name);
         const rawHsn = safeStr(row.hsn_code || row.hsn);
 
+        // 3. Item (Variant) Form Fields
         const rawItemName = safeStr(
-          row.item_name || row.item || row.variant_name || row.variant || row.name
+          row.item_name || row.item || row.variant_name || row.variant
         );
-        const rawUnit = safeStr(row.unit || row.unit_code || row.measurement_unit || row.uom);
+        const rawItemCode = safeStr(
+          row.item_code || row.item_slug || row.variant_code || row.variant_slug
+        );
+        const rawShortDesc = safeStr(row.short_description || row.short_desc);
+        const rawItemDesc = safeStr(
+          row.item_description || row.product_description || row.description
+        );
+        const rawIsFeatured = safeStr(row.is_featured || row.featured);
+        const rawVideoUrl = safeStr(row.video_url || row.video);
+
+        // 4. Pack Size, Pricing & Inventory Fields
+        const rawUnit = safeStr(
+          row.unit || row.unit_code || row.measurement_unit || row.uom
+        );
         const rawUnitVal =
           row.unit_value !== "" && row.unit_value !== undefined
             ? row.unit_value
@@ -330,7 +438,7 @@ export const bulkImportService = {
             : "";
 
         const rawItemSku = safeStr(
-          row.item_sku || row.item_code || row.variant_sku || row.sku
+          row.item_sku || row.variant_sku || (row.sku && row.sku !== row.product_sku ? row.sku : "")
         ).toUpperCase();
 
         const rawPrice =
@@ -377,34 +485,43 @@ export const bulkImportService = {
         let currentProdSku = "";
         let currentProdName = "";
         let currentCategory = "";
-        let currentProdDesc = "";
+        let currentCatCode = "";
+        let currentCatDesc = "";
         let currentBrand = "";
         let currentHsn = "";
-        let currentItemName = "";
 
         if (rawProdSku) {
           if (rawProdSku !== lastProductSku) {
             // New product encounter
             currentProdSku = rawProdSku;
-            currentProdName = rawProdName; // Do not fall back to SKU - let validation catch missing name
-            currentCategory = rawCategory; // New product must specify its own category
-            currentProdDesc = rawProdDesc;
+            currentProdName = rawProdName;
+            currentCategory = rawCategory;
+            currentCatCode = rawCatCode;
+            currentCatDesc = rawCatDesc;
             currentBrand = rawBrand;
             currentHsn = rawHsn;
 
             lastProductSku = currentProdSku;
             lastProductName = currentProdName;
             lastCategory = currentCategory;
-            lastProductDesc = currentProdDesc;
+            lastCatCode = currentCatCode;
+            lastCatDesc = currentCatDesc;
             lastBrand = currentBrand;
             lastHsn = currentHsn;
+
             lastItemName = "";
+            lastItemCode = "";
+            lastShortDesc = "";
+            lastItemDesc = "";
+            lastVideoUrl = "";
+            lastIsFeatured = "";
           } else {
             // Continuation of same product
             currentProdSku = rawProdSku;
             currentProdName = rawProdName || lastProductName;
             currentCategory = rawCategory || lastCategory;
-            currentProdDesc = rawProdDesc || lastProductDesc;
+            currentCatCode = rawCatCode || lastCatCode;
+            currentCatDesc = rawCatDesc || lastCatDesc;
             currentBrand = rawBrand || lastBrand;
             currentHsn = rawHsn || lastHsn;
           }
@@ -413,7 +530,8 @@ export const bulkImportService = {
           currentProdSku = lastProductSku;
           currentProdName = rawProdName || lastProductName;
           currentCategory = rawCategory || lastCategory;
-          currentProdDesc = rawProdDesc || lastProductDesc;
+          currentCatCode = rawCatCode || lastCatCode;
+          currentCatDesc = rawCatDesc || lastCatDesc;
           currentBrand = rawBrand || lastBrand;
           currentHsn = rawHsn || lastHsn;
         } else {
@@ -421,45 +539,103 @@ export const bulkImportService = {
           currentProdSku = "";
           currentProdName = rawProdName;
           currentCategory = rawCategory;
-          currentProdDesc = rawProdDesc;
+          currentCatCode = rawCatCode;
+          currentCatDesc = rawCatDesc;
           currentBrand = rawBrand;
           currentHsn = rawHsn;
         }
 
+        // Handle item-level inheritance
+        let currentItemName = "";
+        let currentItemCode = "";
+        let currentShortDesc = "";
+        let currentItemDesc = "";
+        let currentVideoUrl = "";
+        let currentIsFeatured = "";
+
         if (rawItemName) {
-          currentItemName = rawItemName;
-          lastItemName = currentItemName;
+          if (rawItemName !== lastItemName) {
+            currentItemName = rawItemName;
+            currentItemCode = rawItemCode;
+            currentShortDesc = rawShortDesc;
+            currentItemDesc = rawItemDesc;
+            currentVideoUrl = rawVideoUrl;
+            currentIsFeatured = rawIsFeatured;
+
+            lastItemName = currentItemName;
+            lastItemCode = currentItemCode;
+            lastShortDesc = currentShortDesc;
+            lastItemDesc = currentItemDesc;
+            lastVideoUrl = currentVideoUrl;
+            lastIsFeatured = currentIsFeatured;
+          } else {
+            currentItemName = rawItemName;
+            currentItemCode = rawItemCode || lastItemCode;
+            currentShortDesc = rawShortDesc || lastShortDesc;
+            currentItemDesc = rawItemDesc || lastItemDesc;
+            currentVideoUrl = rawVideoUrl || lastVideoUrl;
+            currentIsFeatured = rawIsFeatured || lastIsFeatured;
+          }
         } else if (lastItemName) {
           currentItemName = lastItemName;
+          currentItemCode = rawItemCode || lastItemCode;
+          currentShortDesc = rawShortDesc || lastShortDesc;
+          currentItemDesc = rawItemDesc || lastItemDesc;
+          currentVideoUrl = rawVideoUrl || lastVideoUrl;
+          currentIsFeatured = rawIsFeatured || lastIsFeatured;
         } else {
           currentItemName = "";
+          currentItemCode = rawItemCode;
+          currentShortDesc = rawShortDesc;
+          currentItemDesc = rawItemDesc;
+          currentVideoUrl = rawVideoUrl;
+          currentIsFeatured = rawIsFeatured;
         }
 
         // ── Comprehensive Field Validations (Exact Form Modal Rules) ──
         const rowErrors: string[] = [];
 
-        // 1. Category Field Validation
-        if (!currentCategory) {
+        // 1. Category Field Validation (Both Category Name and Category Code are required in form)
+        if (!rawCategory) {
           rowErrors.push("Category is required");
-        } else if (currentCategory.length > 150) {
+        } else if (rawCategory.length > 150) {
           rowErrors.push("Category name cannot exceed 150 characters");
         }
 
-        // 2. Product Field Validation
-        if (!currentProdName) {
+        if (!rawCatCode) {
+          rowErrors.push("Category code is required");
+        } else if (rawCatCode.length > 170) {
+          rowErrors.push("Category code cannot exceed 170 characters");
+        } else if (!/^[A-Za-z0-9_]+$/.test(rawCatCode)) {
+          rowErrors.push(
+            "Category code can only contain letters, numbers, and underscores (no spaces)"
+          );
+        } else if (
+          categorySlugMap.has(rawCatCode.toLowerCase()) &&
+          rawCategory &&
+          categorySlugMap.get(rawCatCode.toLowerCase())!.name.toLowerCase() !== rawCategory.toLowerCase()
+        ) {
+          const conflict = categorySlugMap.get(rawCatCode.toLowerCase())!;
+          rowErrors.push(
+            `Category code "${rawCatCode}" already exists for category "${conflict.name}" in database`
+          );
+        }
+
+        if (currentCatDesc && currentCatDesc.length > 2000) {
+          rowErrors.push("Category description cannot exceed 2000 characters");
+        }
+
+        // 2. Product Field Validation (Both Product Name and Product SKU are required in form)
+        if (!rawProdName) {
           rowErrors.push("Product name is required");
-        } else if (currentProdName.length > 100) {
+        } else if (rawProdName.length > 100) {
           rowErrors.push("Product name cannot exceed 100 characters");
         }
 
-        if (!currentProdSku) {
+        if (!rawProdSku) {
           rowErrors.push("Product SKU is required");
-        } else if (currentProdSku.length > 100) {
+        } else if (rawProdSku.length > 100) {
           rowErrors.push("Product SKU cannot exceed 100 characters");
-        }
-
-        if (currentProdDesc && currentProdDesc.length > 5000) {
-          rowErrors.push("Product description cannot exceed 5000 characters");
         }
 
         if (currentBrand && currentBrand.length > 100) {
@@ -472,22 +648,40 @@ export const bulkImportService = {
 
         // Check product SKU in DB / duplicates if newly seen
         const isFirstProductOccurrence =
-          currentProdSku && !seenProdSkus.has(currentProdSku);
+          rawProdSku && !seenProdSkus.has(rawProdSku);
         if (isFirstProductOccurrence) {
-          if (existingProductSkus.has(currentProdSku)) {
-            rowErrors.push(`Product SKU "${currentProdSku}" already exists in database`);
+          if (existingProductSkus.has(rawProdSku)) {
+            rowErrors.push(`Product SKU "${rawProdSku}" already exists in database`);
           }
         }
 
-        if (currentProdSku && invalidProductSkus.has(currentProdSku)) {
-          rowErrors.push(`Product "${currentProdSku}" has validation errors`);
+        if (rawProdSku && invalidProductSkus.has(rawProdSku)) {
+          rowErrors.push(`Product "${rawProdSku}" has validation errors`);
         }
 
-        // 3. Item Name Field Validation
-        if (!currentItemName) {
+        // 3. Item (Variant) Field Validation (Both Item Name and Item Code are required in form)
+        if (!rawItemName) {
           rowErrors.push("Item name is required");
-        } else if (currentItemName.length > 100) {
+        } else if (rawItemName.length > 100) {
           rowErrors.push("Item name cannot exceed 100 characters");
+        }
+
+        if (!rawItemCode) {
+          rowErrors.push("Item code is required");
+        } else if (rawItemCode.length > 255) {
+          rowErrors.push("Item code cannot exceed 255 characters");
+        }
+
+        if (currentShortDesc && currentShortDesc.length > 500) {
+          rowErrors.push("Short description cannot exceed 500 characters");
+        }
+
+        if (currentItemDesc && currentItemDesc.length > 5000) {
+          rowErrors.push("Item description cannot exceed 5000 characters");
+        }
+
+        if (currentVideoUrl && currentVideoUrl.length > 500) {
+          rowErrors.push("Video URL cannot exceed 500 characters");
         }
 
         // 4. Pack Size & Pricing Validation
@@ -644,10 +838,15 @@ export const bulkImportService = {
         if (!seenCatNames.has(catName.toLowerCase())) {
           seenCatNames.add(catName.toLowerCase());
           if (!categoryMap.has(catName.toLowerCase())) {
+            const catSlugToUse = currentCatCode
+              ? makeUniqueSlug(currentCatCode.toUpperCase(), usedCatSlugs)
+              : makeUniqueSlug(catName, usedCatSlugs);
+
             validCatsToCreate.push({
               name: catName,
-              slug: makeUniqueSlug(catName, usedCatSlugs),
+              slug: catSlugToUse,
               parentName: parentCat,
+              description: currentCatDesc || undefined,
               sortOrder: validCatsToCreate.length + 1,
             });
           }
@@ -661,9 +860,10 @@ export const bulkImportService = {
             name: formattedProdName,
             slug: makeUniqueSlug(formattedProdName, usedProdSlugs),
             categoryName: catName,
+            categoryCode: currentCatCode || undefined,
+            categoryDesc: currentCatDesc || undefined,
             basePrice: validatedPrice,
             salePrice: validatedSalePrice,
-            description: currentProdDesc || undefined,
             brand: currentBrand || undefined,
             hsnCode: currentHsn || undefined,
             variants: [],
@@ -676,10 +876,16 @@ export const bulkImportService = {
         prod.variants.push({
           productSku: currentProdSku,
           variantName: formattedItemName,
+          itemCode: currentItemCode || undefined,
+          shortDescription: currentShortDesc || undefined,
+          description: currentItemDesc || undefined,
+          videoUrl: currentVideoUrl || undefined,
+          isFeatured: safeBool(currentIsFeatured),
           unit: validatedUnitCode,
           unitValue: validatedUnitValue,
           variantSku: rawItemSku,
           price: validatedPrice,
+          salePrice: validatedSalePrice,
           stockQty: validatedStock,
           reorderLevel: validatedReorder,
           isDefault: safeBool(rawIsDefault),
@@ -711,8 +917,9 @@ export const bulkImportService = {
 
         const row = normalizeRowKeys(rawRow) as RawCategoryRow;
         const name = safeStr(row.category_name || row.name || row.category);
+        const code = safeStr(row.category_code || row.category_slug || row.slug);
         const parent = safeStr(row.parent_category || row.parent);
-        const desc = safeStr(row.description);
+        const desc = safeStr(row.category_description || row.description);
         const rawSort = row.sort_order;
 
         const catErrors: string[] = [];
@@ -723,8 +930,27 @@ export const bulkImportService = {
           catErrors.push("Category name cannot exceed 150 characters");
         }
 
+        if (!code) {
+          catErrors.push("Category code is required");
+        } else if (code.length > 170) {
+          catErrors.push("Category code cannot exceed 170 characters");
+        } else if (!/^[A-Za-z0-9_]+$/.test(code)) {
+          catErrors.push(
+            "Category code can only contain letters, numbers, and underscores (no spaces)"
+          );
+        } else if (
+          categorySlugMap.has(code.toLowerCase()) &&
+          name &&
+          categorySlugMap.get(code.toLowerCase())!.name.toLowerCase() !== name.toLowerCase()
+        ) {
+          const conflict = categorySlugMap.get(code.toLowerCase())!;
+          catErrors.push(
+            `Category code "${code}" already exists for category "${conflict.name}" in database`
+          );
+        }
+
         if (desc && desc.length > 2000) {
-          catErrors.push("Description cannot exceed 2000 characters");
+          catErrors.push("Category description cannot exceed 2000 characters");
         }
 
         let sortOrder = 0;
@@ -755,9 +981,13 @@ export const bulkImportService = {
         seenCatNames.add(name.toLowerCase());
         const formattedCat = formatTitleCase(name);
         if (!categoryMap.has(formattedCat.toLowerCase())) {
+          const catSlugToUse = code
+            ? makeUniqueSlug(code.toUpperCase(), usedCatSlugs)
+            : makeUniqueSlug(formattedCat, usedCatSlugs);
+
           validCatsToCreate.push({
             name: formattedCat,
-            slug: makeUniqueSlug(formattedCat, usedCatSlugs),
+            slug: catSlugToUse,
             parentName: parent ? formatTitleCase(parent) : undefined,
             description: desc || undefined,
             sortOrder,
@@ -775,7 +1005,6 @@ export const bulkImportService = {
         const name = safeStr(row.product_name || row.name || row.product);
         const sku = safeStr(row.sku || row.product_sku || row.product_code).toUpperCase();
         const catName = safeStr(row.category_name || row.category);
-        const desc = safeStr(row.description || row.product_description);
         const brand = safeStr(row.brand || row.brand_name);
         const hsn = safeStr(row.hsn_code || row.hsn);
         const rawBasePrice = row.base_price ?? row.price;
@@ -806,10 +1035,6 @@ export const bulkImportService = {
           prodErrors.push("Category is required");
         } else if (catName.length > 150) {
           prodErrors.push("Category name cannot exceed 150 characters");
-        }
-
-        if (desc && desc.length > 5000) {
-          prodErrors.push("Product description cannot exceed 5000 characters");
         }
 
         if (brand && brand.length > 100) {
@@ -866,7 +1091,6 @@ export const bulkImportService = {
           categoryName: formattedCatName,
           basePrice,
           salePrice,
-          description: desc || undefined,
           brand: brand || undefined,
           hsnCode: hsn || undefined,
           variants: [],
@@ -885,12 +1109,23 @@ export const bulkImportService = {
         const itemName = safeStr(
           row.item_name || row.item || row.variant_name || row.variant || row.name
         );
+        const itemCode = safeStr(
+          row.item_code || row.item_slug || row.variant_code || row.variant_slug
+        );
+        const shortDesc = safeStr(row.short_description || row.short_desc);
+        const itemDesc = safeStr(
+          row.item_description || row.product_description || row.description
+        );
+        const isFeatured = safeStr(row.is_featured || row.featured);
+        const videoUrl = safeStr(row.video_url || row.video);
+
         const unit = safeStr(row.unit || row.unit_code || row.measurement_unit || row.uom);
         const rawUnitVal = row.unit_value ?? row.pack_size ?? row.size;
         const itemSku = safeStr(
           row.item_sku || row.item_code || row.variant_sku || row.sku
         ).toUpperCase();
         const rawPrice = row.price ?? row.base_price ?? row.unit_price ?? row.rate;
+        const rawSalePrice = row.sale_price ?? row.offer_price;
         const rawStock = row.stock_qty ?? row.stock ?? row.quantity ?? row.qty;
         const rawReorder = row.reorder_level ?? row.reorder_qty ?? row.min_stock;
         const rawIsDefault = safeStr(row.is_default || row.default);
@@ -907,6 +1142,24 @@ export const bulkImportService = {
           itemErrors.push("Item name is required");
         } else if (itemName.length > 100) {
           itemErrors.push("Item name cannot exceed 100 characters");
+        }
+
+        if (!itemCode) {
+          itemErrors.push("Item code is required");
+        } else if (itemCode.length > 255) {
+          itemErrors.push("Item code cannot exceed 255 characters");
+        }
+
+        if (shortDesc && shortDesc.length > 500) {
+          itemErrors.push("Short description cannot exceed 500 characters");
+        }
+
+        if (itemDesc && itemDesc.length > 5000) {
+          itemErrors.push("Item description cannot exceed 5000 characters");
+        }
+
+        if (videoUrl && videoUrl.length > 500) {
+          itemErrors.push("Video URL cannot exceed 500 characters");
         }
 
         let validatedUnitCode = "";
@@ -962,6 +1215,18 @@ export const bulkImportService = {
           }
         }
 
+        let salePrice: number | undefined = undefined;
+        if (rawSalePrice !== "" && rawSalePrice !== undefined && rawSalePrice !== null) {
+          const sNum = Number(rawSalePrice);
+          if (isNaN(sNum) || sNum <= 0) {
+            itemErrors.push("Sale price must be greater than 0");
+          } else if (price > 0 && sNum > price) {
+            itemErrors.push("Sale price cannot be greater than base price");
+          } else {
+            salePrice = sNum;
+          }
+        }
+
         let stockQty = 0;
         if (rawStock !== "" && rawStock !== undefined && rawStock !== null) {
           const sNum = Number(rawStock);
@@ -1011,10 +1276,16 @@ export const bulkImportService = {
           prod.variants.push({
             productSku: pSku,
             variantName: formatTitleCase(itemName),
+            itemCode: itemCode || undefined,
+            shortDescription: shortDesc || undefined,
+            description: itemDesc || undefined,
+            videoUrl: videoUrl || undefined,
+            isFeatured: safeBool(isFeatured),
             unit: validatedUnitCode,
             unitValue,
             variantSku: itemSku,
             price,
+            salePrice,
             stockQty,
             reorderLevel,
             isDefault: safeBool(rawIsDefault),
@@ -1035,12 +1306,15 @@ export const bulkImportService = {
           categoryName: prod.categoryName,
           productName: prod.name,
           sku: prod.sku,
+          brand: prod.brand,
           variants: prod.variants.map((v) => ({
             variantName: v.variantName,
+            itemCode: v.itemCode,
             unit: v.unit,
             unitValue: v.unitValue,
             variantSku: v.variantSku,
             price: v.price,
+            salePrice: v.salePrice,
             stockQty: v.stockQty,
             isDefault: v.isDefault,
           })),
@@ -1066,136 +1340,204 @@ export const bulkImportService = {
     }
 
     // ── Commit Valid Data to Database (Atomic Transaction) ──
-    await db.$transaction(async (tx) => {
-      // 1. Insert Categories
-      for (const cat of validCatsToCreate) {
-        let parentId: bigint | undefined;
-        if (cat.parentName) {
-          parentId = categoryMap.get(cat.parentName.toLowerCase());
-        }
-        const created = await tx.productCategory.create({
-          data: {
-            uuid: crypto.randomUUID(),
-            name: cat.name,
-            slug: cat.slug,
-            description: cat.description,
-            parentId: parentId ?? null,
-            sortOrder: cat.sortOrder,
-            isActive: true,
-            status: true,
-            created_by: adminUserId ?? null,
-            updated_by: adminUserId ?? null,
-          },
-        });
-        categoryMap.set(cat.name.toLowerCase(), created.id);
-        importedCategories.push(cat.name);
-      }
-
-      // 2. Fetch all unit IDs
-      const units = await tx.product_units.findMany({
-        select: { id: true, name: true, code: true },
-      });
-      const unitMap = new Map<string, bigint>();
-      for (const u of units) {
-        unitMap.set(u.code.toLowerCase(), u.id);
-        unitMap.set(u.name.toLowerCase(), u.id);
-      }
-
-      // 3. Insert Products + Items + Unit Prices + Inventory
-      for (const prod of validProds) {
-        const catId = categoryMap.get(prod.categoryName.toLowerCase());
-
-        const createdProd = await tx.product.create({
-          data: {
-            uuid: crypto.randomUUID(),
-            name: prod.name,
-            slug: prod.slug,
-            sku: prod.sku,
-            base_price: prod.basePrice,
-            sale_price: prod.salePrice ?? null,
-            categoryId: catId ? catId : null,
-            isActive: true,
-            status: true,
-            created_by: adminUserId ?? null,
-            updated_by: adminUserId ?? null,
-          },
-        });
-        importedProducts.push(prod.name);
-
-        // Group items by item_name (3-tier architecture: Product -> Item -> UnitPrice)
-        const variantsByName = new Map<string, ValidVariantItem[]>();
-        for (const v of prod.variants) {
-          const key = v.variantName.toLowerCase();
-          if (!variantsByName.has(key)) variantsByName.set(key, []);
-          variantsByName.get(key)!.push(v);
-        }
-
-        let isFirstVariant = true;
-        for (const [, subvariants] of variantsByName) {
-          const first = subvariants[0];
-          const variantSlug = makeUniqueSlug(
-            `${prod.slug}-${first.variantName}`,
-            usedVarSlugs
-          );
-
-          let isVariantDefault = subvariants.some((sv) => sv.isDefault);
-          if (isFirstVariant && !prod.variants.some((v) => v.isDefault)) {
-            isVariantDefault = true;
+    try {
+      await db.$transaction(async (tx) => {
+        // 1. Insert Categories
+        for (const cat of validCatsToCreate) {
+          let parentId: bigint | undefined;
+          if (cat.parentName) {
+            parentId = categoryMap.get(cat.parentName.toLowerCase());
           }
-          isFirstVariant = false;
-
-          const createdVariant = await tx.productVariant.create({
+          const created = await tx.productCategory.create({
             data: {
               uuid: crypto.randomUUID(),
-              productId: createdProd.id,
-              variant_name: first.variantName,
-              slug: variantSlug,
-              is_default: isVariantDefault,
+              name: cat.name,
+              slug: cat.slug,
+              description: cat.description ?? null,
+              parentId: parentId ?? null,
+              sortOrder: cat.sortOrder,
               isActive: true,
+              status: true,
               created_by: adminUserId ?? null,
               updated_by: adminUserId ?? null,
             },
           });
+          categoryMap.set(cat.name.toLowerCase(), created.id);
+          importedCategories.push(cat.name);
+        }
 
-          // Ensure at least one subvariant in this item is marked default
-          if (!subvariants.some((sv) => sv.isDefault)) {
-            subvariants[0].isDefault = true;
+        // 2. Fetch all unit IDs
+        const units = await tx.product_units.findMany({
+          select: { id: true, name: true, code: true },
+        });
+        const unitMap = new Map<string, bigint>();
+        for (const u of units) {
+          unitMap.set(u.code.toLowerCase(), u.id);
+          unitMap.set(u.name.toLowerCase(), u.id);
+        }
+
+        // 3. Insert Products + Brands + Items + Unit Prices + Inventory
+        for (const prod of validProds) {
+          const catId = categoryMap.get(prod.categoryName.toLowerCase());
+
+          // Resolve or create Brand
+          let prodBrandId = defaultBrandId;
+          if (prod.brand) {
+            const bLower = prod.brand.toLowerCase();
+            if (brandMap.has(bLower)) {
+              prodBrandId = brandMap.get(bLower)!;
+            } else {
+              const newBrandSlug = makeUniqueSlug(prod.brand, usedBrandSlugs);
+              const createdBrand = await tx.productBrand.create({
+                data: {
+                  uuid: crypto.randomUUID(),
+                  name: formatTitleCase(prod.brand),
+                  slug: newBrandSlug,
+                  status: true,
+                  isActive: true,
+                  created_by: adminUserId ?? null,
+                  updated_by: adminUserId ?? null,
+                },
+              });
+              prodBrandId = createdBrand.id;
+              brandMap.set(bLower, createdBrand.id);
+              brandMap.set(newBrandSlug.toLowerCase(), createdBrand.id);
+            }
           }
 
-          for (const sv of subvariants) {
-            const unitId = unitMap.get(sv.unit);
-            if (!unitId) continue;
+          // Resolve or create HSN Code
+          let prodHsnId: bigint | null = null;
+          if (prod.hsnCode) {
+            const hKey = prod.hsnCode.trim();
+            const hUpper = hKey.toUpperCase();
+            const hLower = hKey.toLowerCase();
+            if (hsnMap.has(hUpper) || hsnMap.has(hLower)) {
+              prodHsnId = (hsnMap.get(hUpper) || hsnMap.get(hLower))!;
+            } else {
+              const createdHsn = await tx.product_hsn_codes.create({
+                data: {
+                  uuid: crypto.randomUUID(),
+                  code: hUpper,
+                  status: true,
+                  is_active: true,
+                  created_by: adminUserId ?? null,
+                  updated_by: adminUserId ?? null,
+                },
+              });
+              prodHsnId = createdHsn.id;
+              hsnMap.set(hUpper, createdHsn.id);
+              hsnMap.set(hLower, createdHsn.id);
+            }
+          }
 
-            const createdVup = await tx.variantUnitPrice.create({
+          const createdProd = await tx.product.create({
+            data: {
+              uuid: crypto.randomUUID(),
+              name: prod.name,
+              slug: prod.slug,
+              sku: prod.sku,
+              base_price: prod.basePrice,
+              sale_price: prod.salePrice ?? null,
+              categoryId: catId ? catId : null,
+              brandId: prodBrandId,
+              hsn_code_id: prodHsnId,
+              isActive: true,
+              status: true,
+              created_by: adminUserId ?? null,
+              updated_by: adminUserId ?? null,
+            },
+          });
+          importedProducts.push(prod.name);
+
+          // Group items by item_name (3-tier architecture: Product -> Item -> UnitPrice)
+          const variantsByName = new Map<string, ValidVariantItem[]>();
+          for (const v of prod.variants) {
+            const key = v.variantName.toLowerCase();
+            if (!variantsByName.has(key)) variantsByName.set(key, []);
+            variantsByName.get(key)!.push(v);
+          }
+
+          let isFirstVariant = true;
+          for (const [, subvariants] of variantsByName) {
+            const first = subvariants[0];
+            const variantSlug = first.itemCode
+              ? makeUniqueSlug(first.itemCode.toUpperCase(), usedVarSlugs)
+              : makeUniqueSlug(`${prod.slug}-${first.variantName}`, usedVarSlugs);
+
+            let isVariantDefault = subvariants.some((sv) => sv.isDefault);
+            if (isFirstVariant && !prod.variants.some((v) => v.isDefault)) {
+              isVariantDefault = true;
+            }
+            isFirstVariant = false;
+
+            const createdVariant = await tx.productVariant.create({
               data: {
                 uuid: crypto.randomUUID(),
-                variant_id: createdVariant.id,
-                unit_id: unitId,
-                unit_value: sv.unitValue,
-                sku: sv.variantSku,
-                base_price: sv.price,
-                is_default: sv.isDefault,
+                productId: createdProd.id,
+                variant_name: first.variantName,
+                slug: variantSlug,
+                short_description: first.shortDescription ?? null,
+                description: first.description ?? null,
+                video_url: first.videoUrl ?? null,
+                is_featured: first.isFeatured ?? false,
+                is_default: isVariantDefault,
                 isActive: true,
+                out_of_stock: false,
                 created_by: adminUserId ?? null,
                 updated_by: adminUserId ?? null,
               },
             });
 
-            await tx.inventory.create({
-              data: {
-                variantUnitPriceId: createdVup.id,
-                quantity_available: sv.stockQty,
-                quantity_reserved: 0,
-                reorderLevel: sv.reorderLevel,
-                is_active: true,
-                created_by: adminUserId ?? null,
-                updated_by: adminUserId ?? null,
-              },
-            });
+            // Ensure at least one subvariant in this item is marked default
+            if (!subvariants.some((sv) => sv.isDefault)) {
+              subvariants[0].isDefault = true;
+            }
+
+            for (const sv of subvariants) {
+              const unitId = unitMap.get(sv.unit);
+              if (!unitId) continue;
+
+              const createdVup = await tx.variantUnitPrice.create({
+                data: {
+                  uuid: crypto.randomUUID(),
+                  variant_id: createdVariant.id,
+                  unit_id: unitId,
+                  unit_value: sv.unitValue,
+                  sku: sv.variantSku,
+                  base_price: sv.price,
+                  is_default: sv.isDefault,
+                  isActive: true,
+                  created_by: adminUserId ?? null,
+                  updated_by: adminUserId ?? null,
+                },
+              });
+
+              await tx.inventory.create({
+                data: {
+                  variantUnitPriceId: createdVup.id,
+                  quantity_available: sv.stockQty,
+                  quantity_reserved: 0,
+                  reorderLevel: sv.reorderLevel,
+                  is_active: true,
+                  created_by: adminUserId ?? null,
+                  updated_by: adminUserId ?? null,
+                },
+              });
+            }
           }
         }
+      });
+    } catch (error: any) {
+      const details = extractPrismaDuplicateDetails(error);
+      if (details?.value || details?.field) {
+        throw ApiError.conflict(details.message);
       }
-    });
+      const prismaResult = handlePrismaError(error);
+      if (prismaResult && prismaResult.message !== "A database error occurred") {
+        throw prismaResult;
+      }
+      throw error;
+    }
 
     return {
       totalRows: totalSourceRows,

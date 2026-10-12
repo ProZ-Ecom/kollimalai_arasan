@@ -244,7 +244,7 @@ export default function BulkImportPage() {
       <AdminContent>
         <div className="w space-y-6">
           {/* ── Upload Zone ── */}
-          {stage === "idle" || stage === "error" ? (
+          {stage === "idle" || (stage === "error" && !previewData) ? (
             <div
               onDrop={handleDrop}
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -296,7 +296,7 @@ export default function BulkImportPage() {
           )}
 
           {/* ── Action buttons ── */}
-          {file && (stage === "idle" || stage === "error") && (
+          {file && (stage === "idle" || (stage === "error" && !previewData)) && (
             <div className="flex gap-3">
               <Button
                 onClick={handlePreview}
@@ -320,7 +320,7 @@ export default function BulkImportPage() {
           )}
 
           {/* ── Preview / Results ── */}
-          {activeData && (stage === "preview_done" || stage === "done") && (
+          {activeData && (stage === "preview_done" || stage === "done" || stage === "error") && (
             <div className="space-y-5">
               {/* Status banner */}
               {stage === "done" && (
@@ -458,15 +458,18 @@ export default function BulkImportPage() {
 
               {/* Action buttons */}
               <div className="flex gap-3 pt-2">
-                {stage === "preview_done" && previewData && previewData.preview.length > 0 && (
-                  <Button
-                    onClick={handleImport}
-                    className="bg-green-600 hover:bg-green-700 text-white gap-2"
-                  >
-                    <PackagePlus className="w-4 h-4" />
-                    Confirm Import ({previewData.preview.length} products)
-                  </Button>
-                )}
+                {(stage === "preview_done" || stage === "error") &&
+                  previewData &&
+                  previewData.preview.length > 0 && (
+                    <Button
+                      onClick={handleImport}
+                      className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                    >
+                      <PackagePlus className="w-4 h-4" />
+                      {stage === "error" ? "Retry Import" : "Confirm Import"} (
+                      {previewData.preview.length} products)
+                    </Button>
+                  )}
                 <Button variant="outline" onClick={handleReset} className="gap-2">
                   <RotateCcw className="w-4 h-4" />
                   {stage === "done" ? "Import Another File" : "Cancel"}

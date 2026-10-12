@@ -7,9 +7,14 @@ import {
   useAdminCustomers,
   useAdminCustomersCount,
   useUpdateCustomerStatus,
+  getAdminCustomers,
   type AdminCustomerListItemDto,
 } from "@/features/customers";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { exportToExcel } from "@/lib/excel-export";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import { StatsCard } from "@/components/admin/StatsCard";
@@ -20,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { SearchInput } from "@/components/ui/search-input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 import {
   Users,
   UserCheck,
@@ -48,6 +54,15 @@ export default function AdminCustomersPage() {
   // Selected customer for block/unblock dialog
   const [statusTargetCustomer, setStatusTargetCustomer] =
     useState<AdminCustomerListItemDto | null>(null);
+
+  // Bulk Selection State
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<AdminCustomerListItemDto[]>([]);
+
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, statusFilter, genderFilter, verificationFilter, page, pageSize]);
 
   const { mutate: updateCustomerStatus, isPending: isUpdatingStatus } =
     useUpdateCustomerStatus();
@@ -103,8 +118,8 @@ export default function AdminCustomersPage() {
 
     if (verificationFilter === "email_verified") {
       params.emailVerified = true;
-    } else if (verificationFilter === "unverified") {
-      params.emailVerified = false;
+    } else if (verificationFilter === "phone_verified") {
+      params.phoneVerified = true;
     }
 
     return params;
@@ -172,6 +187,7 @@ export default function AdminCustomersPage() {
                   src={item.profileImage}
                   alt={item.name}
                   fill
+                  sizes="40px"
                   className="object-cover"
                 />
               ) : (
@@ -188,8 +204,8 @@ export default function AdminCustomersPage() {
                 {item.customerId
                   ? `ID: ${item.customerId}`
                   : item.id
-                    ? `ID: ${item.id.slice(0, 8)}...`
-                    : "-"}
+                  ? `ID: ${item.id.slice(0, 8)}...`
+                  : "-"}
               </p>
             </div>
           </Link>
@@ -251,6 +267,12 @@ export default function AdminCustomersPage() {
                 Email
               </span>
             )}
+            {item.phoneVerified ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success-700 bg-success-50 px-2 py-0.5 rounded-full">
+                <CheckCircle2 className="h-3 w-3" />
+                Phone
+              </span>
+            ) : null}
           </div>
         );
       },
@@ -332,7 +354,7 @@ export default function AdminCustomersPage() {
           item.status === "inactive";
 
         return (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-center gap-1.5">
             <Link
               href={`/admin/dashboard/customers/${item.id}`}
               className="inline-flex items-center h-8 gap-1 px-2.5 rounded-lg text-xs font-semibold text-secondary-600 hover:text-secondary-700 hover:bg-secondary-50 cursor-pointer transition-colors"
@@ -418,107 +440,130 @@ export default function AdminCustomersPage() {
           title="Verified Accounts"
           value={isLoadingCounts ? "—" : (customerCounts?.verified ?? 0)}
           icon={ShieldCheck}
-          description="Email verified accounts"
+          description="Email or phone verified"
         />
       </div>
 
       {/* Search and Filters Toolbar */}
-      <div className="flex-shrink-0 flex flex-col gap-3.5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 flex-wrap">
-          {/* Search + Filter Selects */}
-          <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-            <SearchInput
-              placeholder="Search by name, email, phone, or customer ID..."
-              value={search}
-              onSearch={(val) => {
-                setSearch(val);
+      <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
+          <SearchInput
+            placeholder="Search by name, email, phone, or customer ID..."
+            value={search}
+            onSearch={(val) => {
+              setSearch(val);
+              setPage(1);
+            }}
+            className="w-full max-w-md"
+          />
+
+          {/* Status Filter (Active, Inactive, Blocked, Unblocked) */}
+          <div className="w-full sm:w-44">
+            <Select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full sm:max-w-xs md:max-w-sm"
+              options={[
+                { value: "all", label: "All Statuses" },
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+                { value: "blocked", label: "Blocked" },
+                { value: "unblocked", label: "Unblocked" },
+              ]}
+              placeholder="Filter by Status"
+              className="h-11 rounded-xl"
             />
-
-            {/* Status Filter (Active, Inactive, Blocked, Unblocked) */}
-            <div className="w-full sm:w-44">
-              <Select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
-                options={[
-                  { value: "all", label: "All Statuses" },
-                  { value: "active", label: "Active" },
-                  { value: "inactive", label: "Inactive" },
-                  { value: "blocked", label: "Blocked" },
-                  { value: "unblocked", label: "Unblocked" },
-                ]}
-                placeholder="Filter by Status"
-                className="h-10 rounded-xl text-xs font-medium"
-              />
-            </div>
-
-            {/* Verification Filter */}
-            <div className="w-full sm:w-44">
-              <Select
-                value={verificationFilter}
-                onChange={(e) => {
-                  setVerificationFilter(e.target.value);
-                  setPage(1);
-                }}
-                options={[
-                  { value: "all", label: "All Verification" },
-                  { value: "email_verified", label: "Email Verified" },
-                  { value: "unverified", label: "Not Verified" },
-                ]}
-                placeholder="Verification"
-                className="h-10 rounded-xl text-xs font-medium"
-              />
-            </div>
-
-            {/* Gender Filter */}
-            <div className="w-full sm:w-36">
-              <Select
-                value={genderFilter}
-                onChange={(e) => {
-                  setGenderFilter(e.target.value);
-                  setPage(1);
-                }}
-                options={[
-                  { value: "all", label: "All Genders" },
-                  { value: "male", label: "Male" },
-                  { value: "female", label: "Female" },
-                  { value: "other", label: "Other" },
-                ]}
-                placeholder="Gender"
-                className="h-10 rounded-xl text-xs font-medium"
-              />
-            </div>
-
-            {/* Reset Filters Button */}
-            {hasActiveFilters && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleResetFilters}
-                className="h-10 px-3 text-xs font-semibold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Reset</span>
-              </Button>
-            )}
           </div>
+
+          {/* Verification Filter */}
+          <div className="w-full sm:w-44">
+            <Select
+              value={verificationFilter}
+              onChange={(e) => {
+                setVerificationFilter(e.target.value);
+                setPage(1);
+              }}
+              options={[
+                { value: "all", label: "All Verification" },
+                { value: "email_verified", label: "Email Verified" },
+                { value: "phone_verified", label: "Phone Verified" },
+              ]}
+              placeholder="Verification"
+              className="h-11 rounded-xl"
+            />
+          </div>
+
+          {/* Gender Filter */}
+          <div className="w-full sm:w-36">
+            <Select
+              value={genderFilter}
+              onChange={(e) => {
+                setGenderFilter(e.target.value);
+                setPage(1);
+              }}
+              options={[
+                { value: "all", label: "All Genders" },
+                { value: "male", label: "Male" },
+                { value: "female", label: "Female" },
+                { value: "other", label: "Other" },
+              ]}
+              placeholder="Gender"
+              className="h-11 rounded-xl"
+            />
+          </div>
+
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <ClearFiltersButton onClick={handleResetFilters} />
+          )}
+        </div>
+
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <ExportExcelButton
+            data={customers}
+            fetchData={async () => {
+              const res = await getAdminCustomers({
+                ...queryParams,
+                page: 1,
+                pageSize: 10000,
+              });
+              return res.data;
+            }}
+            totalCount={meta?.total ?? customerCounts?.all}
+            filename="customers"
+            sheetName="Customers"
+            columns={EXPORT_PRESETS.customers}
+          />
         </div>
       </div>
 
       {/* Data Table Container */}
       <div className="flex-1 min-h-0 min-w-0 flex flex-col w-full">
+        <BulkActionsBar
+          selectedCount={selectedRows.length}
+          entityName="customer"
+          filterNotice={search ? `Filtered by "${search}"` : undefined}
+          onClearSelection={() => {
+            setSelectedRowIds({});
+            setSelectedRows([]);
+          }}
+          onExport={() => {
+            exportToExcel({
+              filename: "selected_customers",
+              sheetName: "Selected Customers",
+              data: selectedRows,
+              columns: EXPORT_PRESETS.customers,
+            });
+          }}
+        />
+
         <DataTable
           columns={columns}
           data={customers}
-          tableClassName="min-w-[1250px]"
           pageSize={pageSize}
-          pageSizeOptions={[5, 10, 20, 50]}
+          pageSizeOptions={[10, 20, 30, 50]}
           page={meta?.page ?? page}
           totalPages={
             meta?.totalPages ??
@@ -530,7 +575,13 @@ export default function AdminCustomersPage() {
             setPageSize(newSize);
             setPage(1);
           }}
-          className="bg-white border border-neutral-200"
+          selectedRowIds={selectedRowIds}
+          onRowSelectionChange={(newSelection, items) => {
+            setSelectedRowIds(newSelection);
+            setSelectedRows(items);
+          }}
+          getRowId={(row) => String(row.id)}
+          className="bg-white"
           emptyMessage="No customers found matching your criteria."
         />
       </div>
@@ -547,10 +598,12 @@ export default function AdminCustomersPage() {
         }
         description={
           isTargetBlocked
-            ? `Are you sure you want to unblock ${statusTargetCustomer?.name || "this customer"
-            }? Their account will be reactivated, allowing them to sign in and place new orders.`
-            : `Are you sure you want to block ${statusTargetCustomer?.name || "this customer"
-            }? This will deactivate their account and prevent them from signing in or placing new orders.`
+            ? `Are you sure you want to unblock ${
+                statusTargetCustomer?.name || "this customer"
+              }? Their account will be reactivated, allowing them to sign in and place new orders.`
+            : `Are you sure you want to block ${
+                statusTargetCustomer?.name || "this customer"
+              }? This will deactivate their account and prevent them from signing in or placing new orders.`
         }
         confirmText={
           isUpdatingStatus
@@ -558,8 +611,8 @@ export default function AdminCustomersPage() {
               ? "Unblocking..."
               : "Blocking..."
             : isTargetBlocked
-              ? "Unblock Customer"
-              : "Block Customer"
+            ? "Unblock Customer"
+            : "Block Customer"
         }
         cancelText="Cancel"
         variant={isTargetBlocked ? "default" : "destructive"}

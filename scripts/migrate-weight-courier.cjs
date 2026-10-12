@@ -6,10 +6,11 @@ require('dotenv').config();
   const conn = await mariadb.createConnection({
     host: url.hostname === 'localhost' ? '127.0.0.1' : url.hostname,
     port: Number(url.port) || 3306,
-    user: url.username,
-    password: url.password,
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
     database: url.pathname.replace('/', ''),
     multipleStatements: false,
+    allowPublicKeyRetrieval: true,
   });
 
   async function columnExists(table, column) {
@@ -46,8 +47,8 @@ require('dotenv').config();
     const crypto = require('crypto');
     const now = new Date();
     await conn.query(
-      "INSERT INTO `delivery_partners` (`uuid`, `name`, `code`, `courier_type`, `is_active`, `created_at`, `updated_at`, `created_by`, `updated_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [crypto.randomUUID(), 'Mettur Super Services', 'MSS', 'mss', 1, now, now, 1, 1]
+      "INSERT INTO `delivery_partners` (`name`, `code`, `courier_type`, `is_active`, `created_at`, `updated_at`, `created_by`, `updated_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      ['Mettur Super Services', 'MSS', 'mss', 1, now, now, 1, 1]
     );
     console.log('Inserted MSS delivery partner');
   } else {
