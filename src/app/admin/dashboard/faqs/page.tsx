@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Plus, Pencil, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,10 @@ import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/Switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { exportToExcel } from "@/lib/excel-export";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import {
@@ -26,6 +30,7 @@ import {
   useDeleteFaq,
   useUpdateFaqStatus,
   useUpdateFaqOrder,
+  faqApi,
 } from "@/features/faqs/hooks";
 import { FaqForm } from "@/features/faqs/components";
 import type { FaqDto, FaqStatus } from "@/features/faqs/types";
@@ -50,6 +55,14 @@ export default function AdminFaqsPage() {
     id: string;
     question: string;
   } | null>(null);
+
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<FaqDto[]>([]);
+
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, categoryFilter, statusFilter, page, pageSize]);
 
   const { data, isLoading, error, refetch } = useAdminFaqs({
     page,
@@ -265,14 +278,14 @@ export default function AdminFaqsPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex-1 min-h-0 min-w-0 flex flex-col">
       <AdminPageHeader
         title="FAQs"
         description="Manage the questions and answers shown on the storefront FAQ page."
       />
 
-      <AdminContent className="min-h-0 flex-1 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-transparent py-1">
+      <AdminContent className="flex-1 min-h-0 min-w-0">
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col bg-transparent">
           {/* Top Bar: Search, Filters, Add Button */}
           <div className="flex flex-shrink-0 flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
@@ -317,10 +330,30 @@ export default function AdminFaqsPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <ExportExcelButton
+                data={faqs}
+                fetchData={async () => {
+                  const res = await faqApi.getAdminFaqs({
+                    page: 1,
+                    limit: 10000,
+                    search: search.trim() || undefined,
+                    category: categoryFilter || undefined,
+                    status: (statusFilter || undefined) as FaqStatus | undefined,
+                    sortBy: "displayOrder",
+                    sortOrder: "asc",
+                  });
+                  return res?.data ?? [];
+                }}
+                totalCount={data?.meta?.total ?? faqs.length}
+                filename="faqs"
+                sheetName="FAQs"
+                columns={EXPORT_PRESETS.faqs}
+              />
+
               <Button
                 onClick={() => setIsCreateOpen(true)}
-                className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)]"
+                className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] shadow-xs"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add FAQ
@@ -335,11 +368,28 @@ export default function AdminFaqsPage() {
           )}
 
           {/* Data Table */}
-          <div className="mt-6 flex min-h-0 flex-1 flex-col">
+          <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
+            <BulkActionsBar
+              selectedCount={selectedRows.length}
+              entityName="FAQs"
+              filterNotice={search ? `Filtered by "${search}"` : undefined}
+              onClearSelection={() => {
+                setSelectedRowIds({});
+                setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportToExcel({
+                  filename: "selected_faqs",
+                  sheetName: "Selected FAQs",
+                  data: selectedRows,
+                  columns: EXPORT_PRESETS.faqs,
+                });
+              }}
+            />
+
             <DataTable
               columns={columns}
               data={faqs}
-              tableClassName="min-w-[1000px]"
               pageSize={pageSize}
               pageSizeOptions={[10, 20, 30, 50]}
               page={data?.meta?.page ?? page}
@@ -356,6 +406,12 @@ export default function AdminFaqsPage() {
                 setPageSize(newSize);
                 setPage(1);
               }}
+              selectedRowIds={selectedRowIds}
+              onRowSelectionChange={(newSelection, items) => {
+                setSelectedRowIds(newSelection);
+                setSelectedRows(items);
+              }}
+              getRowId={(row) => String(row.id)}
               className="bg-white"
             />
           </div>

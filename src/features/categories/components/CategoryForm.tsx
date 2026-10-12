@@ -70,7 +70,7 @@ function CategoryForm({
           <FormInput
             name="name"
             label="Category Name"
-            placeholder="Enter category name"
+            placeholder="e.g. Spices, Millets, Natural Honey"
             isTitleCase
             required
           />
@@ -78,8 +78,8 @@ function CategoryForm({
           <FormInput
             name="slug"
             label="Category Code"
-            placeholder="e.g. SWEETS_SNACKS"
-            infoMessage="Use letters, numbers, and underscores only (e.g. SWEETS_SNACKS). No spaces or other special characters allowed."
+            placeholder="e.g. SPICES_HERBS"
+            infoMessage="Use letters, numbers, and underscores only (e.g. SPICES_HERBS). No spaces or other special characters allowed."
             required
           />
         </div>
@@ -87,7 +87,7 @@ function CategoryForm({
         <FormTextarea
           name="description"
           label="Description"
-          placeholder="Enter category description"
+          placeholder="e.g. Pure and authentic spices, wild honey, and natural foods harvested from Kolli Hills"
         />
 
         <FormImageUpload

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   Eye,
@@ -13,24 +13,29 @@ import {
   ArrowRight,
   Truck,
   Package,
+  Check,
+  Clock,
+  AlertCircle,
   ExternalLink,
-  RotateCcw,
+  Send,
 } from "lucide-react";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { exportToExcel } from "@/lib/excel-export";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { LoadingState } from "@/components/ui/loading-state";
-import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
+import { Select, type SelectOption } from "@/components/ui/select";
 import { FormModal } from "@/components/common/FormModal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SearchInput } from "@/components/ui/search-input";
-import { Select } from "@/components/ui/select";
 import { ClearFiltersButton } from "@/components/common/clear-filters-button";
-import { formatDateTime, formatPrice } from "@/lib/utils";
+import { cn, formatDateTime, formatPrice } from "@/lib/utils";
+import { AssignStaffModal } from "@/features/orders/components/AssignStaffModal";
 import { ShipOrderModal } from "@/features/orders/components/ShipOrderModal";
 import { LiveTrackingModal } from "@/features/orders/components/LiveTrackingModal";
-import { ReturnRefundModal } from "@/features/orders/components/ReturnRefundModal";
-import { getCourierTrackingInfo } from "@/features/orders/utils/courier-tracking";
 import {
   useAdminOrders,
   useAdminOrder,
@@ -38,9 +43,8 @@ import {
   useProcessAdminOrder,
   usePackAdminOrder,
   useCancelOrderAdmin,
-  useDeliverAdminOrder,
-  useReturnAdminOrder,
 } from "@/features/orders/hooks";
+import { getAdminOrders } from "@/features/orders/api/get-orders";
 import { OrderDetailView } from "@/features/orders/components/OrderDetailView";
 import {
   OrderStatusBadge,
@@ -69,13 +73,11 @@ export function AdminOrderListTable({
   const [paymentFilter, setPaymentFilter] = useState<string>("");
   const [viewOrderId, setViewOrderId] = useState<string | null>(null);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
-  const [returnRefundOrder, setReturnRefundOrder] = useState<{
+  const [assignStaffOrder, setAssignStaffOrder] = useState<{
     id: string;
     orderNumber: string;
-    totalAmount: number;
-    paymentStatus?: string;
-    customerName?: string;
   } | null>(null);
+
   const [shipCourierOrder, setShipCourierOrder] = useState<{
     id: string;
     orderNumber: string;
@@ -83,12 +85,27 @@ export function AdminOrderListTable({
     partnerCode?: string;
     trackingNumber?: string;
   } | null>(null);
+
   const [liveTrackingModal, setLiveTrackingModal] = useState<{
     open: boolean;
     awb: string;
-    courierName?: string;
+    courierName: string;
     orderNumber?: string;
-  }>({ open: false, awb: "" });
+  }>({
+    open: false,
+    awb: "",
+    courierName: "ST Courier",
+    orderNumber: "",
+  });
+
+  // Bulk Selection State
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<OrderListItemResponse[]>([]);
+
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, paymentFilter, page, pageSize, status]);
 
   const { data, isLoading, error, refetch } = useAdminOrders({
     page,
@@ -98,15 +115,16 @@ export function AdminOrderListTable({
     paymentStatus: (paymentFilter || undefined) as PaymentStatus | undefined,
   });
 
-  const { data: orderDetail, isLoading: detailLoading } =
-    useAdminOrder(viewOrderId);
+  const {
+    data: orderDetail,
+    isLoading: detailLoading,
+    refetch: refetchDetail,
+  } = useAdminOrder(viewOrderId);
 
   const confirmOrder = useConfirmAdminOrder();
   const processOrder = useProcessAdminOrder();
   const packOrder = usePackAdminOrder();
   const cancelOrder = useCancelOrderAdmin();
-  const deliverOrder = useDeliverAdminOrder();
-  const returnOrder = useReturnAdminOrder();
 
   const orders = data?.data ?? [];
   const meta = data?.meta;
@@ -129,14 +147,12 @@ export function AdminOrderListTable({
     confirmOrder.isPending ||
     processOrder.isPending ||
     packOrder.isPending ||
-    cancelOrder.isPending ||
-    deliverOrder.isPending ||
-    returnOrder.isPending;
+    cancelOrder.isPending;
 
   const currentDetailStatus = orderDetail?.status?.toLowerCase();
   const isOrderLocked =
     !!orderDetail &&
-    ["cancelled", "returned"].includes(currentDetailStatus || "");
+    ["cancelled", "returned", "delivered"].includes(currentDetailStatus || "");
 
   const columns: ColumnDef<OrderListItemResponse, unknown>[] = [
     {
@@ -210,20 +226,24 @@ export function AdminOrderListTable({
       cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
     },
     {
-      id: "courierTracking",
-      header: "Courier / Tracking",
+      accessorKey: "delivery",
+      header: "Delivery / Dispatch",
       cell: ({ row }) => {
         const delivery = row.original.delivery;
+        const staff = delivery?.staff;
+        const trackingNum = delivery?.trackingNumber;
         const orderStatus = (row.original.status || "").toLowerCase();
+        const assignmentStatus = (delivery?.assignmentStatus || "pending").toLowerCase();
 
-        // 1. Courier Shipment with Tracking Number
-        if (delivery?.trackingNumber) {
+        // 1. Courier Delivery (ST Courier / Tracking Number)
+        if (trackingNum) {
           const partnerName = delivery.deliveryPartner?.name || "ST Courier";
 
           return (
-            <div className="leading-tight max-w-[190px]">
+            <div className="leading-tight max-w-[210px]">
               <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-xs text-secondary-800 truncate">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-secondary-800 bg-secondary-50 border border-secondary-200 px-2 py-0.5 rounded-full">
+                  <Truck className="h-3 w-3 text-secondary-600" />
                   {partnerName}
                 </span>
                 <button
@@ -234,7 +254,7 @@ export function AdminOrderListTable({
                       orderNumber: row.original.orderNumber,
                       customerName: row.original.customer?.name,
                       partnerCode: delivery.deliveryPartner?.code,
-                      trackingNumber: delivery.trackingNumber || "",
+                      trackingNumber: trackingNum,
                     })
                   }
                   title="Edit Courier Tracking"
@@ -243,21 +263,21 @@ export function AdminOrderListTable({
                   Edit
                 </button>
               </div>
-              <div className="flex items-center gap-1 text-[11px] font-mono text-neutral-600 font-medium truncate mt-0.5">
+              <div className="flex items-center gap-1 text-[11px] font-mono text-neutral-700 font-semibold mt-1">
                 <button
                   type="button"
                   onClick={() =>
                     setLiveTrackingModal({
                       open: true,
-                      awb: delivery.trackingNumber!,
+                      awb: trackingNum,
                       courierName: partnerName,
                       orderNumber: row.original.orderNumber,
                     })
                   }
-                  title="Open Live Shipment Tracking (In-App, Ad-Free)"
+                  title="Open Live ST Courier Tracking"
                   className="text-secondary-700 hover:text-secondary-900 font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
-                  <span>AWB: {delivery.trackingNumber}</span>
+                  <span>AWB: {trackingNum}</span>
                   <ExternalLink className="h-3 w-3 text-secondary-600" />
                 </button>
               </div>
@@ -265,28 +285,143 @@ export function AdminOrderListTable({
           );
         }
 
-        // 2. Pending Shipment
+        // 2. Staff Delivery (Assigned Staff)
+        if (staff) {
+          const initial = staff.name.charAt(0).toUpperCase();
+          const isAccepted = assignmentStatus === "accepted";
+          const isRejected = assignmentStatus === "rejected";
+          const isPending = !isAccepted && !isRejected;
+
+          return (
+            <div className="flex items-center justify-between gap-2 max-w-[210px]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className={cn(
+                    "grid h-7 w-7 place-items-center rounded-full text-white text-xs font-bold shrink-0",
+                    isAccepted
+                      ? "bg-emerald-600"
+                      : isRejected
+                      ? "bg-rose-500"
+                      : "bg-secondary-600"
+                  )}
+                >
+                  {initial}
+                </div>
+                <div className="min-w-0 leading-tight">
+                  <div className="flex items-center gap-1 truncate">
+                    <span
+                      className={cn(
+                        "font-semibold text-xs truncate",
+                        isRejected ? "text-neutral-500 line-through" : "text-neutral-900"
+                      )}
+                    >
+                      {staff.name}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {isAccepted && (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
+                        <Check className="h-2.5 w-2.5" />
+                        Accepted
+                      </span>
+                    )}
+                    {isPending && (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">
+                        <Clock className="h-2.5 w-2.5" />
+                        Pending
+                      </span>
+                    )}
+                    {isRejected && (
+                      <span
+                        className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded"
+                        title={delivery?.deliveryNotes || "Rejected by staff"}
+                      >
+                        <AlertCircle className="h-2.5 w-2.5" />
+                        Rejected
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {orderStatus === "packed" && (
+                <>
+                  {isPending && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAssignStaffOrder({
+                          id: row.original.id,
+                          orderNumber: row.original.orderNumber,
+                        })
+                      }
+                      title="Change / Reassign Delivery Staff"
+                      className="text-[11px] font-semibold text-secondary-600 hover:underline cursor-pointer shrink-0"
+                    >
+                      Change
+                    </button>
+                  )}
+
+                  {isRejected && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAssignStaffOrder({
+                          id: row.original.id,
+                          orderNumber: row.original.orderNumber,
+                        })
+                      }
+                      title="Reassign a new Delivery Staff member"
+                      className="text-[11px] font-bold text-rose-700 hover:underline cursor-pointer shrink-0"
+                    >
+                      Reassign
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        }
+
+        // 3. Unassigned / Pending
         return (
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-500 bg-cream-100 px-2 py-0.5 rounded-full border border-cream-border">
               <Package className="h-3 w-3 text-neutral-400" />
-              Pending Shipment
+              Unassigned
             </span>
             {["confirmed", "processing", "packed"].includes(orderStatus) && (
-              <button
-                type="button"
-                onClick={() =>
-                  setShipCourierOrder({
-                    id: row.original.id,
-                    orderNumber: row.original.orderNumber,
-                    customerName: row.original.customer?.name,
-                  })
-                }
-                title="Ship via ST Courier"
-                className="text-[11px] font-semibold text-secondary-700 hover:underline cursor-pointer"
-              >
-                Ship
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAssignStaffOrder({
+                      id: row.original.id,
+                      orderNumber: row.original.orderNumber,
+                    })
+                  }
+                  title="Assign Delivery Staff"
+                  className="text-[11px] font-semibold text-secondary-600 hover:underline cursor-pointer"
+                >
+                  Staff
+                </button>
+                <span className="text-neutral-300">|</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShipCourierOrder({
+                      id: row.original.id,
+                      orderNumber: row.original.orderNumber,
+                      customerName: row.original.customer?.name,
+                    })
+                  }
+                  title="Ship via ST Courier"
+                  className="text-[11px] font-semibold text-amber-700 hover:underline cursor-pointer"
+                >
+                  Courier
+                </button>
+              </div>
             )}
           </div>
         );
@@ -327,7 +462,7 @@ export function AdminOrderListTable({
         );
 
         return (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-center gap-1.5">
             {/* Quick advance action button */}
             {orderStatus === "pending" && (
               <button
@@ -380,75 +515,76 @@ export function AdminOrderListTable({
               </button>
             )}
 
-            {/* Ship via ST Courier Action Button */}
-            {["confirmed", "processing", "packed", "shipped"].includes(orderStatus) && (
-              <button
-                type="button"
-                onClick={() =>
-                  setShipCourierOrder({
-                    id: row.original.id,
-                    orderNumber: row.original.orderNumber,
-                    customerName: row.original.customer?.name,
-                    partnerCode: row.original.delivery?.deliveryPartner?.code,
-                    trackingNumber: row.original.delivery?.trackingNumber || "",
-                  })
-                }
-                title={
-                  row.original.delivery?.trackingNumber
-                    ? "Update ST Courier Tracking"
-                    : "Ship with ST Courier"
-                }
-                className={`grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer ${orderStatus === "packed"
-                    ? "border-secondary-600 bg-secondary-600 text-white hover:bg-secondary-700 shadow-xs"
-                    : row.original.delivery?.trackingNumber
-                      ? "border-secondary-300 bg-secondary-50 text-secondary-700 hover:bg-secondary-100"
-                      : "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                  }`}
-                disabled={isTransitionPending}
-              >
-                <Truck className="h-3.5 w-3.5" />
-              </button>
-            )}
+            {orderStatus === "packed" && (
+              <>
+                {/* 1. Staff assignment button (if not already accepted by staff) */}
+                {row.original.delivery?.assignmentStatus?.toLowerCase() !== "accepted" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAssignStaffOrder({
+                        id: row.original.id,
+                        orderNumber: row.original.orderNumber,
+                      })
+                    }
+                    title={
+                      row.original.delivery?.assignmentStatus?.toLowerCase() === "rejected"
+                        ? "Reassign Delivery Staff (Previous staff declined)"
+                        : row.original.delivery?.isAssigned && row.original.delivery?.staff
+                        ? "Change Delivery Staff"
+                        : "Assign Delivery Staff"
+                    }
+                    className={cn(
+                      "grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer shadow-xs",
+                      row.original.delivery?.assignmentStatus?.toLowerCase() === "rejected"
+                        ? "border-rose-600 bg-rose-600 text-white hover:bg-rose-700"
+                        : row.original.delivery?.isAssigned && row.original.delivery?.staff
+                        ? "border-amber-600 bg-amber-600 text-white hover:bg-amber-700"
+                        : "border-secondary-600 bg-secondary-600 text-white hover:bg-secondary-700"
+                    )}
+                    disabled={isTransitionPending}
+                  >
+                    <Truck className="h-3.5 w-3.5" />
+                  </button>
+                )}
 
-            {/* Quick Mark as Delivered button for in-transit orders */}
-            {["shipped", "out_for_delivery"].includes(orderStatus) && (
-              <button
-                type="button"
-                onClick={() =>
-                  deliverOrder.mutate(
-                    {
+                {/* 2. Ship via Courier button */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShipCourierOrder({
                       id: row.original.id,
-                      note: "Order marked as delivered by admin",
-                    },
-                    { onSuccess: () => refetch() }
-                  )
-                }
-                title="Mark as Delivered"
-                className="grid h-8 w-8 place-items-center rounded-lg border border-emerald-300 bg-emerald-50 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-all cursor-pointer"
-                disabled={isTransitionPending}
-              >
-                <CheckCircle className="h-3.5 w-3.5" />
-              </button>
+                      orderNumber: row.original.orderNumber,
+                      customerName: row.original.customer?.name,
+                      partnerCode: row.original.delivery?.deliveryPartner?.code,
+                      trackingNumber: row.original.delivery?.trackingNumber || "",
+                    })
+                  }
+                  title="Ship via Courier (ST Courier)"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-amber-600 bg-amber-600 text-white hover:bg-amber-700 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+                  disabled={isTransitionPending}
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              </>
             )}
 
-            {/* Quick Process Return / Refund button for delivered orders */}
-            {orderStatus === "delivered" && (
+            {/* Quick Live Tracking Button for Active Courier Shipments */}
+            {row.original.delivery?.trackingNumber && (
               <button
                 type="button"
                 onClick={() =>
-                  setReturnRefundOrder({
-                    id: row.original.id,
+                  setLiveTrackingModal({
+                    open: true,
+                    awb: row.original.delivery!.trackingNumber!,
+                    courierName: row.original.delivery?.deliveryPartner?.name || "ST Courier",
                     orderNumber: row.original.orderNumber,
-                    totalAmount: Number(row.original.totalAmount),
-                    paymentStatus: row.original.paymentStatus,
-                    customerName: row.original.customer?.name,
                   })
                 }
-                title="Process Return / Refund"
-                className="grid h-8 w-8 place-items-center rounded-lg border border-purple-300 bg-purple-50 text-xs font-semibold text-purple-700 hover:bg-purple-100 transition-all cursor-pointer"
-                disabled={isTransitionPending}
+                title="Live Shipment Tracking"
+                className="grid h-8 w-8 place-items-center rounded-lg border border-secondary-600 bg-secondary-50 text-secondary-700 hover:bg-secondary-100 text-xs font-semibold transition-all cursor-pointer shadow-xs"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
+                <Truck className="h-3.5 w-3.5 text-secondary-700 animate-pulse" />
               </button>
             )}
 
@@ -478,10 +614,10 @@ export function AdminOrderListTable({
   ];
 
   return (
-    <div className="flex flex-1 min-h-0 min-w-0 flex flex-col bg-transparent">
+    <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-transparent rounded-2xl">
       {/* Filter and Search Bar */}
-      <div className="admin-surface flex-shrink-0 mb-4 flex flex-col gap-3 rounded-xl p-2.5 sm:flex-row sm:items-center sm:justify-between relative z-50">
-        <div className="flex flex-1 items-center gap-3">
+      <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
           <SearchInput
             placeholder="Search by order number, customer name, email, phone..."
             value={search}
@@ -489,45 +625,74 @@ export function AdminOrderListTable({
               setSearch(val.trim());
               setPage(1);
             }}
-            className="w-full max-w-md bg-cream-50 border-cream-border-subtle"
+            className="w-full max-w-md"
           />
-          {!isLoading && !error && (
-            <span className="hidden whitespace-nowrap text-xs font-medium text-neutral-500 lg:inline">
-              <span className="font-bold text-neutral-800 tabular-nums">
-                {meta?.total ?? orders.length}
-              </span>{" "}
-              {(meta?.total ?? orders.length) === 1 ? "order" : "orders"}
-              {hasActiveFilters ? " found" : ""}
-            </span>
-          )}
-        </div>
 
-        <div className="flex items-center gap-2 relative z-50">
-          <Select
-            value={paymentFilter}
-            onValueChange={(val) => {
-              setPaymentFilter(val);
-              setPage(1);
-            }}
-            options={[
-              { value: "", label: "All Payments" },
-              ...PAYMENT_STATUSES.map((ps) => ({
-                value: ps,
-                label: PAYMENT_STATUS_LABELS[ps] || ps,
-              })),
-            ]}
-            className="w-40 sm:w-44 h-10"
-            size="sm"
-          />
+          <div className="w-full sm:w-44">
+            <Select
+              value={paymentFilter}
+              onValueChange={(val) => {
+                setPaymentFilter(val);
+                setPage(1);
+              }}
+              options={[
+                { value: "", label: "All Payments" },
+                ...PAYMENT_STATUSES.map((ps) => ({
+                  value: ps,
+                  label: PAYMENT_STATUS_LABELS[ps] || ps,
+                })),
+              ]}
+              placeholder="All Payments"
+              className="h-11 rounded-xl"
+            />
+          </div>
 
           {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} />}
+        </div>
+
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <ExportExcelButton
+            data={orders}
+            fetchData={async () => {
+              const res = await getAdminOrders({
+                page: 1,
+                limit: 10000,
+                search: search || undefined,
+                status: status || undefined,
+                paymentStatus: (paymentFilter || undefined) as PaymentStatus | undefined,
+              });
+              return res.data;
+            }}
+            totalCount={meta?.total ?? orders.length}
+            filename={`orders${status ? `_${status.toLowerCase()}` : ""}`}
+            sheetName="Orders"
+            columns={EXPORT_PRESETS.orders}
+          />
         </div>
       </div>
 
       {/* Table & Pagination Content */}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col">
+      <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
+        <BulkActionsBar
+          selectedCount={selectedRows.length}
+          entityName="order"
+          filterNotice={search ? `Filtered by "${search}"` : undefined}
+          onClearSelection={() => {
+            setSelectedRowIds({});
+            setSelectedRows([]);
+          }}
+          onExport={() => {
+            exportToExcel({
+              filename: `selected_orders${status ? `_${status.toLowerCase()}` : ""}`,
+              sheetName: "Selected Orders",
+              data: selectedRows,
+              columns: EXPORT_PRESETS.orders,
+            });
+          }}
+        />
+
         {isLoading ? (
-          <AdminTableSkeleton bare rows={8} columns={8} />
+          <LoadingState text="Loading orders..." />
         ) : error ? (
           <ErrorState
             message="Failed to load orders. Please try again."
@@ -538,7 +703,7 @@ export function AdminOrderListTable({
             columns={columns}
             data={orders}
             pageSize={pageSize}
-            pageSizeOptions={[5, 10, 20, 50]}
+            pageSizeOptions={[10, 20, 30, 50]}
             page={meta?.page ?? page}
             totalPages={
               meta?.totalPages ??
@@ -550,8 +715,13 @@ export function AdminOrderListTable({
               setPageSize(newSize);
               setPage(1);
             }}
-            className="admin-surface flex-1"
-            tableClassName="min-w-[1250px]"
+            selectedRowIds={selectedRowIds}
+            onRowSelectionChange={(newSelection, items) => {
+              setSelectedRowIds(newSelection);
+              setSelectedRows(items);
+            }}
+            getRowId={(row) => String(row.id)}
+            className="bg-white border border-cream-border"
             emptyMessage={emptyMessage}
           />
         )}
@@ -668,77 +838,43 @@ export function AdminOrderListTable({
                 )}
 
                 {currentDetailStatus === "packed" && (
-                  <Button
-                    size="sm"
-                    className="bg-secondary-600 hover:bg-secondary-700 text-white"
-                    onClick={() => {
-                      setShipCourierOrder({
-                        id: orderDetail.id,
-                        orderNumber: orderDetail.orderNumber,
-                        customerName: orderDetail.customer?.name,
-                        partnerCode: orderDetail.delivery?.deliveryPartner?.code,
-                        trackingNumber: orderDetail.delivery?.trackingNumber || "",
-                      });
-                    }}
-                    disabled={isTransitionPending}
-                  >
-                    <Truck className="mr-1.5 h-4 w-4" />
-                    Ship via ST Courier
-                  </Button>
-                )}
-
-                {(currentDetailStatus === "shipped" ||
-                  currentDetailStatus === "out_for_delivery") && (
+                  <>
                     <Button
                       size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="bg-secondary-600 hover:bg-secondary-700 text-white cursor-pointer"
                       onClick={() => {
-                        deliverOrder.mutate(
-                          {
-                            id: orderDetail.id,
-                            note: "Order marked as delivered by admin",
-                          },
-                          {
-                            onSuccess: () => {
-                              refetch();
-                            },
-                          }
-                        );
+                        setAssignStaffOrder({
+                          id: orderDetail.id,
+                          orderNumber: orderDetail.orderNumber,
+                        });
                       }}
                       disabled={isTransitionPending}
                     >
-                      {deliverOrder.isPending ? (
-                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                      ) : (
-                        <CheckCircle className="mr-1.5 h-4 w-4" />
-                      )}
-                      Mark Delivered
+                      <Truck className="mr-1.5 h-4 w-4" />
+                      {orderDetail.delivery?.isAssigned && orderDetail.delivery?.staff
+                        ? "Reassign Staff"
+                        : "Assign Staff"}
                     </Button>
-                  )}
 
-                {/* Refund / Return Manual Action for Admin */}
-                {["delivered", "shipped", "out_for_delivery"].includes(
-                  currentDetailStatus || ""
-                ) && (
                     <Button
-                      variant="outline"
                       size="sm"
-                      className="text-purple-700 border-purple-300 hover:bg-purple-50"
-                      onClick={() =>
-                        setReturnRefundOrder({
+                      className="bg-amber-600 hover:bg-amber-700 text-white cursor-pointer"
+                      onClick={() => {
+                        setShipCourierOrder({
                           id: orderDetail.id,
                           orderNumber: orderDetail.orderNumber,
-                          totalAmount: Number(orderDetail.totalAmount),
-                          paymentStatus: orderDetail.paymentStatus,
                           customerName: orderDetail.customer?.name,
-                        })
-                      }
+                          partnerCode: orderDetail.delivery?.deliveryPartner?.code,
+                          trackingNumber: orderDetail.delivery?.trackingNumber || "",
+                        });
+                      }}
                       disabled={isTransitionPending}
                     >
-                      <RotateCcw className="mr-1.5 h-4 w-4" />
-                      Process Return / Refund
+                      <Send className="mr-1.5 h-4 w-4" />
+                      Ship via Courier
                     </Button>
-                  )}
+                  </>
+                )}
 
                 <Button
                   variant="outline"
@@ -776,6 +912,20 @@ export function AdminOrderListTable({
         )}
       </FormModal>
 
+      {/* Assign Staff Modal */}
+      <AssignStaffModal
+        open={!!assignStaffOrder}
+        onClose={() => setAssignStaffOrder(null)}
+        orderId={assignStaffOrder?.id ?? null}
+        orderNumber={assignStaffOrder?.orderNumber}
+        onSuccess={() => {
+          refetch();
+          if (viewOrderId) {
+            refetchDetail();
+          }
+        }}
+      />
+
       {/* Ship Order via Courier Modal */}
       <ShipOrderModal
         open={!!shipCourierOrder}
@@ -787,7 +937,21 @@ export function AdminOrderListTable({
         initialTrackingNumber={shipCourierOrder?.trackingNumber}
         onSuccess={() => {
           refetch();
+          if (viewOrderId) {
+            refetchDetail();
+          }
         }}
+      />
+
+      {/* Live In-App Courier Tracking Modal */}
+      <LiveTrackingModal
+        open={liveTrackingModal.open}
+        onClose={() =>
+          setLiveTrackingModal((prev) => ({ ...prev, open: false }))
+        }
+        awb={liveTrackingModal.awb}
+        courierName={liveTrackingModal.courierName}
+        orderNumber={liveTrackingModal.orderNumber}
       />
 
       {/* Cancel Order Dialog */}
@@ -812,28 +976,6 @@ export function AdminOrderListTable({
         confirmText="Cancel Order"
         variant="destructive"
         isLoading={cancelOrder.isPending}
-      />
-
-      {/* Return & Refund Dialog with 30%, 40%, 50%, 100% or Custom Partial Refund */}
-      <ReturnRefundModal
-        open={!!returnRefundOrder}
-        onClose={() => setReturnRefundOrder(null)}
-        order={returnRefundOrder}
-        onSuccess={() => {
-          setReturnRefundOrder(null);
-          refetch();
-        }}
-      />
-
-      {/* Live In-App Courier Tracking Modal */}
-      <LiveTrackingModal
-        open={liveTrackingModal.open}
-        onClose={() =>
-          setLiveTrackingModal((prev) => ({ ...prev, open: false }))
-        }
-        awb={liveTrackingModal.awb}
-        courierName={liveTrackingModal.courierName}
-        orderNumber={liveTrackingModal.orderNumber}
       />
     </div>
   );

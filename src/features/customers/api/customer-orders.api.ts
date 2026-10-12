@@ -19,8 +19,9 @@ export interface CreateCustomerOrderPayload {
   shippingAddressId: string;
   billingAddressId?: string;
   notes?: string;
-  paymentMethod?: "CARD" | "COD" | "UPI";
+  paymentMethod?: "CARD" | "UPI" | "WHATSAPP" | "CALL";
   paymentDetails?: Record<string, any>;
+  courierType?: "st_courier" | "mss";
 }
 
 export interface CancelCustomerOrderPayload {

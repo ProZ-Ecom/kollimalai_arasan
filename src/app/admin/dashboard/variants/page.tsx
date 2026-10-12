@@ -12,10 +12,14 @@ import {
   useBulkDeleteVariants,
 } from "@/features/variants/hooks";
 import { toast } from "@/components/ui/Toast";
+import { getAdminVariants } from "@/features/variants/api/get-variants";
 import { useUnits } from "@/features/units/hooks";
 import { useInfiniteProductsSelect } from "@/hooks/use-infinite-select";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { exportToExcel, exportVariantsMatrixToExcel } from "@/lib/excel-export";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import {
   AdminPageHeader,
   AdminContent,
@@ -592,6 +596,35 @@ export default function AdminVariantsPage() {
                 </button>
               </div>
 
+              <ExportExcelButton
+                data={variants}
+                fetchData={async () => {
+                  try {
+                    const res = await getAdminVariants({
+                      page: 1,
+                      pageSize: 10000,
+                      search: search || undefined,
+                      productIds: selectedProductFilter ? [selectedProductFilter] : undefined,
+                    });
+                    return res?.data ?? variants;
+                  } catch (e) {
+                    console.warn("fetchData failed, falling back to page variants:", e);
+                    return variants;
+                  }
+                }}
+                totalCount={totalItems}
+                filename="items_catalog"
+                sheetName="Items"
+                columns={EXPORT_PRESETS.variants}
+                onCustomExport={(itemsToExport) => {
+                  exportVariantsMatrixToExcel({
+                    filename: "items_catalog",
+                    sheetName: "Items",
+                    variants: itemsToExport,
+                  });
+                }}
+              />
+
               <Button
                 onClick={() => {
                   setCreateStep(1);
@@ -615,6 +648,13 @@ export default function AdminVariantsPage() {
               onClearSelection={() => {
                 setSelectedRowIds({});
                 setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportVariantsMatrixToExcel({
+                  filename: "selected_items_catalog",
+                  sheetName: "Selected Items",
+                  variants: selectedRows,
+                });
               }}
               onDelete={() => setIsBulkDeleteOpen(true)}
               isDeleting={bulkDeleteMutation.isPending}
@@ -1098,14 +1138,48 @@ export default function AdminVariantsPage() {
                 isLoading={updateMutation.isPending}
                 submitLabel="Update Details"
                 onSubmit={async (formData) => {
-                  const payload = {
-                    variantName: formData.variantName,
-                    slug: formData.slug,
-                    shortDescription: formData.shortDescription || null,
-                    description: formData.description || null,
-                    videoUrl: formData.videoUrl || null,
-                    isFeatured: formData.isFeatured,
-                  };
+                  const payload: Record<string, unknown> = {};
+                  if (
+                    formData.variantName?.trim() !==
+                    (selectedVariant.variantName || "").trim()
+                  ) {
+                    payload.variantName = formData.variantName.trim();
+                  }
+                  if (
+                    formData.slug?.trim() !==
+                    (selectedVariant.slug || "").trim()
+                  ) {
+                    payload.slug = formData.slug.trim();
+                  }
+                  const formShortDesc =
+                    formData.shortDescription?.trim() || null;
+                  const origShortDesc =
+                    selectedVariant.shortDescription?.trim() || null;
+                  if (formShortDesc !== origShortDesc) {
+                    payload.shortDescription = formShortDesc;
+                  }
+                  const formDesc = formData.description?.trim() || null;
+                  const origDesc = selectedVariant.description?.trim() || null;
+                  if (formDesc !== origDesc) {
+                    payload.description = formDesc;
+                  }
+                  const formVideo = formData.videoUrl?.trim() || null;
+                  const origVideo = selectedVariant.videoUrl?.trim() || null;
+                  if (formVideo !== origVideo) {
+                    payload.videoUrl = formVideo;
+                  }
+                  if (
+                    formData.isFeatured !== undefined &&
+                    formData.isFeatured !== (selectedVariant.isFeatured ?? false)
+                  ) {
+                    payload.isFeatured = formData.isFeatured;
+                  }
+
+                  if (Object.keys(payload).length === 0) {
+                    setIsEditOpen(false);
+                    setSelectedVariant(null);
+                    return;
+                  }
 
                   await updateMutation.mutateAsync({
                     productUuid: selectedVariant.productId,
@@ -1152,7 +1226,7 @@ export default function AdminVariantsPage() {
           if (deleteTarget) {
             deleteMutation.mutate(deleteTarget, {
               onSuccess: () => {
-                toast.success("Item Deleted", "Product item removed successfully.");
+                toast.success("Item Deleted", "Product item and associated offers removed successfully.");
                 setDeleteTarget(null);
                 refetch();
               },
@@ -1163,8 +1237,8 @@ export default function AdminVariantsPage() {
           }
         }}
         title="Delete Product Item"
-        description="Are you sure you want to delete this product Item? This action cannot be undone."
-        confirmText="Delete"
+        description="Are you sure you want to delete this product item? Deleting this item will also automatically remove all its pack sizes, inventory records, and associated offers."
+        confirmText="Delete Item"
         variant="destructive"
         isLoading={deleteMutation.isPending}
       />
@@ -1180,7 +1254,7 @@ export default function AdminVariantsPage() {
             await bulkDeleteMutation.mutateAsync(idsToDelete);
             toast.success(
               "Items Deleted",
-              `Successfully deleted ${idsToDelete.length} ${idsToDelete.length === 1 ? "item" : "items"}.`
+              `Successfully deleted ${idsToDelete.length} ${idsToDelete.length === 1 ? "item" : "items"} along with their offers.`
             );
             setSelectedRowIds({});
             setSelectedRows([]);
@@ -1191,7 +1265,7 @@ export default function AdminVariantsPage() {
           }
         }}
         title={`Delete ${selectedRows.length} Selected ${selectedRows.length === 1 ? "Item" : "Items"}`}
-        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "item" : "items"}${activeProductName ? ` belonging to "${activeProductName}"` : ""}? This will permanently remove these items, pricing, and inventories. This action cannot be undone.`}
+        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "item" : "items"}${activeProductName ? ` belonging to "${activeProductName}"` : ""}? Deleting these items will also automatically remove all their pack sizes, inventory records, and associated offers.`}
         confirmText={`Delete ${selectedRows.length} ${selectedRows.length === 1 ? "Item" : "Items"}`}
         variant="destructive"
         isLoading={bulkDeleteMutation.isPending}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Calendar, Eye, Pencil, Plus, Power, Tag, Trash2, X } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Calendar, Eye, Pencil, Plus, Power, PowerOff, Tag, Trash2, X } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,10 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ErrorState } from "@/components/ui/error-state";
 import { toast } from "@/components/ui/Toast";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { exportToExcel } from "@/lib/excel-export";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { AdminContent, AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { FormModal } from "@/components/common/FormModal";
@@ -23,6 +27,7 @@ import {
   useOffers,
   useToggleOfferStatus,
   useUpdateOffer,
+  getOffers,
 } from "@/features/offers/hooks";
 import { OfferDetails, OfferForm } from "@/features/offers/components";
 import {
@@ -99,6 +104,15 @@ export default function AdminOffersPage() {
   const [statusTarget, setStatusTarget] = useState<OfferListItem | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Bulk Selection State
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<OfferListItem[]>([]);
+
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [filters, page, pageSize]);
+
   const { data, isLoading, isFetching, error, refetch } = useOffers({
     page,
     limit: pageSize,
@@ -163,10 +177,108 @@ export default function AdminOffersPage() {
   const handleUpdate = async (formData: CreateOfferSchemaInput) => {
     if (!editingOffer) return;
     setFormError(null);
+
+    const payload: Record<string, unknown> = {};
+
+    if (formData.name?.trim() !== (editingOffer.name || "").trim()) {
+      payload.name = formData.name.trim();
+    }
+    const formCode = formData.code?.trim() || null;
+    const origCode = editingOffer.code?.trim() || null;
+    if (formCode !== origCode) {
+      payload.code = formCode;
+    }
+    if (formData.level !== editingOffer.level) {
+      payload.level = formData.level;
+    }
+    if (formData.type !== editingOffer.type) {
+      payload.type = formData.type;
+    }
+    if (Number(formData.value) !== Number(editingOffer.value)) {
+      payload.value = Number(formData.value);
+    }
+    const numOrNull = (v: unknown) =>
+      v === undefined || v === null || v === "" ? null : Number(v);
+    if (numOrNull(formData.buyQuantity) !== numOrNull(editingOffer.buyQuantity)) {
+      payload.buyQuantity = numOrNull(formData.buyQuantity);
+    }
+    if (numOrNull(formData.getQuantity) !== numOrNull(editingOffer.getQuantity)) {
+      payload.getQuantity = numOrNull(formData.getQuantity);
+    }
+    if (Number(formData.minQuantity) !== Number(editingOffer.minQuantity)) {
+      payload.minQuantity = Number(formData.minQuantity);
+    }
+    if (numOrNull(formData.maxQuantity) !== numOrNull(editingOffer.maxQuantity)) {
+      payload.maxQuantity = numOrNull(formData.maxQuantity);
+    }
+    if (numOrNull(formData.minCartValue) !== numOrNull(editingOffer.minCartValue)) {
+      payload.minCartValue = numOrNull(formData.minCartValue);
+    }
+    if (
+      numOrNull(formData.maxDiscountAmount) !==
+      numOrNull(editingOffer.maxDiscountAmount)
+    ) {
+      payload.maxDiscountAmount = numOrNull(formData.maxDiscountAmount);
+    }
+    if (Number(formData.priority) !== Number(editingOffer.priority)) {
+      payload.priority = Number(formData.priority);
+    }
+    const formTerms = formData.terms?.trim() || null;
+    const origTerms = editingOffer.terms?.trim() || null;
+    if (formTerms !== origTerms) {
+      payload.terms = formTerms;
+    }
+
+    const formStartsAt = formData.startsAt;
+    const origStartsAt = editingOffer.startsAt
+      ? new Date(editingOffer.startsAt).toISOString().slice(0, 10)
+      : "";
+    if (formStartsAt !== origStartsAt) {
+      payload.startsAt = formStartsAt;
+    }
+
+    const formEndsAt = formData.endsAt;
+    const origEndsAt = editingOffer.endsAt
+      ? new Date(editingOffer.endsAt).toISOString().slice(0, 10)
+      : "";
+    if (formEndsAt !== origEndsAt) {
+      payload.endsAt = formEndsAt;
+    }
+
+    if (
+      formData.isActive !== undefined &&
+      formData.isActive !== editingOffer.isActive
+    ) {
+      payload.isActive = formData.isActive;
+    }
+
+    const formProductIds = (formData.productIds || []).slice().sort().join(",");
+    const origProductIds = (editingOffer.products?.map((p) => p.id) || [])
+      .slice()
+      .sort()
+      .join(",");
+    if (formProductIds !== origProductIds) {
+      payload.productIds = formData.productIds || [];
+    }
+
+    const formItemIds = (formData.itemIds || []).slice().sort().join(",");
+    const origItemIds = (editingOffer.items?.map((i) => i.id) || [])
+      .slice()
+      .sort()
+      .join(",");
+    if (formItemIds !== origItemIds) {
+      payload.itemIds = formData.itemIds || [];
+    }
+
+    if (Object.keys(payload).length === 0) {
+      setEditingOffer(null);
+      return;
+    }
+
     try {
       await updateMutation.mutateAsync({
         id: editingOffer.id,
-        data: formData as Record<string, unknown>,
+        data: payload,
       });
       toast.success("Offer updated", `"${formData.name}" has been saved.`);
       setEditingOffer(null);
@@ -353,12 +465,16 @@ export default function AdminOffersPage() {
               onClick={() => setStatusTarget(offer)}
               className={
                 offer.isActive
-                  ? "h-8 w-8 text-emerald-600 hover:bg-emerald-50"
-                  : "h-8 w-8 text-slate-400 hover:bg-slate-100"
+                  ? "h-8 w-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                  : "h-8 w-8 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
               }
-              title={offer.isActive ? "Deactivate offer" : "Activate offer"}
+              title={offer.isActive ? "Active — Click to deactivate" : "Inactive — Click to activate"}
             >
-              <Power className="h-4 w-4" />
+              {offer.isActive ? (
+                <Power className="h-4 w-4 text-emerald-600" />
+              ) : (
+                <PowerOff className="h-4 w-4 text-neutral-400" />
+              )}
             </Button>
             <Button
               variant="ghost"
@@ -384,37 +500,25 @@ export default function AdminOffersPage() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex flex-1 min-h-0 min-w-0 flex-col">
       <AdminPageHeader
         title="Offers"
         description="Create product-wise and item-wise offers, and control which one wins when several apply."
-        actions={
-          <Button
-            onClick={() => {
-              setFormError(null);
-              setIsCreateOpen(true);
-            }}
-            className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)]"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Create Offer
-          </Button>
-        }
       />
 
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-transparent py-1">
-          {/* Filters */}
+      <AdminContent className="flex-1 min-h-0 min-w-0">
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-transparent">
+          {/* Filters + Action Buttons Toolbar */}
           <div className="flex-shrink-0 space-y-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <SearchInput
-                placeholder="Search offers by name or code..."
-                value={filters.search}
-                onSearch={(value) => setFilter("search", value)}
-                className="w-full max-w-md"
-              />
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
+                <SearchInput
+                  placeholder="Search offers by name or code..."
+                  value={filters.search}
+                  onSearch={(value) => setFilter("search", value)}
+                  className="w-full max-w-md"
+                />
 
-              <div className="flex flex-wrap items-center gap-2.5">
                 {/* Aligned Date Range Picker */}
                 <div className="flex items-center h-11 bg-white border border-[var(--color-neutral-300)] rounded-xl px-3.5 shadow-2xs gap-2">
                   <Calendar className="h-4 w-4 text-[var(--color-neutral-400)] shrink-0" />
@@ -453,6 +557,43 @@ export default function AdminOffersPage() {
                 </div>
 
                 {hasActiveFilters && <ClearFiltersButton onClick={clearFilters} />}
+              </div>
+
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <ExportExcelButton
+                  data={offers}
+                  fetchData={async () => {
+                    const res = await getOffers({
+                      page: 1,
+                      limit: 10000,
+                      search: filters.search || undefined,
+                      level: filters.level || undefined,
+                      type: filters.type || undefined,
+                      status: filters.status || undefined,
+                      categoryId: filters.categoryId || undefined,
+                      productId: filters.productId || undefined,
+                      startDate: filters.startDate || undefined,
+                      endDate: filters.endDate || undefined,
+                    });
+                    return res?.data ?? [];
+                  }}
+                  totalCount={data?.meta?.total ?? offers.length}
+                  filename="offers"
+                  sheetName="Offers"
+                  columns={EXPORT_PRESETS.offers}
+                />
+
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setFormError(null);
+                    setIsCreateOpen(true);
+                  }}
+                  className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] shadow-xs"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Offer
+                </Button>
               </div>
             </div>
 
@@ -511,8 +652,26 @@ export default function AdminOffersPage() {
             </div>
           </div>
 
-          {/* Table */}
-          <div className="mt-6 flex min-h-0 flex-1 flex-col">
+          {/* Table Container */}
+          <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
+            <BulkActionsBar
+              selectedCount={selectedRows.length}
+              entityName="offer"
+              filterNotice={filters.search ? `Filtered by "${filters.search}"` : undefined}
+              onClearSelection={() => {
+                setSelectedRowIds({});
+                setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportToExcel({
+                  filename: "selected_offers",
+                  sheetName: "Selected Offers",
+                  data: selectedRows,
+                  columns: EXPORT_PRESETS.offers,
+                });
+              }}
+            />
+
             <DataTable
               columns={columns}
               data={offers}
@@ -527,6 +686,12 @@ export default function AdminOffersPage() {
                 setPageSize(newSize);
                 setPage(1);
               }}
+              selectedRowIds={selectedRowIds}
+              onRowSelectionChange={(newSelection, items) => {
+                setSelectedRowIds(newSelection);
+                setSelectedRows(items);
+              }}
+              getRowId={(row) => String(row.id)}
               emptyMessage={
                 hasActiveFilters
                   ? "No offers match these filters."
@@ -609,8 +774,8 @@ export default function AdminOffersPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         isLoading={deleteMutation.isPending}
-        title="Delete this offer?"
-        description={`"${deleteTarget?.name}" will be removed and will stop applying to carts. Orders already placed keep the discount they were given.`}
+        title="Delete Offer"
+        description={`Are you sure you want to delete the offer "${deleteTarget?.name}"? It will be removed from the offers module and will stop applying discounts to products and items across the store.`}
         confirmText="Delete Offer"
       />
     </div>

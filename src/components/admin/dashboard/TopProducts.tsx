@@ -52,7 +52,7 @@ export function TopProducts({ products }: TopProductsProps) {
             <Package className="h-8 w-8 text-neutral-300" />
             <p className="mt-2 text-sm font-medium text-neutral-600">No sales recorded yet</p>
             <p className="text-xs text-neutral-400">
-              Top selling snacks will rank here automatically.
+              Top selling products will rank here automatically.
             </p>
           </div>
         ) : (

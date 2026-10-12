@@ -25,19 +25,6 @@ function CartSummary({
   isCheckingOut = false,
   isAdminUser = false,
 }: CartSummaryProps) {
-  const freeShippingThreshold = 500;
-  const subtotal = Number(summary.subtotal || 0);
-  const discount = Number(summary.discount || 0);
-  const effectiveSubtotal = Math.max(0, subtotal - discount);
-  const remainingForFreeShipping = Math.max(
-    0,
-    freeShippingThreshold - effectiveSubtotal
-  );
-  const progressPercent = Math.min(
-    100,
-    Math.round((effectiveSubtotal / freeShippingThreshold) * 100)
-  );
-
   return (
     <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-xs overflow-hidden">
       {/* Header */}
@@ -49,25 +36,20 @@ function CartSummary({
       </div>
 
       <div className="p-5 space-y-5">
-        {/* Free Shipping Progress */}
-        <div className="rounded-xl border border-theme-border-subtle bg-theme-surface-alt p-3.5 space-y-2">
-          <div className="flex items-center justify-between text-xs font-medium">
-            <span className="flex items-center gap-1.5 text-theme-primary">
-              <Truck className="h-3.5 w-3.5 text-theme-secondary" />
-              {remainingForFreeShipping > 0
-                ? `Add ${formatPrice(remainingForFreeShipping)} more for FREE delivery`
-                : "You unlocked FREE Standard Delivery!"}
-            </span>
-            <span className="text-theme-text-muted font-semibold">
-              {progressPercent}%
+        {/* Weight & Courier Info */}
+        <div className="rounded-xl border border-theme-border-subtle bg-theme-surface-alt p-3.5 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-theme-text-primary font-medium">
+            <Truck className="h-4 w-4 text-theme-primary shrink-0" />
+            <span>
+              Total Weight:{" "}
+              <span className="font-bold text-theme-primary">
+                {summary.totalWeightKg ? `${summary.totalWeightKg} kg` : "Calculated at checkout"}
+              </span>
             </span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-theme-border">
-            <div
-              className="h-full rounded-full bg-theme-secondary transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+          <span className="text-[11px] font-semibold text-theme-text-subtle bg-theme-surface px-2.5 py-0.5 rounded-md border border-theme-border">
+            {summary.courierName || "ST Courier"}
+          </span>
         </div>
 
         {/* Pricing Breakdown */}
@@ -98,8 +80,15 @@ function CartSummary({
           )}
 
           <div className="flex justify-between items-center text-sm">
-            <span className="text-theme-text-subtle">Delivery Charges</span>
-            {summary.shippingCharge === 0 || remainingForFreeShipping === 0 ? (
+            <div className="space-y-0.5">
+              <span className="text-theme-text-subtle">Delivery Charges</span>
+              {summary.rateDescription && (
+                <span className="block text-[11px] text-theme-text-muted">
+                  {summary.rateDescription}
+                </span>
+              )}
+            </div>
+            {summary.shippingCharge === 0 ? (
               <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-theme-status-del-bg text-theme-status-del-fg font-bold text-xs">
                 FREE
               </span>

@@ -26,9 +26,8 @@ export function CustomerProductGrid({
     if (!variants || variants.length === 0) return [];
     const map = new Map<string, CustomerVariantListItemDto>();
     for (const v of variants) {
-      const existing = map.get(v.productId);
-      if (!existing || (v.isDefault && !existing.isDefault)) {
-        map.set(v.productId, v);
+      if (!map.has(v.id)) {
+        map.set(v.id, v);
       }
     }
     return Array.from(map.values());
@@ -71,11 +70,11 @@ export function CustomerProductGrid({
     <div className={`grid ${gridColsClass} gap-5 sm:gap-6`}>
       {hasVariants
         ? uniqueVariants.map((variant) => (
-            <CustomerVariantCard key={variant.id} variant={variant} />
-          ))
+          <CustomerVariantCard key={variant.id} variant={variant} />
+        ))
         : products!.map((product) => (
-            <CustomerProductCard key={product.id} product={product} />
-          ))}
+          <CustomerProductCard key={product.id} product={product} />
+        ))}
     </div>
   );
 }

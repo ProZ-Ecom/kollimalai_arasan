@@ -46,9 +46,9 @@ function formatVariantPriceHistory(
     changedAt: item.changed_at,
     changedBy: user
       ? {
-          id: user.uuid || String(user.id),
-          name: user.name,
-        }
+        id: user.uuid || String(user.id),
+        name: user.name,
+      }
       : null,
   };
 }
@@ -135,6 +135,7 @@ export const variantUnitPriceService = {
           variantUnitPriceId: created.id,
           quantity_available: initialStock,
           quantity_reserved: 0,
+          reorderLevel: 0,
           is_active: true,
           created_by: adminId,
           updated_by: adminId,

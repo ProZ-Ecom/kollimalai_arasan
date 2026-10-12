@@ -32,7 +32,6 @@ export function LowestPrice() {
     pageSize: 20,
     sortBy: "createdAt",
     sortOrder: "desc",
-    onlyDefault: true,
   });
 
   const { wishlistedIds } = useWishlistedUnitPriceIds({ enabled: !!session });
@@ -47,9 +46,8 @@ export function LowestPrice() {
     );
     const productMap = new Map<string, StorefrontProduct>();
     for (const item of discounted) {
-      const existing = productMap.get(item.productId);
-      if (!existing || (item.isDefault && !existing.isDefault)) {
-        productMap.set(item.productId, item);
+      if (!productMap.has(item.id)) {
+        productMap.set(item.id, item);
       }
     }
     return Array.from(productMap.values());

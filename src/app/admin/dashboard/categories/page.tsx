@@ -21,9 +21,13 @@ import {
   useCreateCategory,
   useUpdateCategory,
 } from "@/features/categories/hooks";
+import { getCategories } from "@/features/categories/api/get-categories";
 import { getImageUrl } from "@/lib/utils";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { exportToExcel } from "@/lib/excel-export";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { toast } from "@/components/ui/Toast";
 import { AdminPageHeader, AdminContent } from "@/components/admin/AdminPageHeader";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
@@ -217,14 +221,37 @@ export default function AdminCategoriesPage() {
               className="w-full max-w-md"
             />
 
-            <Button
-              type="button"
-              onClick={() => setIsCreateOpen(true)}
-              className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)]"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Category
-            </Button>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <ExportExcelButton
+                data={categories}
+                fetchData={async () => {
+                  try {
+                    const res = await getCategories({
+                      page: 1,
+                      pageSize: 10000,
+                      search: search || undefined,
+                    });
+                    return res?.data ?? categories;
+                  } catch (e) {
+                    console.warn("fetchData failed, falling back to page categories:", e);
+                    return categories;
+                  }
+                }}
+                totalCount={data?.meta?.total ?? categories.length}
+                filename="categories"
+                sheetName="Categories"
+                columns={EXPORT_PRESETS.categories}
+              />
+
+              <Button
+                type="button"
+                onClick={() => setIsCreateOpen(true)}
+                className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] shadow-xs"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Category
+              </Button>
+            </div>
           </div>
 
           {/* Table Container */}
@@ -236,6 +263,14 @@ export default function AdminCategoriesPage() {
               onClearSelection={() => {
                 setSelectedRowIds({});
                 setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportToExcel({
+                  filename: "selected_categories",
+                  sheetName: "Selected Categories",
+                  data: selectedRows,
+                  columns: EXPORT_PRESETS.categories,
+                });
               }}
               onDelete={() => setIsBulkDeleteOpen(true)}
               isDeleting={bulkDeleteMutation.isPending}
@@ -274,7 +309,7 @@ export default function AdminCategoriesPage() {
           if (deleteId) {
             deleteMutation.mutate(deleteId, {
               onSuccess: () => {
-                toast.success("Category Deleted", "Category deleted successfully.");
+                toast.success("Category Deleted", "Category and related products, items, and offers deleted successfully.");
                 setDeleteId(null);
               },
               onError: (err: any) => {
@@ -284,7 +319,7 @@ export default function AdminCategoriesPage() {
           }
         }}
         title="Delete Category"
-        description="Are you sure you want to delete this category? This action cannot be undone."
+        description="Are you sure you want to delete this category? Deleting this category will also automatically remove all its related products, variant items, unit pricing, and associated active offers from both the storefront and admin panel."
         confirmText="Delete Category"
         variant="destructive"
         isLoading={deleteMutation.isPending}
@@ -303,7 +338,7 @@ export default function AdminCategoriesPage() {
 
             toast.success(
               "Categories Deleted",
-              `Successfully deleted ${idsToDelete.length} ${idsToDelete.length === 1 ? "category" : "categories"}.`
+              `Successfully deleted ${idsToDelete.length} ${idsToDelete.length === 1 ? "category" : "categories"} along with related products, items, and offers.`
             );
             setSelectedRowIds({});
             setSelectedRows([]);
@@ -314,7 +349,7 @@ export default function AdminCategoriesPage() {
           }
         }}
         title={`Delete ${selectedRows.length} Selected ${selectedRows.length === 1 ? "Category" : "Categories"}`}
-        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "category" : "categories"}${search ? ` matching "${search}"` : ""}? Deleting will automatically deactivate and remove all associated products and items from both the admin dashboard and storefront. This action cannot be undone.`}
+        description={`Are you sure you want to delete ${selectedRows.length} selected ${selectedRows.length === 1 ? "category" : "categories"}? Deleting these categories will also automatically remove all their related products, variant items, unit pricing, and associated active offers from both the storefront and admin panel.`}
         confirmText={`Delete ${selectedRows.length} ${selectedRows.length === 1 ? "Category" : "Categories"}`}
         variant="destructive"
         isLoading={bulkDeleteMutation.isPending}
@@ -380,13 +415,41 @@ export default function AdminCategoriesPage() {
             isLoading={updateMutation.isPending}
             submitLabel="Update Category"
             onSubmit={async (data) => {
-              const payload = {
-                name: data.name,
-                slug: data.slug,
-                description: data.description,
-                icon: data.image,
-                sortOrder: Number(data.sortOrder || 0),
-              };
+              const payload: Record<string, unknown> = {};
+
+              const cleanName = data.name?.trim();
+              if (cleanName && cleanName !== selectedCategory.name?.trim()) {
+                payload.name = cleanName;
+              }
+
+              const cleanSlug = data.slug?.trim();
+              if (cleanSlug && cleanSlug !== selectedCategory.slug?.trim()) {
+                payload.slug = cleanSlug;
+              }
+
+              const cleanDesc = data.description?.trim() ?? "";
+              const currentDesc = selectedCategory.description?.trim() ?? "";
+              if (cleanDesc !== currentDesc) {
+                payload.description = cleanDesc;
+              }
+
+              const cleanImage = data.image?.trim();
+              const currentImage = (selectedCategory.icon || selectedCategory.image || "").trim();
+              if (cleanImage && cleanImage !== currentImage) {
+                payload.image = cleanImage;
+              }
+
+              const newSortOrder = Number(data.sortOrder || 0);
+              const currentSortOrder = Number(selectedCategory.sortOrder || 0);
+              if (newSortOrder !== currentSortOrder) {
+                payload.sortOrder = newSortOrder;
+              }
+
+              if (Object.keys(payload).length === 0) {
+                setIsEditOpen(false);
+                setSelectedCategory(null);
+                return;
+              }
 
               try {
                 await updateMutation.mutateAsync({

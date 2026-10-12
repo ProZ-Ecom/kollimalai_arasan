@@ -50,7 +50,7 @@ export const createBannerSchema = z
       .number()
       .int("Sort order must be an integer")
       .min(0, "Sort order cannot be negative")
-      .max(100, "Sort order cannot exceed 100")
+      .max(100000, "Sort order cannot exceed 100000")
       .default(0),
     isActive: z.boolean().default(true),
     startsAt: parseDateString.nullable().optional(),
@@ -122,7 +122,7 @@ export const updateBannerSchema = z
       .number()
       .int("Sort order must be an integer")
       .min(0, "Sort order cannot be negative")
-      .max(100, "Sort order cannot exceed 100")
+      .max(100000, "Sort order cannot exceed 100000")
       .optional(),
     isActive: z.boolean().optional(),
     startsAt: parseDateString.nullable().optional(),
@@ -159,7 +159,7 @@ export type UpdateBannerPayload = z.input<typeof updateBannerSchema>;
 export const bannerListQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(10),
+    limit: z.coerce.number().int().min(1).max(100000).default(10),
     search: z.string().trim().optional(),
     bannerPositionId: z.string().uuid("Invalid banner position UUID").optional(),
     positionSlug: z.string().trim().optional(),

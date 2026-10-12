@@ -29,9 +29,18 @@ export function GstRateForm({
     reValidateMode: "onChange",
     defaultValues: {
       name: initialData?.name || "",
-      cgstPercent: initialData?.cgstPercent ?? 0,
-      sgstPercent: initialData?.sgstPercent ?? 0,
-      igstPercent: initialData?.igstPercent ?? 0,
+      cgstPercent:
+        initialData?.cgstPercent !== undefined
+          ? initialData.cgstPercent
+          : ("" as unknown as number),
+      sgstPercent:
+        initialData?.sgstPercent !== undefined
+          ? initialData.sgstPercent
+          : ("" as unknown as number),
+      igstPercent:
+        initialData?.igstPercent !== undefined
+          ? initialData.igstPercent
+          : ("" as unknown as number),
     },
   });
 
@@ -60,7 +69,7 @@ export function GstRateForm({
         <FormInput
           name="name"
           label="GST Rate Name"
-          placeholder="GST 18 Percent Standard"
+          placeholder="e.g. GST 5% (Spices & Natural Foods)"
           required
         />
 

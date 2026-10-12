@@ -29,4 +29,5 @@ export function useBlog(slugOrId: string | null) {
   });
 }
 
+export { getBlogs, getBlog } from "../api/get-blogs";
 export { useCreateBlog, useUpdateBlog, useDeleteBlog } from "./use-blog-mutations";

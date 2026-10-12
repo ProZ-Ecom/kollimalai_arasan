@@ -9,13 +9,18 @@ import {
   Package,
 } from "lucide-react";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
+import { exportToExcel } from "@/lib/excel-export";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
+import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 import { Select } from "@/components/ui/select";
 import { formatDateTime, formatPrice } from "@/lib/utils";
-import { useAdminDeliveryOrders, useAdminDeliveryStaff } from "../hooks";
+import { useAdminDeliveryOrders, useAdminDeliveryStaff, getAdminDeliveryOrders } from "../hooks";
 import { DeliveryStatusBadge, AssignmentStatusBadge } from "./DeliveryStatusBadge";
 import { AssignStaffModal } from "@/features/orders/components/AssignStaffModal";
 import type { AdminDeliveryOrderItem } from "../types/delivery.types";
@@ -26,6 +31,18 @@ export function AdminDeliveryOrdersTable() {
   const [search, setSearch] = useState("");
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState<string>("");
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<AdminDeliveryOrderItem[]>([]);
+
+  const handleClearFilters = () => {
+    setSearch("");
+    setSelectedStaffId("");
+    setSelectedDeliveryStatus("");
+    setPage(1);
+  };
+
+  const hasActiveFilters =
+    search.trim() !== "" || selectedStaffId !== "" || selectedDeliveryStatus !== "";
 
   const [assignModalOrder, setAssignModalOrder] = useState<{
     id: string;
@@ -221,73 +238,115 @@ export function AdminDeliveryOrdersTable() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col gap-3">
+    <div className="flex flex-1 min-h-0 flex-col bg-transparent rounded-2xl">
       {/* Search & Filter Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-white p-3 rounded-xl border border-cream-border">
-        <div className="flex flex-wrap items-center gap-2 flex-1">
+      <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
           <SearchInput
             placeholder="Search by order #, customer name, phone..."
-            defaultValue={search}
+            value={search}
             onSearch={(val) => {
               setSearch(val);
               setPage(1);
             }}
-            className="w-full sm:w-64"
+            className="w-full max-w-md"
           />
 
-          <Select
-            value={selectedDeliveryStatus}
-            onValueChange={(val) => {
-              setSelectedDeliveryStatus(val);
-              setPage(1);
-            }}
-            size="sm"
-            wrapperClassName="w-full sm:w-48"
-            className="h-10 rounded-xl"
-            options={[
-              { value: "", label: "All Shipment Statuses" },
-              { value: "pending", label: "Pending" },
-              { value: "picked_up", label: "Picked Up" },
-              { value: "in_transit", label: "In Transit" },
-              { value: "out_for_delivery", label: "Out for Delivery" },
-              { value: "delivered", label: "Delivered" },
-              { value: "failed", label: "Failed" },
-            ]}
-          />
+          <div className="w-full sm:w-48">
+            <Select
+              value={selectedDeliveryStatus}
+              onValueChange={(val) => {
+                setSelectedDeliveryStatus(val);
+                setPage(1);
+              }}
+              className="h-11 rounded-xl"
+              options={[
+                { value: "", label: "All Shipment Statuses" },
+                { value: "pending", label: "Pending" },
+                { value: "picked_up", label: "Picked Up" },
+                { value: "in_transit", label: "In Transit" },
+                { value: "out_for_delivery", label: "Out for Delivery" },
+                { value: "delivered", label: "Delivered" },
+                { value: "failed", label: "Failed" },
+              ]}
+            />
+          </div>
 
-          <Select
-            value={selectedStaffId}
-            onValueChange={(val) => {
-              setSelectedStaffId(val);
-              setPage(1);
-            }}
-            size="sm"
-            wrapperClassName="w-full sm:w-48"
-            className="h-10 rounded-xl"
-            options={[
-              { value: "", label: "All Delivery Staff" },
-              ...staffList.map((s) => ({
-                value: s.id,
-                label: `${s.name} (${s.phone || "Staff"})`,
-              })),
-            ]}
-          />
+          <div className="w-full sm:w-52">
+            <Select
+              value={selectedStaffId}
+              onValueChange={(val) => {
+                setSelectedStaffId(val);
+                setPage(1);
+              }}
+              className="h-11 rounded-xl"
+              options={[
+                { value: "", label: "All Delivery Staff" },
+                ...staffList.map((s) => ({
+                  value: s.id,
+                  label: `${s.name} (${s.phone || "Staff"})`,
+                })),
+              ]}
+            />
+          </div>
+
+          {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} />}
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="h-10 px-3 rounded-xl border-cream-border hover:bg-cream-100 cursor-pointer self-end sm:self-auto"
-        >
-          <RotateCcw className={`mr-1.5 h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="h-11 rounded-xl border-cream-border hover:bg-cream-100 text-neutral-700 px-3.5 shrink-0"
+            title="Refresh delivery list"
+          >
+            <RotateCcw className={`mr-1.5 h-4 w-4 ${isFetching ? "animate-spin text-secondary-600" : ""}`} />
+            Refresh
+          </Button>
+
+          <ExportExcelButton
+            data={orders}
+            fetchData={async () => {
+              const res = await getAdminDeliveryOrders({
+                page: 1,
+                limit: 10000,
+                search: search.trim() || undefined,
+                staffId: selectedStaffId || undefined,
+                deliveryStatus: (selectedDeliveryStatus || undefined) as any,
+                sortBy: "createdAt",
+                sortOrder: "desc",
+              });
+              return res?.data ?? [];
+            }}
+            totalCount={meta?.total ?? orders.length}
+            filename="delivery_orders"
+            sheetName="Deliveries"
+            columns={EXPORT_PRESETS.deliveryOrders}
+          />
+        </div>
       </div>
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="mt-3 sm:mt-5 flex-1 min-h-0 flex flex-col">
+        <BulkActionsBar
+          selectedCount={selectedRows.length}
+          entityName="delivery order"
+          filterNotice={search ? `Filtered by "${search}"` : undefined}
+          onClearSelection={() => {
+            setSelectedRowIds({});
+            setSelectedRows([]);
+          }}
+          onExport={() => {
+            exportToExcel({
+              filename: "selected_delivery_orders",
+              sheetName: "Selected Deliveries",
+              data: selectedRows,
+              columns: EXPORT_PRESETS.deliveryOrders,
+            });
+          }}
+        />
+
         <DataTable
           columns={columns}
           data={orders}
@@ -305,6 +364,12 @@ export function AdminDeliveryOrdersTable() {
             setPageSize(newSize);
             setPage(1);
           }}
+          selectedRowIds={selectedRowIds}
+          onRowSelectionChange={(newSelection, items) => {
+            setSelectedRowIds(newSelection);
+            setSelectedRows(items);
+          }}
+          getRowId={(row) => String(row.id)}
           className="bg-white"
           emptyMessage="No delivery orders found matching your criteria."
         />

@@ -25,8 +25,9 @@ export const customerCreateOrderSchema = z
     shippingAddressId: z.string().uuid("Invalid shippingAddressId UUID format"),
     billingAddressId: z.string().uuid("Invalid billingAddressId UUID format").optional(),
     notes: z.string().max(500, "Notes cannot exceed 500 characters").optional(),
-    paymentMethod: z.enum(["CARD", "COD", "UPI"]).default("CARD").optional(),
+    paymentMethod: z.enum(["CARD", "UPI", "WHATSAPP", "CALL"]).default("CARD").optional(),
     paymentDetails: z.record(z.string(), z.any()).optional(),
+    courierType: z.enum(["st_courier", "mss"]).default("st_courier").optional(),
   })
   .strict();
 
@@ -39,13 +40,13 @@ export const customerOrdersQuerySchema = z
       .number()
       .int()
       .min(1, "pageSize must be at least 1")
-      .max(100, "pageSize cannot exceed 100")
+      .max(100000, "pageSize cannot exceed 100000")
       .default(20),
     limit: z.coerce
       .number()
       .int()
       .min(1, "limit must be at least 1")
-      .max(100, "limit cannot exceed 100")
+      .max(100000, "limit cannot exceed 100000")
       .optional(),
     search: z.string().trim().optional(),
     status: z.union([z.string(), z.array(z.string())]).optional(),
@@ -67,14 +68,14 @@ export const customerOrdersListSchema = z
       .number()
       .int()
       .min(1, "pageSize must be at least 1")
-      .max(100, "pageSize cannot exceed 100")
+      .max(100000, "pageSize cannot exceed 100000")
       .default(20)
       .optional(),
     limit: z.coerce
       .number()
       .int()
       .min(1, "limit must be at least 1")
-      .max(100, "limit cannot exceed 100")
+      .max(100000, "limit cannot exceed 100000")
       .optional(),
     search: z.string().trim().optional(),
     status: z.union([z.string(), z.array(z.string())]).optional(),
@@ -100,8 +101,14 @@ export const adminOrdersListSchema = z
       .number()
       .int()
       .min(1, "pageSize must be at least 1")
-      .max(100, "pageSize cannot exceed 100")
+      .max(100000, "pageSize cannot exceed 100000")
       .default(20),
+    limit: z
+      .number()
+      .int()
+      .min(1, "limit must be at least 1")
+      .max(100000, "limit cannot exceed 100000")
+      .optional(),
     search: z.string().trim().optional(),
     customerId: z.string().uuid("Invalid customerId UUID format").optional(),
     status: z.enum(ORDER_STATUS_ENUM).optional(),
@@ -137,6 +144,8 @@ export const returnOrderSchema = z
     reason: z.string().max(500, "Reason cannot exceed 500 characters").optional(),
     note: z.string().max(500, "Note cannot exceed 500 characters").optional(),
     amount: z.coerce.number().positive("Refund amount must be greater than 0").optional(),
+    paymentMode: z.string().max(100000, "Payment mode cannot exceed 100 characters").optional(),
+    referenceId: z.string().max(100000, "Reference ID cannot exceed 100 characters").optional(),
   })
   .passthrough();
 
@@ -160,7 +169,7 @@ export type OrderStatusTransitionInput = z.infer<
 export const getOrdersQuerySchema = z
   .object({
     page: z.coerce.number().int().positive().default(1).optional(),
-    limit: z.coerce.number().int().positive().max(100).default(10).optional(),
+    limit: z.coerce.number().int().positive().max(100000).default(10).optional(),
     search: z.string().max(255).optional(),
     status: z.string().optional(),
   })
@@ -194,7 +203,7 @@ export type CheckoutSummarySchemaInput = z.infer<typeof checkoutSummarySchema>;
 export const shipOrderCourierSchema = z
   .object({
     deliveryPartnerId: z.union([z.string(), z.number()]),
-    trackingNumber: z.string().trim().min(3, "Tracking / AWB number is required").max(100),
+    trackingNumber: z.string().trim().min(3, "Tracking / AWB number is required").max(100000),
     notes: z.string().max(500).optional(),
   })
   .strict();

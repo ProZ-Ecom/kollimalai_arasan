@@ -158,8 +158,16 @@ export function BulkRestockModal({
                 type="number"
                 min="1"
                 step="1"
-                value={restockQty || ""}
-                onChange={(e) => setRestockQty(parseInt(e.target.value, 10) || 0)}
+                value={restockQty === 0 ? "" : restockQty}
+                onFocus={(e) => {
+                  if (e.target.value === "0") {
+                    e.target.select();
+                  }
+                }}
+                onChange={(e) => {
+                  const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                  setRestockQty(clean === "" ? 0 : Math.max(0, parseInt(clean, 10) || 0));
+                }}
                 placeholder="e.g. 50"
                 className="w-full h-11 px-3.5 rounded-xl border border-neutral-300 font-mono text-lg font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-secondary-600/30 focus:border-secondary-600 transition-all"
                 autoFocus

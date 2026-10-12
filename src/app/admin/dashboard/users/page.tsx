@@ -9,45 +9,56 @@ import {
   useUpdateUser,
   useDeleteUser,
   useResetUserPassword,
+  getUsers,
 } from "@/features/users/hooks";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { exportToExcel } from "@/lib/excel-export";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { AdminPageHeader, AdminContent } from "@/components/admin/AdminPageHeader";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
+import { SearchInput } from "@/components/ui/search-input";
+import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormModal } from "@/components/common/FormModal";
+import { Select } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, KeyRound } from "lucide-react";
 import {
   createUserSchema,
-  updateUserSchema,
   resetPasswordSchema,
   type CreateUserSchemaInput,
-  type UpdateUserSchemaInput,
 } from "@/features/users/validations/user.schema";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { UserListItem } from "@/features/users/types";
 
 type ModalMode = "create" | "edit" | "resetPassword" | null;
 
-interface UserFormValues {
-  name: string;
-  email: string;
-  password?: string;
-  phone?: string;
-  roleId?: number;
-  status: "active" | "inactive" | "banned";
-}
-
 export default function AdminUsersPage() {
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedUser, setSelectedUser] = useState<UserListItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-  const { data, isLoading, error, refetch } = useUsers();
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<UserListItem[]>([]);
+
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, page, pageSize]);
+
+  const { data, isLoading, error, refetch } = useUsers({
+    page,
+    limit: pageSize,
+    search: search.trim() || undefined,
+  });
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
   const deleteMutation = useDeleteUser();
@@ -62,8 +73,8 @@ export default function AdminUsersPage() {
     watch,
     setValue,
     formState: { errors },
-  } = useForm<UserFormValues>({
-    resolver: zodResolver(modalMode === "edit" ? updateUserSchema : createUserSchema) as any,
+  } = useForm<CreateUserSchemaInput>({
+    resolver: zodResolver(createUserSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -106,7 +117,7 @@ export default function AdminUsersPage() {
     }
   }, [modalMode, selectedUser, reset]);
 
-  const onSubmit = (formData: any) => {
+  const onSubmit = (formData: CreateUserSchemaInput) => {
     if (modalMode === "edit" && selectedUser) {
       const { password: _, ...updateData } = formData;
       updateMutation.mutate(
@@ -155,7 +166,7 @@ export default function AdminUsersPage() {
       case "active":
         return "success";
       case "inactive":
-        return "warning";
+        return "secondary";
       case "banned":
       case "blocked":
         return "destructive";
@@ -210,7 +221,7 @@ export default function AdminUsersPage() {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-center gap-1.5">
           <Button
             variant="ghost"
             size="icon"
@@ -246,41 +257,115 @@ export default function AdminUsersPage() {
     },
   ];
 
-  if (isLoading) return <AdminTableSkeleton />;
+  if (isLoading && !data) return <AdminTableSkeleton />;
   if (error) return <ErrorState message="Failed to load users" onRetry={() => refetch()} />;
 
   const isMutating = createMutation.isPending || updateMutation.isPending;
   const isRoleMutating = resetPasswordMutation.isPending;
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex-1 min-h-0 min-w-0 flex flex-col">
       <AdminBreadcrumb items={[{ label: "Users" }]} />
       <AdminPageHeader
         title="Users"
         description="Manage user accounts and permissions"
-        actions={
-          <Button onClick={() => setModalMode("create")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add User
-          </Button>
-        }
       />
-      <AdminContent className="flex-1 min-h-0 flex flex-col">
-        <div className="flex-1 min-h-0 flex flex-col">
-          <DataTable
-            columns={columns}
-            data={users}
-            tableClassName="min-w-[1050px]"
-            searchKey="name"
-            searchPlaceholder="Search users..."
-            pageSize={20}
-            className="bg-white border border-neutral-200"
-          />
+      <AdminContent className="flex-1 min-h-0 min-w-0">
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col bg-transparent">
+          {/* Search + Action Toolbar */}
+          <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
+              <SearchInput
+                placeholder="Search users..."
+                value={search}
+                onSearch={(val) => {
+                  setSearch(val);
+                  setPage(1);
+                }}
+                className="w-full max-w-md"
+              />
+              {Boolean(search.trim()) && (
+                <ClearFiltersButton onClick={() => { setSearch(""); setPage(1); }} />
+              )}
+            </div>
+
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <ExportExcelButton
+                data={users}
+                fetchData={async () => {
+                  const res = await getUsers({
+                    page: 1,
+                    limit: 10000,
+                    search: search.trim() || undefined,
+                  });
+                  return res?.data ?? [];
+                }}
+                totalCount={data?.meta?.total ?? users.length}
+                filename="users"
+                sheetName="Users"
+                columns={EXPORT_PRESETS.users}
+              />
+
+              <Button
+                type="button"
+                onClick={() => setModalMode("create")}
+                className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] shadow-xs"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add User
+              </Button>
+            </div>
+          </div>
+
+          {/* Table Container */}
+          <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
+            <BulkActionsBar
+              selectedCount={selectedRows.length}
+              entityName="users"
+              filterNotice={search ? `Filtered by "${search}"` : undefined}
+              onClearSelection={() => {
+                setSelectedRowIds({});
+                setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportToExcel({
+                  filename: "selected_users",
+                  sheetName: "Selected Users",
+                  data: selectedRows,
+                  columns: EXPORT_PRESETS.users,
+                });
+              }}
+            />
+
+            <DataTable
+              columns={columns}
+              data={users}
+              pageSize={pageSize}
+              pageSizeOptions={[10, 20, 30, 50]}
+              page={data?.meta?.page ?? page}
+              totalPages={
+                data?.meta?.totalPages ??
+                Math.max(1, Math.ceil((data?.meta?.total ?? users.length) / pageSize))
+              }
+              totalItems={data?.meta?.total ?? users.length}
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(1);
+              }}
+              selectedRowIds={selectedRowIds}
+              onRowSelectionChange={(newSelection, items) => {
+                setSelectedRowIds(newSelection);
+                setSelectedRows(items);
+              }}
+              getRowId={(row) => String(row.id)}
+              className="bg-white"
+            />
+          </div>
         </div>
       </AdminContent>
 
       <FormModal
-        key={modalMode ?? "closed"}
         open={modalMode === "create" || modalMode === "edit"}
         onClose={handleCloseModal}
         title={modalMode === "edit" ? "Edit User" : "Add User"}
@@ -308,7 +393,7 @@ export default function AdminUsersPage() {
               placeholder="Full name"
             />
             {errors.name && (
-              <p className="mt-1 text-sm text-error-600">{errors.name.message}</p>
+              <p className="mt-1 text-xs text-red-500 font-medium">{errors.name.message}</p>
             )}
           </div>
 
@@ -323,7 +408,7 @@ export default function AdminUsersPage() {
               placeholder="user@example.com"
             />
             {errors.email && (
-              <p className="mt-1 text-sm text-error-600">{errors.email.message}</p>
+              <p className="mt-1 text-xs text-red-500 font-medium">{errors.email.message}</p>
             )}
           </div>
 
@@ -339,7 +424,7 @@ export default function AdminUsersPage() {
                 placeholder="Minimum 6 characters"
               />
               {errors.password && (
-                <p className="mt-1 text-sm text-error-600">{errors.password.message}</p>
+                <p className="mt-1 text-xs text-red-500 font-medium">{errors.password.message}</p>
               )}
             </div>
           )}
@@ -354,7 +439,7 @@ export default function AdminUsersPage() {
               placeholder="Phone number"
             />
             {errors.phone && (
-              <p className="mt-1 text-sm text-error-600">{errors.phone.message}</p>
+              <p className="mt-1 text-xs text-red-500 font-medium">{errors.phone.message}</p>
             )}
           </div>
 
@@ -370,7 +455,7 @@ export default function AdminUsersPage() {
                 placeholder="1"
               />
               {errors.roleId && (
-                <p className="mt-1 text-sm text-error-600">{errors.roleId.message}</p>
+                <p className="mt-1 text-xs text-red-500 font-medium">{errors.roleId.message}</p>
               )}
             </div>
 
@@ -381,21 +466,17 @@ export default function AdminUsersPage() {
               <Select
                 value={watch("status")}
                 onValueChange={(val) =>
-                  setValue("status", val as "active" | "inactive" | "banned", {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
+                  setValue("status", val as "active" | "inactive" | "banned", { shouldValidate: true })
                 }
-                size="sm"
-                className="h-10 rounded-lg text-sm"
                 options={[
                   { value: "active", label: "Active" },
                   { value: "inactive", label: "Inactive" },
                   { value: "banned", label: "Banned" },
                 ]}
+                error={errors.status?.message}
               />
               {errors.status && (
-                <p className="mt-1 text-sm text-error-600">{errors.status.message}</p>
+                <p className="mt-1 text-xs text-red-500 font-medium">{errors.status.message}</p>
               )}
             </div>
           </div>
@@ -437,7 +518,7 @@ export default function AdminUsersPage() {
               placeholder="Minimum 6 characters"
             />
             {resetPasswordErrors.password && (
-              <p className="mt-1 text-sm text-error-600">
+              <p className="mt-1 text-xs text-red-500 font-medium">
                 {resetPasswordErrors.password.message}
               </p>
             )}

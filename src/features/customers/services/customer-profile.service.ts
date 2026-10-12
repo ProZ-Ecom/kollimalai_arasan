@@ -9,7 +9,10 @@ import {
 } from "../repositories/customer-profile.repository";
 import { uploadService } from "@/features/uploads/services/upload.service";
 import type { CustomerProfileResponse } from "../types";
-import type { UpdateCustomerProfileInput } from "../validations/customer-profile.schema";
+import type {
+  UpdateCustomerProfileInput,
+  ChangeCustomerPasswordInput,
+} from "../validations/customer-profile.schema";
 
 function generateReferralCode(uuidOrId?: string): string {
   const rand = crypto.randomUUID().replace(/-/g, "").toUpperCase().slice(0, 6);
@@ -232,6 +235,11 @@ export const customerProfileService = {
     const isMatch = await bcrypt.compare(currentPassword, dbUser.password_hash);
     if (!isMatch) {
       throw ApiError.badRequest("Current password is incorrect");
+    }
+
+    const isSame = await bcrypt.compare(newPassword, dbUser.password_hash);
+    if (isSame) {
+      throw ApiError.badRequest("New password must be different from current password");
     }
 
     const hashedNew = await bcrypt.hash(newPassword, 12);

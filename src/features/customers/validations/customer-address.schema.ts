@@ -5,6 +5,7 @@ export const ADDRESS_TYPE_ENUM = ["shipping", "billing"] as const;
 const indiaPhoneSchema = z
   .string()
   .trim()
+  .min(1, "Phone Number is required")
   .transform((val) => {
     if (/^[6-9]\d{9}$/.test(val)) {
       return `+91${val}`;
@@ -12,12 +13,13 @@ const indiaPhoneSchema = z
     return val;
   })
   .refine((val) => /^\+91[6-9]\d{9}$/.test(val), {
-    message: "Phone number must be a valid 10-digit Indian number starting with +91 (e.g. +919876543210)",
+    message: "Phone number must be a valid 10-digit Indian number (e.g. 9876543210)",
   });
 
 const pincodeSchema = z
   .string()
   .trim()
+  .min(1, "PIN Code is required")
   .refine((val) => /^\d{6}$/.test(val), {
     message: "PIN code must be a valid 6-digit Indian postal code (e.g. 637001)",
   });
@@ -47,18 +49,18 @@ export const createCustomerAddressSchema = z
     fullName: z
       .string()
       .trim()
-      .min(1, "Full name is required")
-      .max(150, "Full name cannot exceed 150 characters"),
+      .min(1, "Full Name is required")
+      .max(150, "Full Name cannot exceed 150 characters"),
     phone: indiaPhoneSchema,
     addressLine1: z
       .string()
       .trim()
-      .min(1, "Address line 1 is required")
-      .max(255, "Address line 1 cannot exceed 255 characters"),
+      .min(1, "Address Line 1 is required")
+      .max(255, "Address Line 1 cannot exceed 255 characters"),
     addressLine2: z
       .string()
       .trim()
-      .max(255, "Address line 2 cannot exceed 255 characters")
+      .max(255, "Address Line 2 cannot exceed 255 characters")
       .optional()
       .nullable(),
     landmark: z

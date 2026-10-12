@@ -219,7 +219,7 @@ export default function BulkImportPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Bulk Product Import"
-        description="Import categories, products, and variants from a single Excel file (.xlsx)"
+        description="Import categories, products, and items from a single Excel file (.xlsx)"
         breadcrumbs={
           <AdminBreadcrumb
             items={[
@@ -244,7 +244,7 @@ export default function BulkImportPage() {
       <AdminContent>
         <div className="w space-y-6">
           {/* ── Upload Zone ── */}
-          {stage === "idle" || stage === "error" ? (
+          {stage === "idle" || (stage === "error" && !previewData) ? (
             <div
               onDrop={handleDrop}
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -296,7 +296,7 @@ export default function BulkImportPage() {
           )}
 
           {/* ── Action buttons ── */}
-          {file && (stage === "idle" || stage === "error") && (
+          {file && (stage === "idle" || (stage === "error" && !previewData)) && (
             <div className="flex gap-3">
               <Button
                 onClick={handlePreview}
@@ -320,7 +320,7 @@ export default function BulkImportPage() {
           )}
 
           {/* ── Preview / Results ── */}
-          {activeData && (stage === "preview_done" || stage === "done") && (
+          {activeData && (stage === "preview_done" || stage === "done" || stage === "error") && (
             <div className="space-y-5">
               {/* Status banner */}
               {stage === "done" && (
@@ -421,7 +421,7 @@ export default function BulkImportPage() {
                             </p>
                           </div>
                           <span className="shrink-0 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold">
-                            {prod.variants.length} variant{prod.variants.length !== 1 ? "s" : ""}
+                            {prod.variants.length} item{prod.variants.length !== 1 ? "s" : ""}
                           </span>
                         </div>
                         {prod.variants.length > 0 && (
@@ -458,15 +458,18 @@ export default function BulkImportPage() {
 
               {/* Action buttons */}
               <div className="flex gap-3 pt-2">
-                {stage === "preview_done" && previewData && previewData.preview.length > 0 && (
-                  <Button
-                    onClick={handleImport}
-                    className="bg-green-600 hover:bg-green-700 text-white gap-2"
-                  >
-                    <PackagePlus className="w-4 h-4" />
-                    Confirm Import ({previewData.preview.length} products)
-                  </Button>
-                )}
+                {(stage === "preview_done" || stage === "error") &&
+                  previewData &&
+                  previewData.preview.length > 0 && (
+                    <Button
+                      onClick={handleImport}
+                      className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                    >
+                      <PackagePlus className="w-4 h-4" />
+                      {stage === "error" ? "Retry Import" : "Confirm Import"} (
+                      {previewData.preview.length} products)
+                    </Button>
+                  )}
                 <Button variant="outline" onClick={handleReset} className="gap-2">
                   <RotateCcw className="w-4 h-4" />
                   {stage === "done" ? "Import Another File" : "Cancel"}

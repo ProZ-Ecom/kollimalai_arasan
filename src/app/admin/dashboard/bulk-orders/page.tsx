@@ -1,32 +1,37 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   useAdminBulkOrders,
+  getAdminBulkOrders,
   type AdminBulkOrderListItem,
   type BulkOrderEnquiryStatus,
   AdminBulkOrderDetailModal,
 } from "@/features/bulk-orders";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { exportToExcel } from "@/lib/excel-export";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { SearchInput } from "@/components/ui/search-input";
+import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 import {
   PackagePlus,
   AlertCircle,
   CheckCircle2,
   Phone,
   Eye,
-  RotateCcw,
+  RefreshCw,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
-import { StatusBadge } from "@/components/common/status-badge";
-import { BULK_ORDER_STATUS } from "@/features/bulk-orders/constants/status";
-
 
 export default function AdminBulkOrdersPage() {
   const [search, setSearch] = useState("");
@@ -36,6 +41,15 @@ export default function AdminBulkOrdersPage() {
 
   const [selectedEnquiry, setSelectedEnquiry] =
     useState<AdminBulkOrderListItem | null>(null);
+
+  // Bulk Selection State
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<AdminBulkOrderListItem[]>([]);
+
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, statusFilter, page, pageSize]);
 
   const queryParams = useMemo(() => {
     const params: {
@@ -63,9 +77,9 @@ export default function AdminBulkOrdersPage() {
     return params;
   }, [page, pageSize, search, statusFilter]);
 
-  const { data, isLoading, error, refetch } = useAdminBulkOrders(queryParams);
+  const { data, isLoading, isFetching, error, refetch } = useAdminBulkOrders(queryParams);
 
-  const { data: allEnquiriesData } = useAdminBulkOrders({
+  const { data: allEnquiriesData, refetch: refetchAll } = useAdminBulkOrders({
     page: 1,
     pageSize: 100,
   });
@@ -87,6 +101,33 @@ export default function AdminBulkOrdersPage() {
 
   const hasActiveFilters = search.trim() !== "" || statusFilter !== "all";
 
+  const getStatusBadge = (status: BulkOrderEnquiryStatus) => {
+    switch (status) {
+      case "new":
+        return (
+          <Badge className="bg-amber-100 text-amber-800 border-amber-200 gap-1 text-xs">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+            New
+          </Badge>
+        );
+      case "contacted":
+        return (
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200 gap-1 text-xs">
+            <CheckCircle2 className="h-3 w-3 text-blue-600" />
+            Contacted
+          </Badge>
+        );
+      case "closed":
+        return (
+          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 gap-1 text-xs">
+            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+            Closed
+          </Badge>
+        );
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
 
   const columns: ColumnDef<AdminBulkOrderListItem, unknown>[] = [
     {
@@ -154,9 +195,7 @@ export default function AdminBulkOrdersPage() {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => (
-        <StatusBadge status={row.original.status} config={BULK_ORDER_STATUS} />
-      ),
+      cell: ({ row }) => getStatusBadge(row.original.status),
     },
     {
       accessorKey: "createdAt",
@@ -189,7 +228,7 @@ export default function AdminBulkOrdersPage() {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-center gap-1.5">
             <button
               type="button"
               onClick={() => setSelectedEnquiry(item)}
@@ -223,6 +262,30 @@ export default function AdminBulkOrdersPage() {
       <AdminPageHeader
         title="Bulk Order Enquiries"
         description="Review bulk order enquiries submitted via the storefront and track follow-up status"
+        actions={
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-700">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Live Auto-Sync
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                refetch();
+                refetchAll();
+              }}
+              disabled={isFetching}
+              className="h-9 gap-1.5 text-xs font-semibold cursor-pointer"
+            >
+              <RefreshCw
+                className={cn("h-3.5 w-3.5", isFetching && "animate-spin text-secondary-600")}
+              />
+              <span>{isFetching ? "Syncing..." : "Refresh"}</span>
+            </Button>
+          </div>
+        }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 flex-shrink-0">
@@ -252,60 +315,85 @@ export default function AdminBulkOrdersPage() {
         />
       </div>
 
-      <div className="flex-shrink-0 flex flex-col gap-3.5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 flex-wrap">
-          <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-            <SearchInput
-              placeholder="Search by name, email, phone, company, or product..."
-              value={search}
-              onSearch={(val) => {
-                setSearch(val);
+      {/* Search and Filters Toolbar */}
+      <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
+          <SearchInput
+            placeholder="Search by name, email, phone, company, or product..."
+            value={search}
+            onSearch={(val) => {
+              setSearch(val);
+              setPage(1);
+            }}
+            className="w-full max-w-md"
+          />
+
+          <div className="w-full sm:w-48">
+            <Select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full sm:max-w-xs md:max-w-md"
+              options={[
+                { value: "all", label: "All Statuses" },
+                { value: "new", label: "New" },
+                { value: "contacted", label: "Contacted" },
+                { value: "closed", label: "Closed" },
+              ]}
+              placeholder="Filter by Status"
+              className="h-11 rounded-xl"
             />
-
-            <div className="w-full sm:w-48">
-              <Select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
-                options={[
-                  { value: "all", label: "All Statuses" },
-                  { value: "new", label: "New" },
-                  { value: "contacted", label: "Contacted" },
-                  { value: "closed", label: "Closed" },
-                ]}
-                placeholder="Filter by Status"
-                className="h-10 rounded-xl text-xs font-medium"
-              />
-            </div>
-
-            {hasActiveFilters && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleResetFilters}
-                className="h-10 px-3 text-xs font-semibold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Reset</span>
-              </Button>
-            )}
           </div>
+
+          {hasActiveFilters && (
+            <ClearFiltersButton onClick={handleResetFilters} />
+          )}
+        </div>
+
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <ExportExcelButton
+            data={enquiries}
+            fetchData={async () => {
+              const res = await getAdminBulkOrders({
+                ...queryParams,
+                page: 1,
+                pageSize: 10000,
+              });
+              return res?.data ?? [];
+            }}
+            totalCount={totalCount}
+            filename="bulk_order_enquiries"
+            sheetName="Bulk Orders"
+            columns={EXPORT_PRESETS.bulkOrders}
+          />
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col w-full">
+      <div className=" sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col w-full">
+        <BulkActionsBar
+          selectedCount={selectedRows.length}
+          entityName="enquiry"
+          filterNotice={search ? `Filtered by "${search}"` : undefined}
+          onClearSelection={() => {
+            setSelectedRowIds({});
+            setSelectedRows([]);
+          }}
+          onExport={() => {
+            exportToExcel({
+              filename: "selected_bulk_orders",
+              sheetName: "Selected Bulk Orders",
+              data: selectedRows,
+              columns: EXPORT_PRESETS.bulkOrders,
+            });
+          }}
+        />
+
         <DataTable
           columns={columns}
           data={enquiries}
-          tableClassName="min-w-[1150px]"
           pageSize={pageSize}
-          pageSizeOptions={[5, 10, 20, 50]}
+          pageSizeOptions={[10, 20, 30, 50]}
           page={meta?.page ?? page}
           totalPages={
             meta?.totalPages ??
@@ -317,7 +405,13 @@ export default function AdminBulkOrdersPage() {
             setPageSize(newSize);
             setPage(1);
           }}
-          className="bg-white border border-neutral-200"
+          selectedRowIds={selectedRowIds}
+          onRowSelectionChange={(newSelection, items) => {
+            setSelectedRowIds(newSelection);
+            setSelectedRows(items);
+          }}
+          getRowId={(row) => String(row.id)}
+          className="bg-white"
           emptyMessage="No bulk order enquiries found matching your criteria."
         />
       </div>

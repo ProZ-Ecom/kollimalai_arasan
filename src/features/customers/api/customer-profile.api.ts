@@ -19,4 +19,12 @@ export const customerProfileApi = {
     );
     return res.data!;
   },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    const res = await apiClient.post<{ success: boolean; message: string }>(
+      "/api/customer/profile/password",
+      { currentPassword, newPassword }
+    );
+    return res.data!;
+  },
 };

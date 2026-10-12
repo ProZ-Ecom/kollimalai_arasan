@@ -63,16 +63,119 @@ export function isApiError(error: unknown): error is ApiError {
   );
 }
 
+export function extractPrismaDuplicateDetails(error: unknown): {
+  value?: string;
+  field?: string;
+  model?: string;
+  message: string;
+} {
+  const prismaError = error as {
+    code?: string;
+    message?: string;
+    meta?: Record<string, any>;
+    cause?: any;
+  };
+
+  const meta = prismaError?.meta || {};
+  let duplicateValue: string | undefined;
+  let keyOrField: string | undefined;
+  const model: string | undefined = meta.modelName;
+
+  // 1. Check driverAdapterError cause (@prisma/adapter-mariadb / MySQL 1062)
+  const cause = meta.driverAdapterError?.cause || prismaError?.cause;
+  const originalMessage: string =
+    cause?.originalMessage || prismaError?.message || "";
+
+  const dupMatchWithKey = originalMessage.match(
+    /Duplicate entry ['"]([^'"]*)['"] for key ['"]([^'"]*)['"]/i
+  );
+  const dupMatchValueOnly = !dupMatchWithKey
+    ? originalMessage.match(/Duplicate entry ['"]([^'"]*)['"]/i)
+    : null;
+
+  if (dupMatchWithKey) {
+    duplicateValue = dupMatchWithKey[1];
+    keyOrField = dupMatchWithKey[2];
+  } else if (dupMatchValueOnly) {
+    duplicateValue = dupMatchValueOnly[1];
+  }
+
+  // 2. Check meta.target (standard Prisma)
+  if (!keyOrField && meta.target) {
+    keyOrField = Array.isArray(meta.target)
+      ? meta.target.join(", ")
+      : String(meta.target);
+  }
+
+  // 3. Check constraint index from driver adapter
+  if (!keyOrField && cause?.constraint?.index) {
+    keyOrField = cause.constraint.index;
+  }
+
+  // 4. Map key/index to human-friendly field name
+  let friendlyField = keyOrField;
+  if (keyOrField) {
+    const rawKey = keyOrField.toLowerCase();
+    if (rawKey.includes("slug")) {
+      friendlyField = "code / slug";
+    } else if (rawKey.includes("sku")) {
+      friendlyField = "SKU";
+    } else if (rawKey.includes("email")) {
+      friendlyField = "email";
+    } else if (rawKey.includes("phone")) {
+      friendlyField = "phone number";
+    } else if (rawKey.includes("code")) {
+      friendlyField = "code";
+    } else if (rawKey.includes("name")) {
+      friendlyField = "name";
+    } else {
+      const parts = keyOrField.split(".");
+      friendlyField = parts[parts.length - 1]
+        .replace(/^uq_|^idx_/, "")
+        .replace(/_/g, " ");
+    }
+  }
+
+  // 5. Map model/table to human-friendly entity name
+  let entity = model || (cause?.table ? cause.table.replace(/_/g, " ") : "record");
+  const entityLower = entity.toLowerCase();
+  if (entityLower === "productcategory" || entityLower === "product_categories") {
+    entity = "Category";
+  } else if (entityLower === "product" || entityLower === "products") {
+    entity = "Product";
+  } else if (entityLower === "productvariant" || entityLower === "product_variants") {
+    entity = "Item";
+  } else if (entityLower === "variantunitprice" || entityLower === "variant_unit_prices") {
+    entity = "Item SKU / Pack Size";
+  } else if (entityLower === "productbrand" || entityLower === "product_brands") {
+    entity = "Brand";
+  } else if (entityLower === "product_hsn_codes" || entityLower === "producthsncodes") {
+    entity = "HSN Code";
+  }
+
+  // 6. Formulate precise, user-friendly message
+  let message: string;
+  if (duplicateValue && friendlyField) {
+    message = `A ${entity} with ${friendlyField} "${duplicateValue}" already exists in the database`;
+  } else if (duplicateValue) {
+    message = `A ${entity} with the value "${duplicateValue}" already exists in the database`;
+  } else if (friendlyField) {
+    message = `A ${entity} with the same ${friendlyField} already exists in the database`;
+  } else {
+    message = `A ${entity} with the same value already exists in the database`;
+  }
+
+  return { value: duplicateValue, field: friendlyField, model, message };
+}
+
 export function handlePrismaError(error: unknown): ApiError {
   const prismaError = error as { code?: string; meta?: Record<string, unknown> };
 
   switch (prismaError.code) {
-    case "P2002":
-      return ApiError.conflict(
-        `A record with the same value already exists${
-          prismaError.meta?.target ? ` for field: ${String(prismaError.meta.target)}` : ""
-        }`
-      );
+    case "P2002": {
+      const details = extractPrismaDuplicateDetails(error);
+      return ApiError.conflict(details.message);
+    }
     case "P2025":
       return ApiError.notFound("The requested record was not found");
     case "P2003":

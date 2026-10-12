@@ -21,9 +21,12 @@ import { SearchInput } from "@/components/ui/search-input";
 import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import {
   useInventory,
   useInventoryStats,
+  getInventory,
 } from "@/features/inventory/hooks";
 import {
   InventoryKpiCards,
@@ -183,12 +186,12 @@ export default function InventoryDashboardPage() {
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      <AdminBreadcrumb
+      {/* <AdminBreadcrumb
         items={[
           { label: "Dashboard", href: "/admin/dashboard" },
           { label: "Inventory" },
         ]}
-      />
+      /> */}
 
       <AdminPageHeader
         title="Inventory Management"
@@ -313,8 +316,8 @@ export default function InventoryDashboardPage() {
 
           {/* Search & Status Filter (visible on stock & low stock tabs) */}
           {activeTab !== "history" && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-              <div className="flex-1 max-w-md">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pt-1">
+              <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
                 <SearchInput
                   placeholder="Search by product name, SKU, or variant..."
                   value={search}
@@ -322,18 +325,45 @@ export default function InventoryDashboardPage() {
                     setSearch(val);
                     setPage(1);
                   }}
+                  className="w-full max-w-md"
                 />
+
+                <div className="w-full sm:w-56 shrink-0">
+                  <Select
+                    options={statusFilterOptions}
+                    value={statusFilter}
+                    onValueChange={(val) => {
+                      setStatusFilter(val);
+                      setPage(1);
+                    }}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+
+                {hasActiveFilters && (
+                  <ClearFiltersButton onClick={handleClearFilters} />
+                )}
               </div>
 
-              <div className="w-[200px] shrink-0">
-                <Select
-                  options={statusFilterOptions}
-                  value={statusFilter}
-                  onValueChange={(val) => {
-                    setStatusFilter(val);
-                    setPage(1);
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <ExportExcelButton
+                  data={items}
+                  fetchData={async () => {
+                    const res = await getInventory({
+                      page: 1,
+                      limit: 10000,
+                      search: search.trim() || undefined,
+                      lowStock: isLowStockFilter || undefined,
+                      lowStockThreshold: isLowStock10 ? 10 : isLowStock50 ? 50 : undefined,
+                      reserved: isReservedFilter || undefined,
+                      outOfStock: isOutOfStockFilter || undefined,
+                    });
+                    return res?.data?.data ?? [];
                   }}
-                  size="sm"
+                  totalCount={meta?.total ?? items.length}
+                  filename="inventory_stock"
+                  sheetName="Inventory Stock"
+                  columns={EXPORT_PRESETS.inventoryStock}
                 />
               </div>
             </div>

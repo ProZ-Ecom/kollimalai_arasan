@@ -17,6 +17,7 @@ import {
   Copy,
   Check,
   ExternalLink,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatPrice } from "@/lib/utils";
@@ -111,6 +112,35 @@ export function OrderDetailView({
     })
     : "—";
 
+  const totalWeightKg = (order.items || []).reduce((sum, it) => {
+    let w = 0.5;
+    const m = (it as any).measurement;
+    if (m && m.value > 0) {
+      const u = (m.unit || "").toLowerCase();
+      if (u === "kg" || u === "l") w = m.value;
+      else if (u === "g" || u === "ml" || u === "gm") w = m.value / 1000;
+      else if (u === "mg") w = m.value / 1000000;
+    }
+    return sum + w * (it.quantity || 1);
+  }, 0);
+
+  const formattedWeight =
+    totalWeightKg >= 1
+      ? `${totalWeightKg.toFixed(2).replace(/\.00$/, "")} kg`
+      : totalWeightKg >= 0.001
+      ? `${Math.round(totalWeightKg * 1000)} g`
+      : `${Math.round(totalWeightKg * 1000000)} mg`;
+
+  const weightDetails =
+    totalWeightKg > 0
+      ? {
+          formattedWeight,
+          courierName:
+            delivery?.deliveryPartner?.name ||
+            (Number(shippingCharge) === 200 ? "MSS" : "ST Courier"),
+        }
+      : null;
+
   return (
     <div className="space-y-6">
       {/* Top Details Header Bar */}
@@ -165,6 +195,40 @@ export function OrderDetailView({
           )}
         </div>
       </div>
+
+      {/* Refund Processing Notice for Cancelled Orders */}
+      {String(order.status).toLowerCase() === "cancelled" &&
+        String(paymentStatus).toLowerCase() === "paid" && (
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-2xs">
+            <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="text-xs sm:text-sm font-bold text-amber-950">
+                Refund Processing Notice
+              </h4>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                This order has been cancelled. Your refund of{" "}
+                <strong>{formatPrice(Number(order.totalAmount))}</strong> will be reviewed and credited to your original payment method within <strong>1 week (5–7 business days)</strong>.
+              </p>
+            </div>
+          </div>
+        )}
+
+      {String(order.status).toLowerCase() === "cancelled" &&
+        (String(paymentStatus).toLowerCase() === "refunded" ||
+          String(paymentStatus).toLowerCase() === "partial_refund") && (
+          <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900 shadow-2xs">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="text-xs sm:text-sm font-bold text-emerald-950">
+                Refund Processed
+              </h4>
+              <p className="text-xs text-emerald-800 leading-relaxed">
+                Refund of{" "}
+                <strong>{formatPrice(Number(order.totalAmount))}</strong> has been recorded and processed directly by the store admin.
+              </p>
+            </div>
+          </div>
+        )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
         {/* Main Content (2 Columns) */}
@@ -393,6 +457,7 @@ export function OrderDetailView({
                   totalAmount: Number(order.totalAmount || 0),
                 }}
                 couponLabel={(order as any).couponCode}
+                weightDetails={weightDetails}
               />
             </div>
           </div>

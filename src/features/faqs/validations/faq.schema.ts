@@ -19,7 +19,7 @@ const answerSchema = z
 const categorySchema = z
   .string()
   .trim()
-  .max(100, "Category cannot exceed 100 characters")
+  .max(100000, "Category cannot exceed 100 characters")
   .nullable()
   .optional();
 
@@ -68,9 +68,9 @@ export type UpdateFaqPayload = z.input<typeof updateFaqSchema>;
 export const faqListQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(10),
+    limit: z.coerce.number().int().min(1).max(100000).default(10),
     search: z.string().trim().max(255).optional(),
-    category: z.string().trim().max(100).optional(),
+    category: z.string().trim().max(100000).optional(),
     status: z
       .preprocess(
         (val) => (val === "" || val === undefined ? undefined : val),
@@ -88,7 +88,7 @@ export type FaqListQueryInput = z.infer<typeof faqListQuerySchema>;
 
 export const publicFaqQuerySchema = z
   .object({
-    category: z.string().trim().max(100).optional(),
+    category: z.string().trim().max(100000).optional(),
     search: z.string().trim().max(255).optional(),
   })
   .strict();

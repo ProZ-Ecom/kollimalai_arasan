@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/api-client";
-import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminPageHeader, AdminContent } from "@/components/admin/AdminPageHeader";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
+import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -152,79 +153,87 @@ export default function TrashPage() {
         description="Recover accidentally deleted categories, products, and items"
       />
 
-      <div className="mt-4 flex flex-1 min-h-0 flex-col">
-        {/* Search */}
-        <div className="flex-shrink-0 mb-4 flex items-center gap-3">
-          <SearchInput
-            placeholder="Search deleted items..."
-            defaultValue={search}
-            onSearch={(val) => setSearch(val)}
-            className="w-full max-w-sm"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            className="h-9.5 border-cream-border text-neutral-600 hover:bg-cream-50 shrink-0"
-          >
-            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-            Refresh
-          </Button>
-        </div>
-
-        {isLoading ? (
-          <div className="flex flex-1 items-center justify-center py-20">
-            <LoadingState text="Loading trash..." />
-          </div>
-        ) : error ? (
-          <div className="flex flex-1 items-center justify-center">
-            <ErrorState title="Failed to load trash" onRetry={() => refetch()} />
-          </div>
-        ) : totalItems === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">
-              <Trash2 className="w-8 h-8 text-neutral-300" />
-            </div>
-            <h3 className="text-base font-bold text-neutral-800 mb-1">Trash is empty</h3>
-            <p className="text-sm text-neutral-500">No deleted categories, products, or items found.</p>
-          </div>
-        ) : (
-          <div className="flex flex-1 min-h-0 flex-col">
-            {/* Tabs */}
-            <div className="flex-shrink-0 flex gap-1 mb-4 bg-neutral-100 p-1 rounded-xl w-fit">
-              {TABS.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      isActive
-                        ? "bg-white text-neutral-900 shadow-sm"
-                        : "text-neutral-500 hover:text-neutral-700"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {tab.label}
-                    {counts[tab.id] > 0 && (
-                      <span
-                        className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
-                          isActive
-                            ? "bg-secondary-600 text-white"
-                            : "bg-neutral-200 text-neutral-600"
-                        }`}
-                      >
-                        {counts[tab.id]}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+      <AdminContent className="flex-1">
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col bg-transparent py-1 rounded-2xl">
+          {/* Search + Action Header */}
+          <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
+              <SearchInput
+                placeholder="Search deleted items..."
+                value={search}
+                onSearch={(val) => setSearch(val)}
+                className="w-full max-w-md"
+              />
+              {search.trim() !== "" && (
+                <ClearFiltersButton onClick={() => setSearch("")} />
+              )}
             </div>
 
-            {/* Tab Content - Table Container */}
-            <div className="flex-1 min-h-0 flex flex-col bg-white rounded-2xl border border-cream-border overflow-hidden shadow-xs">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <Button
+                variant="outline"
+                onClick={() => refetch()}
+                className="h-11 rounded-xl border-cream-border hover:bg-cream-100 text-neutral-700 px-3.5 shrink-0"
+              >
+                <RotateCcw className="h-4 w-4 mr-1.5" />
+                Refresh
+              </Button>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex flex-1 items-center justify-center py-20">
+              <LoadingState text="Loading trash..." />
+            </div>
+          ) : error ? (
+            <div className="flex flex-1 items-center justify-center py-10">
+              <ErrorState title="Failed to load trash" onRetry={() => refetch()} />
+            </div>
+          ) : totalItems === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">
+                <Trash2 className="w-8 h-8 text-neutral-300" />
+              </div>
+              <h3 className="text-base font-bold text-neutral-800 mb-1">Trash is empty</h3>
+              <p className="text-sm text-neutral-500">No deleted categories, products, or items found.</p>
+            </div>
+          ) : (
+            <div className="mt-3 sm:mt-5 flex flex-1 min-h-0 flex-col">
+              {/* Tabs */}
+              <div className="flex-shrink-0 flex gap-1 mb-4 bg-neutral-100 p-1 rounded-xl w-fit">
+                {TABS.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-white text-neutral-900 shadow-sm font-bold"
+                          : "text-neutral-500 hover:text-neutral-700"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {tab.label}
+                      {counts[tab.id] > 0 && (
+                        <span
+                          className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                            isActive
+                              ? "bg-secondary-600 text-white"
+                              : "bg-neutral-200 text-neutral-600"
+                          }`}
+                        >
+                          {counts[tab.id]}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Tab Content - Table Container */}
+              <div className="flex-1 min-h-0 flex flex-col bg-white rounded-2xl border border-cream-border overflow-hidden shadow-xs">
               {activeTab === "categories" && (
                 categories.length === 0 ? (
                   <EmptyTab label="deleted categories" />
@@ -290,7 +299,8 @@ export default function TrashPage() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </AdminContent>
 
       {/* Restore Confirm Dialog */}
       <ConfirmDialog

@@ -15,6 +15,11 @@ export const SUPPORTED_COURIERS: Record<string, CourierPartnerInfo> = {
     name: "ST Courier",
     officialUrl: "https://stcourier.com/track/shipment",
   },
+  MSS: {
+    code: "MSS",
+    name: "Mettur Super Services",
+    officialUrl: "https://www.mettursuperservices.com",
+  },
 };
 
 export interface CourierTrackingDetails {

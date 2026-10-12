@@ -5,6 +5,8 @@ import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
   WASocket,
+  Browsers,
+  fetchLatestWaWebVersion,
 } from "@whiskeysockets/baileys";
 import pino from "pino";
 import QRCode from "qrcode";
@@ -33,6 +35,72 @@ declare global {
 }
 
 const AUTH_DIR = path.join(process.cwd(), "auth_baileys");
+const LOCK_FILE = path.join(AUTH_DIR, "process.lock");
+
+/**
+ * Acquire process lock so only ONE Node.js process manages the WhatsApp socket
+ */
+function acquireSessionLock(): boolean {
+  try {
+    if (!fs.existsSync(AUTH_DIR)) {
+      fs.mkdirSync(AUTH_DIR, { recursive: true });
+    }
+    if (fs.existsSync(LOCK_FILE)) {
+      try {
+        const raw = fs.readFileSync(LOCK_FILE, "utf8");
+        const parsed = JSON.parse(raw);
+        if (parsed?.pid && parsed.pid !== process.pid) {
+          // Check if previous PID is still active
+          process.kill(parsed.pid, 0);
+          console.warn(
+            `[WhatsApp] Session is already locked by active Node.js process (PID ${parsed.pid}). Skipping initialization in PID ${process.pid}.`
+          );
+          return false;
+        }
+      } catch {
+        // PID does not exist or invalid lock file, safe to take over
+        console.log(`[WhatsApp] Overwriting stale lock file from inactive process.`);
+      }
+    }
+    fs.writeFileSync(
+      LOCK_FILE,
+      JSON.stringify({ pid: process.pid, time: Date.now() }),
+      "utf8"
+    );
+    return true;
+  } catch (err) {
+    console.error("[WhatsApp] Error managing session lock:", err);
+    return true;
+  }
+}
+
+function releaseSessionLock(): void {
+  try {
+    if (fs.existsSync(LOCK_FILE)) {
+      const raw = fs.readFileSync(LOCK_FILE, "utf8");
+      const parsed = JSON.parse(raw);
+      if (parsed?.pid === process.pid) {
+        fs.unlinkSync(LOCK_FILE);
+        console.log(`[WhatsApp] Released session lock for PID ${process.pid}`);
+      }
+    }
+  } catch {
+    // Ignore cleanup errors
+  }
+}
+
+// Clean up lock file on process termination
+if (typeof process !== "undefined" && typeof process.once === "function") {
+  process.once("exit", releaseSessionLock);
+  process.once("SIGINT", () => {
+    releaseSessionLock();
+    process.exit(0);
+  });
+  process.once("SIGTERM", () => {
+    releaseSessionLock();
+    process.exit(0);
+  });
+}
 
 function getManager(): WhatsAppManagerInstance {
   if (!globalThis.__whatsapp_manager__) {
@@ -56,7 +124,14 @@ const createSocket =
       : (makeWASocket as any)?.makeWASocket;
 
 function hasSavedCredentials(): boolean {
-  return fs.existsSync(path.join(AUTH_DIR, "creds.json"));
+  try {
+    const credsPath = path.join(AUTH_DIR, "creds.json");
+    if (!fs.existsSync(credsPath)) return false;
+    const content = JSON.parse(fs.readFileSync(credsPath, "utf8"));
+    return !!content?.me?.id;
+  } catch {
+    return false;
+  }
 }
 
 function getSavedUserFromCreds(): WhatsAppUserInfo | null {
@@ -84,12 +159,34 @@ function getSavedUserFromCreds(): WhatsAppUserInfo | null {
 export async function initWhatsAppClient(force = false): Promise<WhatsAppManagerInstance> {
   const manager = getManager();
 
-  if (manager.isInitializing && !force) {
+  // If a socket is already active or connecting, NEVER create a duplicate socket
+  if (!force && manager.sock) {
     return manager;
   }
 
-  if (!force && manager.status === "CONNECTED" && manager.sock) {
+  // Prevent multiple concurrent initializations
+  if (manager.isInitializing) {
     return manager;
+  }
+
+  // Enforce single-process lock to prevent duplicate instances
+  if (!acquireSessionLock()) {
+    manager.isInitializing = false;
+    manager.status = "DISCONNECTED";
+    manager.errorMessage =
+      "Another Node.js process is currently managing this WhatsApp session. Only 1 instance is allowed.";
+    return manager;
+  }
+
+  // If forcing a new socket and an old one exists, cleanly close it
+  if (manager.sock) {
+    try {
+      (manager.sock.ev as any).removeAllListeners?.();
+      manager.sock.end(undefined);
+    } catch {
+      // ignore
+    }
+    manager.sock = null;
   }
 
   const hasCreds = hasSavedCredentials();
@@ -107,23 +204,42 @@ export async function initWhatsAppClient(force = false): Promise<WhatsAppManager
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    const { version } = await fetchLatestWaWebVersion({}).catch(() => ({
+      version: [2, 3000, 1049850526] as [number, number, number],
+    }));
+
+    console.log(`[WhatsApp] Initializing socket with WA Web version: ${version.join(".")}`);
 
     const sock = createSocket({
+      version,
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: "silent" }),
       syncFullHistory: false,
       markOnlineOnConnect: false,
-      browser: ["Kollimalai Admin", "Chrome", "1.0.0"],
+      browser: Browsers.ubuntu("Chrome"),
       generateHighQualityLinkPreview: false,
+      qrTimeout: 60000,
+      getMessage: async () => undefined,
     });
 
     manager.sock = sock;
 
-    sock.ev.on("creds.update", saveCreds);
+    sock.ev.on("creds.update", async () => {
+      try {
+        await saveCreds();
+      } catch (err) {
+        console.error("[WhatsApp] Error saving credentials:", err);
+      }
+    });
 
     sock.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
-      const { connection, lastDisconnect, qr } = update;
+      const { connection, lastDisconnect, qr, isNewLogin } = update as any;
+
+      if (isNewLogin) {
+        manager.qr = null;
+        console.log("[WhatsApp] Device paired! Awaiting server connection restart...");
+      }
 
       // Only show QR if credentials do not exist on disk
       if (qr && !hasSavedCredentials()) {
@@ -156,19 +272,46 @@ export async function initWhatsAppClient(force = false): Promise<WhatsAppManager
         };
         console.log(`[WhatsApp] Connected successfully as ${phone}`);
       } else if (connection === "close") {
+        // Null out closed socket immediately
+        manager.sock = null;
+
         const statusCode = (lastDisconnect?.error as { output?: { statusCode?: number } })?.output
           ?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+
+        const isConflict =
+          statusCode === DisconnectReason.connectionReplaced || statusCode === 440;
+        const isLoggedOut =
+          statusCode === DisconnectReason.loggedOut || statusCode === 401;
+        const isBadSession =
+          statusCode === DisconnectReason.badSession || statusCode === 500;
+        const isMultideviceMismatch =
+          statusCode === DisconnectReason.multideviceMismatch || statusCode === 411;
+
+        const shouldReconnect =
+          !isConflict && !isLoggedOut && !isBadSession && !isMultideviceMismatch;
 
         console.log(
           `[WhatsApp] Connection closed. StatusCode: ${statusCode}, shouldReconnect: ${shouldReconnect}`
         );
 
-        if (statusCode === DisconnectReason.loggedOut) {
+        if (isConflict) {
+          // CRITICAL: Another instance or device has linked/connected.
+          // Halting auto-reconnect prevents the infinite 440 reconnect war and pre-key corruption!
+          releaseSessionLock();
+          manager.status = "DISCONNECTED";
+          manager.errorMessage =
+            "Connection conflict (440): Another device or Node.js instance connected with this session. Auto-reconnect stopped to protect account.";
+          console.warn(
+            "[WhatsApp] 440 Connection Replaced: Another instance is active. Halting auto-reconnect on this process."
+          );
+        } else if (isLoggedOut || isBadSession || isMultideviceMismatch) {
+          releaseSessionLock();
           manager.status = "DISCONNECTED";
           manager.user = null;
           manager.qr = null;
-          manager.sock = null;
+          manager.errorMessage = isLoggedOut
+            ? "WhatsApp session logged out"
+            : `WhatsApp session closed with code ${statusCode}`;
           // Clear auth credentials directory
           if (fs.existsSync(AUTH_DIR)) {
             try {
@@ -178,22 +321,25 @@ export async function initWhatsAppClient(force = false): Promise<WhatsAppManager
             }
           }
         } else if (shouldReconnect) {
+          const isRestartRequired =
+            statusCode === DisconnectReason.restartRequired || statusCode === 515;
+
           // Keep user profile if credentials are saved
           if (hasSavedCredentials()) {
-            manager.status = "CONNECTED";
             if (!manager.user) manager.user = getSavedUserFromCreds();
-          } else {
-            manager.status = "DISCONNECTED";
           }
-          // Immediate quiet reconnect
+          manager.status = "PAIRING";
+
+          // Fast reconnect on restartRequired so companion login stream completes smoothly
+          const delay = isRestartRequired ? 500 : 2500;
           setTimeout(() => {
             initWhatsAppClient(true).catch((err) => {
               console.error("[WhatsApp] Auto-reconnect failed:", err);
             });
-          }, 1500);
+          }, delay);
         } else {
+          releaseSessionLock();
           manager.status = "DISCONNECTED";
-          manager.sock = null;
         }
       }
     });
@@ -203,7 +349,7 @@ export async function initWhatsAppClient(force = false): Promise<WhatsAppManager
   } catch (err: any) {
     manager.isInitializing = false;
     if (hasSavedCredentials()) {
-      manager.status = "CONNECTED";
+      manager.status = "PAIRING";
       if (!manager.user) manager.user = getSavedUserFromCreds();
     } else {
       manager.status = "DISCONNECTED";
@@ -234,6 +380,16 @@ export function getWhatsAppStatus() {
       status: "CONNECTED" as WhatsAppStatus,
       qr: null,
       user: manager.user,
+      errorMessage: manager.errorMessage,
+    };
+  }
+
+  // If there is an active QR code to scan, we are in PAIRING state
+  if (manager.qr) {
+    return {
+      status: "PAIRING" as WhatsAppStatus,
+      qr: manager.qr,
+      user: null,
       errorMessage: manager.errorMessage,
     };
   }
@@ -344,10 +500,19 @@ export async function sendWhatsAppMessage(
     // If connection was closed or dropped, auto-reconnect and retry once
     const errMsg = err?.message || err?.output?.payload?.message || "";
     if (
-      errMsg.includes("Closed") ||
       errMsg.includes("conflict") ||
-      err?.output?.statusCode === 428 ||
       err?.output?.statusCode === 440
+    ) {
+      console.warn("[WhatsApp] Send failed due to 440 conflict. Halting reconnection.");
+      return {
+        success: false,
+        error: "WhatsApp session is active in another instance or device (440 Conflict). Please stop duplicate instances.",
+      };
+    }
+
+    if (
+      errMsg.includes("Closed") ||
+      err?.output?.statusCode === 428
     ) {
       console.log("[WhatsApp] Socket closed/errored. Reconnecting and retrying send...");
       await initWhatsAppClient(true);
@@ -392,6 +557,7 @@ export async function disconnectWhatsAppSession(): Promise<{ success: boolean }>
   } catch (err) {
     console.error("[WhatsApp] Error during logout:", err);
   } finally {
+    releaseSessionLock();
     manager.sock = null;
     manager.status = "DISCONNECTED";
     manager.qr = null;

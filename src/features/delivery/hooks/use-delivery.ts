@@ -222,3 +222,10 @@ export function useAssignDelivery() {
     },
   });
 }
+
+export {
+  getStaffDeliveries,
+  getAdminDeliveryOrders,
+  getStaffDeliveryByUuid,
+  getAdminDeliveryStaff,
+} from "../api/delivery.api";

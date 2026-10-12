@@ -132,7 +132,7 @@ export function ProductVariantSelector({
       <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-5 sm:mb-6 gap-3 sm:gap-4">
         <div>
           <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#007F06] block mb-1 font-sans">
-            COMPLETE YOUR FESTIVE BOX
+            DISCOVER MORE NATURAL PRODUCTS
           </span>
           <h2 className="font-serif text-xl sm:text-2xl lg:text-[34px] font-bold text-[#101010] tracking-tight leading-tight">
             You May Also Like
@@ -144,7 +144,7 @@ export function ProductVariantSelector({
             href="/products"
             className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#007F06] hover:text-[#005A04] transition-colors group"
           >
-            <span>View All Sweets & Savories</span>
+            <span>View All Products</span>
             <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
 

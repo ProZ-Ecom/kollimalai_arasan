@@ -35,7 +35,7 @@ export function SnackFallbackIllustration({
         "relative flex flex-col items-center justify-center overflow-hidden select-none bg-gradient-to-br from-[#FFFFFF] via-[#F5F5F5] to-[#FEF2D0] text-[#007F06] p-4 text-center",
         className
       )}
-      aria-label={title || "Authentic Snack"}
+      aria-label={title || "Authentic Product"}
     >
       {/* Decorative background radial pattern */}
       <div className="absolute inset-0 bg-[radial-gradient(#007F06_0.75px,transparent_0.75px)] opacity-[0.07] [background-size:12px_12px]" />

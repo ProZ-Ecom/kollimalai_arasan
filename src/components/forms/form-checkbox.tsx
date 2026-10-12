@@ -16,14 +16,15 @@ function FormCheckbox({ name, label, description }: FormCheckboxProps) {
     <Controller
       name={name}
       control={control}
-      render={({ field }) => (
+      render={({ field, fieldState }) => (
         <div className="space-y-1">
           <Checkbox
             label={label}
             checked={field.value}
             onChange={field.onChange}
+            error={fieldState.error?.message}
           />
-          {description && (
+          {description && !fieldState.error && (
             <p className="text-xs text-muted-foreground pl-6">
               {description}
             </p>
