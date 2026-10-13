@@ -304,7 +304,7 @@ export function ContactFormModal({ open, onClose }: ContactFormModalProps) {
                     />
                   </div>
                   {fieldErrors.name && (
-                    <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                    <p className="text-xs text-error-600 font-medium flex items-center gap-1 mt-1">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>{fieldErrors.name}</span>
                     </p>
@@ -339,7 +339,7 @@ export function ContactFormModal({ open, onClose }: ContactFormModalProps) {
                     />
                   </div>
                   {fieldErrors.email && (
-                    <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                    <p className="text-xs text-error-600 font-medium flex items-center gap-1 mt-1">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>{fieldErrors.email}</span>
                     </p>
@@ -377,7 +377,7 @@ export function ContactFormModal({ open, onClose }: ContactFormModalProps) {
                     />
                   </div>
                   {fieldErrors.phone && (
-                    <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                    <p className="text-xs text-error-600 font-medium flex items-center gap-1 mt-1">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>{fieldErrors.phone}</span>
                     </p>
@@ -412,7 +412,7 @@ export function ContactFormModal({ open, onClose }: ContactFormModalProps) {
                     />
                   </div>
                   {fieldErrors.subject && (
-                    <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                    <p className="text-xs text-error-600 font-medium flex items-center gap-1 mt-1">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>{fieldErrors.subject}</span>
                     </p>
@@ -445,7 +445,7 @@ export function ContactFormModal({ open, onClose }: ContactFormModalProps) {
                   />
                 </div>
                 {fieldErrors.message && (
-                  <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                  <p className="text-xs text-error-600 font-medium flex items-center gap-1 mt-1">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     <span>{fieldErrors.message}</span>
                   </p>

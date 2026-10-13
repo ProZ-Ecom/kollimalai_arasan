@@ -56,7 +56,7 @@ export function HsnCodeForm({
           <FormInput
             name="code"
             label="HSN Code"
-            placeholder="Enter HSN code"
+            placeholder="e.g. 0910, 0409, 0904"
             required
           />
 
@@ -72,7 +72,7 @@ export function HsnCodeForm({
         <FormTextarea
           name="description"
           label="Description"
-          placeholder="Enter HSN description"
+          placeholder="e.g. Ginger, turmeric, spices, wild honey, unpolished millets"
         />
 
         <div className="flex justify-end pt-4">

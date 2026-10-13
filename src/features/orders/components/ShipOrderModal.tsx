@@ -59,16 +59,21 @@ export function ShipOrderModal({
       setValidationError("");
 
       if (partners.length > 0) {
-        // Try to match initialPartnerCode, or default to ST Courier, or first partner
-        const stPartner = partners.find(
-          (p) =>
-            p.code === (initialPartnerCode || "ST_COURIER") ||
-            p.name.toLowerCase().includes("st courier")
-        );
-        setSelectedPartnerId(stPartner ? stPartner.id : partners[0].id);
+        if (
+          !selectedPartnerId ||
+          !partners.some((p) => String(p.id) === String(selectedPartnerId))
+        ) {
+          // Try to match initialPartnerCode, or default to ST Courier, or first partner
+          const stPartner = partners.find(
+            (p) =>
+              p.code === (initialPartnerCode || "ST_COURIER") ||
+              p.name.toLowerCase().includes("st courier")
+          );
+          setSelectedPartnerId(String(stPartner ? stPartner.id : partners[0].id));
+        }
       }
     }
-  }, [open, partners, initialPartnerCode, initialTrackingNumber]);
+  }, [open, partners, initialPartnerCode, initialTrackingNumber, selectedPartnerId]);
 
   const partnerOptions: SelectOption[] = useMemo(() => {
     return partners.map((partner) => ({

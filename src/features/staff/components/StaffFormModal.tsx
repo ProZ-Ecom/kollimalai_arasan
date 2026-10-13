@@ -12,13 +12,18 @@ import { Label } from "@/components/forms/label";
 import { User, Mail, Phone, Lock, Loader2 } from "lucide-react";
 import { useCreateStaff, useUpdateStaff } from "../hooks/use-staff";
 import type { StaffResponse } from "../types";
+import type { UpdateStaffInput } from "../validations/staff.schema";
 
 const staffSchema = z.object({
   name: z
     .string({ message: "Name is required" })
     .trim()
     .min(1, "Name is required")
-    .max(150, "Name cannot exceed 150 characters"),
+    .max(150, "Name cannot exceed 150 characters")
+    .regex(
+      /^[a-zA-Z\s'-]+$/,
+      "Name can only contain alphabetical characters, spaces, hyphens, and apostrophes"
+    ),
   email: z
     .string({ message: "Email is required" })
     .trim()
@@ -148,21 +153,35 @@ export function StaffFormModal({
 
     try {
       if (isEditing && staff) {
-        const updatePayload: {
-          name: string;
-          email: string;
-          phone: string | null;
-          isActive: boolean;
-          password?: string;
-        } = {
-          name: values.name.trim(),
-          email: values.email.toLowerCase().trim(),
-          phone: formattedPhone,
-          isActive: values.isActive,
-        };
+        const updatePayload: Partial<UpdateStaffInput> = {};
+
+        const cleanName = values.name.trim();
+        if (cleanName && cleanName !== staff.name?.trim()) {
+          updatePayload.name = cleanName;
+        }
+
+        const cleanEmail = values.email.toLowerCase().trim();
+        if (cleanEmail && cleanEmail !== staff.email?.toLowerCase().trim()) {
+          updatePayload.email = cleanEmail;
+        }
+
+        const cleanPhone = formattedPhone ?? null;
+        const currentStaffPhone = formatPhoneNumber(staff.phone);
+        if (cleanPhone !== currentStaffPhone) {
+          updatePayload.phone = cleanPhone;
+        }
+
+        if (values.isActive !== undefined && values.isActive !== staff.isActive) {
+          updatePayload.isActive = values.isActive;
+        }
 
         if (values.password && values.password.trim() !== "") {
           updatePayload.password = values.password.trim();
+        }
+
+        if (Object.keys(updatePayload).length === 0) {
+          onClose();
+          return;
         }
 
         await updateMutation.mutateAsync({
@@ -203,13 +222,37 @@ export function StaffFormModal({
         {/* Full Name */}
         <div>
           <Label htmlFor="staff-name" className="block mb-1.5 font-medium text-neutral-800">
-            Full Name <span className="text-red-500">*</span>
+            Full Name <span className="text-error-600 font-bold">*</span>
           </Label>
           <Input
             id="staff-name"
             placeholder="Enter full name"
             leftIcon={<User className="h-4 w-4" />}
             {...register("name")}
+            onKeyDown={(e) => {
+              if (
+                [
+                  "Backspace",
+                  "Delete",
+                  "Tab",
+                  "Escape",
+                  "Enter",
+                  "ArrowLeft",
+                  "ArrowRight",
+                  "ArrowUp",
+                  "ArrowDown",
+                  "Home",
+                  "End",
+                ].includes(e.key) ||
+                (e.ctrlKey && ["a", "c", "v", "x", "z"].includes(e.key.toLowerCase())) ||
+                (e.metaKey && ["a", "c", "v", "x", "z"].includes(e.key.toLowerCase()))
+              ) {
+                return;
+              }
+              if (!/^[a-zA-Z\s'-]$/.test(e.key)) {
+                e.preventDefault();
+              }
+            }}
             error={errors.name?.message}
             disabled={isSubmitting}
           />

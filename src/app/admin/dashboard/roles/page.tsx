@@ -82,11 +82,33 @@ export default function AdminRolesPage() {
   };
 
   const onSubmit = (formData: CreateRoleSchemaInput) => {
-    const payload = { ...formData, permissionIds: selectedPermissionIds };
-
     if (editingRole) {
+      const updatePayload: Partial<CreateRoleSchemaInput> = {};
+
+      const cleanName = formData.name?.trim();
+      if (cleanName && cleanName !== editingRole.name?.trim()) {
+        updatePayload.name = cleanName;
+      }
+
+      const cleanDesc = formData.description?.trim() ?? "";
+      const currentDesc = editingRole.description?.trim() ?? "";
+      if (cleanDesc !== currentDesc) {
+        updatePayload.description = cleanDesc;
+      }
+
+      if (selectedPermissionIds.length > 0) {
+        updatePayload.permissionIds = selectedPermissionIds;
+      }
+
+      if (Object.keys(updatePayload).length === 0) {
+        setModalOpen(false);
+        setEditingRole(null);
+        setSelectedPermissionIds([]);
+        return;
+      }
+
       updateMutation.mutate(
-        { id: editingRole.id, data: payload },
+        { id: editingRole.id, data: updatePayload },
         {
           onSuccess: () => {
             setModalOpen(false);
@@ -96,6 +118,7 @@ export default function AdminRolesPage() {
         }
       );
     } else {
+      const payload = { ...formData, permissionIds: selectedPermissionIds };
       createMutation.mutate(payload, {
         onSuccess: () => {
           setModalOpen(false);

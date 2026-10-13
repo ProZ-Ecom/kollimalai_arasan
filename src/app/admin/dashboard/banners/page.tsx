@@ -393,9 +393,74 @@ export default function AdminBannersPage() {
               setSelectedBanner(null);
             }}
             onSubmit={async (formData) => {
+              const payload: Record<string, unknown> = {};
+              if (
+                formData.bannerPositionId &&
+                formData.bannerPositionId !== selectedBanner.bannerPosition?.id
+              ) {
+                payload.bannerPositionId = formData.bannerPositionId;
+              }
+              if (
+                formData.title?.trim() !== (selectedBanner.title || "").trim()
+              ) {
+                payload.title = formData.title.trim();
+              }
+              if (
+                formData.mediaType &&
+                formData.mediaType !== selectedBanner.mediaType
+              ) {
+                payload.mediaType = formData.mediaType;
+              }
+              const formImage = formData.imageUrl?.trim() || "";
+              const origImage = selectedBanner.imageUrl?.trim() || "";
+              if (formImage !== origImage) {
+                payload.imageUrl = formImage;
+              }
+              const formVideo = formData.videoUrl?.trim() || null;
+              const origVideo = selectedBanner.videoUrl?.trim() || null;
+              if (formVideo !== origVideo) {
+                payload.videoUrl = formVideo;
+              }
+              if (
+                formData.isActive !== undefined &&
+                formData.isActive !== selectedBanner.isActive
+              ) {
+                payload.isActive = formData.isActive;
+              }
+
+              const formStartsAt = formData.startsAt
+                ? new Date(formData.startsAt).toISOString().slice(0, 10)
+                : "";
+              const origStartsAt = selectedBanner.startsAt
+                ? new Date(selectedBanner.startsAt).toISOString().slice(0, 10)
+                : "";
+              if (formStartsAt !== origStartsAt) {
+                payload.startsAt = formData.startsAt
+                  ? new Date(formData.startsAt).toISOString()
+                  : null;
+              }
+
+              const formEndsAt = formData.endsAt
+                ? new Date(formData.endsAt).toISOString().slice(0, 10)
+                : "";
+              const origEndsAt = selectedBanner.endsAt
+                ? new Date(selectedBanner.endsAt).toISOString().slice(0, 10)
+                : "";
+              if (formEndsAt !== origEndsAt) {
+                payload.endsAt = formData.endsAt
+                  ? new Date(formData.endsAt).toISOString()
+                  : null;
+              }
+
+              if (Object.keys(payload).length === 0) {
+                setIsEditOpen(false);
+                setSelectedBanner(null);
+                return;
+              }
+
               await updateMutation.mutateAsync({
                 uuid: selectedBanner.id,
-                data: formData,
+                data: payload,
               });
               setIsEditOpen(false);
               setSelectedBanner(null);

@@ -69,8 +69,7 @@ export function handlePrismaError(error: unknown): ApiError {
   switch (prismaError.code) {
     case "P2002":
       return ApiError.conflict(
-        `A record with the same value already exists${
-          prismaError.meta?.target ? ` for field: ${String(prismaError.meta.target)}` : ""
+        `A record with the same value already exists${prismaError.meta?.target ? ` for field: ${String(prismaError.meta.target)}` : ""
         }`
       );
     case "P2025":

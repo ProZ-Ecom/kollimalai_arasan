@@ -79,7 +79,7 @@ export const reviewRepository = {
   },
 
   /**
-   * Resolves an item-level ProductVariant (e.g. "Mango Mysore Pak"). Used to
+   * Resolves an item-level ProductVariant (e.g. "Pure Wild Honey"). Used to
    * scope reviews across *all* of that variant's pack sizes.
    */
   async findVariantByIdentifier(identifier: string) {

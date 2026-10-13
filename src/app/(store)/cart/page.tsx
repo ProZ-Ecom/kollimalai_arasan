@@ -23,6 +23,7 @@ import {
   useRemoveCartItemMutation,
   useClearCartMutation,
 } from "@/features/customers/hooks/use-customer-cart";
+import { calculateShippingCharge } from "@/features/shipping/utils/shipping-calculator";
 
 function CartPageSkeleton() {
   return (
@@ -154,10 +155,14 @@ export default function CartPage() {
   );
 
   const payableBeforeShipping = Math.max(0, subtotal - discount);
-  const freeShippingThreshold = 500;
-  const isFreeDelivery =
-    payableBeforeShipping >= freeShippingThreshold || payableBeforeShipping === 0;
-  const shippingCharge = isFreeDelivery ? 0 : 40;
+  const totalWeightKg = Number(
+    (
+      (cart as any)?.totalWeightKg ??
+      items.reduce((sum: number, it: any) => sum + (it.weightKg ?? 0.5) * it.quantity, 0)
+    ).toFixed(3)
+  );
+  const shippingResult = calculateShippingCharge("st_courier", totalWeightKg);
+  const shippingCharge = shippingResult.shippingCharge;
   const grandTotal = payableBeforeShipping + shippingCharge;
 
   const summary = {
@@ -167,6 +172,10 @@ export default function CartPage() {
     shippingCharge,
     grandTotal,
     totalItems: totalItemsCount,
+    totalWeightKg,
+    courierType: shippingResult.courierType,
+    courierName: shippingResult.courierName,
+    rateDescription: shippingResult.rateDescription,
   };
 
   const handleUpdateQuantity = (variantUuid: string, quantity: number) => {

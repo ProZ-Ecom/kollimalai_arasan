@@ -120,7 +120,7 @@ function AdminLoginForm() {
             name="email"
             label="Admin Email"
             type="email"
-            placeholder="admin@kollimalaiarasan.com"
+            placeholder="Enter your email"
             autoComplete="email"
             leftIcon={<Mail size={18} />}
             required

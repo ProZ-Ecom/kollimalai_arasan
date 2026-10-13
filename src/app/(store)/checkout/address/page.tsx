@@ -65,8 +65,53 @@ export default function CheckoutAddressPage() {
 
   const handleSubmit = (data: CreateAddressSchemaInput) => {
     if (editingAddress) {
+      const payload: Partial<CreateAddressSchemaInput> = {};
+
+      if (data.firstName?.trim() !== (editingAddress.firstName || "").trim()) {
+        payload.firstName = data.firstName.trim();
+      }
+      const formLast = data.lastName?.trim() || "";
+      const origLast = editingAddress.lastName?.trim() || "";
+      if (formLast !== origLast) {
+        payload.lastName = formLast || undefined;
+      }
+      if (data.phone?.trim() !== (editingAddress.phone || "").trim()) {
+        payload.phone = data.phone.trim();
+      }
+      if (data.addressLine1?.trim() !== (editingAddress.addressLine1 || "").trim()) {
+        payload.addressLine1 = data.addressLine1.trim();
+      }
+      const formAddr2 = data.addressLine2?.trim() || "";
+      const origAddr2 = editingAddress.addressLine2?.trim() || "";
+      if (formAddr2 !== origAddr2) {
+        payload.addressLine2 = formAddr2 || undefined;
+      }
+      if (data.city?.trim() !== (editingAddress.city || "").trim()) {
+        payload.city = data.city.trim();
+      }
+      if (data.state?.trim() !== (editingAddress.state || "").trim()) {
+        payload.state = data.state.trim();
+      }
+      if (data.postalCode?.trim() !== (editingAddress.postalCode || "").trim()) {
+        payload.postalCode = data.postalCode.trim();
+      }
+      const formCountry = data.country?.trim() || "";
+      const origCountry = editingAddress.country?.trim() || "";
+      if (formCountry !== origCountry) {
+        payload.country = formCountry || undefined;
+      }
+      if (data.isDefault !== undefined && data.isDefault !== editingAddress.isDefault) {
+        payload.isDefault = data.isDefault;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        setModalOpen(false);
+        setEditingAddress(null);
+        return;
+      }
+
       updateAddress.mutate(
-        { id: editingAddress.id, data },
+        { id: editingAddress.id, data: payload },
         {
           onSuccess: () => {
             setModalOpen(false);

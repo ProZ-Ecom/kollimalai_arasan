@@ -63,9 +63,10 @@ export function CustomDropdown({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
+        aria-invalid={!!error}
         className={`w-full flex items-center justify-between border rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors cursor-pointer text-left min-h-[42px] disabled:opacity-50 disabled:cursor-not-allowed ${
           error
-            ? "border-red-500 bg-red-50/20"
+            ? "border-error-500 bg-error-50/20"
             : "border-theme-border-input hover:border-theme-border"
         } ${triggerClassName}`}
       >
@@ -159,7 +160,7 @@ export function CustomDropdown({
         </div>
       )}
 
-      {error && <span className="text-[11px] text-red-600">{error}</span>}
+      {error && <span className="text-[11px] text-error-600 font-medium">{error}</span>}
     </div>
   );
 }

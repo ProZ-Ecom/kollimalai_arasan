@@ -34,6 +34,7 @@ export interface CartItemResponse {
   originalItemTotal: number;
   /** Line total the customer pays, after the offer. */
   itemTotal: number;
+  weightKg?: number;
 }
 
 export interface CartResponse {
@@ -48,6 +49,7 @@ export interface CartResponse {
   /** Subtotal minus the discount; delivery and tax are added at checkout. */
   total: number;
   totalItems: number;
+  totalWeightKg?: number;
 }
 
 export type CartWithItems = CartResponse;
@@ -64,6 +66,10 @@ export interface CartSummary {
   shippingCharge: number;
   grandTotal: number;
   totalItems: number;
+  totalWeightKg?: number;
+  courierType?: "st_courier" | "mss";
+  courierName?: string;
+  rateDescription?: string;
 }
 
 export interface AddToCartInput {

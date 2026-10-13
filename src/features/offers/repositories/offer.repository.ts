@@ -26,6 +26,7 @@ const unitPriceTargetSelect = {
   base_price: true,
   unit_value: true,
   isActive: true,
+  deleted_at: true,
   product_units: {
     select: { id: true, uuid: true, name: true, code: true, type: true },
   },
@@ -36,12 +37,14 @@ const unitPriceTargetSelect = {
       uuid: true,
       variant_name: true,
       out_of_stock: true,
+      deleted_at: true,
       product: {
         select: {
           id: true,
           uuid: true,
           name: true,
           categoryId: true,
+          deleted_at: true,
         },
       },
     },
@@ -50,13 +53,22 @@ const unitPriceTargetSelect = {
 
 const offerInclude = {
   offer_products: {
+    where: {
+      products: { deleted_at: null },
+    },
     include: {
       products: {
-        select: { id: true, uuid: true, name: true, categoryId: true },
+        select: { id: true, uuid: true, name: true, categoryId: true, deleted_at: true },
       },
     },
   },
   offer_items: {
+    where: {
+      variant_unit_price: {
+        deleted_at: null,
+        variant: { deleted_at: null, product: { deleted_at: null } },
+      },
+    },
     include: { variant_unit_price: { select: unitPriceTargetSelect } },
   },
 } satisfies Prisma.OfferInclude;
@@ -141,10 +153,16 @@ function toOfferListItem(offer: OfferRow): OfferListItem {
     createdAt: offer.createdAt.toISOString(),
     updatedAt: offer.updatedAt.toISOString(),
     products: offer.offer_products
-      .filter((op) => op.products)
+      .filter((op) => op.products && (op.products as any).deleted_at === null)
       .map((op) => toOfferProductTarget(op.products)),
     items: offer.offer_items
-      .filter((oi) => oi.variant_unit_price)
+      .filter(
+        (oi) =>
+          oi.variant_unit_price &&
+          !oi.variant_unit_price.deleted_at &&
+          !oi.variant_unit_price.variant?.deleted_at &&
+          !oi.variant_unit_price.variant?.product?.deleted_at
+      )
       .map((oi) => toOfferItemTarget(oi.variant_unit_price)),
   };
 }
@@ -231,10 +249,15 @@ function buildOfferWhere(params: OfferWhereParams, now: Date): Prisma.OfferWhere
   if (params.productId) {
     and.push({
       OR: [
-        { offer_products: { some: { products: { uuid: params.productId } } } },
+        { offer_products: { some: { products: { uuid: params.productId, deleted_at: null } } } },
         {
           offer_items: {
-            some: { variant_unit_price: { variant: { product: { uuid: params.productId } } } },
+            some: {
+              variant_unit_price: {
+                deleted_at: null,
+                variant: { deleted_at: null, product: { uuid: params.productId, deleted_at: null } },
+              },
+            },
           },
         },
       ],
@@ -247,10 +270,15 @@ function buildOfferWhere(params: OfferWhereParams, now: Date): Prisma.OfferWhere
     const categoryId = params.categoryInternalId;
     and.push({
       OR: [
-        { offer_products: { some: { products: { categoryId } } } },
+        { offer_products: { some: { products: { categoryId, deleted_at: null } } } },
         {
           offer_items: {
-            some: { variant_unit_price: { variant: { product: { categoryId } } } },
+            some: {
+              variant_unit_price: {
+                deleted_at: null,
+                variant: { deleted_at: null, product: { categoryId, deleted_at: null } },
+              },
+            },
           },
         },
       ],
@@ -748,7 +776,11 @@ export const offerRepository = {
   async findItemsByUuids(uuids: string[]): Promise<OfferItemTarget[]> {
     if (uuids.length === 0) return [];
     const rows = await db.variantUnitPrice.findMany({
-      where: { uuid: { in: uuids }, deleted_at: null },
+      where: {
+        uuid: { in: uuids },
+        deleted_at: null,
+        variant: { deleted_at: null, product: { deleted_at: null } },
+      },
       select: unitPriceTargetSelect,
     });
     return rows.map(toOfferItemTarget);
@@ -773,7 +805,11 @@ export const offerRepository = {
     if (unique.length === 0) return result;
 
     const items = await db.variantUnitPrice.findMany({
-      where: { uuid: { in: unique }, deleted_at: null },
+      where: {
+        uuid: { in: unique },
+        deleted_at: null,
+        variant: { deleted_at: null, product: { deleted_at: null } },
+      },
       select: { id: true, uuid: true, variant: { select: { productId: true } } },
     });
     if (items.length === 0) return result;
@@ -845,7 +881,11 @@ export const offerRepository = {
     if (unique.length === 0) return new Map<string, { unitPrice: number; productId: string }>();
 
     const rows = await db.variantUnitPrice.findMany({
-      where: { uuid: { in: unique }, deleted_at: null },
+      where: {
+        uuid: { in: unique },
+        deleted_at: null,
+        variant: { deleted_at: null, product: { deleted_at: null } },
+      },
       select: {
         uuid: true,
         base_price: true,
@@ -871,7 +911,9 @@ export const offerRepository = {
       where: {
         deleted_at: null,
         ...(activeOnly ? liveOfferWhere(now) : {}),
-        offer_products: { some: { is_active: true, products: { uuid: productUuid } } },
+        offer_products: {
+          some: { is_active: true, products: { uuid: productUuid, deleted_at: null } },
+        },
       },
       include: offerInclude,
       orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
@@ -889,7 +931,14 @@ export const offerRepository = {
         OR: [
           {
             offer_items: {
-              some: { is_active: true, variant_unit_price: { uuid: itemUuid } },
+              some: {
+                is_active: true,
+                variant_unit_price: {
+                  uuid: itemUuid,
+                  deleted_at: null,
+                  variant: { deleted_at: null, product: { deleted_at: null } },
+                },
+              },
             },
           },
           {
@@ -897,8 +946,12 @@ export const offerRepository = {
               some: {
                 is_active: true,
                 products: {
+                  deleted_at: null,
                   variants: {
-                    some: { variant_unit_prices: { some: { uuid: itemUuid } } },
+                    some: {
+                      deleted_at: null,
+                      variant_unit_prices: { some: { uuid: itemUuid, deleted_at: null } },
+                    },
                   },
                 },
               },

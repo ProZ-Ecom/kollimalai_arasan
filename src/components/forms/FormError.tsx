@@ -14,7 +14,7 @@ function FormError({ message, className }: FormErrorProps) {
   return (
     <p
       role="alert"
-      className={cn("text-sm text-red-500", className)}
+      className={cn("text-xs text-error-600 font-medium", className)}
     >
       {message}
     </p>

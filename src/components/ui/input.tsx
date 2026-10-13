@@ -57,6 +57,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             type={inputType}
+            aria-invalid={!!error}
             className={cn(
               "w-full border border-theme-border bg-theme-surface text-theme-text-primary placeholder:text-theme-text-muted transition-all outline-none",
               sizeClasses[size],
@@ -64,7 +65,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               leftIcon && "pl-10",
               inputPrefix && "pl-20",
               (rightIcon || isPassword) && "pr-11",
-              error && "border-theme-status-can-fg focus:border-theme-status-can-fg focus:ring-theme-status-can-fg/20",
+              error && "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10",
               className
             )}
             onFocus={(e) => {
@@ -94,7 +95,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         </div>
 
         {error && (
-          <p className="mt-1 text-xs text-theme-status-can-fg font-medium">
+          <p className="mt-1 text-xs text-error-600 font-medium">
             {error}
           </p>
         )}

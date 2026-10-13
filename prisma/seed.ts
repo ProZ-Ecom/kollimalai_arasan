@@ -205,7 +205,40 @@ async function main() {
       });
     }
   }
-  console.log("✓ Banner positions verified (home-hero, home-offer, home-popup-offer, home-reels)");
+  // 8. Delivery Partners
+  const defaultDeliveryPartners = [
+    {
+      name: "ST Courier",
+      code: "ST_COURIER",
+      contact_number: "044-24614488",
+      is_active: true,
+    },
+    {
+      name: "Professional Courier",
+      code: "PROFESSIONAL_COURIER",
+      contact_number: null,
+      is_active: true,
+    },
+  ];
+
+  for (const partner of defaultDeliveryPartners) {
+    const existing = await prisma.delivery_partners.findFirst({
+      where: { code: partner.code },
+    });
+    if (!existing) {
+      await prisma.delivery_partners.create({
+        data: {
+          name: partner.name,
+          code: partner.code,
+          contact_number: partner.contact_number,
+          is_active: partner.is_active,
+          created_by: adminUser.id,
+          updated_by: adminUser.id,
+        },
+      });
+    }
+  }
+  console.log("✓ Delivery partners verified (ST Courier, Professional Courier)");
 
   console.log("\n=========================================");
   console.log("🎉 Clean Deployment Database Ready!");

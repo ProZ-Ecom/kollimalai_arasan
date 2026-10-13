@@ -24,6 +24,7 @@ export const cartItemInclude = Prisma.validator<Prisma.CartItemInclude>()({
       sku: true,
       base_price: true,
       unit_value: true,
+      weight_kg: true,
       is_default: true,
       isActive: true,
       deleted_at: true,

@@ -222,9 +222,38 @@ export default function AdminGstRatesPage() {
             isLoading={updateMutation.isPending}
             submitLabel="Update GST Rate"
             onSubmit={async (formData) => {
+              const payload: Record<string, unknown> = {};
+              if (formData.name?.trim() !== (selectedGst.name || "").trim()) {
+                payload.name = formData.name.trim();
+              }
+              if (
+                formData.cgstPercent !== undefined &&
+                Number(formData.cgstPercent) !== Number(selectedGst.cgstPercent)
+              ) {
+                payload.cgstPercent = Number(formData.cgstPercent);
+              }
+              if (
+                formData.sgstPercent !== undefined &&
+                Number(formData.sgstPercent) !== Number(selectedGst.sgstPercent)
+              ) {
+                payload.sgstPercent = Number(formData.sgstPercent);
+              }
+              if (
+                formData.igstPercent !== undefined &&
+                Number(formData.igstPercent) !== Number(selectedGst.igstPercent)
+              ) {
+                payload.igstPercent = Number(formData.igstPercent);
+              }
+
+              if (Object.keys(payload).length === 0) {
+                setIsEditOpen(false);
+                setSelectedGst(null);
+                return;
+              }
+
               await updateMutation.mutateAsync({
                 uuid: selectedGst.id,
-                data: formData,
+                data: payload,
               });
 
               setIsEditOpen(false);

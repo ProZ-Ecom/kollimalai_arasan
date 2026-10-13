@@ -166,11 +166,11 @@ export default function AdminFaqsPage() {
       accessorKey: "question",
       header: "Question",
       cell: ({ row }) => (
-        <div className="min-w-[240px] max-w-[420px]">
-          <p className="font-semibold text-[var(--color-neutral-900)]">
+        <div className="max-w-[420px] min-w-[200px] overflow-hidden whitespace-normal">
+          <p className="font-semibold text-[var(--color-neutral-900)] line-clamp-1 break-words">
             {row.original.question}
           </p>
-          <p className="mt-0.5 line-clamp-2 text-xs text-[var(--color-neutral-500)]">
+          <p className="mt-0.5 line-clamp-2 max-w-full overflow-hidden text-ellipsis break-words text-xs text-[var(--color-neutral-500)]">
             {row.original.answer}
           </p>
         </div>
@@ -405,9 +405,47 @@ export default function AdminFaqsPage() {
               setSelectedFaq(null);
             }}
             onSubmit={async (formData) => {
+              const payload: Record<string, unknown> = {};
+              if (
+                formData.question?.trim() !== (selectedFaq.question || "").trim()
+              ) {
+                payload.question = formData.question.trim();
+              }
+              if (formData.answer?.trim() !== (selectedFaq.answer || "").trim()) {
+                payload.answer = formData.answer.trim();
+              }
+              const formCat = formData.category?.trim() || null;
+              const origCat = selectedFaq.category?.trim() || null;
+              if (formCat !== origCat) {
+                payload.category = formCat;
+              }
+              const formIcon = formData.icon || null;
+              const origIcon = selectedFaq.icon || null;
+              if (formIcon !== origIcon) {
+                payload.icon = formIcon;
+              }
+              if (
+                formData.displayOrder !== undefined &&
+                Number(formData.displayOrder) !== Number(selectedFaq.displayOrder)
+              ) {
+                payload.displayOrder = Number(formData.displayOrder);
+              }
+              if (
+                formData.status !== undefined &&
+                formData.status !== selectedFaq.status
+              ) {
+                payload.status = formData.status;
+              }
+
+              if (Object.keys(payload).length === 0) {
+                setIsEditOpen(false);
+                setSelectedFaq(null);
+                return;
+              }
+
               await updateMutation.mutateAsync({
                 id: selectedFaq.id,
-                data: formData,
+                data: payload,
               });
               setIsEditOpen(false);
               setSelectedFaq(null);

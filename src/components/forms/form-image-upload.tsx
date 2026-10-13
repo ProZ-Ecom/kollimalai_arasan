@@ -213,7 +213,7 @@ function FormImageUpload({
         className={cn(
           "relative flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-[var(--color-neutral-300)] bg-[var(--color-neutral-50)] transition-all hover:border-[var(--color-primary-500)] hover:bg-white overflow-hidden",
           aspectRatioClassName,
-          displayError && "border-[var(--color-error-500)]",
+          displayError && "border-error-500 bg-error-50/10",
           className
         )}
       >

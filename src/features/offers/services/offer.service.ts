@@ -306,26 +306,39 @@ export const offerService = {
       excludeId: id,
     });
 
+    const targetsChanged =
+      data.productIds !== undefined ||
+      data.itemIds !== undefined ||
+      (data.level !== undefined && data.level !== existing.level);
+
     return offerRepository.update(id, {
       name: data.name,
       code: data.code,
-      level,
-      type,
+      level: data.level,
+      type: data.type,
       value: data.value,
-      buyQuantity: type === "bxgy" ? data.buyQuantity ?? existing.buyQuantity : null,
-      getQuantity: type === "bxgy" ? data.getQuantity ?? existing.getQuantity : null,
+      buyQuantity:
+        type === "bxgy"
+          ? (data.buyQuantity !== undefined ? data.buyQuantity : undefined)
+          : (data.type !== undefined ? null : undefined),
+      getQuantity:
+        type === "bxgy"
+          ? (data.getQuantity !== undefined ? data.getQuantity : undefined)
+          : (data.type !== undefined ? null : undefined),
       minQuantity: data.minQuantity,
       maxQuantity: data.maxQuantity,
       minCartValue: data.minCartValue,
       maxDiscountAmount:
-        type === "special_price" ? null : data.maxDiscountAmount,
+        type === "special_price"
+          ? (data.type !== undefined ? null : undefined)
+          : data.maxDiscountAmount,
       priority: data.priority,
       terms: data.terms,
-      startsAt,
-      endsAt,
+      startsAt: data.startsAt !== undefined ? startsAt : undefined,
+      endsAt: data.endsAt !== undefined ? endsAt : undefined,
       isActive: data.isActive,
-      productIds: targets.productIds,
-      itemIds: targets.itemIds,
+      productIds: targetsChanged ? targets.productIds : undefined,
+      itemIds: targetsChanged ? targets.itemIds : undefined,
       actorId,
     });
   },

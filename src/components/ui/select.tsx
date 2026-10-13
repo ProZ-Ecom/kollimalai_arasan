@@ -269,12 +269,13 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             isOpen
               ? "border-theme-primary ring-2 ring-theme-primary/20 bg-theme-surface"
               : "border-theme-border hover:border-theme-border-accent hover:bg-theme-surface-warm",
-            error && "border-theme-status-can-fg focus:border-theme-status-can-fg focus:ring-theme-status-can-fg/20",
+            error && "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10",
             disabled && "cursor-not-allowed bg-theme-surface-alt opacity-60 hover:border-theme-border",
             className
           )}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
+          aria-invalid={!!error}
         >
           <div className="flex items-center gap-2 truncate">
             {leftIcon && (
@@ -409,7 +410,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         )}
 
         {/* Error message */}
-        {error && <p className="mt-1 text-xs text-theme-status-can-fg font-medium">{error}</p>}
+        {error && <p className="mt-1 text-xs text-error-600 font-medium">{error}</p>}
       </div>
     );
   }

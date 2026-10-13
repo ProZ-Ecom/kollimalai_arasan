@@ -108,7 +108,40 @@ export default function AdminUsersPage() {
 
   const onSubmit = (formData: any) => {
     if (modalMode === "edit" && selectedUser) {
-      const { password: _, ...updateData } = formData;
+      const updateData: Partial<UpdateUserSchemaInput> = {};
+
+      const newName = formData.name?.trim();
+      if (newName !== undefined && newName !== selectedUser.name?.trim()) {
+        updateData.name = newName;
+      }
+
+      const newEmail = formData.email?.trim().toLowerCase();
+      const currentEmail = selectedUser.email?.trim().toLowerCase();
+      if (newEmail !== undefined && newEmail !== currentEmail) {
+        updateData.email = newEmail;
+      }
+
+      const newPhone = formData.phone?.trim();
+      const currentPhone = selectedUser.phone?.trim();
+      if (newPhone !== undefined && newPhone !== currentPhone) {
+        updateData.phone = newPhone;
+      }
+
+      if (formData.roleId !== undefined && formData.roleId !== selectedUser.roleId) {
+        updateData.roleId = formData.roleId;
+      }
+
+      const currentStatus = selectedUser.status || "active";
+      if (formData.status && formData.status !== currentStatus) {
+        updateData.status = formData.status;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        setModalMode(null);
+        setSelectedUser(null);
+        return;
+      }
+
       updateMutation.mutate(
         { id: selectedUser.id, data: updateData },
         {

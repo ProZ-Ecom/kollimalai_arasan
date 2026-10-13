@@ -260,9 +260,43 @@ export default function AdminUnitsPage() {
             isLoading={updateMutation.isPending}
             submitLabel="Update Unit"
             onSubmit={async (formData) => {
+              const payload: Record<string, unknown> = {};
+              if (formData.name?.trim() !== (selectedUnit.name || "").trim()) {
+                payload.name = formData.name.trim();
+              }
+              if (formData.code?.trim() !== (selectedUnit.code || "").trim()) {
+                payload.code = formData.code.trim();
+              }
+              if (formData.type !== selectedUnit.type) {
+                payload.type = formData.type;
+              }
+              const formBaseUnitId = formData.baseUnitId || null;
+              const origBaseUnitId = selectedUnit.baseUnitId || null;
+              if (formBaseUnitId !== origBaseUnitId) {
+                payload.baseUnitId = formBaseUnitId;
+              }
+              if (
+                formData.conversionFactor !== undefined &&
+                Number(formData.conversionFactor) !== Number(selectedUnit.conversionFactor)
+              ) {
+                payload.conversionFactor = Number(formData.conversionFactor);
+              }
+              if (
+                formData.sortOrder !== undefined &&
+                Number(formData.sortOrder) !== Number(selectedUnit.sortOrder)
+              ) {
+                payload.sortOrder = Number(formData.sortOrder);
+              }
+
+              if (Object.keys(payload).length === 0) {
+                setIsEditOpen(false);
+                setSelectedUnit(null);
+                return;
+              }
+
               await updateMutation.mutateAsync({
                 uuid: selectedUnit.id,
-                data: formData,
+                data: payload,
               });
 
               setIsEditOpen(false);

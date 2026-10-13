@@ -357,12 +357,27 @@ export function OrdersTab({
                     )}
                   </div>
 
-                  <span
-                    className={`inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border ${statusMeta.bg}`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusMeta.dot}`} />
-                    {order.status.replace(/_/g, " ")}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border ${statusMeta.bg}`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusMeta.dot}`} />
+                      {order.status.replace(/_/g, " ")}
+                    </span>
+                    {order.status?.toLowerCase() === "cancelled" &&
+                      order.paymentStatus?.toLowerCase() === "paid" && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-800">
+                          Refund within 1 week
+                        </span>
+                      )}
+                    {order.status?.toLowerCase() === "cancelled" &&
+                      (order.paymentStatus?.toLowerCase() === "refunded" ||
+                        order.paymentStatus?.toLowerCase() === "partial_refund") && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800">
+                          Refunded
+                        </span>
+                      )}
+                  </div>
                 </div>
 
                 {/* Ordered Items List */}

@@ -399,13 +399,13 @@ export function FilterSidebar({
         </button>
       </div>
 
-      {/* 2. Search Snack by Name */}
+      {/* 2. Search Product by Name */}
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="filter-search-input"
           className="text-[11px] font-extrabold uppercase tracking-wider text-[#5A5A5A]"
         >
-          Search Snack by Name
+          Search Products by Name
         </label>
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A8A8A] pointer-events-none" />
@@ -414,7 +414,7 @@ export function FilterSidebar({
             type="text"
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
-            placeholder="e.g. Murukku, Mixture..."
+            placeholder="e.g. Black Pepper, Wild Honey, Millets..."
             className="w-full bg-[#FAFAFA] border border-[#D4D4D4] rounded-xl pl-10 pr-9 py-2.5 text-sm text-[#101010] placeholder-[#8A8A8A] focus:outline-none focus:border-[#007F06] focus:ring-1 focus:ring-[#007F06] transition-all"
           />
           {localSearch && (

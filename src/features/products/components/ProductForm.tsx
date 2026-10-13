@@ -267,7 +267,7 @@ function ProductForm({
                     <div className="flex items-start gap-2">
                       <Info className="h-4 w-4 text-[var(--color-secondary-600)] shrink-0 mt-0.5" />
                       <p className="leading-relaxed text-[var(--color-neutral-800)]">
-                        Enter product code (special characters allowed, e.g. BANANA_CHIPS). Category code prefix is automatically applied.
+                        Enter product code (special characters allowed, e.g. BLACK_PEPPER). Category code prefix is automatically applied.
                       </p>
                     </div>
                     <button
@@ -285,7 +285,7 @@ function ProductForm({
 
           <div
             className={`flex items-stretch rounded-lg border transition-all ${extraSlugError || methods.formState.errors.slug
-                ? "border-red-500 ring-2 ring-red-500/10"
+                ? "border-error-500 ring-2 ring-error-500/20"
                 : "border-neutral-200 focus-within:border-secondary-600 focus-within:ring-2 focus-within:ring-secondary-600/20"
               } bg-white overflow-hidden`}
           >
@@ -314,7 +314,7 @@ function ProductForm({
               type="text"
               value={extraSlug}
               onChange={(e) => handleExtraSlugChange(e.target.value)}
-              placeholder="e.g. BANANA_CHIPS"
+              placeholder="e.g. BLACK_PEPPER"
               className="flex-1 min-w-0 px-3 py-2 text-sm text-neutral-900 bg-transparent outline-none font-mono placeholder:text-neutral-400 placeholder:font-sans uppercase"
             />
           </div>
@@ -322,7 +322,7 @@ function ProductForm({
           {/* Helper message / live preview / error */}
           <div className="mt-1.5 min-h-[18px]">
             {extraSlugError || methods.formState.errors.slug?.message ? (
-              <p className="text-xs text-theme-status-can-fg font-medium">
+              <p className="mt-1 text-xs text-error-600 font-medium">
                 {extraSlugError || methods.formState.errors.slug?.message}
               </p>
             ) : (

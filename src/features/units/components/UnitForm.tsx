@@ -116,14 +116,14 @@ const filteredBaseUnits = baseUnits.filter(
           <FormInput
             name="name"
             label="Unit Name"
-            placeholder="Kilogram"
+            placeholder="e.g. Gram, Kilogram, Milliliter"
             required
           />
 
           <FormInput
             name="code"
             label="Unit Code"
-            placeholder="KG"
+            placeholder="e.g. g, kg, ml, L"
             required
           />
         </div>

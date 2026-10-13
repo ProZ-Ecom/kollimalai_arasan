@@ -75,12 +75,8 @@ export function useCreateFaq() {
 
   return useMutation({
     mutationFn: (data: CreateFaqPayload) => faqApi.createFaq(data),
-    onSuccess: (result) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FAQ_KEYS.all });
-      toast.success("Success", result.message || "FAQ created successfully");
-    },
-    onError: (error: Error) => {
-      toast.error("Error", error.message || "Failed to create FAQ");
     },
   });
 }
@@ -91,15 +87,11 @@ export function useUpdateFaq() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateFaqPayload }) =>
       faqApi.updateFaq(id, data),
-    onSuccess: (result, variables) => {
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: FAQ_KEYS.all });
       queryClient.invalidateQueries({
         queryKey: FAQ_KEYS.detail(variables.id),
       });
-      toast.success("Success", result.message || "FAQ updated successfully");
-    },
-    onError: (error: Error) => {
-      toast.error("Error", error.message || "Failed to update FAQ");
     },
   });
 }
@@ -109,12 +101,8 @@ export function useDeleteFaq() {
 
   return useMutation({
     mutationFn: (id: string) => faqApi.deleteFaq(id),
-    onSuccess: (result) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FAQ_KEYS.all });
-      toast.success("Success", result.message || "FAQ deleted successfully");
-    },
-    onError: (error: Error) => {
-      toast.error("Error", error.message || "Failed to delete FAQ");
     },
   });
 }
@@ -125,12 +113,8 @@ export function useUpdateFaqStatus() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateFaqStatusInput }) =>
       faqApi.updateFaqStatus(id, data),
-    onSuccess: (result) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FAQ_KEYS.all });
-      toast.success("Success", result.message || "FAQ status updated");
-    },
-    onError: (error: Error) => {
-      toast.error("Error", error.message || "Failed to update FAQ status");
     },
   });
 }
@@ -140,12 +124,8 @@ export function useUpdateFaqOrder() {
 
   return useMutation({
     mutationFn: (data: UpdateFaqOrderInput) => faqApi.updateFaqOrder(data),
-    onSuccess: (result) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FAQ_KEYS.all });
-      toast.success("Success", result.message || "FAQ order updated");
-    },
-    onError: (error: Error) => {
-      toast.error("Error", error.message || "Failed to update FAQ order");
     },
   });
 }

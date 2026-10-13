@@ -151,8 +151,8 @@ export default function AdminStaffPage() {
               Active
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-600 border border-neutral-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-neutral-400" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-error-50 px-2.5 py-1 text-xs font-semibold text-error-700 border border-error-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-error-500" />
               Inactive
             </span>
           );
@@ -210,18 +210,21 @@ export default function AdminStaffPage() {
           title="Total Staff"
           value={isCountLoading ? "—" : totalCount}
           icon={Users}
+          iconColor="violet"
           description="Total registered staff accounts"
         />
         <StatsCard
           title="Active Staff"
           value={isCountLoading ? "—" : activeCount}
           icon={UserCheck}
+          iconColor="emerald"
           description="Currently active staff members"
         />
         <StatsCard
           title="Inactive Staff"
           value={isCountLoading ? "—" : inactiveCount}
           icon={UserX}
+          iconColor="rose"
           description="Deactivated or suspended accounts"
         />
       </div>

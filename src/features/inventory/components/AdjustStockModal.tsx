@@ -257,8 +257,17 @@ export function AdjustStockModal({
                 type="number"
                 min="0"
                 step="1"
-                value={reorderLevel}
-                onChange={(e) => setReorderLevel(Math.max(0, Number(e.target.value) || 0))}
+                placeholder="0"
+                value={reorderLevel === 0 ? "" : reorderLevel}
+                onFocus={(e) => {
+                  if (e.target.value === "0") {
+                    e.target.select();
+                  }
+                }}
+                onChange={(e) => {
+                  const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                  setReorderLevel(clean === "" ? 0 : Math.max(0, parseInt(clean, 10) || 0));
+                }}
                 className="w-28 h-8 px-2.5 text-xs font-mono font-bold text-neutral-900 bg-white border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
               <span className="text-xs text-neutral-500">units</span>
@@ -374,10 +383,18 @@ export function AdjustStockModal({
                       type="number"
                       min="0"
                       step="1"
-                      value={deltaQty || ""}
-                      onChange={(e) => setDeltaQty(Number(e.target.value) || 0)}
-                      className="w-full h-10 px-3.5 text-sm font-mono font-bold text-neutral-900 bg-white border border-cream-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary-500/20 focus:border-secondary-500 transition-colors"
                       placeholder="0 (Enter units to adjust)..."
+                      value={deltaQty === 0 ? "" : deltaQty}
+                      onFocus={(e) => {
+                        if (e.target.value === "0") {
+                          e.target.select();
+                        }
+                      }}
+                      onChange={(e) => {
+                        const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                        setDeltaQty(clean === "" ? 0 : Math.max(0, parseInt(clean, 10) || 0));
+                      }}
+                      className="w-full h-10 px-3.5 text-sm font-mono font-bold text-neutral-900 bg-white border border-cream-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary-500/20 focus:border-secondary-500 transition-colors"
                     />
                   </div>
                 </div>
@@ -392,12 +409,18 @@ export function AdjustStockModal({
                     type="number"
                     min="0"
                     step="1"
-                    value={targetQty}
-                    onChange={(e) =>
-                      setTargetQty(Math.max(0, parseInt(e.target.value, 10) || 0))
-                    }
+                    placeholder="0 (Enter target units, e.g. 30, 20, 0)..."
+                    value={targetQty === 0 ? "" : targetQty}
+                    onFocus={(e) => {
+                      if (e.target.value === "0") {
+                        e.target.select();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                      setTargetQty(clean === "" ? 0 : Math.max(0, parseInt(clean, 10) || 0));
+                    }}
                     className="w-full h-11 px-3.5 text-base font-mono font-bold text-neutral-900 bg-white border border-cream-border rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary-500/20 focus:border-secondary-500 transition-colors"
-                    placeholder="Enter target units, e.g. 30, 20, 0..."
                   />
                   <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-neutral-400">
                     units

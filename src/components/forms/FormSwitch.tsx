@@ -35,7 +35,7 @@ const FormSwitch = React.forwardRef<HTMLButtonElement, FormSwitchProps>(
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:ring-offset-2",
             "disabled:cursor-not-allowed disabled:opacity-50",
             checked ? "bg-emerald-500" : "bg-neutral-300",
-            error && "ring-2 ring-red-500 ring-offset-2",
+            error && "ring-2 ring-error-500 ring-offset-2",
             className
           )}
         >
@@ -58,7 +58,7 @@ const FormSwitch = React.forwardRef<HTMLButtonElement, FormSwitchProps>(
               </label>
             )}
             {description && <p className="text-sm text-gray-500">{description}</p>}
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-xs font-medium text-error-600 mt-1">{error}</p>}
           </div>
         )}
       </div>

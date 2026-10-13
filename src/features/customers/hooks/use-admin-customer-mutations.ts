@@ -20,6 +20,7 @@ export function useUpdateCustomerStatus() {
     UpdateCustomerStatusVariables
   >({
     mutationFn: ({ uuid, isActive }) => updateCustomerStatus(uuid, isActive),
+    meta: { skipToast: true },
     onSuccess: (data, variables) => {
       // Invalidate customer lists, detail, and count queries
       queryClient.invalidateQueries({

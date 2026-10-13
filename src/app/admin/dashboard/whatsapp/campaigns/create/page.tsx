@@ -393,7 +393,7 @@ function CreateCampaignContent() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Diwali Sweets & Mixture 20% Off"
+                placeholder="e.g. Kolli Hills Spices & Honey 20% Off"
               />
             </div>
 

@@ -49,8 +49,10 @@ function cleanToastMessage(text?: string): string {
   return text
     .trim()
     .toLowerCase()
-    .replace(/[.,!?:;]+$/, "") // remove trailing punctuation
-    .replace(/\s+/g, " ");
+    .replace(/[.,!?:;_\-\/\\]+/g, " ")
+    .replace(/\b(post|item|record|details|the|a|an|successfully)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function showToast(toastData: ToastInput) {
@@ -63,8 +65,10 @@ function showToast(toastData: ToastInput) {
       ? "success"
       : toastData.variant;
 
-  // Deduplicate based on message content to prevent dual toasts from MutationCache & components
-  const content = cleanToastMessage(toastData.description || toastData.title);
+  // Deduplicate based on normalized semantic content to prevent dual toasts
+  const descKey = cleanToastMessage(toastData.description);
+  const titleKey = cleanToastMessage(toastData.title);
+  const content = descKey || titleKey;
   const dedupeKey = `${variant}:${content}`;
   const now = Date.now();
   const lastShown = recentToasts.get(dedupeKey);
@@ -110,17 +114,17 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<Toast[]>([]);
 
   const addToast = React.useCallback((newToast: Omit<Toast, "id">) => {
-    const newContent = cleanToastMessage(newToast.description || newToast.title);
+    const newNorm = cleanToastMessage(newToast.description || newToast.title);
 
     setToasts((prev) => {
       const alreadyActive = prev.some((t) => {
-        const existingContent = cleanToastMessage(t.description || t.title);
+        if (t.variant !== newToast.variant) return false;
+        const existingNorm = cleanToastMessage(t.description || t.title);
         return (
-          t.variant === newToast.variant &&
-          (existingContent === newContent ||
-            (existingContent &&
-              newContent &&
-              (existingContent.includes(newContent) || newContent.includes(existingContent))))
+          existingNorm === newNorm ||
+          (existingNorm &&
+            newNorm &&
+            (existingNorm.includes(newNorm) || newNorm.includes(existingNorm)))
         );
       });
       if (alreadyActive) {

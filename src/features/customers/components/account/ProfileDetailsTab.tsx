@@ -59,14 +59,40 @@ export function ProfileDetailsTab({
     setMessage(null);
     setFieldErrors({});
 
-    const payload = {
-      name: name.trim() || undefined,
-      phone: phone.trim() || null,
-      dob: dob || null,
-      gender: (gender || null) as "male" | "female" | "other" | null,
-      isWhatsapp,
-      whatsappNo: isWhatsapp ? (whatsappNo.trim() || undefined) : null,
-    };
+    const origName = (profile?.name || "").trim();
+    const origPhone = profile?.phone ? profile.phone.replace(/\D/g, "").slice(-10) : "";
+    const origDob = profile?.dob ? profile.dob.slice(0, 10) : "";
+    const origGender = profile?.gender || "";
+    const origIsWhatsapp = profile?.isWhatsapp || false;
+    const origWhatsappNo = profile?.whatsappNo ? profile.whatsappNo.replace(/\D/g, "").slice(-10) : "";
+
+    const payload: Record<string, unknown> = {};
+
+    if (name.trim() !== origName) {
+      payload.name = name.trim() || undefined;
+    }
+    const cleanPhone = phone.trim();
+    if (cleanPhone !== origPhone) {
+      payload.phone = cleanPhone || null;
+    }
+    if (dob !== origDob) {
+      payload.dob = dob || null;
+    }
+    if (gender !== origGender) {
+      payload.gender = gender || null;
+    }
+    if (isWhatsapp !== origIsWhatsapp) {
+      payload.isWhatsapp = isWhatsapp;
+    }
+    const cleanWhatsapp = isWhatsapp ? (whatsappNo.trim() || null) : null;
+    if (cleanWhatsapp !== (origIsWhatsapp ? origWhatsappNo || null : null)) {
+      payload.whatsappNo = cleanWhatsapp;
+    }
+
+    if (Object.keys(payload).length === 0) {
+      setMessage({ type: "success", text: "Profile updated successfully!" });
+      return;
+    }
 
     const validationResult = updateCustomerProfileSchema.safeParse(payload);
     if (!validationResult.success) {
@@ -179,12 +205,13 @@ export function ProfileDetailsTab({
               value={name}
               onChange={(e) => handleFieldChange(setName, "name", e.target.value)}
               placeholder="Enter your full name"
+              aria-invalid={!!fieldErrors.name}
               className={`border rounded-lg px-3.5 py-3 text-xs sm:text-sm text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors min-h-[44px] ${
-                fieldErrors.name ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                fieldErrors.name ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
               }`}
             />
             {fieldErrors.name && (
-              <span className="text-[11px] text-red-600">{fieldErrors.name}</span>
+              <span className="text-[11px] text-error-600 font-medium">{fieldErrors.name}</span>
             )}
           </label>
 
@@ -224,12 +251,13 @@ export function ProfileDetailsTab({
                 }
               }}
               placeholder="Enter 10-digit mobile number"
+              aria-invalid={!!fieldErrors.phone}
               className={`border rounded-lg px-3.5 py-3 text-xs sm:text-sm text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors min-h-[44px] ${
-                fieldErrors.phone ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                fieldErrors.phone ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
               }`}
             />
             {fieldErrors.phone && (
-              <span className="text-[11px] text-red-600">{fieldErrors.phone}</span>
+              <span className="text-[11px] text-error-600 font-medium">{fieldErrors.phone}</span>
             )}
           </label>
 
@@ -254,12 +282,13 @@ export function ProfileDetailsTab({
               type="date"
               value={dob}
               onChange={(e) => handleFieldChange(setDob, "dob", e.target.value)}
+              aria-invalid={!!fieldErrors.dob}
               className={`border rounded-lg px-3.5 py-3 text-xs sm:text-sm text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors min-h-[44px] ${
-                fieldErrors.dob ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                fieldErrors.dob ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
               }`}
             />
             {fieldErrors.dob && (
-              <span className="text-[11px] text-red-600">{fieldErrors.dob}</span>
+              <span className="text-[11px] text-error-600 font-medium">{fieldErrors.dob}</span>
             )}
           </label>
 
@@ -330,12 +359,13 @@ export function ProfileDetailsTab({
                     }
                   }}
                   placeholder="Enter 10-digit WhatsApp number"
+                  aria-invalid={!!fieldErrors.whatsappNo}
                   className={`border rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-theme-surface-warm focus:border-theme-primary transition-colors ${
-                    fieldErrors.whatsappNo ? "border-red-500 bg-red-50/20" : "border-theme-border-input"
+                    fieldErrors.whatsappNo ? "border-error-500 bg-error-50/20" : "border-theme-border-input"
                   }`}
                 />
                 {fieldErrors.whatsappNo && (
-                  <span className="text-[11px] text-red-600">{fieldErrors.whatsappNo}</span>
+                  <span className="text-[11px] text-error-600 font-medium">{fieldErrors.whatsappNo}</span>
                 )}
               </div>
             )}

@@ -242,12 +242,29 @@ export default function AdminBrandsPage() {
       isLoading={updateMutation.isPending}
       submitLabel="Update Brand"
       onSubmit={async (data) => {
-        const payload = {
-          name: data.name,
-          slug: data.slug,
-          description: data.description || null,
-         
-        };
+        const payload: Record<string, unknown> = {};
+
+        const cleanName = data.name?.trim();
+        if (cleanName && cleanName !== selectedBrand.name?.trim()) {
+          payload.name = cleanName;
+        }
+
+        const cleanSlug = data.slug?.trim();
+        if (cleanSlug && cleanSlug !== selectedBrand.slug?.trim()) {
+          payload.slug = cleanSlug;
+        }
+
+        const cleanDesc = data.description?.trim() ?? "";
+        const currentDesc = selectedBrand.description?.trim() ?? "";
+        if (cleanDesc !== currentDesc) {
+          payload.description = cleanDesc || undefined;
+        }
+
+        if (Object.keys(payload).length === 0) {
+          setIsEditOpen(false);
+          setSelectedBrand(null);
+          return;
+        }
 
         await updateMutation.mutateAsync({
           uuid: selectedBrand.uuid,

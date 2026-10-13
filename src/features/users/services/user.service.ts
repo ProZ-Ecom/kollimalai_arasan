@@ -150,24 +150,38 @@ export const userService = {
       throw ApiError.notFound("User not found");
     }
 
-    if (data.email && data.email !== existing.email) {
-      const emailExists = await userRepository.findByEmail(data.email);
-      if (emailExists) {
+    if (
+      data.email &&
+      data.email.toLowerCase().trim() !== existing.email?.toLowerCase().trim()
+    ) {
+      const emailExists = await userRepository.findByEmail(
+        data.email.toLowerCase().trim()
+      );
+      if (
+        emailExists &&
+        emailExists.uuid !== existing.uuid &&
+        Number(emailExists.internalId) !== Number(existing.internalId)
+      ) {
         throw ApiError.conflict("An account with this email already exists");
       }
     }
 
-    if (data.phone && data.phone !== existing.phone) {
-      const phoneExists = await userRepository.findByPhone(data.phone);
-      if (phoneExists && phoneExists.uuid !== existing.uuid && Number(phoneExists.id) !== Number(existing.internalId)) {
+    if (data.phone && data.phone.trim() !== existing.phone?.trim()) {
+      const phoneExists = await userRepository.findByPhone(data.phone.trim());
+      if (
+        phoneExists &&
+        phoneExists.uuid !== existing.uuid &&
+        Number(phoneExists.internalId) !== Number(existing.internalId)
+      ) {
         throw ApiError.conflict("An account with this phone number already exists");
       }
     }
 
     const updateData: Record<string, unknown> = {};
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.email !== undefined) updateData.email = data.email;
-    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.name !== undefined) updateData.name = data.name.trim();
+    if (data.email !== undefined) updateData.email = data.email.toLowerCase().trim();
+    if (data.phone !== undefined) updateData.phone = data.phone?.trim() || null;
+    if (data.roleId !== undefined) updateData.roleId = BigInt(data.roleId);
     if (data.status !== undefined) updateData.status = data.status;
 
     return userRepository.update(id, updateData as never);

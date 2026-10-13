@@ -22,6 +22,7 @@ export function useUpdateBulkOrderStatus() {
   >({
     mutationFn: ({ uuid, status, comment }) =>
       updateBulkOrderStatus(uuid, status, comment),
+    meta: { skipToast: true },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: adminBulkOrderKeys.all });
       queryClient.invalidateQueries({

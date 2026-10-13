@@ -14,10 +14,10 @@ export async function GET() {
     "product_name",
     "product_sku",
     "product_description",
-    "variant_name",
+    "item_name",
     "unit_value",
     "unit",
-    "variant_sku",
+    "item_sku",
     "price",
     "stock_qty",
     "reorder_level",
@@ -26,7 +26,7 @@ export async function GET() {
   ];
 
   const sampleRows = [
-    // Turmeric: 2 Variants (Standard Pouch & Pet Jar), multiple sizes
+    // Turmeric: 2 Items (Standard Pouch & Pet Jar), multiple sizes
     [
       "Spices",
       "Turmeric Powder",
@@ -229,7 +229,7 @@ export async function GET() {
       "1008",
     ],
 
-    // Honey: 2 Variants (Glass Jar & Squeeze Bottle)
+    // Honey: 2 Items (Glass Jar & Squeeze Bottle)
     [
       "Honey & Oils",
       "Raw Forest Honey",
@@ -362,10 +362,10 @@ export async function GET() {
     { wch: 26 }, // product_name
     { wch: 16 }, // product_sku
     { wch: 38 }, // product_description
-    { wch: 22 }, // variant_name
+    { wch: 22 }, // item_name
     { wch: 12 }, // unit_value
     { wch: 8 },  // unit
-    { wch: 18 }, // variant_sku
+    { wch: 18 }, // item_sku
     { wch: 10 }, // price
     { wch: 12 }, // stock_qty
     { wch: 14 }, // reorder_level
@@ -379,35 +379,44 @@ export async function GET() {
     ["KOLLIMALAI ARASAN — Unified Bulk Import Template"],
     [""],
     ["1. EVERYTHING IN ONE SHEET"],
-    ["• You no longer need to switch between tabs! Enter all product and variant details directly in the 'Catalog Import' sheet."],
+    ["• You no longer need to switch between tabs! Enter all product and item details directly in the 'Catalog Import' sheet."],
     [""],
     ["2. 3-TIER ARCHITECTURE EXPLAINED"],
     ["• Tier 1 (Product): category, product_name, product_sku, product_description"],
-    ["• Tier 2 (Variant): variant_name (packaging type or grade, e.g. 'Standard Pouch', 'Glass Jar', 'Grade A Bold')"],
-    ["• Tier 3 (Subvariant / Size): unit_value, unit, variant_sku, price, stock_qty"],
+    ["• Tier 2 (Item): item_name (packaging type, grade, or item type, e.g. 'Standard Pouch', 'Glass Jar', 'Grade A Bold')"],
+    ["• Tier 3 (Pack Size / Pricing): unit_value, unit, item_sku, price, stock_qty"],
     [""],
     ["3. HOW TO ENTER MULTIPLE SIZES FOR A PRODUCT"],
-    ["• To attach multiple package sizes (e.g. 100g, 250g, 500g) under the SAME variant:"],
-    ["  Repeat the same 'product_sku' and 'variant_name', and specify different 'unit_value', 'variant_sku', and 'price'."],
-    ["  The system will automatically group them under one variant with multiple sellable sizes!"],
+    ["• To attach multiple package sizes (e.g. 100g, 250g, 500g) under the SAME item:"],
+    ["  Repeat the same 'product_sku' and 'item_name', and specify different 'unit_value', 'item_sku', and 'price'."],
+    ["  The system will automatically group them under one item with multiple sellable sizes!"],
     [""],
-    ["4. VALID UNIT CODES IN DATABASE"],
+    ["4. MANDATORY FIELD VALIDATIONS (Same as Form Modals)"],
+    ["• category: Required. Max 150 characters. Subcategories can be created using '>' (e.g. 'Spices > Whole Spices')."],
+    ["• product_name: Required. Cannot be left empty. Max 100 characters."],
+    ["• product_sku: Required. Unique product code (e.g. 'KA-TUR-001'). Max 100 characters."],
+    ["• item_name: Required. Cannot be left empty (e.g. 'Standard Pouch', 'Glass Jar'). Max 100 characters."],
+    ["• unit: Required. Must match a valid unit code in database (e.g. g, kg, ml, L, pcs)."],
+    ["• unit_value: Required. Must be a positive number greater than 0 (e.g. 100, 250, 500)."],
+    ["• item_sku: Required. Unique SKU for each pack size (e.g. 'KA-TUR-P100'). Max 100 characters."],
+    ["• price: Required. Must be a positive number greater than 0 (e.g. 85, 200)."],
+    ["• stock_qty: Optional. Whole number (integer >= 0). Default is 0."],
+    ["• reorder_level: Optional. Whole number (integer >= 0). Default is 10."],
+    ["• is_default: Optional. Set 'YES' for the primary sellable size shown first on the storefront."],
+    [""],
+    ["5. VALID UNIT CODES IN DATABASE"],
     ["• g   → Grams (e.g. 100, 250, 500)"],
     ["• kg  → Kilograms (e.g. 1, 2, 5)"],
     ["• ml  → Milliliters (e.g. 250, 500)"],
     ["• L   → Liters (e.g. 1, 2)"],
     ["• pcs → Pieces"],
     [""],
-    ["5. RULES & BEST PRACTICES"],
-    ["• SKUs: 'product_sku' and 'variant_sku' must each be unique."],
-    ["• is_default: Set 'YES' for the primary sellable size shown first on the storefront."],
-    ["• Prices: Must be greater than 0."],
-    ["• Subcategories: Use '>' in category (e.g. 'Spices > Whole Spices') to create subcategories automatically."],
-    ["• Optional fields: If left empty on subsequent rows of the same product, they are automatically inherited."],
+    ["6. INHERITANCE RULES"],
+    ["• When entering multiple pack sizes for the same product, product-level columns can be repeated or left empty on subsequent rows to inherit from the top row."],
   ];
 
   const wsInstructions = XLSX.utils.aoa_to_sheet(instructionData);
-  wsInstructions["!cols"] = [{ wch: 95 }];
+  wsInstructions["!cols"] = [{ wch: 110 }];
   XLSX.utils.book_append_sheet(wb, wsInstructions, "Instructions");
 
   const xlBuffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });

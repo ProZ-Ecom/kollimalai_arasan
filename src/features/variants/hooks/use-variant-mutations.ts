@@ -126,10 +126,13 @@ export function useCreateVariantUnitPrice() {
   });
 }
 
-export function useUpdateVariantUnitPrice() {
+export function useUpdateVariantUnitPrice(options?: {
+  meta?: { skipToast?: boolean; successMessage?: string; errorMessage?: string };
+}) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: options?.meta,
     mutationFn: async ({
       productUuid,
       variantUuid,

@@ -46,6 +46,7 @@ export async function syncOrderStatusFromTrackingResult(
     },
     include: {
       orders: true,
+      delivery_partners: true,
     },
     orderBy: {
       id: "desc",
@@ -56,6 +57,14 @@ export async function syncOrderStatusFromTrackingResult(
     return {
       synced: false,
       reason: `No active shipment matching AWB '${cleanAwb}' in database`,
+    };
+  }
+
+  // GUARD: If courier is MSS or manual, ST Courier tracking auto-sync should never run
+  if (shipment.delivery_partners?.courier_type && shipment.delivery_partners.courier_type !== "st_courier") {
+    return {
+      synced: false,
+      reason: `Courier '${shipment.delivery_partners.name}' is manual/MSS; tracking managed by admin`,
     };
   }
 
@@ -261,9 +270,13 @@ export async function runSTCourierSyncCronJob(): Promise<{
           in: ["shipped", "out_for_delivery"],
         },
       },
+      delivery_partners: {
+        courier_type: "st_courier",
+      },
     },
     include: {
       orders: true,
+      delivery_partners: true,
     },
     take: 50, // Batch limit per cron run
   });
