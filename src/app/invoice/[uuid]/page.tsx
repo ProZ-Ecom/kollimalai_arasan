@@ -31,7 +31,8 @@ export default async function OrderInvoicePage({
       uuid,
       isStaff ? undefined : user.id
     );
-  } catch {
+  } catch (error) {
+    console.error(`[OrderInvoicePage] Failed to load invoice for order ${uuid}:`, error);
     notFound();
   }
 

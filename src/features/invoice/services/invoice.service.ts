@@ -54,31 +54,43 @@ export const invoiceService = {
     ]);
 
     if (!order) throw ApiError.notFound("Order not found");
-    if (!company) throw ApiError.notFound("Company settings not found");
+
+    const sellerCompany = {
+      companyName: company?.companyName || "Kollimalai Arasan",
+      address: company?.address || "Kolli Hills Main Road, Semmedu",
+      city: company?.city || "Namakkal",
+      pincode: company?.pincode || "637411",
+      state: company?.state || "Tamil Nadu",
+      gstNumber: company?.gstNumber || null,
+      panNumber: company?.panNumber || null,
+      phone: company?.phone || null,
+      email: company?.email || "support@kollimalaiarasan.com",
+      logo: company?.logo || null,
+    };
 
     const billing =
       order.address.find((a) => a.type === "billing") ?? order.address[0] ?? null;
     const shipping =
       order.address.find((a) => a.type === "shipping") ?? billing;
 
-    const sellerStateCode = resolveStateCode(company.state, company.gstNumber);
+    const sellerStateCode = resolveStateCode(sellerCompany.state, sellerCompany.gstNumber);
     const buyerStateCode = resolveStateCode(billing?.state);
 
     const seller: InvoicePartyDto = {
-      name: company.companyName,
-      addressLines: (company.address || "")
+      name: sellerCompany.companyName,
+      addressLines: (sellerCompany.address || "")
         .split(/\r?\n|,/)
         .map((line) => line.trim())
         .filter(Boolean),
-      city: company.city,
-      pincode: company.pincode,
-      state: company.state,
+      city: sellerCompany.city,
+      pincode: sellerCompany.pincode,
+      state: sellerCompany.state,
       stateCode: sellerStateCode,
-      gstin: company.gstNumber,
-      pan: company.panNumber,
-      phone: company.phone,
-      email: company.email,
-      logo: company.logo,
+      gstin: sellerCompany.gstNumber,
+      pan: sellerCompany.panNumber,
+      phone: sellerCompany.phone,
+      email: sellerCompany.email,
+      logo: sellerCompany.logo,
     };
 
     const buyer: InvoicePartyDto = {
@@ -97,7 +109,7 @@ export const invoiceService = {
       logo: null,
     };
 
-    const sameState = isSameState(company.state, billing?.state);
+    const sameState = isSameState(sellerCompany.state, billing?.state);
 
     const lines: InvoiceLineDto[] = order.items.map((item, index) => {
       const hsn = item.product.product_hsn_codes;
