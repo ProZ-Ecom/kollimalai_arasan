@@ -183,11 +183,6 @@
   width: 14%;
 }
 
-.ti-spacer td {
-  height: 90px;
-  border-right: 1px solid #252525;
-}
-
 .ti-total td {
   border-top: 1px solid #252525;
   font-weight: 700;

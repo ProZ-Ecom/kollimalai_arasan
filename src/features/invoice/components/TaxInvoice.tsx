@@ -172,19 +172,13 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
               <tr>
                 <td />
                 <td className="r">CGST</td>
-                <td />
-                <td />
-                <td />
-                <td />
+                <td colSpan={4} />
                 <td className="r">{money(invoice.totalCgst)}</td>
               </tr>
               <tr>
                 <td />
                 <td className="r">SGST</td>
-                <td />
-                <td />
-                <td />
-                <td />
+                <td colSpan={4} />
                 <td className="r">{money(invoice.totalSgst)}</td>
               </tr>
             </>
@@ -192,10 +186,7 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
             <tr>
               <td />
               <td className="r">IGST</td>
-              <td />
-              <td />
-              <td />
-              <td />
+              <td colSpan={4} />
               <td className="r">{money(invoice.totalIgst)}</td>
             </tr>
           )}
@@ -204,10 +195,7 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
             <tr>
               <td />
               <td className="r">Delivery Charges</td>
-              <td />
-              <td />
-              <td />
-              <td />
+              <td colSpan={4} />
               <td className="r">{money(invoice.deliveryCharge)}</td>
             </tr>
           )}
@@ -216,31 +204,17 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
             <tr>
               <td />
               <td className="r">Round Off</td>
-              <td />
-              <td />
-              <td />
-              <td />
+              <td colSpan={4} />
               <td className="r">{money(invoice.roundOff)}</td>
             </tr>
           )}
-
-          <tr className="ti-spacer">
-            <td />
-            <td />
-            <td />
-            <td />
-            <td />
-            <td />
-            <td />
-          </tr>
 
           <tr className="ti-total">
             <td />
             <td className="r">Total</td>
             <td />
             <td className="c">{invoice.totalQuantity} Nos</td>
-            <td />
-            <td />
+            <td colSpan={2} />
             <td className="r">&#8377; {money(invoice.invoiceValue)}</td>
           </tr>
         </tbody>
@@ -375,7 +349,7 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
                 described and that all particulars are true and correct.
               </td>
               <td colSpan={2} className="ti-sign">
-                <p>for {seller.name}</p>
+                <p>for {seller.name || "Kollimalai Arasan"}</p>
                 <p className="ti-sign-line">Authorised Signatory</p>
               </td>
             </tr>
