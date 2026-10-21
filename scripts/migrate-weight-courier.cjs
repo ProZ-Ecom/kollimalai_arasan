@@ -44,19 +44,27 @@ require('dotenv').config();
 
   const existingMss = await conn.query("SELECT id FROM `delivery_partners` WHERE `code` = 'MSS'");
   if (existingMss.length === 0) {
-    const crypto = require('crypto');
     const now = new Date();
-    await conn.query(
-      "INSERT INTO `delivery_partners` (`name`, `code`, `courier_type`, `is_active`, `created_at`, `updated_at`, `created_by`, `updated_by`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      ['Mettur Super Services', 'MSS', 'mss', 1, now, now, 1, 1]
-    );
+    const hasUuid = await columnExists('delivery_partners', 'uuid');
+    if (hasUuid) {
+      const crypto = require('crypto');
+      await conn.query(
+        "INSERT INTO `delivery_partners` (`uuid`, `name`, `code`, `courier_type`, `is_active`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [crypto.randomUUID(), 'Mettur Super Services', 'MSS', 'mss', 1, now, now]
+      );
+    } else {
+      await conn.query(
+        "INSERT INTO `delivery_partners` (`name`, `code`, `courier_type`, `is_active`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?)",
+        ['Mettur Super Services', 'MSS', 'mss', 1, now, now]
+      );
+    }
     console.log('Inserted MSS delivery partner');
   } else {
     await conn.query("UPDATE `delivery_partners` SET `courier_type` = 'mss' WHERE `code` = 'MSS'");
     console.log('Updated MSS courier_type');
   }
 
-  await conn.query("UPDATE `delivery_partners` SET `courier_type` = 'st_courier' WHERE `code` = 'ST'");
+  await conn.query("UPDATE `delivery_partners` SET `courier_type` = 'st_courier' WHERE `code` IN ('ST', 'ST_COURIER')");
   console.log('Updated ST courier_type');
 
   await conn.end();
