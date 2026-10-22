@@ -21,7 +21,7 @@ import {
   useCreateCategory,
   useUpdateCategory,
 } from "@/features/categories/hooks";
-import { getCategories } from "@/features/categories/api/get-categories";
+import { getCategories, createCategory } from "@/features/categories/api/get-categories";
 import { getImageUrl } from "@/lib/utils";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
@@ -37,9 +37,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SearchInput } from "@/components/ui/search-input";
-import { Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Upload } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { CategoryListItem } from "@/features/categories/types";
+import { ExcelImportDialog } from "@/components/common/ExcelImportDialog";
+import { createAdminCategorySchema } from "@/features/categories/validations/admin-category.schema";
+import { formatSlug } from "@/components/forms/form-input";
+import { formatTitleCase } from "@/lib/utils";
 
 export default function AdminCategoriesPage() {
   const router = useRouter();
@@ -49,6 +53,7 @@ export default function AdminCategoriesPage() {
   const [pageSize, setPageSize] = useState(10);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryListItem | null>(null);
 
@@ -242,6 +247,16 @@ export default function AdminCategoriesPage() {
                 sheetName="Categories"
                 columns={EXPORT_PRESETS.categories}
               />
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsImportOpen(true)}
+                className="h-11 rounded-xl px-5 text-sm font-semibold"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Button>
 
               <Button
                 type="button"
@@ -471,6 +486,59 @@ export default function AdminCategoriesPage() {
           />
         )}
       </FormModal>
+
+      <ExcelImportDialog
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        title="Categories"
+        sampleFileName="categories"
+        columns={[
+          {
+            key: "name",
+            header: "Category Name",
+            required: true,
+            info: "Category name, max 150 characters.",
+            samples: ["Spices & Seasonings", "Millets & Grains", "Natural Honey"],
+          },
+          {
+            key: "slug",
+            header: "Category Code",
+            info: "Letters, numbers, and underscores only (e.g. SPICES_HERBS). Generated from name if blank.",
+            samples: ["SPICES_SEASONINGS", "MILLETS_GRAINS", "NATURAL_HONEY"],
+          },
+          {
+            key: "description",
+            header: "Description",
+            info: "Category description, max 2000 characters.",
+            samples: [
+              "Pure authentic spices from Kolli Hills",
+              "Traditional organic millets",
+              "Wild raw forest honey",
+            ],
+          },
+          {
+            key: "sortOrder",
+            header: "Sort Order",
+            info: "Whole number 0-100000. Defaults to 0.",
+            type: "number",
+            samples: [1, 2, 3],
+          },
+        ]}
+        hint="Top-level categories only. Category Code will be formatted with uppercase and underscores automatically."
+        prepare={(row) => ({
+          ...row,
+          name: formatTitleCase(String(row.name ?? "").trim()),
+          slug: formatSlug(String(row.slug ?? row.name ?? "")),
+          description: row.description ? String(row.description).trim() : null,
+          sortOrder:
+            typeof row.sortOrder === "number" && !isNaN(row.sortOrder)
+              ? row.sortOrder
+              : 0,
+        })}
+        schema={createAdminCategorySchema}
+        createRow={(payload) => createCategory(payload as any)}
+        onImported={() => refetch()}
+      />
     </div>
   );
 }

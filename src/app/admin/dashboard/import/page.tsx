@@ -1,225 +1,54 @@
 "use client";
 
-import { useState, useRef } from "react";
+import Link from "next/link";
 import {
-  Upload,
-  FileSpreadsheet,
+  FolderTree,
+  Package,
+  Layers,
+  ArrowRight,
+  UploadCloud,
   CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  Download,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  RotateCcw,
-  PackagePlus,
 } from "lucide-react";
 import { AdminPageHeader, AdminContent } from "@/components/admin/AdminPageHeader";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import { Button } from "@/components/ui/button";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface RejectedRow {
-  row: number;
-  sheet: string;
-  name: string;
-  reason: string;
-}
-
-interface PreviewItem {
-  categoryName: string;
-  productName: string;
-  sku: string;
-  variants: {
-    variantName: string;
-    unit: string;
-    unitValue: number;
-    variantSku: string;
-    price: number;
-    stockQty: number;
-    isDefault: boolean;
-  }[];
-}
-
-interface ImportData {
-  totalRows: number;
-  successCount: number;
-  rejectedCount: number;
-  preview: PreviewItem[];
-  rejected: RejectedRow[];
-  importedCategories: string[];
-  importedProducts: string[];
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function StatBadge({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: "green" | "red" | "blue" | "amber";
-}) {
-  const colors = {
-    green: "bg-emerald-50 border-emerald-200 text-emerald-700",
-    red: "bg-red-50 border-red-200 text-red-700",
-    blue: "bg-blue-50 border-blue-200 text-blue-700",
-    amber: "bg-amber-50 border-amber-200 text-amber-700",
-  };
-  return (
-    <div className={`rounded-xl border p-4 text-center ${colors[color]}`}>
-      <div className="text-2xl font-extrabold">{value}</div>
-      <div className="text-xs font-semibold mt-0.5 opacity-80">{label}</div>
-    </div>
-  );
-}
-
-function CollapsibleSection({
-  title,
-  count,
-  colorClass,
-  icon,
-  children,
-  defaultOpen = true,
-}: {
-  title: string;
-  count: number;
-  colorClass: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="rounded-xl border border-neutral-200 overflow-hidden">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between px-5 py-3.5 font-semibold text-sm ${colorClass}`}
-      >
-        <div className="flex items-center gap-2">
-          {icon}
-          {title}{" "}
-          <span className="px-2 py-0.5 rounded-full bg-white/60 text-xs font-bold">
-            {count}
-          </span>
-        </div>
-        {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-      </button>
-      {open && <div className="bg-white">{children}</div>}
-    </div>
-  );
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-export default function BulkImportPage() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-
-  // States: idle | previewing | preview_done | importing | done | error
-  const [stage, setStage] = useState<"idle" | "previewing" | "preview_done" | "importing" | "done" | "error">("idle");
-  const [previewData, setPreviewData] = useState<ImportData | null>(null);
-  const [importData, setImportData] = useState<ImportData | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // ── File selection ──
-  const handleFile = (f: File) => {
-    if (!f.name.endsWith(".xlsx")) {
-      setErrorMsg("Only .xlsx files are supported.");
-      return;
-    }
-    setFile(f);
-    setStage("idle");
-    setPreviewData(null);
-    setImportData(null);
-    setErrorMsg(null);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const dropped = e.dataTransfer.files[0];
-    if (dropped) handleFile(dropped);
-  };
-
-  // ── Preview call ──
-  const handlePreview = async () => {
-    if (!file) return;
-    setStage("previewing");
-    setErrorMsg(null);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/admin/import/products?preview=true", {
-        method: "POST",
-        body: fd,
-        credentials: "include",
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.message || json.error || "Preview failed");
-      setPreviewData(json.data);
-      setStage("preview_done");
-    } catch (err: any) {
-      setErrorMsg(err.message || "Preview failed");
-      setStage("error");
-    }
-  };
-
-  // ── Import call ──
-  const handleImport = async () => {
-    if (!file) return;
-    setStage("importing");
-    setErrorMsg(null);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/admin/import/products", {
-        method: "POST",
-        body: fd,
-        credentials: "include",
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.message || json.error || "Import failed");
-      setImportData(json.data);
-      setStage("done");
-    } catch (err: any) {
-      setErrorMsg(err.message || "Import failed");
-      setStage("error");
-    }
-  };
-
-  // ── Reset ──
-  const handleReset = () => {
-    setFile(null);
-    setStage("idle");
-    setPreviewData(null);
-    setImportData(null);
-    setErrorMsg(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  // ── Template Download ──
-  const handleDownloadTemplate = async () => {
-    const res = await fetch("/api/admin/import/template");
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "kollimalai_catalog_import_template.xlsx";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const activeData = importData ?? previewData;
+export default function BulkImportRedirectPage() {
+  const modules = [
+    {
+      title: "Categories",
+      description:
+        "Import your product categories in bulk. Validates category names, category codes, sort orders, and descriptions.",
+      href: "/admin/dashboard/categories",
+      icon: FolderTree,
+      badge: "Module Import Available",
+      color: "emerald",
+    },
+    {
+      title: "Products",
+      description:
+        "Import master products in bulk. Validates product codes, category matching, brand matching, and HSN codes.",
+      href: "/admin/dashboard/products",
+      icon: Package,
+      badge: "Module Import Available",
+      color: "green",
+    },
+    {
+      title: "Items (Variants)",
+      description:
+        "Import individual items, pack sizes, unit values, SKUs, base prices, and initial stock quantities per product.",
+      href: "/admin/dashboard/variants",
+      icon: Layers,
+      badge: "Module Import Available",
+      color: "teal",
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Bulk Product Import"
-        description="Import categories, products, and items from a single Excel file (.xlsx)"
+        title="Bulk Import"
+        description="Bulk import has been modularized. Each module now features its own dedicated import with exact form validations and live preview."
         breadcrumbs={
           <AdminBreadcrumb
             items={[
@@ -228,255 +57,68 @@ export default function BulkImportPage() {
             ]}
           />
         }
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownloadTemplate}
-            className="gap-2 text-xs"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Download Template
-          </Button>
-        }
       />
 
       <AdminContent>
-        <div className="w space-y-6">
-          {/* ── Upload Zone ── */}
-          {stage === "idle" || (stage === "error" && !previewData) ? (
-            <div
-              onDrop={handleDrop}
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-              onDragLeave={() => setIsDragging(false)}
-              onClick={() => fileInputRef.current?.click()}
-              className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 cursor-pointer transition-all ${isDragging
-                ? "border-green-500 bg-green-50"
-                : file
-                  ? "border-green-400 bg-green-50/50"
-                  : "border-neutral-300 bg-neutral-50 hover:border-green-400 hover:bg-green-50/40"
-                }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx"
-                className="hidden"
-                onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }}
-              />
-              {file ? (
-                <>
-                  <FileSpreadsheet className="w-10 h-10 text-green-500 mb-3" />
-                  <p className="text-sm font-bold text-green-700">{file.name}</p>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    {(file.size / 1024).toFixed(1)} KB · Click to change
-                  </p>
-                </>
-              ) : (
-                <>
-                  <Upload className="w-10 h-10 text-neutral-300 mb-3" />
-                  <p className="text-sm font-semibold text-neutral-600">
-                    Drag & drop your Excel file here
-                  </p>
-                  <p className="text-xs text-neutral-400 mt-1">or click to browse · Only .xlsx supported</p>
-                </>
-              )}
+        <div className="max-w-4xl space-y-6">
+          <div className="flex items-start gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 text-emerald-900">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
+              <UploadCloud className="h-5 w-5" />
             </div>
-          ) : null}
-
-          {/* Error */}
-          {errorMsg && (
-            <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              <XCircle className="w-5 h-5 shrink-0 text-red-500 mt-0.5" />
-              <div>
-                <p className="font-semibold">Import Error</p>
-                <p className="text-xs mt-0.5">{errorMsg}</p>
-              </div>
+            <div className="space-y-1">
+              <h2 className="text-base font-bold text-emerald-950">
+                Modular Bulk Import Enabled
+              </h2>
+              <p className="text-sm text-emerald-800 leading-relaxed">
+                Rather than bundling everything into a single complex spreadsheet, you can now download sample Excel templates and upload data directly inside each respective module. Each module performs real-time validation matching form rules and provides instant error feedback.
+              </p>
             </div>
-          )}
+          </div>
 
-          {/* ── Action buttons ── */}
-          {file && (stage === "idle" || (stage === "error" && !previewData)) && (
-            <div className="flex gap-3">
-              <Button
-                onClick={handlePreview}
-                className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                Preview Import
-              </Button>
-              <Button variant="outline" onClick={handleReset} className="gap-2">
-                <RotateCcw className="w-4 h-4" />
-                Clear
-              </Button>
-            </div>
-          )}
-
-          {(stage === "previewing" || stage === "importing") && (
-            <div className="flex items-center gap-3 text-sm text-neutral-600 font-medium py-4">
-              <Loader2 className="w-5 h-5 animate-spin text-green-600" />
-              {stage === "previewing" ? "Validating your Excel file..." : "Importing data to database..."}
-            </div>
-          )}
-
-          {/* ── Preview / Results ── */}
-          {activeData && (stage === "preview_done" || stage === "done" || stage === "error") && (
-            <div className="space-y-5">
-              {/* Status banner */}
-              {stage === "done" && (
-                <div className="flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-200 p-4">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-                  <div>
-                    <p className="font-bold text-emerald-700 text-sm">Import Successful!</p>
-                    <p className="text-xs text-emerald-600">
-                      {importData?.importedProducts.length ?? 0} products and{" "}
-                      {importData?.importedCategories.length ?? 0} categories added to the database.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {stage === "preview_done" && (
-                <div className="flex items-center gap-3 rounded-xl bg-blue-50 border border-blue-200 p-4">
-                  <AlertTriangle className="w-5 h-5 text-blue-600 shrink-0" />
-                  <p className="text-sm text-blue-700 font-medium">
-                    This is a <strong>preview only</strong> — no data has been saved yet. Review and click{" "}
-                    <strong>Confirm Import</strong> to proceed.
-                  </p>
-                </div>
-              )}
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <StatBadge label="Total Rows" value={activeData.totalRows} color="blue" />
-                <StatBadge label="Will Import" value={activeData.successCount} color="green" />
-                <StatBadge label="Rejected" value={activeData.rejectedCount} color="red" />
-                <StatBadge
-                  label="Products"
-                  value={activeData.preview.length}
-                  color="amber"
-                />
-              </div>
-
-              {/* Rejected Rows */}
-              {activeData.rejected.length > 0 && (
-                <CollapsibleSection
-                  title="Rejected Rows"
-                  count={activeData.rejected.length}
-                  colorClass="bg-red-50 text-red-700"
-                  icon={<XCircle className="w-4 h-4" />}
-                  defaultOpen={true}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {modules.map((m) => {
+              const Icon = m.icon;
+              return (
+                <div
+                  key={m.title}
+                  className="flex flex-col justify-between rounded-2xl border border-[var(--color-neutral-200)] bg-white p-6 shadow-xs hover:border-[var(--color-secondary-300)] hover:shadow-md transition-all"
                 >
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-neutral-100 bg-neutral-50 text-neutral-500">
-                          <th className="text-left px-4 py-2 font-semibold">Sheet</th>
-                          <th className="text-left px-4 py-2 font-semibold">Row</th>
-                          <th className="text-left px-4 py-2 font-semibold">Name / SKU</th>
-                          <th className="text-left px-4 py-2 font-semibold">Reason</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {activeData.rejected.map((r, i) => (
-                          <tr
-                            key={i}
-                            className="border-b border-neutral-50 hover:bg-red-50/40"
-                          >
-                            <td className="px-4 py-2 font-medium text-neutral-600">{r.sheet}</td>
-                            <td className="px-4 py-2 text-neutral-500">#{r.row}</td>
-                            <td className="px-4 py-2 font-semibold text-neutral-700">{r.name}</td>
-                            <td className="px-4 py-2 text-red-600">{r.reason}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CollapsibleSection>
-              )}
-
-              {/* Success Preview */}
-              {activeData.preview.length > 0 && (
-                <CollapsibleSection
-                  title="Products to Import"
-                  count={activeData.preview.length}
-                  colorClass="bg-emerald-50 text-emerald-700"
-                  icon={<CheckCircle2 className="w-4 h-4" />}
-                  defaultOpen={true}
-                >
-                  <div className="divide-y divide-neutral-100">
-                    {activeData.preview.map((prod, i) => (
-                      <div key={i} className="px-5 py-4">
-                        <div className="flex items-start justify-between gap-4 mb-2">
-                          <div>
-                            <p className="text-sm font-bold text-neutral-800">
-                              {prod.productName}
-                            </p>
-                            <p className="text-xs text-neutral-400">
-                              SKU: <span className="font-mono font-semibold">{prod.sku}</span>
-                              {" · "}Category:{" "}
-                              <span className="font-semibold text-green-600">
-                                {prod.categoryName}
-                              </span>
-                            </p>
-                          </div>
-                          <span className="shrink-0 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold">
-                            {prod.variants.length} item{prod.variants.length !== 1 ? "s" : ""}
-                          </span>
-                        </div>
-                        {prod.variants.length > 0 && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-                            {prod.variants.map((v, j) => (
-                              <div
-                                key={j}
-                                className={`rounded-lg border px-3 py-2 text-xs ${v.isDefault
-                                  ? "border-green-300 bg-green-50"
-                                  : "border-neutral-200 bg-neutral-50"
-                                  }`}
-                              >
-                                <p className="font-semibold text-neutral-700">
-                                  {v.variantName}{" "}
-                                  {v.isDefault && (
-                                    <span className="text-[10px] text-green-600 font-bold">(default)</span>
-                                  )}
-                                </p>
-                                <p className="text-neutral-400 font-mono">{v.variantSku}</p>
-                                <div className="flex gap-3 mt-1 text-neutral-600">
-                                  <span>₹{v.price}</span>
-                                  <span>Stock: {v.stockQty}</span>
-                                  <span>{v.unitValue}{v.unit}</span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-secondary-50)] text-[var(--color-secondary-600)]">
+                        <Icon className="h-6 w-6" />
                       </div>
-                    ))}
-                  </div>
-                </CollapsibleSection>
-              )}
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Active
+                      </span>
+                    </div>
 
-              {/* Action buttons */}
-              <div className="flex gap-3 pt-2">
-                {(stage === "preview_done" || stage === "error") &&
-                  previewData &&
-                  previewData.preview.length > 0 && (
-                    <Button
-                      onClick={handleImport}
-                      className="bg-green-600 hover:bg-green-700 text-white gap-2"
-                    >
-                      <PackagePlus className="w-4 h-4" />
-                      {stage === "error" ? "Retry Import" : "Confirm Import"} (
-                      {previewData.preview.length} products)
-                    </Button>
-                  )}
-                <Button variant="outline" onClick={handleReset} className="gap-2">
-                  <RotateCcw className="w-4 h-4" />
-                  {stage === "done" ? "Import Another File" : "Cancel"}
-                </Button>
-              </div>
-            </div>
-          )}
+                    <div>
+                      <h3 className="text-lg font-bold text-[var(--color-neutral-900)]">
+                        {m.title}
+                      </h3>
+                      <p className="mt-1 text-xs text-[var(--color-neutral-600)] leading-relaxed">
+                        {m.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-6">
+                    <Link href={m.href} className="w-full block">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between h-10 rounded-xl text-sm font-semibold hover:bg-[var(--color-secondary-50)] hover:text-[var(--color-secondary-700)] hover:border-[var(--color-secondary-300)]"
+                      >
+                        Go to {m.title}
+                        <ArrowRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </AdminContent>
     </div>

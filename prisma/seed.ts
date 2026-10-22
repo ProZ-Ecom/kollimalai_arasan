@@ -253,7 +253,7 @@ async function main() {
         country: "India",
         pincode: "637411",
         email: "support@kollimalaiarasan.com",
-        phone: "+91 94432 00000",
+        phone: "+91 74181 88950",
         website: "https://kollimalaiarasan.com",
         isActive: true,
         createdBy: adminUser.id,

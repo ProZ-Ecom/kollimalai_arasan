@@ -15,7 +15,7 @@ import { useCategories } from "@/features/categories/hooks";
 import { useBrands } from "@/features/brands/hooks";
 import { useHsnCodes } from "@/features/hsn-codes/hooks";
 import { useInfiniteCategoriesSelect } from "@/hooks/use-infinite-select";
-import { getAdminProducts } from "@/features/products/api/get-products";
+import { getAdminProducts, createAdminProduct } from "@/features/products/api/get-products";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
 import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
@@ -36,11 +36,13 @@ import { SearchInput } from "@/components/ui/search-input";
 import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Pencil, Trash2, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, Upload } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AdminProductResponse } from "@/features/products/types";
 import { ProductForm } from "@/features/products/components/ProductForm";
-import { getImageUrl } from "@/lib/utils";
+import { getImageUrl, formatTitleCase } from "@/lib/utils";
+import { ExcelImportDialog } from "@/components/common/ExcelImportDialog";
+import { createAdminProductSchema } from "@/features/products/validations/admin-product.schema";
 
 export default function AdminProductsPage() {
   const [search, setSearch] = useState("");
@@ -51,6 +53,7 @@ export default function AdminProductsPage() {
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] =
     useState<AdminProductResponse | null>(null);
@@ -75,22 +78,22 @@ export default function AdminProductsPage() {
   });
 
   // Reference queries for categories filter & modal form dropdowns
-  const isModalOpen = isCreateOpen || isEditOpen;
+  const isModalOpen = isCreateOpen || isEditOpen || isImportOpen;
   const categoryFilterSelect = useInfiniteCategoriesSelect({
     includeAllOption: true,
     allOptionLabel: "All Categories",
     pageSize: 20,
   });
   const { data: categoriesData } = useCategories(
-    { pageSize: 100 },
+    { pageSize: 500 },
     { enabled: isModalOpen }
   );
   const { data: brandsData } = useBrands(
-    { limit: 100 },
+    { limit: 500 },
     { enabled: isModalOpen }
   );
   const { data: hsnData } = useHsnCodes(
-    { pageSize: 100 },
+    { pageSize: 500 },
     { enabled: isModalOpen }
   );
 
@@ -369,6 +372,16 @@ export default function AdminProductsPage() {
               />
 
               <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsImportOpen(true)}
+                className="h-11 rounded-xl px-5 text-sm font-semibold"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Button>
+
+              <Button
                 onClick={() => setIsCreateOpen(true)}
                 className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] shadow-xs"
               >
@@ -602,6 +615,126 @@ export default function AdminProductsPage() {
         confirmText={`Delete ${selectedRows.length} ${selectedRows.length === 1 ? "Product" : "Products"}`}
         variant="destructive"
         isLoading={bulkDeleteMutation.isPending}
+      />
+
+      <ExcelImportDialog
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        title="Products"
+        sampleFileName="products"
+        columns={[
+          {
+            key: "name",
+            header: "Product Name",
+            required: true,
+            info: "Product name, max 100 characters.",
+            samples: [
+              "Kolli Hills Black Pepper",
+              "Pure Wild Rock Honey",
+              "Barnyard Millet",
+            ],
+          },
+          {
+            key: "slug",
+            header: "Product Code",
+            required: true,
+            info: "Product code (e.g. BLACK_PEPPER). Uppercase with underscores. Category code is prepended automatically.",
+            samples: ["BLACK_PEPPER", "WILD_HONEY", "BARNYARD_MILLET"],
+          },
+          {
+            key: "category",
+            header: "Category Name",
+            required: true,
+            info: "Must match an existing category name or category code exactly.",
+            samples: [
+              "Spices & Seasonings",
+              "Natural Honey",
+              "Millets & Grains",
+            ],
+          },
+          {
+            key: "brand",
+            header: "Brand Name",
+            info: "Must match an existing brand name. First active brand is used if blank.",
+            samples: [
+              "Kollimalai Arasan",
+              "Kollimalai Arasan",
+              "Kollimalai Arasan",
+            ],
+          },
+          {
+            key: "hsn",
+            header: "HSN Code",
+            info: "Must match an existing HSN code (e.g. 0904, 0409). Optional.",
+            samples: ["0904", "0409", "1008"],
+          },
+        ]}
+        hint="Category, Brand and HSN Code must already exist. Product code will be auto-prefixed with the category code if not already present."
+        prepare={(row) => {
+          const find = <T,>(
+            list: T[],
+            key: (item: T) => string,
+            value: unknown
+          ) =>
+            list.find(
+              (item) =>
+                key(item).trim().toLowerCase() ===
+                String(value ?? "").trim().toLowerCase()
+            );
+
+          const category =
+            find(categoryOptions, (c) => c.label, row.category) ||
+            find(categoryOptions, (c) => c.slug || "", row.category);
+          if (!category) {
+            return { error: `Category "${row.category ?? ""}" not found` };
+          }
+
+          let brandId: string | undefined = brandOptions[0]?.value;
+          if (row.brand !== undefined && String(row.brand).trim() !== "") {
+            const brand = find(brandOptions, (b) => b.label, row.brand);
+            if (!brand) return { error: `Brand "${row.brand}" not found` };
+            brandId = brand.value;
+          }
+          if (!brandId) {
+            return {
+              error: "No brand available. Please create a brand first.",
+            };
+          }
+
+          let hsnCodeId: string | null = null;
+          if (row.hsn !== undefined && String(row.hsn).trim() !== "") {
+            const hsn = hsnCodes.find(
+              (h) =>
+                h.code.trim().toLowerCase() ===
+                String(row.hsn ?? "").trim().toLowerCase()
+            );
+            if (!hsn) return { error: `HSN code "${row.hsn ?? ""}" not found` };
+            hsnCodeId = hsn.id;
+          }
+
+          const catSlug = (category.slug || "").trim().toUpperCase();
+          const prefix = catSlug ? `${catSlug}_` : "";
+          const rawSlug = String(row.slug ?? row.name ?? "")
+            .toUpperCase()
+            .replace(/\s+/g, "_")
+            .replace(/[^A-Za-z0-9_]/g, "");
+
+          let finalSlug = rawSlug;
+          if (prefix && !rawSlug.startsWith(prefix)) {
+            finalSlug = `${prefix}${rawSlug}`;
+          }
+
+          return {
+            name: formatTitleCase(String(row.name ?? "").trim()),
+            slug: finalSlug,
+            categoryId: category.value,
+            brandId,
+            hsnCodeId,
+          };
+        }}
+        schema={createAdminProductSchema}
+        createRow={(payload) => createAdminProduct(payload as any)}
+        onImported={() => refetch()}
       />
     </div>
   );
