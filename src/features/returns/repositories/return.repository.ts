@@ -53,6 +53,11 @@ export const returnRepository = {
         items: {
           where: { is_active: true },
         },
+        shipments: {
+          where: { is_active: true },
+          orderBy: { id: "desc" },
+          take: 1,
+        },
         user: {
           select: {
             id: true,

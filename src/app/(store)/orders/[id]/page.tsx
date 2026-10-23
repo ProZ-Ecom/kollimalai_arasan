@@ -10,13 +10,24 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   useCustomerOrderDetail,
   useCancelCustomerOrder,
+  useRequestCustomerReturn,
 } from "@/features/customers/hooks/use-customer-orders";
 import { OrderDetailView } from "@/features/orders/components/OrderDetailView";
+import { FormModal } from "@/components/common/FormModal";
+import { getReturnWindowInfo } from "@/features/customers/components/account/OrdersTab";
 import type { OrderStatus } from "@/features/orders/types";
 
 import { toast } from "@/components/ui/Toast";
 
 const CUSTOMER_CANCELLABLE: OrderStatus[] = ["pending", "confirmed"];
+
+const RETURN_REASONS = [
+  "Damaged product on delivery",
+  "Quality or freshness issue",
+  "Wrong item received",
+  "Package broken or seal tampered",
+  "Other / Customer dissatisfaction",
+];
 
 function OrderDetailSkeleton() {
   return (
@@ -52,9 +63,13 @@ export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: session, status } = useSession();
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState(RETURN_REASONS[0]);
+  const [returnNote, setReturnNote] = useState("");
 
   const { data: order, isLoading, error, refetch } = useCustomerOrderDetail(id);
   const cancelOrderMutation = useCancelCustomerOrder();
+  const returnOrderMutation = useRequestCustomerReturn();
 
   if (status === "loading" || (isLoading && !order)) {
     return <OrderDetailSkeleton />;
@@ -113,6 +128,32 @@ export default function OrderDetailPage() {
   }
 
   const canCancel = CUSTOMER_CANCELLABLE.includes(order.status);
+  const returnInfo = getReturnWindowInfo(order);
+  const canReturn = returnInfo.isEligible;
+
+  const handleReturnSubmit = () => {
+    const fullNote = returnNote.trim()
+      ? `${returnReason}: ${returnNote.trim()}`
+      : returnReason;
+
+    returnOrderMutation.mutate(
+      { uuid: order.id, payload: { note: fullNote } },
+      {
+        onSuccess: () => {
+          setReturnOpen(false);
+          setReturnNote("");
+          toast.success(
+            "Return Request Submitted",
+            "Our team will review your request. A pickup courier will be assigned once approved."
+          );
+          refetch();
+        },
+        onError: (err: any) => {
+          toast.error(err?.message || "Failed to submit return request");
+        },
+      }
+    );
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 sm:py-10 max-w-5xl">
@@ -143,8 +184,12 @@ export default function OrderDetailPage() {
         canCancel={canCancel}
         isCancelling={cancelOrderMutation.isPending}
         onCancel={() => setCancelOpen(true)}
+        canReturn={canReturn}
+        isReturning={returnOrderMutation.isPending}
+        onRequestReturn={() => setReturnOpen(true)}
       />
 
+      {/* Cancel Order Dialog */}
       <ConfirmDialog
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
@@ -162,6 +207,7 @@ export default function OrderDetailPage() {
                 } else {
                   toast.success("Order cancelled successfully");
                 }
+                refetch();
               },
               onError: (err: any) => {
                 toast.error(err?.message || "Failed to cancel order");
@@ -179,6 +225,71 @@ export default function OrderDetailPage() {
         variant="destructive"
         isLoading={cancelOrderMutation.isPending}
       />
+
+      {/* Return Request Modal */}
+      <FormModal
+        open={returnOpen}
+        onClose={() => setReturnOpen(false)}
+        title={`Request Return for #${order.orderNumber}`}
+        description="Select the reason for returning your delivered items. Our team will verify and arrange reverse courier pickup."
+        size="md"
+      >
+        <div className="space-y-4 pt-1">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-theme-text-primary mb-1.5">
+              Reason for Return *
+            </label>
+            <select
+              value={returnReason}
+              onChange={(e) => setReturnReason(e.target.value)}
+              className="w-full py-2 px-3 rounded-xl border border-theme-border bg-theme-surface text-xs font-semibold text-theme-text-primary focus:border-theme-primary outline-none"
+            >
+              {RETURN_REASONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-theme-text-primary mb-1.5">
+              Additional Details (Optional)
+            </label>
+            <textarea
+              rows={3}
+              value={returnNote}
+              onChange={(e) => setReturnNote(e.target.value)}
+              placeholder="Describe the issue or condition of the parcel..."
+              className="w-full p-3 rounded-xl border border-theme-border bg-theme-surface text-xs text-theme-text-primary focus:border-theme-primary outline-none resize-none"
+            />
+          </div>
+
+          <div className="rounded-xl border border-purple-200 bg-purple-50 p-3 text-[11px] text-purple-900 leading-relaxed">
+            📦 Once submitted, our team will review your request. After approval, our courier partner (Shiprocket / Express) will schedule doorstep pickup at your delivery address.
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-theme-border-subtle">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReturnOpen(false)}
+              disabled={returnOrderMutation.isPending}
+              className="rounded-xl text-xs font-semibold"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleReturnSubmit}
+              disabled={returnOrderMutation.isPending}
+              className="rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs"
+            >
+              {returnOrderMutation.isPending ? "Submitting..." : "Submit Return Request"}
+            </Button>
+          </div>
+        </div>
+      </FormModal>
     </div>
   );
 }

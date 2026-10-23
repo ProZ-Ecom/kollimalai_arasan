@@ -54,6 +54,9 @@ const unitPriceListArgs = {
     product_units: {
       select: { id: true, uuid: true, name: true, code: true, type: true },
     },
+    inventories: {
+      select: { quantity_available: true, quantity_reserved: true },
+    },
   },
   orderBy: [{ is_default: "desc" as const }, { createdAt: "asc" as const }],
 };
@@ -65,12 +68,32 @@ type VariantUnitPriceForDto = {
   unit_value: Prisma.Decimal | number;
   is_default: boolean;
   product_units: { id: bigint; uuid: string | null; name: string; code: string; type: string } | null;
+  inventories?: { quantity_available: Prisma.Decimal | number; quantity_reserved?: Prisma.Decimal | number } | null;
 };
 
 function pickDefaultUnitPrice(
   unitPrices: VariantUnitPriceForDto[] | null | undefined
 ): VariantUnitPriceForDto | null {
   if (!unitPrices || unitPrices.length === 0) return null;
+
+  // 1. Prefer in-stock default pack size
+  const inStockDefault = unitPrices.find(
+    (up) =>
+      up.is_default &&
+      (up.inventories?.quantity_available === undefined ||
+        Number(up.inventories.quantity_available) > 0)
+  );
+  if (inStockDefault) return inStockDefault;
+
+  // 2. Otherwise, automatically switch to the first in-stock pack size
+  const anyInStock = unitPrices.find(
+    (up) =>
+      up.inventories?.quantity_available === undefined ||
+      Number(up.inventories.quantity_available) > 0
+  );
+  if (anyInStock) return anyInStock;
+
+  // 3. Fallback to marked default or first if everything is out of stock
   return unitPrices.find((up) => up.is_default) ?? unitPrices[0];
 }
 
@@ -96,6 +119,15 @@ function toVariantListItemDto(
     variant.variant_unit_prices || []
   ).map((up) => {
     const basePrice = Number(up.base_price);
+    const availableStock =
+      up.inventories?.quantity_available !== undefined
+        ? Number(up.inventories.quantity_available)
+        : undefined;
+    const isOutOfStock =
+      availableStock !== undefined
+        ? availableStock <= 0
+        : Boolean(variant.out_of_stock);
+
     return {
       id: up.uuid,
       sku: up.sku,
@@ -103,8 +135,15 @@ function toVariantListItemDto(
       basePrice,
       sellingPrice: computeSellingPrice(basePrice),
       isDefault: up.uuid === defaultUnitPrice?.uuid,
+      stock: availableStock,
+      outOfStock: isOutOfStock,
     };
   });
+
+  const hasAnyStock =
+    unitPrices.length > 0
+      ? unitPrices.some((up) => !up.outOfStock)
+      : !variant.out_of_stock;
 
   return {
     id: variant.uuid || String(variant.id),
@@ -128,7 +167,7 @@ function toVariantListItemDto(
       variant.product_variant_images?.[0]?.image_url ??
       fallbackProductImg ??
       null,
-    outOfStock: Boolean(variant.out_of_stock),
+    outOfStock: !hasAnyStock || Boolean(variant.out_of_stock),
     videoUrl: variant.video_url ?? null,
     isDefault: Boolean(variant.is_default),
     unitPrices,

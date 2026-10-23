@@ -22,8 +22,10 @@ import {
   getCheckoutSummary,
   getDeliveryPartners,
   shipOrderCourier,
+  shipOrderWithShiprocket,
   type AssignDeliveryInput,
   type ShipOrderCourierPayload,
+  type ShiprocketDispatchPayload,
 } from "../api/get-orders";
 import type {
   DeliveryMethod,
@@ -308,5 +310,29 @@ export function useShipOrderCourier() {
     },
   });
 }
+
+export function useShipOrderShiprocket() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      uuid,
+      payload,
+    }: {
+      uuid: string | number;
+      payload?: ShiprocketDispatchPayload;
+    }) => shipOrderWithShiprocket(uuid, payload),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: adminOrderKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders", "count"] });
+      queryClient.invalidateQueries({
+        queryKey: adminOrderKeys.detail(variables.uuid),
+      });
+      queryClient.invalidateQueries({ queryKey: deliveryKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["customer", "orders"] });
+    },
+  });
+}
+
 
 

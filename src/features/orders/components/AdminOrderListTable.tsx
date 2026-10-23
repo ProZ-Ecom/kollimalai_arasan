@@ -76,6 +76,14 @@ export function AdminOrderListTable({
     paymentStatus?: string;
     customerName?: string;
     orderStatus?: string;
+    returnRequest?: {
+      id: string;
+      status: string;
+      reason?: string | null;
+      returnAwb?: string | null;
+      labelUrl?: string | null;
+      courierName?: string | null;
+    } | null;
   } | null>(null);
   const [shipCourierOrder, setShipCourierOrder] = useState<{
     id: string;
@@ -208,7 +216,16 @@ export function AdminOrderListTable({
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
+      cell: ({ row }) => (
+        <div className="flex flex-col gap-1 items-start">
+          <OrderStatusBadge status={row.original.status} />
+          {row.original.returnRequest && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-300 bg-purple-50 text-purple-800">
+              Return {row.original.returnRequest.status === "approved" ? "Approved" : row.original.returnRequest.status === "picked_up" ? "Picked Up" : row.original.returnRequest.status === "refunded" ? "Completed" : "Requested"}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       id: "courierTracking",
@@ -432,11 +449,13 @@ export function AdminOrderListTable({
               </button>
             )}
 
-            {/* Quick Process Return / Refund button for delivered OR cancelled paid orders */}
-            {(orderStatus === "delivered" ||
-              (orderStatus === "cancelled" &&
-                (row.original.paymentStatus === "paid" ||
-                  row.original.paymentStatus === "partial_refund"))) && (
+            {/* Process Return / Refund button - ONLY shown when customer raises return or cancelled order needs refund, and not yet refunded */}
+            {row.original.paymentStatus !== "refunded" &&
+              row.original.status !== "returned" &&
+              (!!row.original.returnRequest ||
+                (orderStatus === "cancelled" &&
+                  (row.original.paymentStatus === "paid" ||
+                    row.original.paymentStatus === "partial_refund"))) && (
               <button
                 type="button"
                 onClick={() =>
@@ -447,14 +466,21 @@ export function AdminOrderListTable({
                     paymentStatus: row.original.paymentStatus,
                     customerName: row.original.customer?.name,
                     orderStatus: row.original.status,
+                    returnRequest: row.original.returnRequest,
                   })
                 }
                 title={
-                  orderStatus === "cancelled"
+                  row.original.returnRequest
+                    ? `Process Customer Return: ${row.original.returnRequest.reason || "Customer requested return"}`
+                    : orderStatus === "cancelled"
                     ? "Approve & Process Refund"
                     : "Process Return / Refund"
                 }
-                className="grid h-8 w-8 place-items-center rounded-lg border border-purple-300 bg-purple-50 text-xs font-semibold text-purple-700 hover:bg-purple-100 transition-all cursor-pointer"
+                className={`grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                  row.original.returnRequest
+                    ? "border-purple-400 bg-purple-100 text-purple-800 hover:bg-purple-200 ring-2 ring-purple-300"
+                    : "border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100"
+                }`}
                 disabled={isTransitionPending}
               >
                 <RotateCcw className="h-3.5 w-3.5" />
@@ -595,6 +621,12 @@ export function AdminOrderListTable({
                 {orderDetail.paymentStatus && (
                   <PaymentStatusBadge status={orderDetail.paymentStatus} />
                 )}
+                {orderDetail.returnRequest && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-300">
+                    <RotateCcw className="h-3 w-3" />
+                    Return {orderDetail.returnRequest.status === "approved" ? "Approved" : orderDetail.returnRequest.status === "picked_up" ? "Picked Up" : "Requested"}
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -725,13 +757,13 @@ export function AdminOrderListTable({
                     </Button>
                   )}
 
-                {/* Refund / Return Manual Action for Admin */}
-                {(["delivered", "shipped", "out_for_delivery"].includes(
-                  currentDetailStatus || ""
-                ) ||
-                  (currentDetailStatus === "cancelled" &&
-                    (orderDetail.paymentStatus === "paid" ||
-                      orderDetail.paymentStatus === "partial_refund"))) && (
+                {/* Refund / Return Action for Admin - ONLY shown when return/refund is pending, and not yet refunded */}
+                {orderDetail.paymentStatus !== "refunded" &&
+                  currentDetailStatus !== "returned" &&
+                  (!!orderDetail.returnRequest ||
+                    (currentDetailStatus === "cancelled" &&
+                      (orderDetail.paymentStatus === "paid" ||
+                        orderDetail.paymentStatus === "partial_refund"))) && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -744,6 +776,7 @@ export function AdminOrderListTable({
                           paymentStatus: orderDetail.paymentStatus,
                           customerName: orderDetail.customer?.name,
                           orderStatus: orderDetail.status,
+                          returnRequest: orderDetail.returnRequest,
                         })
                       }
                       disabled={isTransitionPending}

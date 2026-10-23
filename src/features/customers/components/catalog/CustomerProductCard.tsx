@@ -33,15 +33,26 @@ export function CustomerProductCard({ product }: CustomerProductCardProps) {
       label: up.label,
       price: up.sellingPrice,
       comparePrice: up.basePrice > up.sellingPrice ? up.basePrice : null,
-      inStock: true,
+      inStock: !up.outOfStock && (up.stock === undefined || up.stock > 0),
     }));
   }, [product.unitPrices]);
 
-  const [selectedVariantId, setSelectedVariantId] = React.useState(
-    variants[0]?.id || ""
-  );
+  const defaultVariantId = React.useMemo(() => {
+    const inStock = variants.find((v) => v.inStock !== false);
+    return inStock?.id || variants[0]?.id || "";
+  }, [variants]);
+
+  const [selectedVariantId, setSelectedVariantId] = React.useState(defaultVariantId);
 
   React.useEffect(() => {
+    const current = variants.find((v) => v.id === selectedVariantId);
+    if (!current || current.inStock === false) {
+      const inStock = variants.find((v) => v.inStock !== false);
+      if (inStock && inStock.id !== selectedVariantId) {
+        setSelectedVariantId(inStock.id);
+        return;
+      }
+    }
     if (variants.length > 0 && !variants.some((v) => v.id === selectedVariantId)) {
       setSelectedVariantId(variants[0].id);
     }

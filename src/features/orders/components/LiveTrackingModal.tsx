@@ -44,9 +44,11 @@ export function LiveTrackingModal({
     setError(null);
 
     try {
+      const lower = (courierName || "").toLowerCase();
       const courierParam =
-        (courierName || "").toLowerCase().includes("mss") ||
-        (courierName || "").toLowerCase().includes("mettur")
+        lower.includes("shiprocket")
+          ? "shiprocket"
+          : lower.includes("mss") || lower.includes("mettur")
           ? "mss"
           : "st-courier";
       const res = await fetch(

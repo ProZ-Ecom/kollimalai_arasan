@@ -83,6 +83,8 @@ export interface OrderDeliveryDto {
   status?: string | null;
   shippedAt?: Date | string | null;
   deliveryNotes?: string | null;
+  labelUrl?: string | null;
+  courierPartnerName?: string | null;
 }
 
 
@@ -103,6 +105,14 @@ export interface OrderListItemResponse {
   placedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  returnRequest?: {
+    id: string;
+    status: string;
+    reason?: string | null;
+    returnAwb?: string | null;
+    labelUrl?: string | null;
+    courierName?: string | null;
+  } | null;
 }
 
 export interface OrderDetailResponse extends OrderListItemResponse {

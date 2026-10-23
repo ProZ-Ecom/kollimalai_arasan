@@ -113,6 +113,20 @@ export const orderDetailInclude = Prisma.validator<Prisma.OrderInclude>()({
       },
     },
   },
+  return_requests: {
+    where: { is_active: true },
+    select: {
+      id: true,
+      uuid: true,
+      status: true,
+      reason: true,
+      return_awb_code: true,
+      return_label_url: true,
+      courier_partner_name: true,
+    },
+    orderBy: { id: "desc" },
+    take: 1,
+  },
 });
 
 export function formatOrderAddress(
@@ -258,6 +272,8 @@ export function formatOrderDelivery(
     status: latest.status ?? null,
     shippedAt: latest.shipped_at ? latest.shipped_at.toISOString() : null,
     deliveryNotes: latest.delivery_notes ?? null,
+    labelUrl: (latest as any).label_url ?? null,
+    courierPartnerName: (latest as any).courier_partner_name ?? null,
   };
 }
 
@@ -306,6 +322,16 @@ export function formatOrderDetail(
     shippingAddress,
     billingAddress,
     statusHistory,
+    returnRequest: (order as any).return_requests?.[0]
+      ? {
+          id: (order as any).return_requests[0].uuid || String((order as any).return_requests[0].id),
+          status: (order as any).return_requests[0].status,
+          reason: (order as any).return_requests[0].reason ?? null,
+          returnAwb: (order as any).return_requests[0].return_awb_code ?? null,
+          labelUrl: (order as any).return_requests[0].return_label_url ?? null,
+          courierName: (order as any).return_requests[0].courier_partner_name ?? null,
+        }
+      : null,
   };
 }
 
@@ -359,6 +385,16 @@ export function formatOrderListItem(
     placedAt: order.placed_at ?? null,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
+    returnRequest: (order as any).return_requests?.[0]
+      ? {
+          id: (order as any).return_requests[0].uuid || String((order as any).return_requests[0].id),
+          status: (order as any).return_requests[0].status,
+          reason: (order as any).return_requests[0].reason ?? null,
+          returnAwb: (order as any).return_requests[0].return_awb_code ?? null,
+          labelUrl: (order as any).return_requests[0].return_label_url ?? null,
+          courierName: (order as any).return_requests[0].courier_partner_name ?? null,
+        }
+      : null,
   };
 }
 
@@ -974,6 +1010,20 @@ export const orderRepository = {
                   contact_number: true,
                 },
               },
+            },
+          },
+          return_requests: {
+            where: { is_active: true },
+            orderBy: { id: "desc" },
+            take: 1,
+            select: {
+              id: true,
+              uuid: true,
+              status: true,
+              reason: true,
+              return_awb_code: true,
+              return_label_url: true,
+              courier_partner_name: true,
             },
           },
         },

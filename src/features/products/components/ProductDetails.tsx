@@ -33,6 +33,8 @@ import { usePublicVariantReviews } from "@/features/reviews/hooks/use-public-rev
 import { ProductReviewsSection } from "@/features/reviews/components/ProductReviewsSection";
 import type { CustomerProductDetailDto, CustomerVariantListItemDto } from "../types";
 import { sanitizeRichText } from "@/lib/sanitize-html";
+import { PincodeDeliveryChecker } from "@/features/shipping/components/PincodeDeliveryChecker";
+import { toast } from "@/components/ui/Toast";
 
 interface ProductDetailsProps {
   product: CustomerProductDetailDto;
@@ -98,6 +100,13 @@ function ProductDetails({ product }: ProductDetailsProps) {
             formatMeasurementLabel(up.measurement) ||
             v.variantName ||
             "Standard";
+          const isUpOutOfStock =
+            up.outOfStock !== undefined
+              ? up.outOfStock
+              : up.stock !== undefined
+              ? up.stock <= 0
+              : false;
+
           options.push({
             variantId: v.id,
             unitPriceId: up.id,
@@ -105,7 +114,7 @@ function ProductDetails({ product }: ProductDetailsProps) {
             sellingPrice: up.sellingPrice,
             basePrice: up.basePrice,
             sku: up.sku || v.sku || "",
-            inStock: !v.outOfStock,
+            inStock: !v.outOfStock && !isUpOutOfStock,
             isDefault: Boolean(up.isDefault || v.isDefault),
             variant: v,
           });
@@ -132,6 +141,10 @@ function ProductDetails({ product }: ProductDetailsProps) {
   }, [variants]);
 
   const defaultOption = useMemo(() => {
+    const inStockDefault = allPackOptions.find((opt) => opt.isDefault && opt.inStock);
+    if (inStockDefault) return inStockDefault;
+    const anyInStock = allPackOptions.find((opt) => opt.inStock);
+    if (anyInStock) return anyInStock;
     return allPackOptions.find((opt) => opt.isDefault) ?? allPackOptions[0] ?? null;
   }, [allPackOptions]);
 
@@ -166,18 +179,37 @@ function ProductDetails({ product }: ProductDetailsProps) {
       }
       const v = sp.get("variant");
       if (v) {
-        // If current selection already belongs to this variant, keep it!
+        // If current selection already belongs to this variant and is in stock, keep it!
         const isCurrentInVariant = allPackOptions.some(
-          (opt) => opt.variantId === v && opt.unitPriceId === selectedUnitPriceId
+          (opt) => opt.variantId === v && opt.unitPriceId === selectedUnitPriceId && opt.inStock
         );
         if (!isCurrentInVariant) {
-          const matching = allPackOptions.find((opt) => opt.variantId === v);
+          const inStockInVariant = allPackOptions.find((opt) => opt.variantId === v && opt.inStock);
+          const matching = inStockInVariant || allPackOptions.find((opt) => opt.variantId === v);
           if (matching) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedUnitPriceId(matching.unitPriceId);
             return;
           }
         }
+      }
+    }
+    // Auto-switch to in-stock option if current option is out of stock
+    const currentOpt = allPackOptions.find((opt) => opt.unitPriceId === selectedUnitPriceId);
+    if (!currentOpt || !currentOpt.inStock) {
+      if (currentOpt?.variantId) {
+        const inStockInSameVariant = allPackOptions.find(
+          (opt) => opt.variantId === currentOpt.variantId && opt.inStock
+        );
+        if (inStockInSameVariant && inStockInSameVariant.unitPriceId !== selectedUnitPriceId) {
+          setSelectedUnitPriceId(inStockInSameVariant.unitPriceId);
+          return;
+        }
+      }
+      const anyInStock = allPackOptions.find((opt) => opt.inStock);
+      if (anyInStock && anyInStock.unitPriceId !== selectedUnitPriceId) {
+        setSelectedUnitPriceId(anyInStock.unitPriceId);
+        return;
       }
     }
     if (!selectedUnitPriceId && defaultOption) {
@@ -210,6 +242,13 @@ function ProductDetails({ product }: ProductDetailsProps) {
     );
   }, [selectedVariant, activeOption]);
 
+  // Pack options for the currently selected variant ONLY (so other variants are never mixed into choose pack size)
+  const currentVariantPackOptions = useMemo(() => {
+    if (!selectedVariant) return allPackOptions;
+    const filtered = allPackOptions.filter((opt) => opt.variantId === selectedVariant.id);
+    return filtered.length > 0 ? filtered : allPackOptions;
+  }, [allPackOptions, selectedVariant]);
+
   const { data: variantDetail } = useCustomerVariant(product.id, selectedVariant?.id ?? null);
   const { data: company } = useCustomerCompany();
 
@@ -241,13 +280,14 @@ function ProductDetails({ product }: ProductDetailsProps) {
   const selectedVariantId = selectedVariant?.id ?? null;
 
   const handleSelectVariant = (variantId: string) => {
-    const matching = allPackOptions.find((opt) => opt.variantId === variantId);
+    const inStockInVariant = allPackOptions.find((opt) => opt.variantId === variantId && opt.inStock);
+    const matching = inStockInVariant || allPackOptions.find((opt) => opt.variantId === variantId);
     if (matching) {
       handleSelectPackOption(matching);
     }
   };
 
-  const isInStock = !selectedVariant?.outOfStock;
+  const isInStock = activeOption ? activeOption.inStock : !selectedVariant?.outOfStock;
   const sellingPrice = selectedUnitPrice?.sellingPrice ?? 0;
   const basePrice = selectedUnitPrice?.basePrice ?? 0;
   const hasDiscount = sellingPrice < basePrice;
@@ -330,32 +370,103 @@ function ProductDetails({ product }: ProductDetailsProps) {
   }, [selectedVariant?.videoUrl, variantDetail?.videoUrl, variants]);
 
   const handleAddToCart = () => {
-    if (!session) {
-      router.push(`/login?callbackUrl=/products/${product.id}`);
+    const targetUnitId = activeOption?.unitPriceId || selectedUnitPrice?.id;
+    const targetVariantId = activeOption?.variantId || selectedVariant?.id;
+
+    if (!targetUnitId) {
+      toast.error("Please select a pack size");
       return;
     }
-    if (!selectedUnitPrice) return;
-    addToCart.mutate({
-      variantUnitPriceId: selectedUnitPrice.id,
-      variantId: selectedVariant?.id,
-      quantity,
-    });
+
+    addToCart.mutate(
+      {
+        variantUnitPriceId: targetUnitId,
+        variantId: targetVariantId,
+        quantity,
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            "Added to cart!",
+            `${quantity}x ${activeOption?.variant?.variantName || selectedVariant?.variantName || product.name} (${activeOption?.label || ""})`
+          );
+        },
+        onError: (err: any) => {
+          if (
+            err?.status === 401 ||
+            err?.message?.toLowerCase().includes("login") ||
+            err?.message?.toLowerCase().includes("unauthorized")
+          ) {
+            toast.info("Please log in to add items to your cart");
+            const returnUrl =
+              typeof window !== "undefined"
+                ? window.location.pathname + window.location.search
+                : `/products/${product.id}`;
+            router.push(`/login?callbackUrl=${encodeURIComponent(returnUrl)}`);
+            return;
+          }
+          const message = err?.message || "Failed to add to cart";
+          toast.error(message);
+        },
+      }
+    );
   };
 
   const handleWishlistToggle = (e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
-    if (!session) {
-      router.push(`/login?callbackUrl=/products/${product.id}`);
-      return;
-    }
-    if (!selectedUnitPrice) return;
+    const targetId = activeOption?.unitPriceId || selectedUnitPrice?.id;
+    if (!targetId) return;
     if (addToWishlist.isPending || removeFromWishlist.isPending) return;
 
     if (isInWishlist) {
-      removeFromWishlist.mutate(selectedUnitPrice.id);
+      removeFromWishlist.mutate(targetId, {
+        onSuccess: () =>
+          toast.success(
+            "Removed from wishlist",
+            activeOption?.variant?.variantName || selectedVariant?.variantName || product.name
+          ),
+        onError: (err: any) => {
+          if (
+            err?.status === 401 ||
+            err?.message?.toLowerCase().includes("login") ||
+            err?.message?.toLowerCase().includes("unauthorized")
+          ) {
+            toast.info("Please log in to manage your wishlist");
+            const returnUrl =
+              typeof window !== "undefined"
+                ? window.location.pathname + window.location.search
+                : `/products/${product.id}`;
+            router.push(`/login?callbackUrl=${encodeURIComponent(returnUrl)}`);
+            return;
+          }
+          toast.error(err?.message || "Could not remove from wishlist");
+        },
+      });
     } else {
-      addToWishlist.mutate(selectedUnitPrice.id);
+      addToWishlist.mutate(targetId, {
+        onSuccess: () =>
+          toast.success(
+            "Added to wishlist",
+            activeOption?.variant?.variantName || selectedVariant?.variantName || product.name
+          ),
+        onError: (err: any) => {
+          if (
+            err?.status === 401 ||
+            err?.message?.toLowerCase().includes("login") ||
+            err?.message?.toLowerCase().includes("unauthorized")
+          ) {
+            toast.info("Please log in to manage your wishlist");
+            const returnUrl =
+              typeof window !== "undefined"
+                ? window.location.pathname + window.location.search
+                : `/products/${product.id}`;
+            router.push(`/login?callbackUrl=${encodeURIComponent(returnUrl)}`);
+            return;
+          }
+          toast.error(err?.message || "Could not add to wishlist");
+        },
+      });
     }
   };
 
@@ -539,8 +650,59 @@ function ProductDetails({ product }: ProductDetailsProps) {
             )}
           </div>
 
-          {/* Pack Size Selection (Figma Style) */}
-          {allPackOptions.length > 0 && (
+          {/* Variant Selection if more than 1 variant exists (e.g. White Casews vs Black Casews) */}
+          {variants.length > 1 && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs sm:text-sm font-bold tracking-wider text-neutral-900 uppercase font-sans">
+                  CHOOSE VARIANT
+                </span>
+                {selectedVariant?.variantName && (
+                  <span className="text-xs sm:text-sm text-[#007F06] font-semibold">
+                    Selected: {selectedVariant.variantName}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {variants.map((v) => {
+                  const isSelected = v.id === selectedVariant?.id;
+                  const vPacks = allPackOptions.filter((opt) => opt.variantId === v.id);
+                  const isOutOfStock =
+                    v.outOfStock || (vPacks.length > 0 && vPacks.every((p) => !p.inStock));
+
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => handleSelectVariant(v.id)}
+                      className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                        isSelected
+                          ? "border-[#007F06] bg-[#007F06] text-white shadow-xs scale-[1.01]"
+                          : isOutOfStock
+                          ? "border-neutral-200 bg-neutral-100 text-neutral-400 hover:bg-neutral-200"
+                          : "border-neutral-200 bg-white text-neutral-800 hover:border-[#007F06]/50 hover:bg-[#007F06]/5"
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      <span>{v.variantName}</span>
+                      {isOutOfStock && (
+                        <span
+                          className={`text-[10px] font-normal ${
+                            isSelected ? "text-neutral-200" : "text-red-500"
+                          }`}
+                        >
+                          (Out of stock)
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Pack Size Selection (Filtered strictly to selected variant only) */}
+          {currentVariantPackOptions.length > 0 && (
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs sm:text-sm font-bold tracking-wider text-neutral-900 uppercase font-sans">
@@ -553,7 +715,7 @@ function ProductDetails({ product }: ProductDetailsProps) {
                 )}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {allPackOptions.map((opt) => {
+                {currentVariantPackOptions.map((opt) => {
                   const isSelected = activeOption?.unitPriceId === opt.unitPriceId;
                   const price = opt.sellingPrice;
                   const compare = opt.basePrice;
@@ -565,13 +727,18 @@ function ProductDetails({ product }: ProductDetailsProps) {
                       key={opt.unitPriceId}
                       type="button"
                       onClick={() => handleSelectPackOption(opt)}
+                      title={!opt.inStock ? `${opt.label} (Out of stock)` : undefined}
                       className={`relative flex flex-col items-center justify-center p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer select-none ${
                         isSelected
-                          ? "border-[#006B05] bg-[#006B05] text-white shadow-md scale-[1.02]"
+                          ? !opt.inStock
+                            ? "border-neutral-400 bg-neutral-400 text-white shadow-md opacity-80"
+                            : "border-[#006B05] bg-[#006B05] text-white shadow-md scale-[1.02]"
+                          : !opt.inStock
+                          ? "border-neutral-200 bg-neutral-100 text-neutral-400 line-through hover:bg-neutral-200"
                           : "border-neutral-200 bg-white text-neutral-800 hover:border-[#007F06]/50 hover:bg-[#007F06]/5 hover:shadow-2xs"
                       }`}
                     >
-                      {discount > 0 && (
+                      {discount > 0 && opt.inStock && (
                         <span className="absolute -top-2.5 right-2 bg-[#F9CB44] text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded shadow-2xs">
                           SAVE {discount}%
                         </span>
@@ -587,6 +754,11 @@ function ProductDetails({ product }: ProductDetailsProps) {
                       >
                         ₹{price.toFixed(0)}
                       </span>
+                      {!opt.inStock && (
+                        <span className="text-[10px] text-red-500 font-semibold mt-0.5">
+                          Out of stock
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -626,7 +798,7 @@ function ProductDetails({ product }: ProductDetailsProps) {
               <Button
                 type="button"
                 size="lg"
-                disabled={!isInStock || !selectedUnitPrice || addToCart.isPending}
+                disabled={!isInStock || !(activeOption?.unitPriceId || selectedUnitPrice?.id) || addToCart.isPending}
                 onClick={handleAddToCart}
                 className="flex-1 h-12 bg-[#006B05] hover:bg-[#004203] text-white rounded-xl shadow-md hover:shadow-lg font-semibold text-base transition-all active:scale-[0.99] disabled:opacity-50 disabled:shadow-none"
               >
@@ -638,7 +810,7 @@ function ProductDetails({ product }: ProductDetailsProps) {
                 ) : (
                   <>
                     <ShoppingBag className="mr-2 h-5 w-5" />
-                    {!selectedUnitPrice
+                    {!(activeOption?.unitPriceId || selectedUnitPrice?.id)
                       ? "Unavailable"
                       : !isInStock
                         ? "Out of Stock"
@@ -718,6 +890,17 @@ function ProductDetails({ product }: ProductDetailsProps) {
                     ? "In Stock • Ready to ship"
                     : "Currently Out of Stock"}
               </span>
+            </div>
+
+            {/* boAt-style Pincode & Delivery Date Checker */}
+            <div className="pt-1">
+              <PincodeDeliveryChecker
+                weightKg={
+                  (selectedUnitPrice as any)?.weight_kg
+                    ? Number((selectedUnitPrice as any).weight_kg)
+                    : 0.5
+                }
+              />
             </div>
           </div>
 

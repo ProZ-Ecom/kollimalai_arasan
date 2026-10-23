@@ -201,6 +201,8 @@ export interface StorefrontUnitPrice {
   basePrice: number;
   sellingPrice: number;
   isDefault: boolean;
+  stock?: number;
+  outOfStock?: boolean;
 }
 
 /**

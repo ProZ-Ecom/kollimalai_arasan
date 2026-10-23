@@ -21,7 +21,7 @@ export interface CreateCustomerOrderPayload {
   notes?: string;
   paymentMethod?: "CARD" | "UPI" | "WHATSAPP" | "CALL";
   paymentDetails?: Record<string, any>;
-  courierType?: "st_courier" | "mss";
+  courierType?: "st_courier" | "mss" | "shiprocket";
 }
 
 export interface CancelCustomerOrderPayload {
@@ -126,5 +126,20 @@ export const customerOrdersApi = {
       payload
     );
     return response.data!;
+  },
+
+  /**
+   * Request return for a delivered order
+   * Postman: POST /api/customer/orders/:orderUuid/return
+   */
+  async requestReturn(
+    uuid: string,
+    payload: { note?: string } = {}
+  ): Promise<any> {
+    const response = await apiClient.post<any>(
+      `/api/customer/orders/${uuid}/return`,
+      payload
+    );
+    return response.data;
   },
 };

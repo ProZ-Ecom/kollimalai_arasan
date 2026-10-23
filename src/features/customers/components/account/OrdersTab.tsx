@@ -2,15 +2,66 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Check, Package, X, Copy, ExternalLink, Truck } from "lucide-react";
+import { Check, Package, X, Copy, ExternalLink, Truck, RotateCcw } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { OrderDetailResponse } from "@/features/orders/types";
-import { useCustomerOrders, useCancelCustomerOrder } from "../../hooks/use-customer-orders";
+import {
+  useCustomerOrders,
+  useCancelCustomerOrder,
+  useRequestCustomerReturn,
+} from "../../hooks/use-customer-orders";
 import { useAddToCartMutation } from "../../hooks/use-customer-cart";
 import { CustomDropdown, type DropdownOption } from "./CustomDropdown";
 import { SearchInput } from "@/components/common/search-input";
 import { ProductImage } from "@/components/common/ProductImage";
 import { LiveTrackingModal } from "@/features/orders/components/LiveTrackingModal";
+import { FormModal } from "@/components/common/FormModal";
+import { toast } from "@/components/ui/Toast";
+
+const RETURN_REASONS = [
+  "Damaged product on delivery",
+  "Quality or freshness issue",
+  "Wrong item received",
+  "Package broken or seal tampered",
+  "Other / Customer dissatisfaction",
+];
+
+export function getReturnWindowInfo(order: OrderDetailResponse) {
+  if (order.status?.toLowerCase() !== "delivered") {
+    return { isEligible: false, daysLeft: 0, expired: false, hasReturnRequest: false, returnStatus: null };
+  }
+
+  // Check if an active return request already exists
+  const activeReturn = (order as any).returnRequest;
+  if (activeReturn && activeReturn.status !== "cancelled" && activeReturn.status !== "rejected") {
+    return {
+      isEligible: false,
+      daysLeft: 0,
+      expired: false,
+      hasReturnRequest: true,
+      returnStatus: activeReturn.status,
+    };
+  }
+
+  const deliveredDate =
+    (order.delivery as any)?.deliveredAt ||
+    (order.delivery as any)?.delivered_at ||
+    order.updatedAt ||
+    order.createdAt;
+
+  const deliveredTime = new Date(deliveredDate).getTime();
+  const fiveDaysInMs = 5 * 24 * 60 * 60 * 1000;
+  const elapsedMs = Date.now() - deliveredTime;
+
+  if (elapsedMs > fiveDaysInMs) {
+    return { isEligible: false, daysLeft: 0, expired: true, hasReturnRequest: false, returnStatus: null };
+  }
+
+  const msLeft = fiveDaysInMs - elapsedMs;
+  const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+
+  return { isEligible: true, daysLeft: Math.max(1, daysLeft), expired: false, hasReturnRequest: false, returnStatus: null };
+}
 
 const STATUS_OPTIONS: DropdownOption[] = [
   { value: "all", label: "All Orders" },
@@ -59,6 +110,11 @@ export function OrdersTab({
 
   const cancelMutation = useCancelCustomerOrder();
   const addToCartMutation = useAddToCartMutation();
+  const returnMutation = useRequestCustomerReturn();
+
+  const [returnModalOrder, setReturnModalOrder] = useState<OrderDetailResponse | null>(null);
+  const [returnReason, setReturnReason] = useState<string>(RETURN_REASONS[0]);
+  const [returnNote, setReturnNote] = useState<string>("");
 
   const {
     data: ordersResponse,
@@ -377,6 +433,11 @@ export function OrdersTab({
                           Refunded
                         </span>
                       )}
+                    {order.status?.toLowerCase() === "delivered" && (order as any).returnRequest && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border border-purple-200 bg-purple-50 text-purple-800">
+                        Return {(order as any).returnRequest.status === "approved" ? "Approved" : (order as any).returnRequest.status === "picked_up" ? "Picked Up" : "Requested"}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -487,6 +548,44 @@ export function OrdersTab({
                       Need Help
                     </button>
                   </Link>
+
+                  {/* 5-Day Return Option after Delivery */}
+                  {order.status?.toLowerCase() === "delivered" && (() => {
+                    const returnInfo = getReturnWindowInfo(order);
+                    if (returnInfo.hasReturnRequest) {
+                      return (
+                        <span className="inline-flex items-center gap-1.5 border border-purple-200 bg-purple-50 text-purple-700 text-xs font-semibold py-2 px-3 rounded-lg">
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          {returnInfo.returnStatus === "approved"
+                            ? "Return Approved (Pickup Scheduled)"
+                            : returnInfo.returnStatus === "picked_up"
+                            ? "Return Picked Up"
+                            : "Return Requested"}
+                        </span>
+                      );
+                    }
+                    if (returnInfo.isEligible) {
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReturnModalOrder(order);
+                            setReturnReason(RETURN_REASONS[0]);
+                            setReturnNote("");
+                          }}
+                          className="border border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold uppercase tracking-wider py-2.5 px-4 rounded-lg transition-colors cursor-pointer min-h-[40px] inline-flex items-center gap-1.5"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Return ({returnInfo.daysLeft} {returnInfo.daysLeft === 1 ? "day" : "days"} left)
+                        </button>
+                      );
+                    }
+                    return (
+                      <span className="text-[11px] text-theme-text-muted border border-dashed border-theme-border py-2 px-3 rounded-lg select-none">
+                        Return window closed
+                      </span>
+                    );
+                  })()}
 
                   {order.status === "pending" && (
                     <button
@@ -741,6 +840,105 @@ export function OrdersTab({
         courierName={liveTrackingModal.courierName}
         orderNumber={liveTrackingModal.orderNumber}
       />
+
+      {/* Customer 5-Day Return Request Modal */}
+      {returnModalOrder && (
+        <FormModal
+          open={!!returnModalOrder}
+          onClose={() => setReturnModalOrder(null)}
+          title={`Request Return for #${returnModalOrder.orderNumber}`}
+          description="Returns are accepted within 5 days of delivery. Select the reason below and our team will arrange doorstep reverse courier pickup."
+          size="md"
+        >
+          <div className="space-y-4 pt-1">
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-900 flex items-center justify-between">
+              <span>5-Day Return Window Active:</span>
+              <span className="font-bold">
+                {getReturnWindowInfo(returnModalOrder).daysLeft}{" "}
+                {getReturnWindowInfo(returnModalOrder).daysLeft === 1 ? "day" : "days"} remaining
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-theme-text-primary mb-1.5">
+                Reason for Return *
+              </label>
+              <select
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                className="w-full py-2.5 px-3 rounded-xl border border-theme-border bg-theme-surface text-xs font-semibold text-theme-text-primary focus:border-theme-primary outline-none"
+              >
+                {RETURN_REASONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-theme-text-primary mb-1.5">
+                Additional Comments / Issue Details (Optional)
+              </label>
+              <textarea
+                rows={3}
+                value={returnNote}
+                onChange={(e) => setReturnNote(e.target.value)}
+                placeholder="Describe any defects, damage or reason for returning..."
+                className="w-full p-3 rounded-xl border border-theme-border bg-theme-surface text-xs text-theme-text-primary focus:border-theme-primary outline-none resize-none"
+              />
+            </div>
+
+            <div className="rounded-xl border border-theme-border-subtle bg-theme-surface-alt p-3 text-[11px] text-theme-text-muted leading-relaxed">
+              📦 Our courier partner will pick up the package directly from your delivery address. Please ensure all items and packaging are intact.
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-theme-border-subtle">
+              <button
+                type="button"
+                onClick={() => setReturnModalOrder(null)}
+                disabled={returnMutation.isPending}
+                className="py-2 px-4 rounded-xl text-xs font-semibold border border-theme-border hover:bg-theme-surface-alt cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const fullNote = returnNote.trim()
+                    ? `${returnReason}: ${returnNote.trim()}`
+                    : returnReason;
+
+                  returnMutation.mutate(
+                    {
+                      uuid: returnModalOrder.id,
+                      payload: { note: fullNote },
+                    },
+                    {
+                      onSuccess: () => {
+                        setReturnModalOrder(null);
+                        setReturnNote("");
+                        toast.success(
+                          "Return Request Submitted",
+                          "Your request has been placed. Doorstep pickup will be scheduled after quick verification."
+                        );
+                        handleRefetch();
+                      },
+                      onError: (err: any) => {
+                        toast.error(err?.message || "Failed to submit return request");
+                      },
+                    }
+                  );
+                }}
+                disabled={returnMutation.isPending}
+                className="py-2 px-5 rounded-xl text-xs font-bold bg-purple-700 hover:bg-purple-800 text-white cursor-pointer disabled:opacity-50"
+              >
+                {returnMutation.isPending ? "Submitting..." : "Confirm Return Request"}
+              </button>
+            </div>
+          </div>
+        </FormModal>
+      )}
     </div>
   );
 }
