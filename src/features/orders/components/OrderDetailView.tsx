@@ -139,13 +139,16 @@ export function OrderDetailView({
       ? `${Math.round(totalWeightKg * 1000)} g`
       : `${Math.round(totalWeightKg * 1000000)} mg`;
 
+  const courierPartnerName =
+    delivery?.deliveryPartner?.name ||
+    delivery?.courierPartnerName ||
+    (Number(shippingCharge) === 200 ? "MSS (Mettur Super Services)" : "Shiprocket Multi-Carrier");
+
   const weightDetails =
     totalWeightKg > 0
       ? {
           formattedWeight,
-          courierName:
-            delivery?.deliveryPartner?.name ||
-            (Number(shippingCharge) === 200 ? "MSS" : "ST Courier"),
+          courierName: courierPartnerName,
         }
       : null;
 
@@ -389,7 +392,7 @@ export function OrderDetailView({
                         Courier Partner
                       </div>
                       <div className="font-bold text-sm text-theme-text-primary">
-                        {delivery.deliveryPartner?.name || "ST Courier"}
+                        {delivery.deliveryPartner?.name || delivery.courierPartnerName || courierPartnerName}
                       </div>
                       {delivery.deliveryPartner?.contactNumber && (
                         <div className="text-[11px] text-theme-text-muted mt-0.5">
@@ -468,7 +471,7 @@ export function OrderDetailView({
                       Pending Dispatch
                     </span>
                     <p className="text-xs text-theme-text-muted mt-2">
-                      Order will be dispatched via ST Courier once packed.
+                      Order will be dispatched via {courierPartnerName} once packed.
                     </p>
                   </div>
                 )}

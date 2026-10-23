@@ -298,9 +298,10 @@ export function AdminOrderListTable({
                     id: row.original.id,
                     orderNumber: row.original.orderNumber,
                     customerName: row.original.customer?.name,
+                    partnerCode: delivery?.deliveryPartner?.code,
                   })
                 }
-                title="Ship via ST Courier"
+                title={`Ship via ${delivery?.deliveryPartner?.name || "Courier"}`}
                 className="text-[11px] font-semibold text-secondary-700 hover:underline cursor-pointer"
               >
                 Ship
@@ -413,8 +414,8 @@ export function AdminOrderListTable({
                 }
                 title={
                   row.original.delivery?.trackingNumber
-                    ? "Update ST Courier Tracking"
-                    : "Ship with ST Courier"
+                    ? `Update ${row.original.delivery?.deliveryPartner?.name || "Courier"} Tracking`
+                    : `Ship with ${row.original.delivery?.deliveryPartner?.name || "Courier"}`
                 }
                 className={`grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer ${orderStatus === "packed"
                     ? "border-secondary-600 bg-secondary-600 text-white hover:bg-secondary-700 shadow-xs"

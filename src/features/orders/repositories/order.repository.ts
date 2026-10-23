@@ -434,6 +434,7 @@ export const orderRepository = {
     orderStatus?: "pending" | "confirmed";
     paymentStatus?: "pending" | "paid";
     paymentMethod?: string;
+    courierType?: "st_courier" | "mss" | "shiprocket";
     shippingAddress: {
       fullName: string;
       phone: string;
@@ -577,6 +578,47 @@ export const orderRepository = {
               ? `Order confirmed with payment via ${params.paymentMethod ?? "CARD"}`
               : "Order placed by customer"),
           changed_by: params.userId,
+          is_active: true,
+          created_by: params.userId,
+          updated_by: params.userId,
+        },
+      });
+
+      // 4b. Create Initial Shipment Record with Selected Courier Partner
+      let partnerCode = "ST_COURIER";
+      let fallbackName = "ST Courier (South Express)";
+      if (params.courierType === "shiprocket") {
+        partnerCode = "SHIPROCKET";
+        fallbackName = "Shiprocket Multi-Carrier";
+      } else if (params.courierType === "mss") {
+        partnerCode = "MSS";
+        fallbackName = "Mettur Super Services";
+      }
+
+      const partner = await tx.delivery_partners.findFirst({
+        where: {
+          OR: [
+            { code: partnerCode },
+            { courier_type: params.courierType || "st_courier" },
+          ],
+          is_active: true,
+        },
+      });
+
+      await tx.shipments.create({
+        data: {
+          uuid: crypto.randomUUID(),
+          order_id: createdOrder.id,
+          delivery_partner_id: partner ? partner.id : null,
+          courier_partner_name: partner ? partner.name : fallbackName,
+          status: "pending",
+          assignment_status: "pending",
+          delivery_notes:
+            params.courierType === "shiprocket"
+              ? "Order booked via Shiprocket Express"
+              : params.courierType === "mss"
+              ? "Order booked via MSS Courier"
+              : "Order booked via ST Courier",
           is_active: true,
           created_by: params.userId,
           updated_by: params.userId,

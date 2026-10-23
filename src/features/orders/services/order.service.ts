@@ -237,6 +237,7 @@ export const orderService = {
       orderStatus,
       paymentStatus,
       paymentMethod,
+      courierType,
       notes: input.notes,
       shippingAddress: {
         fullName: shippingAddress.full_name,

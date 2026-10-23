@@ -496,7 +496,10 @@ export function OrdersTab({
                           setLiveTrackingModal({
                             open: true,
                             awb: order.delivery.trackingNumber,
-                            courierName: order.delivery.deliveryPartner?.name || "ST Courier",
+                            courierName:
+                              order.delivery.deliveryPartner?.name ||
+                              (order.delivery as any)?.courierPartnerName ||
+                              "Courier",
                             orderNumber: order.orderNumber,
                           });
                         } else {
