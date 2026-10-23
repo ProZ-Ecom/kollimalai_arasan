@@ -254,6 +254,7 @@ async function main() {
         pincode: "637411",
         email: "support@kollimalaiarasan.com",
         phone: "+91 74181 88950",
+        gstNumber: "33BXVPR0285H1ZZ",
         website: "https://kollimalaiarasan.com",
         isActive: true,
         createdBy: adminUser.id,

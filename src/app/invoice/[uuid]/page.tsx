@@ -23,7 +23,12 @@ export default async function OrderInvoicePage({
   }
 
   // Staff print any order; customers only get their own.
-  const isStaff = user.role === ROLES.ADMIN || user.role === ROLES.STAFF;
+  const userRole = String(user.role || "").toUpperCase();
+  const isStaff =
+    userRole === ROLES.ADMIN ||
+    userRole === ROLES.STAFF ||
+    userRole === "ADMIN" ||
+    userRole === "STAFF";
 
   let invoice: InvoiceDto;
   try {
