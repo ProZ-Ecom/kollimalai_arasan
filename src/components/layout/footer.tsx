@@ -3,6 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { MapPin } from "lucide-react";
 import {
   LOGOS,
@@ -18,9 +19,21 @@ import { useMainNavigation } from "@/hooks/use-main-navigation";
 import { getImageUrl } from "@/lib/utils";
 
 export function Footer() {
-
+  const pathname = usePathname();
   const { data: company } = useCustomerCompany();
   const { items: navItems } = useMainNavigation();
+
+  const handleLogoClick = () => {
+    if (pathname === "/") {
+      if (typeof window !== "undefined") {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: "smooth",
+        });
+      }
+    }
+  };
 
 
   // Dynamic Contact Cards based on Company API
@@ -136,7 +149,13 @@ export function Footer() {
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             {/* Brand, address, socials */}
             <div>
-              <Link href="/" className="inline-block" aria-label="Home">
+              <Link
+                href="/"
+                scroll={true}
+                onClick={handleLogoClick}
+                className="inline-block"
+                aria-label="Home"
+              >
                 <Image
                   src={companyLogo}
                   alt={companyName}

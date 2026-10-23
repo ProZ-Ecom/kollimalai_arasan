@@ -76,6 +76,7 @@ export default function CategoryProductsPage({
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState("createdAt_desc");
   const [activeCategoryOverride, setActiveCategoryOverride] = useState<string | null>(null);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [stockStatus, setStockStatus] = useState<"all" | "in_stock" | "out_of_stock">("all");
   const [minPrice, setMinPrice] = useState(0);
@@ -95,6 +96,7 @@ export default function CategoryProductsPage({
   // Reset internal state when the route slug changes
   useEffect(() => {
     setActiveCategoryOverride(null);
+    setSelectedCategoryIds([]);
     setSelectedProductIds([]);
     setPage(1);
   }, [slug]);
@@ -162,7 +164,12 @@ export default function CategoryProductsPage({
     page,
     pageSize: 18,
     search: search.trim() ? search.trim() : undefined,
-    categoryIds: activeCategoryId ? [activeCategoryId] : undefined,
+    categoryIds:
+      selectedCategoryIds.length > 0
+        ? selectedCategoryIds
+        : activeCategoryId
+        ? [activeCategoryId]
+        : undefined,
     productIds: selectedProductIds.length > 0 ? selectedProductIds : undefined,
     minPrice: minPrice > 0 ? minPrice : undefined,
     maxPrice: maxPrice < 1000 ? maxPrice : undefined,
@@ -223,18 +230,26 @@ export default function CategoryProductsPage({
     return () => observer.disconnect();
   }, [meta, page, isFetching, isLoading]);
 
-  // Category Selection
+  // Category Selection (Single override for route compatibility)
   const handleCategorySelect = (categoryId: string | null) => {
     setSelectedProductIds([]);
     if (!categoryId) {
       setActiveCategoryOverride("all");
+      setSelectedCategoryIds([]);
       setPage(1);
       window.history.pushState(null, "", "/categories/all");
       return;
     }
     setActiveCategoryOverride(categoryId);
+    setSelectedCategoryIds([categoryId]);
     setPage(1);
     window.history.pushState(null, "", `/categories/${categoryId}`);
+  };
+
+  // Categories Selection (Multi-select)
+  const handleCategoriesSelect = (categoryIds: string[]) => {
+    setSelectedCategoryIds(categoryIds);
+    setPage(1);
   };
 
   // Product Selection under Category (Multi-select)
@@ -250,6 +265,7 @@ export default function CategoryProductsPage({
     setStockStatus("all");
     setMinPrice(0);
     setMaxPrice(1000);
+    setSelectedCategoryIds([]);
     setSelectedProductIds([]);
     if (!isSingleCategoryMode) {
       setActiveCategoryOverride(null);
@@ -260,6 +276,7 @@ export default function CategoryProductsPage({
 
   const hasActiveFilters =
     Boolean(search.trim()) ||
+    selectedCategoryIds.length > 0 ||
     selectedProductIds.length > 0 ||
     stockStatus !== "all" ||
     minPrice > 0 ||
@@ -269,6 +286,7 @@ export default function CategoryProductsPage({
 
   const activeFilterCount = [
     Boolean(search.trim()),
+    selectedCategoryIds.length > 0,
     selectedProductIds.length > 0,
     stockStatus !== "all",
     minPrice > 0 || maxPrice < 1000,
@@ -340,6 +358,8 @@ export default function CategoryProductsPage({
           <FilterSidebar
             categories={categoriesForSidebar}
             isLoadingCategories={isLoadingCategories && categories.length === 0}
+            selectedCategoryIds={selectedCategoryIds}
+            onSelectCategories={handleCategoriesSelect}
             selectedCategoryId={activeCategoryId}
             onSelectCategory={handleCategorySelect}
             selectedProductIds={selectedProductIds}

@@ -82,7 +82,7 @@ function LoginForm() {
       accentGradient="from-secondary-500 via-secondary-400 to-secondary-200"
       eyebrow={
         <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-secondary-700">
-          User Login
+          Login
         </span>
       }
       icon={

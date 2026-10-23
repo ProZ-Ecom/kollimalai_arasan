@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 /** A column entry: either plain text, or a real link when an href is known. */
@@ -23,6 +24,41 @@ export function FooterLinks({
   titleClassName,
   linkClassName,
 }: FooterLinksProps) {
+  const pathname = usePathname();
+
+  const handleLinkClick = (href: string) => {
+    // If it's an external link or fragment-only link, skip
+    if (
+      href.startsWith("http://") ||
+      href.startsWith("https://") ||
+      href.startsWith("mailto:") ||
+      href.startsWith("tel:")
+    ) {
+      return;
+    }
+
+    const cleanHref = href.split("?")[0].split("#")[0] || "/";
+    const normalizedHref =
+      cleanHref !== "/" && cleanHref.endsWith("/")
+        ? cleanHref.slice(0, -1)
+        : cleanHref;
+
+    const normalizedCurrent =
+      pathname !== "/" && pathname.endsWith("/")
+        ? pathname.slice(0, -1)
+        : pathname;
+
+    if (normalizedHref === normalizedCurrent) {
+      if (typeof window !== "undefined") {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: "smooth",
+        });
+      }
+    }
+  };
+
   return (
     <div className={className}>
       <h3
@@ -47,7 +83,12 @@ export function FooterLinks({
           return (
             <li key={label}>
               {href ? (
-                <Link href={href} className={classes}>
+                <Link
+                  href={href}
+                  scroll={true}
+                  onClick={() => handleLinkClick(href)}
+                  className={classes}
+                >
                   {label}
                 </Link>
               ) : (
