@@ -5,9 +5,9 @@ import { userRepository } from "@/features/users/repositories/user.repository";
 import { offerService } from "@/features/offers/services/offer.service";
 import {
   calculateShippingCharge,
-  calculateShippingChargeAsync,
   calculateVariantWeightKg,
 } from "@/features/shipping/utils/shipping-calculator";
+import { calculateShippingChargeAsync } from "@/features/shipping/utils/server-shipping-calculator";
 import {
   orderRepository,
   orderDetailInclude,

@@ -14,6 +14,16 @@ import {
   getTransactions,
   getAllTransactions,
 } from "../api/get-inventory";
+
+export {
+  getInventory,
+  getInventoryItem,
+  adjustStock,
+  createInventory,
+  getLowStock,
+  getTransactions,
+  getAllTransactions,
+};
 import type {
   GetInventoryParams,
   AdjustStockInput,

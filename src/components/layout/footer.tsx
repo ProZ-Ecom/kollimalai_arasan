@@ -3,6 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { MapPin } from "lucide-react";
 import {
   LOGOS,
@@ -18,9 +19,21 @@ import { useMainNavigation } from "@/hooks/use-main-navigation";
 import { getImageUrl } from "@/lib/utils";
 
 export function Footer() {
-
+  const pathname = usePathname();
   const { data: company } = useCustomerCompany();
   const { items: navItems } = useMainNavigation();
+
+  const handleLogoClick = () => {
+    if (pathname === "/") {
+      if (typeof window !== "undefined") {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: "smooth",
+        });
+      }
+    }
+  };
 
 
   // Dynamic Contact Cards based on Company API
@@ -36,13 +49,17 @@ export function Footer() {
 
       const digits = target.replace(/\D/g, "");
       if (digits.length === 12 && digits.startsWith("91")) {
-        return `+91 ${digits.slice(2)}`;
+        return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
       }
       if (digits.length === 10) {
-        return `+91 ${digits}`;
+        return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
       }
       if (digits.length > 10 && digits.startsWith("91")) {
-        return `+91 ${digits.slice(2)}`;
+        const remaining = digits.slice(2);
+        if (remaining.length === 10) {
+          return `+91 ${remaining.slice(0, 5)} ${remaining.slice(5)}`;
+        }
+        return `+91 ${remaining}`;
       }
 
       // Fallback for other international formats
@@ -50,6 +67,9 @@ export function Footer() {
       if (match) {
         const countryCode = match[1];
         const numberPart = match[2].replace(/\s+/g, "");
+        if (numberPart.length === 10) {
+          return `${countryCode} ${numberPart.slice(0, 5)} ${numberPart.slice(5)}`;
+        }
         return numberPart ? `${countryCode} ${numberPart}` : countryCode;
       }
 
@@ -57,25 +77,21 @@ export function Footer() {
     };
 
     // 1. Call
-    const defaultCallVal = defaultContacts[0]?.value || "+91 7418188950";
+    const defaultCallVal = defaultContacts[0]?.value || "+91 74181 88950";
     const callValue = formatPhoneDisplay(phone, defaultCallVal);
     const callDigits = (phone || defaultCallVal).replace(/\D/g, "");
     const cleanCallNumber = callDigits.length === 10 ? `91${callDigits}` : callDigits;
-    const callLink = cleanCallNumber ? `tel:+${cleanCallNumber}` : "tel:+91 7418188950";
+    const callLink = cleanCallNumber ? `tel:+${cleanCallNumber}` : "tel:+917418188950";
 
     // 2. WhatsApp
     const defaultWaVal = defaultContacts[1]?.value || "+91 73388 80950";
     const waValue = defaultWaVal;
     const cleanWaNumber = "+91 73388 80950";
-    const waLink = `https://wa.me/${cleanWaNumber}`;
+    const waLink = `https://wa.me/${cleanWaNumber.replace(/\D/g, "")}`;
 
     // 3. Mail
-    const companyEmail = company?.email?.trim();
-    const mailValue =
-      companyEmail || defaultContacts[2]?.value || "kollimalaiarasan@gmail.com";
-    const mailLink = companyEmail
-      ? `mailto:${companyEmail}`
-      : defaultContacts[2]?.link || "mailto:kollimalaiarasan@gmail.com";
+    const mailValue = "kollimalaiarasan@gmail.com";
+    const mailLink = "mailto:kollimalaiarasan@gmail.com";
 
     return [
       {
@@ -116,28 +132,8 @@ export function Footer() {
 
   // Formatted Location Address
   const formattedLocation = React.useMemo(() => {
-    if (!company) {
-      return "18/41, MGR Nagar, Sakkarai Patti, Valavanthi Nadu, Semmedu Post, Kolli Hills Tk, Namakkal District - 637411, Tamil Nadu, India";
-    }
-
-    const parts: string[] = [];
-    if (company.address?.trim()) parts.push(company.address.trim());
-    if (company.city?.trim()) parts.push(company.city.trim());
-
-    const statePinParts: string[] = [];
-    if (company.state?.trim()) statePinParts.push(company.state.trim());
-    if (company.pincode?.trim()) statePinParts.push(company.pincode.trim());
-
-    if (statePinParts.length > 0) {
-      parts.push(statePinParts.join(" - "));
-    }
-
-    if (parts.length === 0) {
-      return "18/41, MGR Nagar, Sakkarai Patti, Valavanthi Nadu, Semmedu Post, Kolli Hills Tk, Namakkal District - 637411, Tamil Nadu, India";
-    }
-
-    return parts.join(", ");
-  }, [company]);
+    return "18/41, MGR NAGAR, SAKKARAI PATTI, VALAVANTHI NADU, SEMMEDU POST, KOLLI HILLS TK, NAMAKKAL DISTRICT - 637411";
+  }, []);
 
   const mapsUrl = React.useMemo(() => {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formattedLocation)}`;
@@ -153,7 +149,13 @@ export function Footer() {
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             {/* Brand, address, socials */}
             <div>
-              <Link href="/" className="inline-block" aria-label="Home">
+              <Link
+                href="/"
+                scroll={true}
+                onClick={handleLogoClick}
+                className="inline-block"
+                aria-label="Home"
+              >
                 <Image
                   src={companyLogo}
                   alt={companyName}

@@ -29,7 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatPrice, cn } from "@/lib/utils";
 import { formatMeasurementLabel } from "@/features/variants/utils/measurement.util";
-import { ICONS } from "@/constants/storefront";
+import { ICONS, contacts } from "@/constants/storefront";
 import { useCustomerCart } from "@/features/customers/hooks/use-customer-cart";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -48,6 +48,14 @@ import { loadRazorpayScript } from "@/features/customers/utils/razorpay-loader";
 import { useCheckout } from "@/features/checkout/checkout-context";
 import { usePincodeLookup } from "@/features/customers/hooks/use-pincode-lookup";
 import type { CustomerAddressResponse } from "@/features/customers/types/customer-address.types";
+
+const waContact = contacts.find((c) => c.title.toLowerCase().includes("whatsapp"));
+const KOLLIMALAI_WHATSAPP_DISPLAY = waContact?.value || "+91 73388 80950";
+const KOLLIMALAI_WHATSAPP_NUMBER = (waContact?.value || "+91 73388 80950").replace(/\D/g, "");
+
+const callContact = contacts.find((c) => c.title.toLowerCase().includes("call"));
+const KOLLIMALAI_CALL_DISPLAY = callContact?.value || "+91 74181 88950";
+const KOLLIMALAI_CALL_NUMBER = (callContact?.value || "+91 74181 88950").replace(/\D/g, "");
 
 
 function CheckoutSkeleton() {
@@ -426,12 +434,14 @@ export default function CheckoutPage() {
       : stBillableKg * 60;
   const mssShippingCharge = Math.max(1, Math.ceil(totalWeightKg / 20)) * 200;
 
-  const shippingCharge =
+  const baseShippingCharge =
     courierType === "mss"
       ? mssShippingCharge
       : courierType === "shiprocket"
       ? shiprocketShippingCharge
       : stShippingCharge;
+  const isWhatsApp = paymentMethod === "WHATSAPP";
+  const shippingCharge = isWhatsApp ? 0 : baseShippingCharge;
   const grandTotal = payableBeforeShipping + shippingCharge;
 
   // Authentication gate
@@ -727,8 +737,9 @@ export default function CheckoutPage() {
     if (discount > 0) {
       msg += `*Discount:* -₹${discount}\n`;
     }
-    msg += `*Selected Courier:* ${courierName} (₹${shippingCharge})\n`;
-    msg += `*Total Payable:* ₹${grandTotal}\n\n`;
+    msg += `*Selected Courier:* ${courierName} (Waived at checkout · Calculated on WhatsApp)\n`;
+    msg += `*Total Amount (Items Subtotal):* ₹${grandTotal}\n`;
+    msg += `*(Shipping charges will be calculated and confirmed on WhatsApp based on delivery location)*\n\n`;
 
     if (selectedAddr) {
       msg += `*Delivery Address:*\n`;
@@ -744,13 +755,12 @@ export default function CheckoutPage() {
     msg += `Please confirm my order and share details. Thank you!`;
 
     const encoded = encodeURIComponent(msg);
-    const waNumber = "918667380899";
-    window.open(`https://wa.me/${waNumber}?text=${encoded}`, "_blank");
+    window.open(`https://wa.me/${KOLLIMALAI_WHATSAPP_NUMBER}?text=${encoded}`, "_blank");
   };
 
   // Call Order Handler
   const handleOrderByCall = () => {
-    window.location.href = "tel:+919486150579";
+    window.location.href = `tel:+${KOLLIMALAI_CALL_NUMBER}`;
   };
 
   // Place Order Handler
@@ -1289,12 +1299,27 @@ export default function CheckoutPage() {
                       ST Courier
                     </span>
                   </div>
-                  <span className="text-xs font-extrabold text-theme-primary">
-                    ₹{stShippingCharge}
-                  </span>
+                  <div className="text-right">
+                    {isWhatsApp ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-theme-text-muted line-through">
+                          ₹{stShippingCharge}
+                        </span>
+                        <span className="text-xs font-black text-emerald-600">
+                          ₹0.00
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs font-extrabold text-theme-primary">
+                        ₹{stShippingCharge}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <p className="text-[11px] text-theme-text-subtle pl-6">
-                  TN & South India • ₹40/kg ({stBillableKg} kg)
+                  {isWhatsApp
+                    ? `Rate: ₹40/kg (${stBillableKg} kg) · Waived / Calculated on WhatsApp`
+                    : `Rate: ₹40 per kg (${stBillableKg} kg billable)`}
                 </p>
                 <p className="text-[11px] text-theme-text-muted pl-6 flex items-center gap-1 mt-1">
                   <Clock className="h-3 w-3" />
@@ -1373,12 +1398,27 @@ export default function CheckoutPage() {
                       MSS Cargo
                     </span>
                   </div>
-                  <span className="text-xs font-extrabold text-theme-primary">
-                    ₹{mssShippingCharge}
-                  </span>
+                  <div className="text-right">
+                    {isWhatsApp ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-theme-text-muted line-through">
+                          ₹{mssShippingCharge}
+                        </span>
+                        <span className="text-xs font-black text-emerald-600">
+                          ₹0.00
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs font-extrabold text-theme-primary">
+                        ₹{mssShippingCharge}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <p className="text-[11px] text-theme-text-subtle pl-6">
-                  Bulk Cargo • Flat ₹200 (1 - 20 kg)
+                  {isWhatsApp
+                    ? "Flat ₹200 for 1 to 20 kg · Waived / Calculated on WhatsApp"
+                    : "Flat ₹200 for 1 to 20 kg"}
                 </p>
                 <p className="text-[11px] text-theme-text-muted pl-6 flex items-center gap-1 mt-1">
                   <Clock className="h-3 w-3" />
@@ -1465,7 +1505,7 @@ export default function CheckoutPage() {
                   <span className="text-xs font-black text-blue-800">Order by Call</span>
                 </div>
                 <span className="text-[11px] font-medium text-theme-text-muted">
-                  +91 94861 50579
+                  {KOLLIMALAI_CALL_DISPLAY}
                 </span>
               </button>
             </div>
@@ -1496,7 +1536,7 @@ export default function CheckoutPage() {
                     Order Directly on WhatsApp
                   </h3>
                   <p className="text-[11px] text-emerald-800 mt-1 leading-relaxed">
-                    Clicking below will format your order details, selected courier ({courierType === "mss" ? "MSS" : courierType === "shiprocket" ? "Shiprocket" : "ST Courier"}), and delivery address into a message and open WhatsApp (+91 86673 80899).
+                    Clicking below will format your order details, selected courier ({courierType === "mss" ? "MSS" : courierType === "shiprocket" ? "Shiprocket" : "ST Courier"}), and delivery address into a message and open WhatsApp ({KOLLIMALAI_WHATSAPP_DISPLAY}). Shipping fee is waived at checkout and will be calculated and confirmed on WhatsApp based on your location.
                   </p>
                 </div>
                 <Button
@@ -1505,7 +1545,7 @@ export default function CheckoutPage() {
                   className="w-full min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2"
                 >
                   <Image src={ICONS.whatsapp} alt="WhatsApp" width={16} height={16} className="brightness-200" />
-                  Send Order to WhatsApp (+91 86673 80899)
+                  Send Order to WhatsApp ({formatPrice(grandTotal)})
                 </Button>
               </div>
             )}
@@ -1518,7 +1558,7 @@ export default function CheckoutPage() {
                     Place Order by Phone Call
                   </h3>
                   <p className="text-[11px] text-blue-800 mt-1 leading-relaxed">
-                    Prefer phone ordering? Tap below to call our support team (+91 94861 50579) directly. We will take your order and guide you.
+                    Prefer phone ordering? Tap below to call our support team ({KOLLIMALAI_CALL_DISPLAY}) directly. We will take your order and guide you.
                   </p>
                 </div>
                 <Button
@@ -1527,7 +1567,7 @@ export default function CheckoutPage() {
                   className="w-full min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2"
                 >
                   <Phone className="h-4 w-4" />
-                  Call Now (+91 94861 50579)
+                  Call Now ({KOLLIMALAI_CALL_DISPLAY})
                 </Button>
               </div>
             )}
@@ -1626,15 +1666,38 @@ export default function CheckoutPage() {
                       : "ST Courier"}
                     )
                   </span>
-                  <span className="font-semibold text-theme-text-primary">
-                    {formatPrice(shippingCharge)}
-                  </span>
+                  {isWhatsApp ? (
+                    <div className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span className="line-through text-theme-text-muted text-[11px]">
+                          {formatPrice(baseShippingCharge)}
+                        </span>
+                        <span className="font-bold text-emerald-700 text-xs">
+                          ₹0.00
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-emerald-600 font-semibold block">
+                        Calculated on WhatsApp
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="font-semibold text-theme-text-primary">
+                      {formatPrice(shippingCharge)}
+                    </span>
+                  )}
                 </div>
 
                 <div className="border-t border-theme-border pt-3 flex justify-between items-baseline">
-                  <span className="text-sm font-bold text-theme-text-primary">
-                    Total Amount
-                  </span>
+                  <div>
+                    <span className="text-sm font-bold text-theme-text-primary block">
+                      Total Amount
+                    </span>
+                    {isWhatsApp && (
+                      <span className="text-[10px] text-theme-text-muted font-medium">
+                        (Items Subtotal · Shipping excluded)
+                      </span>
+                    )}
+                  </div>
                   <span className="text-xl font-extrabold text-theme-primary">
                     {formatPrice(grandTotal)}
                   </span>
@@ -1683,7 +1746,13 @@ export default function CheckoutPage() {
                   </>
                 ) : paymentMethod === "WHATSAPP" ? (
                   <>
-
+                    <Image
+                      src={ICONS.whatsapp}
+                      alt="WhatsApp"
+                      width={18}
+                      height={18}
+                      className="mr-2 brightness-0 invert inline-block"
+                    />
                     Order via WhatsApp ({formatPrice(grandTotal)})
                   </>
                 ) : paymentMethod === "CALL" ? (

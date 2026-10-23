@@ -88,8 +88,8 @@ export const contacts = [
     id: 1,
     icon: ICONS.call,
     title: "Call",
-    value: "+91 7418188950",
-    link: "tel:+91 7418188950",
+    value: "+91 74181 88950",
+    link: "tel:+917418188950",
   },
   {
     id: 2,

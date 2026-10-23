@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { exportToExcel } from "@/lib/excel-export";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import {
@@ -24,6 +28,7 @@ import {
   useCreateBanner,
   useUpdateBanner,
   useDeleteBanner,
+  bannerApi,
 } from "@/features/banners/hooks";
 import { BannerForm } from "@/features/banners/components";
 import {
@@ -36,7 +41,6 @@ import {
 } from "@/features/banners/constants/banner-types";
 import type { BannerDto } from "@/features/banners/types";
 import { Video } from "lucide-react";
-import { formatDate } from "@/lib/utils";
 
 export default function AdminBannersPage() {
   const [search, setSearch] = useState("");
@@ -52,9 +56,14 @@ export default function AdminBannersPage() {
     title: string;
   } | null>(null);
 
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<BannerDto[]>([]);
+
   useEffect(() => {
     setPage(1);
-  }, [search, selectedPositionFilter]);
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, selectedPositionFilter, page, pageSize]);
 
   // Main banners query
   const { data, isLoading, error, refetch } = useBanners({
@@ -94,6 +103,20 @@ export default function AdminBannersPage() {
     return [{ value: "", label: "All Banner Types" }, ...positionOptions];
   }, [positionOptions]);
 
+  const formatDateDisplay = (dateVal: unknown): string => {
+    if (!dateVal) return "";
+    try {
+      const d = new Date(dateVal as string | Date);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  };
 
   const columns: ColumnDef<BannerDto>[] = [
     {
@@ -194,8 +217,8 @@ export default function AdminBannersPage() {
       accessorKey: "schedule",
       header: "Schedule",
       cell: ({ row }) => {
-        const starts = formatDate(row.original.startsAt, { style: "medium" });
-        const ends = formatDate(row.original.endsAt, { style: "medium" });
+        const starts = formatDateDisplay(row.original.startsAt);
+        const ends = formatDateDisplay(row.original.endsAt);
 
         if (!starts && !ends) {
           return (
@@ -233,7 +256,7 @@ export default function AdminBannersPage() {
       cell: ({ row }) => {
         const banner = row.original;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center justify-center gap-1.5">
             <Button
               variant="ghost"
               size="icon"
@@ -281,14 +304,14 @@ export default function AdminBannersPage() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex-1 min-h-0 min-w-0 flex flex-col">
       <AdminPageHeader
         title="Banners"
         description="Manage hero, offer, popup and reels banners shown across the storefront."
       />
 
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden bg-transparent py-1 rounded-2xl">
+      <AdminContent className="flex-1">
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col bg-transparent py-1 rounded-2xl">
           {/* Top Bar: Search, Position Filter, Add Button */}
           <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
@@ -318,10 +341,27 @@ export default function AdminBannersPage() {
               {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} />}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <ExportExcelButton
+                data={banners}
+                fetchData={async () => {
+                  const res = await bannerApi.getBanners({
+                    page: 1,
+                    limit: 10000,
+                    search: search.trim() || undefined,
+                    bannerPositionId: selectedPositionFilter || undefined,
+                  });
+                  return res?.data ?? [];
+                }}
+                totalCount={data?.meta?.total ?? banners.length}
+                filename="banners"
+                sheetName="Banners"
+                columns={EXPORT_PRESETS.banners}
+              />
+
               <Button
                 onClick={() => setIsCreateOpen(true)}
-                className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)]"
+                className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] shadow-xs"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Banner
@@ -330,11 +370,28 @@ export default function AdminBannersPage() {
           </div>
 
           {/* Data Table */}
-          <div className="mt-6 flex-1 min-h-0 flex flex-col">
+          <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
+            <BulkActionsBar
+              selectedCount={selectedRows.length}
+              entityName="banners"
+              filterNotice={search ? `Filtered by "${search}"` : undefined}
+              onClearSelection={() => {
+                setSelectedRowIds({});
+                setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportToExcel({
+                  filename: "selected_banners",
+                  sheetName: "Selected Banners",
+                  data: selectedRows,
+                  columns: EXPORT_PRESETS.banners,
+                });
+              }}
+            />
+
             <DataTable
               columns={columns}
               data={banners}
-              tableClassName="min-w-[1050px]"
               pageSize={pageSize}
               pageSizeOptions={[10, 20, 30, 50]}
               page={data?.meta?.page ?? page}
@@ -345,6 +402,12 @@ export default function AdminBannersPage() {
                 setPageSize(newSize);
                 setPage(1);
               }}
+              selectedRowIds={selectedRowIds}
+              onRowSelectionChange={(newSelection, items) => {
+                setSelectedRowIds(newSelection);
+                setSelectedRows(items);
+              }}
+              getRowId={(row) => String(row.id)}
               className="bg-white"
             />
           </div>
@@ -393,74 +456,9 @@ export default function AdminBannersPage() {
               setSelectedBanner(null);
             }}
             onSubmit={async (formData) => {
-              const payload: Record<string, unknown> = {};
-              if (
-                formData.bannerPositionId &&
-                formData.bannerPositionId !== selectedBanner.bannerPosition?.id
-              ) {
-                payload.bannerPositionId = formData.bannerPositionId;
-              }
-              if (
-                formData.title?.trim() !== (selectedBanner.title || "").trim()
-              ) {
-                payload.title = formData.title.trim();
-              }
-              if (
-                formData.mediaType &&
-                formData.mediaType !== selectedBanner.mediaType
-              ) {
-                payload.mediaType = formData.mediaType;
-              }
-              const formImage = formData.imageUrl?.trim() || "";
-              const origImage = selectedBanner.imageUrl?.trim() || "";
-              if (formImage !== origImage) {
-                payload.imageUrl = formImage;
-              }
-              const formVideo = formData.videoUrl?.trim() || null;
-              const origVideo = selectedBanner.videoUrl?.trim() || null;
-              if (formVideo !== origVideo) {
-                payload.videoUrl = formVideo;
-              }
-              if (
-                formData.isActive !== undefined &&
-                formData.isActive !== selectedBanner.isActive
-              ) {
-                payload.isActive = formData.isActive;
-              }
-
-              const formStartsAt = formData.startsAt
-                ? new Date(formData.startsAt).toISOString().slice(0, 10)
-                : "";
-              const origStartsAt = selectedBanner.startsAt
-                ? new Date(selectedBanner.startsAt).toISOString().slice(0, 10)
-                : "";
-              if (formStartsAt !== origStartsAt) {
-                payload.startsAt = formData.startsAt
-                  ? new Date(formData.startsAt).toISOString()
-                  : null;
-              }
-
-              const formEndsAt = formData.endsAt
-                ? new Date(formData.endsAt).toISOString().slice(0, 10)
-                : "";
-              const origEndsAt = selectedBanner.endsAt
-                ? new Date(selectedBanner.endsAt).toISOString().slice(0, 10)
-                : "";
-              if (formEndsAt !== origEndsAt) {
-                payload.endsAt = formData.endsAt
-                  ? new Date(formData.endsAt).toISOString()
-                  : null;
-              }
-
-              if (Object.keys(payload).length === 0) {
-                setIsEditOpen(false);
-                setSelectedBanner(null);
-                return;
-              }
-
               await updateMutation.mutateAsync({
                 uuid: selectedBanner.id,
-                data: payload,
+                data: formData,
               });
               setIsEditOpen(false);
               setSelectedBanner(null);

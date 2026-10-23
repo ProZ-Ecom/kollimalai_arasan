@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useBrands, useCreateBrand, useUpdateBrand, useDeleteBrand } from "@/features/brands/hooks";
+import { getBrands } from "@/features/brands/api/get-brands";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { exportToExcel } from "@/lib/excel-export";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { AdminPageHeader, AdminContent } from "@/components/admin/AdminPageHeader";
 // import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
@@ -17,6 +22,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { BrandListItem } from "@/features/brands/types";
 import { BrandForm } from "@/features/brands/components/BrandForm";
 import { SearchInput } from "@/components/ui/search-input";
+import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 
 export default function AdminBrandsPage() {
   const [search, setSearch] = useState("");
@@ -28,6 +34,15 @@ export default function AdminBrandsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<BrandListItem | null>(null);
+
+  // Bulk Selection State
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<BrandListItem[]>([]);
+
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, page, pageSize]);
 
   const { data, isLoading, error, refetch } = useBrands({
     page,
@@ -115,7 +130,7 @@ export default function AdminBrandsPage() {
     id: "actions",
     header: "Actions",
     cell: ({ row }) => (
-      <div className="flex gap-2">
+      <div className="flex items-center justify-center gap-1.5">
         <Button
           variant="ghost"
           size="icon"
@@ -145,43 +160,85 @@ export default function AdminBrandsPage() {
   if (error) return <ErrorState message="Failed to load brands" onRetry={() => refetch()} />;
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex flex-1 min-h-0 min-w-0 flex-col">
       {/* <AdminBreadcrumb items={[{ label: "Brands" }]} /> */}
       <AdminPageHeader
         title="Brand Management"
         description="Manage product brands and their associated catalogs."
       />
       
-      <AdminContent className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex h-full flex-col overflow-hidden bg-transparent py-1 rounded-2xl">
+      <AdminContent className="flex-1 min-h-0 min-w-0">
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-transparent">
 
           {/* Search + Filter */}
           <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <SearchInput
-              placeholder="Search brands..."
-              defaultValue={search}
-              onSearch={(val) => {
-                setSearch(val);
-                setPage(1);
-              }}
-              className="w-full max-w-md"
-            />
+            <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
+              <SearchInput
+                placeholder="Search brands..."
+                value={search}
+                onSearch={(val) => {
+                  setSearch(val);
+                  setPage(1);
+                }}
+                className="w-full max-w-md"
+              />
 
-            <Button
-              onClick={() => setIsCreateOpen(true)}
-              className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)]"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Brand
-            </Button>
+              {Boolean(search.trim()) && (
+                <ClearFiltersButton onClick={() => { setSearch(""); setPage(1); }} />
+              )}
+            </div>
+
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <ExportExcelButton
+                data={brands}
+                fetchData={async () => {
+                  const res = await getBrands({
+                    page: 1,
+                    limit: 10000,
+                    search: search || undefined,
+                  });
+                  return res.data;
+                }}
+                totalCount={data?.meta?.total ?? brands.length}
+                filename="brands"
+                sheetName="Brands"
+                columns={EXPORT_PRESETS.brands}
+              />
+
+              <Button
+                type="button"
+                onClick={() => setIsCreateOpen(true)}
+                className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] shadow-xs"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Brand
+              </Button>
+            </div>
           </div>
 
           {/* Table */}
-          <div className="mt-6 flex-1 min-h-0 flex flex-col">
+          <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
+            <BulkActionsBar
+              selectedCount={selectedRows.length}
+              entityName="brand"
+              filterNotice={search ? `Filtered by "${search}"` : undefined}
+              onClearSelection={() => {
+                setSelectedRowIds({});
+                setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportToExcel({
+                  filename: "selected_brands",
+                  sheetName: "Selected Brands",
+                  data: selectedRows,
+                  columns: EXPORT_PRESETS.brands,
+                });
+              }}
+            />
+
             <DataTable
               columns={columns}
               data={brands}
-              tableClassName="min-w-[950px]"
               pageSize={pageSize}
               pageSizeOptions={[10, 20, 30, 50]}
               page={data?.meta?.page ?? page}
@@ -192,6 +249,12 @@ export default function AdminBrandsPage() {
                 setPageSize(newSize);
                 setPage(1);
               }}
+              selectedRowIds={selectedRowIds}
+              onRowSelectionChange={(newSelection, items) => {
+                setSelectedRowIds(newSelection);
+                setSelectedRows(items);
+              }}
+              getRowId={(row) => String(row.id || row.uuid)}
               className="bg-white"
             />
           </div>
@@ -242,29 +305,12 @@ export default function AdminBrandsPage() {
       isLoading={updateMutation.isPending}
       submitLabel="Update Brand"
       onSubmit={async (data) => {
-        const payload: Record<string, unknown> = {};
-
-        const cleanName = data.name?.trim();
-        if (cleanName && cleanName !== selectedBrand.name?.trim()) {
-          payload.name = cleanName;
-        }
-
-        const cleanSlug = data.slug?.trim();
-        if (cleanSlug && cleanSlug !== selectedBrand.slug?.trim()) {
-          payload.slug = cleanSlug;
-        }
-
-        const cleanDesc = data.description?.trim() ?? "";
-        const currentDesc = selectedBrand.description?.trim() ?? "";
-        if (cleanDesc !== currentDesc) {
-          payload.description = cleanDesc || undefined;
-        }
-
-        if (Object.keys(payload).length === 0) {
-          setIsEditOpen(false);
-          setSelectedBrand(null);
-          return;
-        }
+        const payload = {
+          name: data.name,
+          slug: data.slug,
+          description: data.description || null,
+         
+        };
 
         await updateMutation.mutateAsync({
           uuid: selectedBrand.uuid,

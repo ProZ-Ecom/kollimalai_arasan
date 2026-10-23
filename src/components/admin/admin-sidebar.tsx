@@ -77,7 +77,7 @@ const sidebarItems: SidebarItem[] = [
       { label: "Reviews", href: "/admin/dashboard/reviews", icon: Star },
       { label: "Brands", href: "/admin/dashboard/brands", icon: Crown },
       { label: "Units", href: "/admin/dashboard/units", icon: Ruler },
-      { label: "Bulk Import", href: "/admin/dashboard/import", icon: PackagePlus },
+      // { label: "Bulk Import", href: "/admin/dashboard/import", icon: PackagePlus },
     ],
   },
   {

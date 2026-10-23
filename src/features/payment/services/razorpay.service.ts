@@ -4,7 +4,8 @@ import { db } from "@/lib/db/prisma";
 import { userRepository } from "@/features/users/repositories/user.repository";
 import { cartService } from "@/features/cart/services/cart.service";
 import { orderService } from "@/features/orders/services/order.service";
-import { calculateShippingCharge, calculateShippingChargeAsync } from "@/features/shipping/utils/shipping-calculator";
+import { calculateShippingCharge } from "@/features/shipping/utils/shipping-calculator";
+import { calculateShippingChargeAsync } from "@/features/shipping/utils/server-shipping-calculator";
 import { getRazorpayClient, getRazorpayPublicKey } from "../config/razorpay.config";
 import { paymentRepository } from "../repositories/payment.repository";
 import type {

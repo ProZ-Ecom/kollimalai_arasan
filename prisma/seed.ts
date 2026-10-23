@@ -240,6 +240,32 @@ async function main() {
   }
   console.log("✓ Delivery partners verified (ST Courier, Professional Courier)");
 
+  // 9. Company Settings
+  const existingCompany = await prisma.company.findFirst();
+  if (!existingCompany) {
+    await prisma.company.create({
+      data: {
+        uuid: crypto.randomUUID(),
+        companyName: "Kollimalai Arasan",
+        address: "Kolli Hills Main Road, Semmedu",
+        city: "Namakkal",
+        state: "Tamil Nadu",
+        country: "India",
+        pincode: "637411",
+        email: "support@kollimalaiarasan.com",
+        phone: "+91 74181 88950",
+        gstNumber: "33BXVPR0285H1ZZ",
+        website: "https://kollimalaiarasan.com",
+        isActive: true,
+        createdBy: adminUser.id,
+        updatedBy: adminUser.id,
+      },
+    });
+    console.log("✓ Default company settings seeded: Kollimalai Arasan");
+  } else {
+    console.log("✓ Company settings already present");
+  }
+
   console.log("\n=========================================");
   console.log("🎉 Clean Deployment Database Ready!");
   console.log("=========================================");

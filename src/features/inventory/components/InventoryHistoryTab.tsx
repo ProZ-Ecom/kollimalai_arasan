@@ -14,7 +14,10 @@ import { Select, type SelectOption } from "@/components/ui/select";
 import { SearchInput } from "@/components/ui/search-input";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { useAllInventoryTransactions } from "../hooks";
+import { ClearFiltersButton } from "@/components/common/clear-filters-button";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
+import { useAllInventoryTransactions, getAllTransactions } from "../hooks";
 import { formatDate } from "@/lib/utils";
 import type { InventoryTransactionItem } from "../types";
 
@@ -71,6 +74,16 @@ export function InventoryHistoryTab({
   const [type, setType] = useState<string>("all");
   const [page, setPage] = useState(1);
 
+  const handleClearFilters = () => {
+    setSearch("");
+    setType("all");
+    setPage(1);
+    if (onClearFilterItem) onClearFilterItem();
+  };
+
+  const hasActiveFilters =
+    search.trim() !== "" || type !== "all" || Boolean(filteredItemName);
+
   const { data, isLoading, error, refetch } = useAllInventoryTransactions({
     page,
     limit: 20,
@@ -84,8 +97,8 @@ export function InventoryHistoryTab({
   return (
     <div className="space-y-4">
       {/* Filter Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-cream-border shadow-xs">
-        <div className="flex items-center gap-3 flex-1 max-w-md">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-white p-4 rounded-2xl border border-cream-border shadow-xs">
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
           <SearchInput
             placeholder="Search movement by product, SKU, note..."
             value={search}
@@ -93,12 +106,23 @@ export function InventoryHistoryTab({
               setSearch(val);
               setPage(1);
             }}
+            className="w-full max-w-md"
           />
-        </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="w-full sm:w-56 shrink-0">
+            <Select
+              options={typeOptions}
+              value={type}
+              onValueChange={(val) => {
+                setType(val);
+                setPage(1);
+              }}
+              className="h-11 rounded-xl"
+            />
+          </div>
+
           {filteredItemName && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary-50 text-secondary-800 border border-secondary-200 text-xs font-semibold">
+            <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary-50 text-secondary-800 border border-secondary-200 text-xs font-semibold">
               <span>Item: {filteredItemName}</span>
               <button
                 type="button"
@@ -110,17 +134,28 @@ export function InventoryHistoryTab({
             </div>
           )}
 
-          <div className="w-[200px] shrink-0">
-            <Select
-              options={typeOptions}
-              value={type}
-              onValueChange={(val) => {
-                setType(val);
-                setPage(1);
-              }}
-              size="sm"
-            />
-          </div>
+          {hasActiveFilters && (
+            <ClearFiltersButton onClick={handleClearFilters} />
+          )}
+        </div>
+
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <ExportExcelButton
+            data={transactions}
+            fetchData={async () => {
+              const res = await getAllTransactions({
+                page: 1,
+                limit: 10000,
+                type: type !== "all" ? type : undefined,
+                search: search.trim() || undefined,
+              });
+              return res?.data?.data ?? [];
+            }}
+            totalCount={meta?.total ?? transactions.length}
+            filename="inventory_history"
+            sheetName="Movement History"
+            columns={EXPORT_PRESETS.inventoryHistory}
+          />
         </div>
       </div>
 

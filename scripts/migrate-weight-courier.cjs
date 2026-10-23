@@ -6,10 +6,11 @@ require('dotenv').config();
   const conn = await mariadb.createConnection({
     host: url.hostname === 'localhost' ? '127.0.0.1' : url.hostname,
     port: Number(url.port) || 3306,
-    user: url.username,
-    password: url.password,
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
     database: url.pathname.replace('/', ''),
     multipleStatements: false,
+    allowPublicKeyRetrieval: true,
   });
 
   async function columnExists(table, column) {

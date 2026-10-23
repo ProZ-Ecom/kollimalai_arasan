@@ -1,35 +1,42 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   useAdminContactMessages,
   useUpdateContactMessageStatus,
+  getAdminContactMessages,
   type AdminContactMessageListItem,
   type ContactMessageStatus,
   AdminContactDetailModal,
   AdminContactReplyModal,
 } from "@/features/contact";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { exportToExcel } from "@/lib/excel-export";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { SearchInput } from "@/components/ui/search-input";
+import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 import {
   Mail,
   MessageSquare,
+  Clock,
   CheckCircle2,
   AlertCircle,
   Eye,
   Send,
-  RotateCcw,
+  Sparkles,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
-import { StatusBadge } from "@/components/common/status-badge";
-import { CONTACT_STATUS } from "@/features/contact/constants/status";
-
 
 export default function AdminContactsPage() {
   const [search, setSearch] = useState("");
@@ -37,13 +44,20 @@ export default function AdminContactsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Selected contact for detail modal
   const [selectedContact, setSelectedContact] =
     useState<AdminContactMessageListItem | null>(null);
 
   // Selected contact for reply modal
   const [replyTargetContact, setReplyTargetContact] =
     useState<AdminContactMessageListItem | null>(null);
+
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<AdminContactMessageListItem[]>([]);
+
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, statusFilter, page, pageSize]);
 
   // Build query params
   const queryParams = useMemo(() => {
@@ -98,6 +112,33 @@ export default function AdminContactsPage() {
 
   const hasActiveFilters = search.trim() !== "" || statusFilter !== "all";
 
+  const getStatusBadge = (status: ContactMessageStatus) => {
+    switch (status) {
+      case "new":
+        return (
+          <Badge className="bg-amber-100 text-amber-800 border-amber-200 gap-1 text-xs">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+            New
+          </Badge>
+        );
+      case "read":
+        return (
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200 gap-1 text-xs">
+            <CheckCircle2 className="h-3 w-3 text-blue-600" />
+            Read
+          </Badge>
+        );
+      case "replied":
+        return (
+          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 gap-1 text-xs">
+            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+            Replied
+          </Badge>
+        );
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
 
   const columns: ColumnDef<AdminContactMessageListItem, unknown>[] = [
     {
@@ -155,7 +196,7 @@ export default function AdminContactsPage() {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        return <StatusBadge status={row.original.status} config={CONTACT_STATUS} />;
+        return getStatusBadge(row.original.status);
       },
     },
     {
@@ -190,7 +231,7 @@ export default function AdminContactsPage() {
         const item = row.original;
 
         return (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-center gap-1.5">
             <button
               type="button"
               onClick={() => setSelectedContact(item)}
@@ -230,7 +271,7 @@ export default function AdminContactsPage() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
+    <div className="flex flex-1 flex-col space-y-4 sm:space-y-6">
 
       <AdminPageHeader
         title="Contact Inquiries"
@@ -266,106 +307,85 @@ export default function AdminContactsPage() {
       </div>
 
       {/* Search and Filters Toolbar */}
-      <div className="flex-shrink-0 flex flex-col gap-3.5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 flex-wrap">
-          <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-            <SearchInput
-              placeholder="Search by name, email, phone, subject, or message..."
-              value={search}
-              onSearch={(val) => {
-                setSearch(val);
+      <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
+          <SearchInput
+            placeholder="Search by name, email, phone, subject, or message..."
+            value={search}
+            onSearch={(val) => {
+              setSearch(val);
+              setPage(1);
+            }}
+            className="w-full max-w-md"
+          />
+
+          {/* Status Filter Dropdown */}
+          <div className="w-full sm:w-48">
+            <Select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full sm:max-w-xs md:max-w-md"
+              options={[
+                { value: "all", label: "All Statuses" },
+                { value: "new", label: "New Messages" },
+                { value: "read", label: "Read Messages" },
+                { value: "replied", label: "Replied Messages" },
+              ]}
+              placeholder="Filter by Status"
+              className="h-11 rounded-xl"
             />
-
-            {/* Status Filter Dropdown */}
-            <div className="w-full sm:w-48">
-              <Select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
-                options={[
-                  { value: "all", label: "All Statuses" },
-                  { value: "new", label: "New Messages" },
-                  { value: "read", label: "Read Messages" },
-                  { value: "replied", label: "Replied Messages" },
-                ]}
-                placeholder="Filter by Status"
-                className="h-10 rounded-xl text-xs font-medium"
-              />
-            </div>
-
-            {/* Reset Button */}
-            {hasActiveFilters && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleResetFilters}
-                className="h-10 px-3 text-xs font-semibold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Reset</span>
-              </Button>
-            )}
           </div>
+
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <ClearFiltersButton onClick={handleResetFilters} />
+          )}
         </div>
 
-        {/* Quick Filter Status Pills */}
-        {/* <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-          <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider font-mono mr-1 shrink-0">
-            Status:
-          </span>
-          {[
-            { id: "all", label: "All", count: totalCount },
-            { id: "new", label: "New", count: newCount },
-            { id: "read", label: "Read", count: readCount },
-            { id: "replied", label: "Replied", count: repliedCount },
-          ].map((pill) => {
-            const isSelected = statusFilter === pill.id;
-            return (
-              <button
-                key={pill.id}
-                type="button"
-                onClick={() => {
-                  setStatusFilter(pill.id);
-                  setPage(1);
-                }}
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap cursor-pointer",
-                  isSelected
-                    ? "bg-secondary-600 text-white shadow-xs"
-                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200/80 hover:text-neutral-900"
-                )}
-              >
-                <span>{pill.label}</span>
-                {pill.count !== undefined && (
-                  <span
-                    className={cn(
-                      "text-[10px] px-1.5 py-0.2 rounded-full font-mono font-semibold",
-                      isSelected
-                        ? "bg-white/20 text-white"
-                        : "bg-white text-neutral-600 border border-neutral-200"
-                    )}
-                  >
-                    {pill.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div> */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <ExportExcelButton
+            data={contacts}
+            fetchData={async () => {
+              const res = await getAdminContactMessages({
+                ...queryParams,
+                page: 1,
+                pageSize: 10000,
+              });
+              return res?.data ?? [];
+            }}
+            totalCount={totalCount}
+            filename="contact_messages"
+            sheetName="Contacts"
+            columns={EXPORT_PRESETS.contacts}
+          />
+        </div>
       </div>
 
       {/* Data Table Container */}
-      <div className="flex-1 min-h-0 flex flex-col w-full">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col w-full">
+        <BulkActionsBar
+          selectedCount={selectedRows.length}
+          entityName="contact inquiries"
+          filterNotice={search ? `Filtered by "${search}"` : undefined}
+          onClearSelection={() => {
+            setSelectedRowIds({});
+            setSelectedRows([]);
+          }}
+          onExport={() => {
+            exportToExcel({
+              filename: "selected_contacts",
+              sheetName: "Selected Contacts",
+              data: selectedRows,
+              columns: EXPORT_PRESETS.contacts,
+            });
+          }}
+        />
+
         <DataTable
           columns={columns}
           data={contacts}
-          tableClassName="min-w-[1100px]"
           pageSize={pageSize}
           pageSizeOptions={[10, 20, 30, 50]}
           page={meta?.page ?? page}
@@ -379,7 +399,13 @@ export default function AdminContactsPage() {
             setPageSize(newSize);
             setPage(1);
           }}
-          className="bg-white border border-neutral-200"
+          selectedRowIds={selectedRowIds}
+          onRowSelectionChange={(newSelection, items) => {
+            setSelectedRowIds(newSelection);
+            setSelectedRows(items);
+          }}
+          getRowId={(row) => String(row.id)}
+          className="bg-white"
           emptyMessage="No contact messages found matching your criteria."
         />
       </div>

@@ -92,13 +92,16 @@ let tokenExpiresAt: number = 0;
 const SHIPROCKET_BASE_URL = "https://apiv2.shiprocket.in/v1/external";
 
 function syncShiprocketEnv() {
+  if (typeof window !== "undefined") return;
   try {
-    const fs = require("fs");
-    const path = require("path");
+    // Use dynamic evaluation so bundler never attempts to bundle fs on client
+    const req = (globalThis as unknown as { __non_webpack_require__?: (mod: string) => any }).__non_webpack_require__ || eval("require");
+    const fs = req("fs");
+    const path = req("path");
     const envPath = path.resolve(process.cwd(), ".env");
     if (fs.existsSync(envPath)) {
       const content = fs.readFileSync(envPath, "utf-8");
-      const dotenv = require("dotenv");
+      const dotenv = req("dotenv");
       const parsed = dotenv.parse(content);
       for (const [k, v] of Object.entries(parsed)) {
         if (k.startsWith("SHIPROCKET_")) {

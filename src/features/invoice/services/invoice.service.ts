@@ -39,7 +39,8 @@ export const invoiceService = {
    */
   async getOrderInvoice(
     orderUuid: string,
-    ownerUserId?: string
+    ownerUserId?: string,
+    options?: { forceAllocate?: boolean }
   ): Promise<InvoiceDto> {
     let ownerId: bigint | undefined;
     if (ownerUserId) {
@@ -54,31 +55,70 @@ export const invoiceService = {
     ]);
 
     if (!order) throw ApiError.notFound("Order not found");
-    if (!company) throw ApiError.notFound("Company settings not found");
+
+    // Ensure order has an officially allocated invoice number & issue date
+    let invoiceNumber = order.invoiceNumber;
+    let invoiceDate = order.invoiceDate;
+
+    if (!invoiceNumber) {
+      const seriesCutoffStr = process.env.INVOICE_SERIES_START_DATE;
+      const orderDate = order.placed_at ?? order.createdAt ?? new Date();
+      const isHistorical =
+        Boolean(seriesCutoffStr) &&
+        orderDate < new Date(seriesCutoffStr as string);
+
+      if (isHistorical && !options?.forceAllocate) {
+        // Historical order issued before new series activation: preserve legacy order number
+        invoiceNumber = order.orderNumber;
+        invoiceDate = orderDate;
+      } else {
+        // New order or series active: atomically allocate from official WEB/YY-YY/XXXX series
+        const issueDate = new Date();
+        const allocated = await invoiceRepository.allocateInvoiceNumberForOrder(
+          order.id,
+          issueDate
+        );
+        invoiceNumber = allocated.invoiceNumber;
+        invoiceDate = allocated.invoiceDate;
+      }
+    }
+
+    const sellerCompany = {
+      companyName: company?.companyName || "Kollimalai Arasan",
+      address: company?.address || "Kolli Hills Main Road, Semmedu",
+      city: company?.city || "Namakkal",
+      pincode: company?.pincode || "637411",
+      state: company?.state || "Tamil Nadu",
+      gstNumber: company?.gstNumber || "33BXVPR0285H1ZZ",
+      panNumber: company?.panNumber || null,
+      phone: company?.phone || null,
+      email: company?.email || "support@kollimalaiarasan.com",
+      logo: company?.logo || null,
+    };
 
     const billing =
       order.address.find((a) => a.type === "billing") ?? order.address[0] ?? null;
     const shipping =
       order.address.find((a) => a.type === "shipping") ?? billing;
 
-    const sellerStateCode = resolveStateCode(company.state, company.gstNumber);
+    const sellerStateCode = resolveStateCode(sellerCompany.state, sellerCompany.gstNumber);
     const buyerStateCode = resolveStateCode(billing?.state);
 
     const seller: InvoicePartyDto = {
-      name: company.companyName,
-      addressLines: (company.address || "")
+      name: sellerCompany.companyName,
+      addressLines: (sellerCompany.address || "")
         .split(/\r?\n|,/)
         .map((line) => line.trim())
         .filter(Boolean),
-      city: company.city,
-      pincode: company.pincode,
-      state: company.state,
+      city: sellerCompany.city,
+      pincode: sellerCompany.pincode,
+      state: sellerCompany.state,
       stateCode: sellerStateCode,
-      gstin: company.gstNumber,
-      pan: company.panNumber,
-      phone: company.phone,
-      email: company.email,
-      logo: company.logo,
+      gstin: sellerCompany.gstNumber,
+      pan: sellerCompany.panNumber,
+      phone: sellerCompany.phone,
+      email: sellerCompany.email,
+      logo: sellerCompany.logo,
     };
 
     const buyer: InvoicePartyDto = {
@@ -97,7 +137,7 @@ export const invoiceService = {
       logo: null,
     };
 
-    const sameState = isSameState(company.state, billing?.state);
+    const sameState = isSameState(sellerCompany.state, billing?.state);
 
     const lines: InvoiceLineDto[] = order.items.map((item, index) => {
       const hsn = item.product.product_hsn_codes;
@@ -182,11 +222,12 @@ export const invoiceService = {
     const invoiceValue = Math.round(beforeRounding);
     const roundOff = round2(invoiceValue - beforeRounding);
 
-    const invoiceDate = order.placed_at ?? order.createdAt;
+    const finalInvoiceDate =
+      invoiceDate ?? order.placed_at ?? order.createdAt ?? new Date();
 
     return {
-      invoiceNumber: order.orderNumber,
-      invoiceDate,
+      invoiceNumber: invoiceNumber || order.orderNumber,
+      invoiceDate: finalInvoiceDate,
       orderNumber: order.orderNumber,
       paymentStatus: order.payment_status,
       dispatchThrough: null,
