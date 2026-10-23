@@ -21,9 +21,13 @@ import {
   useCreateCategory,
   useUpdateCategory,
 } from "@/features/categories/hooks";
+import { getCategories, createCategory } from "@/features/categories/api/get-categories";
 import { getImageUrl } from "@/lib/utils";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { exportToExcel } from "@/lib/excel-export";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { toast } from "@/components/ui/Toast";
 import { AdminPageHeader, AdminContent } from "@/components/admin/AdminPageHeader";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
@@ -33,9 +37,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SearchInput } from "@/components/ui/search-input";
-import { Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Upload } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { CategoryListItem } from "@/features/categories/types";
+import { ExcelImportDialog } from "@/components/common/ExcelImportDialog";
+import { createAdminCategorySchema } from "@/features/categories/validations/admin-category.schema";
+import { formatSlug } from "@/components/forms/form-input";
+import { formatTitleCase } from "@/lib/utils";
 
 export default function AdminCategoriesPage() {
   const router = useRouter();
@@ -45,6 +53,7 @@ export default function AdminCategoriesPage() {
   const [pageSize, setPageSize] = useState(10);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryListItem | null>(null);
 
@@ -217,14 +226,47 @@ export default function AdminCategoriesPage() {
               className="w-full max-w-md"
             />
 
-            <Button
-              type="button"
-              onClick={() => setIsCreateOpen(true)}
-              className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)]"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Category
-            </Button>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <ExportExcelButton
+                data={categories}
+                fetchData={async () => {
+                  try {
+                    const res = await getCategories({
+                      page: 1,
+                      pageSize: 10000,
+                      search: search || undefined,
+                    });
+                    return res?.data ?? categories;
+                  } catch (e) {
+                    console.warn("fetchData failed, falling back to page categories:", e);
+                    return categories;
+                  }
+                }}
+                totalCount={data?.meta?.total ?? categories.length}
+                filename="categories"
+                sheetName="Categories"
+                columns={EXPORT_PRESETS.categories}
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsImportOpen(true)}
+                className="h-11 rounded-xl px-5 text-sm font-semibold"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => setIsCreateOpen(true)}
+                className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] shadow-xs"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Category
+              </Button>
+            </div>
           </div>
 
           {/* Table Container */}
@@ -236,6 +278,14 @@ export default function AdminCategoriesPage() {
               onClearSelection={() => {
                 setSelectedRowIds({});
                 setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportToExcel({
+                  filename: "selected_categories",
+                  sheetName: "Selected Categories",
+                  data: selectedRows,
+                  columns: EXPORT_PRESETS.categories,
+                });
               }}
               onDelete={() => setIsBulkDeleteOpen(true)}
               isDeleting={bulkDeleteMutation.isPending}
@@ -436,6 +486,59 @@ export default function AdminCategoriesPage() {
           />
         )}
       </FormModal>
+
+      <ExcelImportDialog
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        title="Categories"
+        sampleFileName="categories"
+        columns={[
+          {
+            key: "name",
+            header: "Category Name",
+            required: true,
+            info: "Category name, max 150 characters.",
+            samples: ["Spices & Seasonings", "Millets & Grains", "Natural Honey"],
+          },
+          {
+            key: "slug",
+            header: "Category Code",
+            info: "Letters, numbers, and underscores only (e.g. SPICES_HERBS). Generated from name if blank.",
+            samples: ["SPICES_SEASONINGS", "MILLETS_GRAINS", "NATURAL_HONEY"],
+          },
+          {
+            key: "description",
+            header: "Description",
+            info: "Category description, max 2000 characters.",
+            samples: [
+              "Pure authentic spices from Kolli Hills",
+              "Traditional organic millets",
+              "Wild raw forest honey",
+            ],
+          },
+          {
+            key: "sortOrder",
+            header: "Sort Order",
+            info: "Whole number 0-100000. Defaults to 0.",
+            type: "number",
+            samples: [1, 2, 3],
+          },
+        ]}
+        hint="Top-level categories only. Category Code will be formatted with uppercase and underscores automatically."
+        prepare={(row) => ({
+          ...row,
+          name: formatTitleCase(String(row.name ?? "").trim()),
+          slug: formatSlug(String(row.slug ?? row.name ?? "")),
+          description: row.description ? String(row.description).trim() : null,
+          sortOrder:
+            typeof row.sortOrder === "number" && !isNaN(row.sortOrder)
+              ? row.sortOrder
+              : 0,
+        })}
+        schema={createAdminCategorySchema}
+        createRow={(payload) => createCategory(payload as any)}
+        onImported={() => refetch()}
+      />
     </div>
   );
 }

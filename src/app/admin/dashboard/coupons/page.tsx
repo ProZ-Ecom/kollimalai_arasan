@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCoupons, useCreateCoupon, useUpdateCoupon, useDeleteCoupon } from "@/features/coupons/hooks";
+import { useCoupons, useCreateCoupon, useUpdateCoupon, useDeleteCoupon, getCoupons } from "@/features/coupons/hooks";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { AdminPageHeader, AdminContent } from "@/components/admin/AdminPageHeader";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { SearchInput } from "@/components/ui/search-input";
+import { ClearFiltersButton } from "@/components/common/clear-filters-button";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
+import { exportToExcel } from "@/lib/excel-export";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,9 +44,13 @@ function formatDateForInput(dateVal: Date | string | null | undefined): string |
 
 export default function AdminCouponsPage() {
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<CouponListItem | null>(null);
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<CouponListItem[]>([]);
 
   const { data, isLoading, error, refetch } = useCoupons({
     search: search || undefined,
@@ -51,6 +61,24 @@ export default function AdminCouponsPage() {
   const deleteMutation = useDeleteCoupon();
 
   const coupons = data?.data ?? [];
+
+  const filteredCoupons = useMemo(() => {
+    return coupons.filter((item) => {
+      if (typeFilter && typeFilter !== "all") {
+        const itemType = (item.type || "").toUpperCase();
+        const expected = typeFilter.toUpperCase();
+        if (expected === "FIXED" && itemType !== "FIXED" && itemType !== "FLAT") return false;
+        if (expected === "PERCENTAGE" && itemType !== "PERCENTAGE") return false;
+      }
+      if (statusFilter && statusFilter !== "all") {
+        if (statusFilter === "active" && !item.isActive) return false;
+        if (statusFilter === "inactive" && item.isActive) return false;
+      }
+      return true;
+    });
+  }, [coupons, typeFilter, statusFilter]);
+
+  const hasActiveFilters = Boolean(search.trim() || typeFilter !== "all" || statusFilter !== "all");
 
   const {
     register,
@@ -291,35 +319,121 @@ export default function AdminCouponsPage() {
     },
   ];
 
+  const handleClearFilters = () => {
+    setSearch("");
+    setTypeFilter("all");
+    setStatusFilter("all");
+  };
+
   if (isLoading) return <AdminTableSkeleton />;
   if (error) return <ErrorState message="Failed to load coupons" onRetry={() => refetch()} />;
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex flex-1 min-h-0 min-w-0 flex-col">
       <AdminBreadcrumb items={[{ label: "Coupons" }]} />
       <AdminPageHeader
         title="Coupons"
         description="Manage discount coupons"
-        actions={
-          <Button onClick={() => handleOpenModal()}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Coupon
-          </Button>
-        }
       />
-      <AdminContent className="flex-1 min-h-0 flex flex-col">
-        <div className="flex-1 min-h-0 flex flex-col">
-          <DataTable
-            columns={columns}
-            data={coupons}
-            tableClassName="min-w-[1100px]"
-            searchKey="code"
-            searchPlaceholder="Search coupons..."
-            searchValue={search}
-            onSearch={(val) => setSearch(val)}
-            pageSize={20}
-            className="bg-white border border-neutral-200"
-          />
+      <AdminContent className="flex-1 min-h-0 min-w-0">
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-transparent">
+          {/* Search + Filter */}
+          <div className="flex-shrink-0 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
+              <SearchInput
+                placeholder="Search coupons by code..."
+                value={search}
+                onSearch={(val) => setSearch(val)}
+                className="w-full max-w-md"
+              />
+
+              <div className="w-full sm:w-44">
+                <Select
+                  value={typeFilter}
+                  onValueChange={(val) => setTypeFilter(val)}
+                  options={[
+                    { value: "all", label: "All Types" },
+                    { value: "PERCENTAGE", label: "Percentage" },
+                    { value: "FIXED", label: "Fixed Amount" },
+                  ]}
+                  placeholder="All Types"
+                  className="h-11 rounded-xl"
+                />
+              </div>
+
+              <div className="w-full sm:w-44">
+                <Select
+                  value={statusFilter}
+                  onValueChange={(val) => setStatusFilter(val)}
+                  options={[
+                    { value: "all", label: "All Status" },
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                  ]}
+                  placeholder="All Status"
+                  className="h-11 rounded-xl"
+                />
+              </div>
+
+              {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} />}
+            </div>
+
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <ExportExcelButton
+                data={filteredCoupons}
+                fetchData={async () => {
+                  const res = await getCoupons({ search: search || undefined, limit: 10000 });
+                  return res?.data ?? [];
+                }}
+                totalCount={filteredCoupons.length}
+                filename="coupons"
+                sheetName="Coupons"
+                columns={EXPORT_PRESETS.coupons}
+              />
+              <Button
+                type="button"
+                onClick={() => handleOpenModal()}
+                className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] shadow-xs"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Coupon
+              </Button>
+            </div>
+          </div>
+
+          {/* Table Container */}
+          <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
+            <BulkActionsBar
+              selectedCount={selectedRows.length}
+              entityName="coupon"
+              filterNotice={hasActiveFilters ? "Filtered results active" : undefined}
+              onClearSelection={() => {
+                setSelectedRowIds({});
+                setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportToExcel({
+                  filename: "selected_coupons",
+                  sheetName: "Selected Coupons",
+                  data: selectedRows,
+                  columns: EXPORT_PRESETS.coupons,
+                });
+              }}
+            />
+            <DataTable
+              columns={columns}
+              data={filteredCoupons}
+              tableClassName="min-w-[1100px]"
+              pageSize={20}
+              selectedRowIds={selectedRowIds}
+              onRowSelectionChange={(newSelection, items) => {
+                setSelectedRowIds(newSelection);
+                setSelectedRows(items);
+              }}
+              getRowId={(row) => String(row.id)}
+              className="bg-white"
+            />
+          </div>
         </div>
       </AdminContent>
 

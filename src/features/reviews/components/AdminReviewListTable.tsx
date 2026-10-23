@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
@@ -16,23 +16,45 @@ import {
   XCircle,
 } from "lucide-react";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { exportToExcel } from "@/lib/excel-export";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
+import { Select, type SelectOption } from "@/components/ui/select";
 import { SearchInput } from "@/components/ui/search-input";
-import { Select } from "@/components/ui/select";
 import { ClearFiltersButton } from "@/components/common/clear-filters-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDateTime } from "@/lib/utils";
 import { ReviewRatingStars } from "./ReviewRatingStars";
 import { ReviewStatusBadge } from "./ReviewStatusBadge";
+import { ReviewStatusTabs, type ReviewStatusTab } from "./ReviewStatusTabs";
 import { AdminReviewDetailModal } from "./AdminReviewDetailModal";
 import {
   useAdminReviews,
   useUpdateReviewStatus,
   useDeleteAdminReview,
 } from "../hooks/use-admin-reviews";
+import { getAdminReviews } from "../api/admin-reviews.api";
 import type { ReviewResponse } from "../types/review.types";
+
+const RATING_FILTER_OPTIONS: SelectOption[] = [
+  { value: "all", label: "All Stars" },
+  { value: "5", label: "5 Stars (★★★★★)" },
+  { value: "4", label: "4 Stars (★★★★☆)" },
+  { value: "3", label: "3 Stars (★★★☆☆)" },
+  { value: "2", label: "2 Stars (★★☆☆☆)" },
+  { value: "1", label: "1 Star (★☆☆☆☆)" },
+];
+
+const SORT_OPTIONS: SelectOption[] = [
+  { value: "createdAt_desc", label: "Newest First" },
+  { value: "createdAt_asc", label: "Oldest First" },
+  { value: "rating_desc", label: "Highest Rating" },
+  { value: "rating_asc", label: "Lowest Rating" },
+];
 
 interface AdminReviewListTableProps {
   initialStatus?: "all" | "approved" | "unapproved";
@@ -59,6 +81,15 @@ export function AdminReviewListTable({
   const [selectedReview, setSelectedReview] = useState<ReviewResponse | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState<ReviewResponse | null>(null);
+
+  // Bulk Selection State
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = useState<ReviewResponse[]>([]);
+
+  useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, statusFilter, ratingFilter, sortBy, sortOrder, page, pageSize]);
 
   // Map tab filter to backend isApproved boolean
   const isApprovedQuery =
@@ -124,7 +155,6 @@ export function AdminReviewListTable({
       reviewId: review.id,
       isApproved,
     });
-    refetch();
   };
 
   const handleConfirmDelete = async () => {
@@ -136,8 +166,13 @@ export function AdminReviewListTable({
     if (reviews.length === 1 && page > 1) {
       setPage(page - 1);
     }
-    refetch();
   };
+
+  const tabs: ReviewStatusTab[] = [
+    { id: "all", label: "All Reviews" },
+    { id: "approved", label: "Approved" },
+    { id: "unapproved", label: "Pending / Unapproved" },
+  ];
 
   const columns: ColumnDef<ReviewResponse, unknown>[] = [
     {
@@ -155,6 +190,7 @@ export function AdminReviewListTable({
                   src={customer.avatar}
                   alt={customer.name || "Customer"}
                   fill
+                  sizes="32px"
                   className="object-cover"
                 />
               ) : (
@@ -253,7 +289,7 @@ export function AdminReviewListTable({
     },
     {
       id: "actions",
-      header: () => <div className="text-right">Actions</div>,
+      header: "Actions",
       cell: ({ row }) => {
         const review = row.original;
         const isActionLoading =
@@ -263,7 +299,7 @@ export function AdminReviewListTable({
             deleteMutation.variables === review.id);
 
         return (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-center gap-1.5">
             {/* Quick Toggle Approve / Unapprove Button */}
             {review.isApproved ? (
               <button
@@ -317,89 +353,92 @@ export function AdminReviewListTable({
   ];
 
   return (
-    <div className="flex flex-1 h-full min-h-0 flex-col overflow-hidden bg-transparent rounded-2xl">
+    <div className="flex-1 min-h-0 min-w-0 flex flex-col bg-transparent rounded-2xl">
       {/* Top Filter and Controls Bar */}
-      <div className="flex-shrink-0 mb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div className="flex-shrink-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Left Side: Search, Rating Filter & Sort */}
-        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap w-full lg:w-auto">
-          <div className="w-full sm:w-72">
-            <SearchInput
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Search by customer, text..."
-              className="h-9.5 text-xs"
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
+          <SearchInput
+            value={search}
+            onSearch={(val) => {
+              setSearch(val.trim());
+              setPage(1);
+            }}
+            placeholder="Search by customer, text..."
+            className="w-full max-w-md"
+          />
+
+          {/* Rating Dropdown Filter */}
+          <div className="w-full sm:w-44">
+            <Select
+              value={ratingFilter === undefined ? "all" : String(ratingFilter)}
+              onValueChange={(val) => handleRatingChange(val)}
+              options={RATING_FILTER_OPTIONS}
+              className="h-11 rounded-xl"
             />
           </div>
 
-          {/* Rating Dropdown Filter */}
-          <Select
-            value={ratingFilter === undefined ? "all" : String(ratingFilter)}
-            onValueChange={(val) => handleRatingChange(val)}
-            size="sm"
-            wrapperClassName="w-36 sm:w-44"
-            className="h-9.5 rounded-lg text-xs font-semibold"
-            options={[
-              { value: "all", label: "All Stars" },
-              { value: "5", label: "⭐⭐⭐⭐⭐ (5 Stars)" },
-              { value: "4", label: "⭐⭐⭐⭐ (4 Stars)" },
-              { value: "3", label: "⭐⭐⭐ (3 Stars)" },
-              { value: "2", label: "⭐⭐ (2 Stars)" },
-              { value: "1", label: "⭐ (1 Star)" },
-            ]}
-          />
-
           {/* Sort Dropdown */}
-          <Select
-            value={`${sortBy}_${sortOrder}`}
-            onValueChange={(val) => handleSortChange(val)}
-            size="sm"
-            wrapperClassName="w-36 sm:w-44"
-            className="h-9.5 rounded-lg text-xs font-semibold"
-            options={[
-              { value: "createdAt_desc", label: "Newest First" },
-              { value: "createdAt_asc", label: "Oldest First" },
-              { value: "rating_desc", label: "Highest Rating" },
-              { value: "rating_asc", label: "Lowest Rating" },
-            ]}
-          />
+          <div className="w-full sm:w-44">
+            <Select
+              value={`${sortBy}_${sortOrder}`}
+              onValueChange={(val) => handleSortChange(val)}
+              options={SORT_OPTIONS}
+              className="h-11 rounded-xl"
+            />
+          </div>
 
-          {/* Status Dropdown Filter */}
-          <Select
-            value={statusFilter}
-            onValueChange={(val) => handleTabChange(val as "all" | "approved" | "unapproved")}
-            size="sm"
-            wrapperClassName="w-36 sm:w-48"
-            className="h-9.5 rounded-lg text-xs font-semibold"
-            options={[
-              { value: "all", label: "All Reviews" },
-              { value: "approved", label: "Approved" },
-              { value: "unapproved", label: "Pending / Unapproved" },
-            ]}
-          />
+          {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} />}
+        </div>
 
-          {/* Refresh Button */}
+        {/* Right Side: Status Tabs, Refresh & Export */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="overflow-x-auto">
+            <ReviewStatusTabs
+              tabs={tabs}
+              activeTab={statusFilter}
+              onChange={handleTabChange}
+            />
+          </div>
+
           <Button
             variant="outline"
-            size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="h-9.5 border-cream-border hover:bg-cream-100 text-neutral-700 px-3 shrink-0"
+            className="h-11 rounded-xl border-cream-border hover:bg-cream-100 text-neutral-700 px-3.5 shrink-0"
             title="Refresh review list"
           >
             <RotateCcw
-              className={`w-3.5 h-3.5 ${isFetching ? "animate-spin text-secondary-600" : ""}`}
+              className={`w-4 h-4 ${isFetching ? "animate-spin text-secondary-600" : ""}`}
             />
           </Button>
 
-          {hasActiveFilters && <ClearFiltersButton onClick={handleClearFilters} className="h-9.5" />}
+          <ExportExcelButton
+            data={reviews}
+            fetchData={async () => {
+              const res = await getAdminReviews({
+                page: 1,
+                limit: 10000,
+                search: search.trim() || undefined,
+                isApproved: isApprovedQuery,
+                rating: ratingFilter,
+                productId: initialProductId,
+                variantId: initialVariantId,
+                sortBy,
+                sortOrder,
+              });
+              return res?.data ?? [];
+            }}
+            totalCount={meta?.total ?? reviews.length}
+            filename="reviews"
+            sheetName="Reviews"
+            columns={EXPORT_PRESETS.reviews}
+          />
         </div>
       </div>
 
       {/* Main Table Container */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center rounded-2xl border border-cream-border bg-white p-12">
             <LoadingState text="Loading reviews..." />
@@ -437,21 +476,46 @@ export function AdminReviewListTable({
             </div>
           </div>
         ) : (
-          <DataTable
-            columns={columns}
-            data={reviews}
-            tableClassName="min-w-[1150px]"
-            page={meta?.page ?? page}
-            pageSize={meta?.limit ?? pageSize}
-            totalItems={meta?.total ?? reviews.length}
-            totalPages={meta?.totalPages ?? (Math.ceil(reviews.length / pageSize) || 1)}
-            onPageChange={(newPage) => setPage(newPage)}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize);
-              setPage(1);
-            }}
-            className="bg-white border border-cream-border shadow-2xs"
-          />
+          <>
+            <BulkActionsBar
+              selectedCount={selectedRows.length}
+              entityName="review"
+              filterNotice={search ? `Filtered by "${search}"` : undefined}
+              onClearSelection={() => {
+                setSelectedRowIds({});
+                setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportToExcel({
+                  filename: "selected_reviews",
+                  sheetName: "Selected Reviews",
+                  data: selectedRows,
+                  columns: EXPORT_PRESETS.reviews,
+                });
+              }}
+            />
+
+            <DataTable
+              columns={columns}
+              data={reviews}
+              page={meta?.page ?? page}
+              pageSize={meta?.limit ?? pageSize}
+              totalItems={meta?.total ?? reviews.length}
+              totalPages={meta?.totalPages ?? (Math.ceil(reviews.length / pageSize) || 1)}
+              onPageChange={(newPage) => setPage(newPage)}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(1);
+              }}
+              selectedRowIds={selectedRowIds}
+              onRowSelectionChange={(newSelection, items) => {
+                setSelectedRowIds(newSelection);
+                setSelectedRows(items);
+              }}
+              getRowId={(row) => String(row.id)}
+              className="bg-white border border-cream-border shadow-2xs"
+            />
+          </>
         )}
       </div>
 
@@ -466,9 +530,6 @@ export function AdminReviewListTable({
             setSelectedReview(null);
           }}
           onDeleted={() => {
-            refetch();
-          }}
-          onStatusChanged={() => {
             refetch();
           }}
         />

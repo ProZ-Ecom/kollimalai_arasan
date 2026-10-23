@@ -71,13 +71,48 @@ export default function ContactPage() {
     }
   }, [session, profile]);
 
+  // Helper to format phone as +91 74181 88950
+  const formatPhoneDisplay = (
+    rawPhone: string | null | undefined,
+    defaultVal: string
+  ): string => {
+    const target = rawPhone?.trim() || defaultVal;
+    if (!target) return "";
+
+    const digits = target.replace(/\D/g, "");
+    if (digits.length === 12 && digits.startsWith("91")) {
+      return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+    }
+    if (digits.length === 10) {
+      return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+    }
+    if (digits.length > 10 && digits.startsWith("91")) {
+      const remaining = digits.slice(2);
+      if (remaining.length === 10) {
+        return `+91 ${remaining.slice(0, 5)} ${remaining.slice(5)}`;
+      }
+      return `+91 ${remaining}`;
+    }
+
+    const match = target.match(/^(\+\d{1,3})\s*(.*)$/);
+    if (match) {
+      const countryCode = match[1];
+      const numberPart = match[2].replace(/\s+/g, "");
+      if (numberPart.length === 10) {
+        return `${countryCode} ${numberPart.slice(0, 5)} ${numberPart.slice(5)}`;
+      }
+      return numberPart ? `${countryCode} ${numberPart}` : countryCode;
+    }
+
+    return target;
+  };
+
   // Company Contact Details
-  const companyPhone = company?.phone?.trim() || "+91 7418188950";
+  const companyPhone = formatPhoneDisplay(company?.phone, "+91 74181 88950");
   const whatsappPhone = "+91 73388 80950";
-  const companyEmail = company?.email?.trim() || "kollimalaiarasan@gmail.com";
+  const companyEmail = "kollimalaiarasan@gmail.com";
   const companyAddress =
-    company?.address?.trim() ||
-    "18/41, MGR Nagar, Sakkarai Patti, Valavanthi Nadu, Semmedu Post, Kolli Hills Tk, Namakkal District - 637411, Tamil Nadu, India";
+    "18/41, MGR NAGAR, SAKKARAI PATTI, VALAVANTHI NADU, SEMMEDU POST, KOLLI HILLS TK, NAMAKKAL DISTRICT - 637411";
 
   const handleInputChange = (
     field: keyof CreateContactInput,
@@ -234,7 +269,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <span className="block text-xs font-bold uppercase tracking-wider text-neutral-400">
-                      Estate &amp; Packing Unit
+                      Mkt &amp; Packed By
                     </span>
                     <span className="block text-sm font-medium text-neutral-800 mt-1 leading-relaxed">
                       {companyAddress}

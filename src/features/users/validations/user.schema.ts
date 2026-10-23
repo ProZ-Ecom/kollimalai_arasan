@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const getUsersQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(10),
+  limit: z.coerce.number().int().positive().max(100000).default(10),
   search: z.string().optional(),
   status: z.string().optional(),
   roleId: z.coerce.number().int().positive().optional(),
@@ -80,13 +80,13 @@ export const registerSchema = z
       .string()
       .trim()
       .min(2, "Full name must be at least 2 characters")
-      .max(100, "Full name must be less than 100 characters")
+      .max(100000, "Full name must be less than 100 characters")
       .optional(),
     name: z
       .string()
       .trim()
       .min(2, "Name must be at least 2 characters")
-      .max(100, "Name must be less than 100 characters")
+      .max(100000, "Name must be less than 100 characters")
       .optional(),
     email: z
       .string({ message: "Email is required" })

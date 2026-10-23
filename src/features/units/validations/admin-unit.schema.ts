@@ -29,7 +29,7 @@ export const createAdminUnitSchema = z
       .number()
       .int("Sort order must be an integer")
       .min(0, "Sort order cannot be negative")
-      .max(100, "Sort order cannot exceed 100")
+      .max(100000, "Sort order cannot exceed 100000")
       .default(0)
       .optional(),
   })
@@ -45,7 +45,7 @@ export type UpdateAdminUnitInput = z.infer<typeof updateAdminUnitSchema>;
 
 export const adminUnitsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1).optional(),
-  pageSize: z.coerce.number().int().min(1).max(100).default(10).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100000).default(10).optional(),
   search: z.string().trim().optional(),
   type: unitTypeEnum.optional(),
 });

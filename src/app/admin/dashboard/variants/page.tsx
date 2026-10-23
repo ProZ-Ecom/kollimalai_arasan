@@ -11,11 +11,17 @@ import {
   useDeleteVariant,
   useBulkDeleteVariants,
 } from "@/features/variants/hooks";
+import { z } from "zod";
 import { toast } from "@/components/ui/Toast";
+import { getAdminVariants, createVariantUnitPrice, createAdminVariant } from "@/features/variants/api/get-variants";
 import { useUnits } from "@/features/units/hooks";
+import { useAdminProducts } from "@/features/products/hooks";
 import { useInfiniteProductsSelect } from "@/hooks/use-infinite-select";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { exportToExcel, exportVariantsMatrixToExcel } from "@/lib/excel-export";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import {
   AdminPageHeader,
   AdminContent,
@@ -47,8 +53,12 @@ import {
   Loader2,
   ArrowLeftRight,
   AlertCircle,
+  Upload,
 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { ExcelImportDialog } from "@/components/common/ExcelImportDialog";
+import { formatTitleCase } from "@/lib/utils";
+import { formatSlug } from "@/components/forms/form-input";
 import type {
   AdminVariantResponse,
   VariantUnitPriceResponse,
@@ -82,6 +92,7 @@ export default function AdminVariantsPage() {
 
   // Add Stepper State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [createStep, setCreateStep] = useState<1 | 2 | 3 | 4>(1);
   const [createdVariant, setCreatedVariant] = useState<{
     id: string;
@@ -136,6 +147,11 @@ export default function AdminVariantsPage() {
 
   // Reference queries
   const { data: unitsData } = useUnits({ pageSize: 100 });
+  const { data: allProductsData } = useAdminProducts(
+    { pageSize: 500 },
+    { enabled: isImportOpen }
+  );
+  const allProducts = allProductsData?.data ?? [];
   const productFilterSelect = useInfiniteProductsSelect({
     includeAllOption: true,
 
@@ -592,6 +608,45 @@ export default function AdminVariantsPage() {
                 </button>
               </div>
 
+              <ExportExcelButton
+                data={variants}
+                fetchData={async () => {
+                  try {
+                    const res = await getAdminVariants({
+                      page: 1,
+                      pageSize: 10000,
+                      search: search || undefined,
+                      productIds: selectedProductFilter ? [selectedProductFilter] : undefined,
+                    });
+                    return res?.data ?? variants;
+                  } catch (e) {
+                    console.warn("fetchData failed, falling back to page variants:", e);
+                    return variants;
+                  }
+                }}
+                totalCount={totalItems}
+                filename="items_catalog"
+                sheetName="Items"
+                columns={EXPORT_PRESETS.variants}
+                onCustomExport={(itemsToExport) => {
+                  exportVariantsMatrixToExcel({
+                    filename: "items_catalog",
+                    sheetName: "Items",
+                    variants: itemsToExport,
+                  });
+                }}
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsImportOpen(true)}
+                className="h-11 rounded-xl px-5 text-sm font-semibold"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Button>
+
               <Button
                 onClick={() => {
                   setCreateStep(1);
@@ -615,6 +670,13 @@ export default function AdminVariantsPage() {
               onClearSelection={() => {
                 setSelectedRowIds({});
                 setSelectedRows([]);
+              }}
+              onExport={() => {
+                exportVariantsMatrixToExcel({
+                  filename: "selected_items_catalog",
+                  sheetName: "Selected Items",
+                  variants: selectedRows,
+                });
               }}
               onDelete={() => setIsBulkDeleteOpen(true)}
               isDeleting={bulkDeleteMutation.isPending}
@@ -1308,6 +1370,261 @@ export default function AdminVariantsPage() {
         onSuccess={() => {
           refetch();
         }}
+      />
+
+      <ExcelImportDialog
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        title="Items"
+        sampleFileName="items"
+        columns={[
+          {
+            key: "product",
+            header: "Product Name",
+            required: true,
+            info: "Must match an existing Product name or Product code exactly.",
+            samples: [
+              "Kolli Hills Black Pepper",
+              "Pure Wild Rock Honey",
+              "Barnyard Millet",
+            ],
+          },
+          {
+            key: "name",
+            header: "Item Name",
+            required: true,
+            info: "Item / variant name, max 100 characters.",
+            samples: [
+              "Whole Black Pepper",
+              "Raw Forest Honey",
+              "Unpolished Barnyard Millet",
+            ],
+          },
+          {
+            key: "slug",
+            header: "Item Code",
+            info: "Item code (e.g. WHOLE_PEPPER). Uppercase with underscores. Product code is prefixed automatically.",
+            samples: [
+              "WHOLE_PEPPER",
+              "RAW_HONEY",
+              "UNPOLISHED_MILLET",
+            ],
+          },
+          {
+            key: "unit",
+            header: "Unit",
+            required: true,
+            info: "Unit code or name (e.g. g, kg, ml, l, pcs).",
+            samples: ["g", "g", "kg"],
+          },
+          {
+            key: "unitValue",
+            header: "Pack Size",
+            required: true,
+            type: "number",
+            info: "Net weight/volume (e.g. 100, 250, 500, 1). Must be > 0.",
+            samples: [100, 500, 1],
+          },
+          {
+            key: "sku",
+            header: "Item SKU",
+            required: true,
+            info: "Unique SKU for this pack size (e.g. BP-100G, WFH-500G).",
+            samples: ["BP-100G", "WFH-500G", "BM-1KG"],
+          },
+          {
+            key: "price",
+            header: "Base Price",
+            required: true,
+            type: "number",
+            info: "Base selling price in ₹. Must be > 0.",
+            samples: [120, 350, 95],
+          },
+          {
+            key: "stock",
+            header: "Stock Qty",
+            type: "number",
+            info: "Initial stock count (whole number >= 0). Defaults to 0.",
+            samples: [50, 100, 200],
+          },
+          {
+            key: "shortDescription",
+            header: "Short Description",
+            info: "Optional brief summary, max 500 characters.",
+            samples: [
+              "Sun-dried spicy black pepper",
+              "Raw unfiltered honey",
+              "Rich in fiber and minerals",
+            ],
+          },
+          {
+            key: "description",
+            header: "Description",
+            info: "Optional detailed description.",
+            samples: ["Harvested fresh from the hills of Kolli.", "", ""],
+          },
+        ]}
+        hint="Product and Unit must already exist. Multiple pack sizes for the same item name can be imported in separate rows."
+        prepare={(row) => {
+          const find = <T,>(
+            list: T[],
+            key: (item: T) => string,
+            value: unknown
+          ) =>
+            list.find(
+              (item) =>
+                key(item).trim().toLowerCase() ===
+                String(value ?? "").trim().toLowerCase()
+            );
+
+          const prod =
+            find(allProducts, (p) => p.name, row.product) ||
+            find(allProducts, (p) => p.slug, row.product);
+          if (!prod) {
+            return { error: `Product "${row.product ?? ""}" not found` };
+          }
+
+          const unit =
+            find(units, (u) => u.code, row.unit) ||
+            find(units, (u) => u.name, row.unit);
+          if (!unit) {
+            return {
+              error: `Unit "${row.unit ?? ""}" not found. Available units: ${units.map((u) => u.code).join(", ")}`,
+            };
+          }
+
+          const prodSlug = (prod.slug || "").trim().toUpperCase();
+          const prefix = prodSlug ? `${prodSlug}_` : "";
+          const rawSlug = String(row.slug ?? row.name ?? "")
+            .toUpperCase()
+            .replace(/\s+/g, "_")
+            .replace(/[^A-Za-z0-9_]/g, "");
+
+          let finalSlug = rawSlug;
+          if (prefix && !rawSlug.startsWith(prefix)) {
+            finalSlug = `${prefix}${rawSlug}`;
+          }
+
+          const rawUnitVal = Number(row.unitValue);
+          if (isNaN(rawUnitVal) || rawUnitVal <= 0) {
+            return { error: "Pack size (unit value) must be a number greater than 0" };
+          }
+
+          const rawPrice = Number(row.price);
+          if (isNaN(rawPrice) || rawPrice < 0) {
+            return { error: "Price must be a valid number >= 0" };
+          }
+
+          const rawStock =
+            row.stock !== undefined && row.stock !== "" && !isNaN(Number(row.stock))
+              ? Math.max(0, Math.floor(Number(row.stock)))
+              : 0;
+
+          return {
+            productId: prod.id,
+            variantName: formatTitleCase(String(row.name ?? "").trim()),
+            slug: finalSlug,
+            unitId: unit.id,
+            unitValue: rawUnitVal,
+            sku: String(row.sku ?? "").trim().toUpperCase(),
+            basePrice: rawPrice,
+            stock: rawStock,
+            shortDescription: row.shortDescription
+              ? String(row.shortDescription).trim()
+              : null,
+            description: row.description ? String(row.description).trim() : null,
+            isFeatured: false,
+          };
+        }}
+        schema={z.object({
+          productId: z.string().uuid("Invalid Product UUID"),
+          variantName: z
+            .string()
+            .trim()
+            .min(1, "Item name cannot be empty")
+            .max(100, "Item name cannot exceed 100 characters")
+            .transform(formatTitleCase),
+          slug: z
+            .string()
+            .trim()
+            .min(1, "Item code cannot be empty")
+            .max(255, "Item code cannot exceed 255 characters"),
+          unitId: z.string().uuid("Invalid Unit UUID"),
+          unitValue: z
+            .number({ message: "Pack size must be a number" })
+            .gt(0, "Pack size must be greater than 0")
+            .max(1000000, "Pack size cannot exceed 1,000,000"),
+          sku: z
+            .string()
+            .trim()
+            .min(1, "Item SKU cannot be empty")
+            .max(100, "Item SKU cannot exceed 100 characters"),
+          basePrice: z
+            .number({ message: "Price must be a number" })
+            .min(0, "Price cannot be negative")
+            .max(10000000, "Price cannot exceed 10,000,000"),
+          stock: z
+            .number()
+            .int("Stock must be an integer")
+            .min(0, "Stock cannot be negative")
+            .default(0),
+          shortDescription: z
+            .string()
+            .trim()
+            .max(500, "Short description cannot exceed 500 characters")
+            .optional()
+            .nullable(),
+          description: z
+            .string()
+            .trim()
+            .max(5000, "Description cannot exceed 5000 characters")
+            .optional()
+            .nullable(),
+          isFeatured: z.boolean().default(false),
+        })}
+        createRow={async (payload) => {
+          let variantUuid = "";
+          try {
+            const variantRes = await createAdminVariant(
+              payload.productId as string,
+              {
+                variantName: payload.variantName as string,
+                slug: payload.slug as string,
+                shortDescription: (payload.shortDescription as string) || null,
+                description: (payload.description as string) || null,
+                isFeatured: Boolean(payload.isFeatured),
+              }
+            );
+            variantUuid = variantRes?.data?.id ?? "";
+          } catch (err: any) {
+            const existing = variants.find(
+              (v) =>
+                (v.slug?.toLowerCase() ===
+                  (payload.slug as string).toLowerCase() ||
+                  v.variantName?.toLowerCase() ===
+                    (payload.variantName as string).toLowerCase()) &&
+                v.productId === payload.productId
+            );
+            if (existing) {
+              variantUuid = existing.id;
+            } else {
+              throw err;
+            }
+          }
+
+          if (!variantUuid) throw new Error("Could not create item");
+
+          await createVariantUnitPrice(payload.productId as string, variantUuid, {
+            unitId: payload.unitId as string,
+            unitValue: payload.unitValue as number,
+            sku: payload.sku as string,
+            basePrice: payload.basePrice as number,
+            stock: payload.stock as number,
+            isDefault: false,
+            isActive: true,
+          });
+        }}
+        onImported={() => refetch()}
       />
     </div>
   );
