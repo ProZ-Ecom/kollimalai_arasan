@@ -151,20 +151,13 @@ export function FilterSidebar({
     };
   }, []);
 
-  // Auto-expand and load products for selected categories
+  // Pre-load products for expanded categories or single-category mode
   React.useEffect(() => {
     const targetCatIds = isSingleCategoryMode
-      ? [categories[0]?.id].filter(Boolean) as string[]
-      : activeCategoryIds;
+      ? ([categories[0]?.id].filter(Boolean) as string[])
+      : Array.from(expandedCategoryIds);
 
     for (const targetCatId of targetCatIds) {
-      setExpandedCategoryIds((prev) => {
-        if (prev.has(targetCatId)) return prev;
-        const next = new Set(prev);
-        next.add(targetCatId);
-        return next;
-      });
-
       if (
         !categoryProducts[targetCatId] &&
         !fetchingRef.current.has(targetCatId)
@@ -197,23 +190,17 @@ export function FilterSidebar({
           });
       }
     }
-  }, [activeCategoryIds, isSingleCategoryMode, categories, categoryProducts]);
+  }, [expandedCategoryIds, isSingleCategoryMode, categories, categoryProducts]);
 
   // Fetch products for a category when user clicks expand chevron
   const toggleCategoryExpand = React.useCallback(
     async (categoryId: string, e?: React.MouseEvent) => {
+      e?.preventDefault();
       e?.stopPropagation();
 
       const willBeExpanded = !expandedCategoryIds.has(categoryId);
-      setExpandedCategoryIds((prev) => {
-        const next = new Set(prev);
-        if (willBeExpanded) {
-          next.add(categoryId);
-        } else {
-          next.delete(categoryId);
-        }
-        return next;
-      });
+      // Accordion: show dropdown ONLY for this category, closing any others
+      setExpandedCategoryIds(willBeExpanded ? new Set([categoryId]) : new Set());
 
       // If expanding and products not yet loaded or fetching, fetch them once
       if (
@@ -248,45 +235,111 @@ export function FilterSidebar({
     [expandedCategoryIds, categoryProducts]
   );
 
-  // Multi-select handlers
+  // Category toggle handler (multi-selection support for categories, collapses other dropdowns)
   const handleCategoryToggle = (catId: string) => {
     const isCurrentlyActive = activeCategoryIds.includes(catId);
-    const next = isCurrentlyActive
-      ? activeCategoryIds.filter((id) => id !== catId)
-      : [...activeCategoryIds, catId];
+    let nextCategories: string[];
+    let nextProducts = [...activeProductIds];
+
+    if (isCurrentlyActive) {
+      // Deselecting this category
+      nextCategories = activeCategoryIds.filter((id) => id !== catId);
+      setExpandedCategoryIds(new Set());
+
+      // Also clear any child products under this category
+      const productsInCat = categoryProducts[catId] || [];
+      const prodIdsInCat = new Set(productsInCat.map((p) => p.id));
+      nextProducts = nextProducts.filter((id) => !prodIdsInCat.has(id));
+    } else {
+      // Selecting this category
+      nextCategories = [...activeCategoryIds, catId];
+      // Expand only this category
+      setExpandedCategoryIds(new Set([catId]));
+    }
+
+    if (onSelectProducts) {
+      onSelectProducts(nextProducts);
+    } else if (onSelectProduct) {
+      onSelectProduct(nextProducts[0] || null);
+    }
 
     if (onSelectCategories) {
-      onSelectCategories(next);
+      onSelectCategories(nextCategories);
     } else if (onSelectCategory) {
-      onSelectCategory(next.length === 1 ? next[0] : next.length > 1 ? next[next.length - 1] : null);
+      onSelectCategory(nextCategories[0] || null);
+    }
+
+    // On mobile viewports, auto-dismiss the slide-over drawer
+    if (isMobileOpen && onCloseMobile) {
+      onCloseMobile();
     }
   };
 
+  // Product toggle handler (multi-selection: allows selecting multiple items across products/categories,
+  // but keeps only the last selected product category's dropdown expanded while others show selected)
   const handleProductToggle = (prodId: string, catId?: string) => {
     const isCurrentlyActive = activeProductIds.includes(prodId);
-    const next = isCurrentlyActive
-      ? activeProductIds.filter((id) => id !== prodId)
-      : [...activeProductIds, prodId];
+    let nextProducts: string[];
+    let nextCategories = [...activeCategoryIds];
 
-    if (onSelectProducts) {
-      onSelectProducts(next);
-    } else if (onSelectProduct) {
-      onSelectProduct(next.length === 1 ? next[0] : next.length > 1 ? next[next.length - 1] : null);
+    if (isCurrentlyActive) {
+      // Deselecting this product
+      nextProducts = activeProductIds.filter((id) => id !== prodId);
+      if (catId) {
+        // Keep this category's dropdown open as the user is actively working on it
+        setExpandedCategoryIds(new Set([catId]));
+
+        // Check if any other product in this category remains active
+        const productsInCat = categoryProducts[catId] || [];
+        const hasOtherActiveInCat = productsInCat.some(
+          (p) => p.id !== prodId && nextProducts.includes(p.id)
+        );
+        // If no products remain active in this category, remove from nextCategories
+        if (!hasOtherActiveInCat) {
+          nextCategories = nextCategories.filter((id) => id !== catId);
+        }
+      }
+    } else {
+      // Adding this product to selection (multi-selection)
+      nextProducts = [...activeProductIds, prodId];
+      if (catId) {
+        // Ensure ONLY the last selected product category dropdown is expanded
+        setExpandedCategoryIds(new Set([catId]));
+
+        // Ensure this category is marked active in categories list
+        if (!nextCategories.includes(catId)) {
+          nextCategories.push(catId);
+        }
+      }
     }
 
-    // In multi-category mode, if category wasn't active, ensure it's selected
-    if (catId && !isSingleCategoryMode && !activeCategoryIds.includes(catId)) {
-      if (onSelectCategories) {
-        onSelectCategories([...activeCategoryIds, catId]);
-      }
+    if (onSelectProducts) {
+      onSelectProducts(nextProducts);
+    } else if (onSelectProduct) {
+      onSelectProduct(nextProducts[0] || null);
+    }
+
+    if (!isSingleCategoryMode && onSelectCategories) {
+      onSelectCategories(nextCategories);
+    }
+
+    // On mobile viewports, auto-dismiss the slide-over drawer
+    if (isMobileOpen && onCloseMobile) {
+      onCloseMobile();
     }
   };
 
   const handleAllProductsClick = () => {
+    setExpandedCategoryIds(new Set());
     if (onSelectCategories) onSelectCategories([]);
     if (onSelectCategory) onSelectCategory(null);
     if (onSelectProducts) onSelectProducts([]);
     if (onSelectProduct) onSelectProduct(null);
+
+    // On mobile viewports, auto-dismiss the slide-over drawer
+    if (isMobileOpen && onCloseMobile) {
+      onCloseMobile();
+    }
   };
 
   const handleAllInCategoryClick = (catId: string) => {
@@ -301,6 +354,11 @@ export function FilterSidebar({
       } else if (onSelectCategory) {
         onSelectCategory(catId);
       }
+    }
+
+    // On mobile viewports, auto-dismiss the slide-over drawer
+    if (isMobileOpen && onCloseMobile) {
+      onCloseMobile();
     }
   };
 
@@ -371,14 +429,14 @@ export function FilterSidebar({
   const sidebarContent = (
     <div className="flex flex-col gap-5 text-[#101010]">
       {/* 1. Header: Title & Clear Filter Button */}
-      <div className="flex items-center justify-between gap-2 pb-3.5 border-b border-[#EDEDED]">
+      <div className="flex items-center justify-between gap-4 pb-3.5 border-b border-[#EDEDED]">
         <div className="flex items-center gap-2 min-w-0">
           <SlidersHorizontal className="w-4 h-4 text-[#007F06] shrink-0" />
-          <h2 className="text-xs font-black uppercase tracking-wider text-[#101010] whitespace-nowrap">
+          <h2 className="text-xs font-black uppercase tracking-wide text-[#101010] whitespace-nowrap">
             Filter Products
           </h2>
           {totalResultsCount !== undefined && (
-            <span className="text-[11px] bg-[#F5F5F5] text-[#007F06] px-2 py-0.5 rounded-full font-bold whitespace-nowrap shrink-0">
+            <span className="text-[11px] bg-[#F5F5F5] text-[#007F06] px-2 py-0.5 rounded-full font-bold whitespace-nowrap shrink-0 mr-3">
               {totalResultsCount}
             </span>
           )}
@@ -387,7 +445,7 @@ export function FilterSidebar({
         <button
           type="button"
           onClick={handleInternalReset}
-          className={`text-xs font-bold flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer select-none ${
+          className={`text-xs font-bold flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer select-none ml-auto pl-4 ${
             hasActiveFilters
               ? "text-[#007F06] hover:text-[#005A04] hover:underline"
               : "text-[#8A8A8A] hover:text-[#007F06]"
@@ -586,9 +644,12 @@ export function FilterSidebar({
                 </div>
               ) : filteredCategories.length > 0 ? (
                 filteredCategories.map((cat) => {
-                  const isSelected = isSingleCategoryMode ? true : activeCategoryIds.includes(cat.id);
-                  const isExpanded = isSingleCategoryMode ? true : expandedCategoryIds.has(cat.id);
                   const products = categoryProducts[cat.id] || [];
+                  const isProductInCatActive = products.some((p) => activeProductIds.includes(p.id));
+                  const isSelected = isSingleCategoryMode
+                    ? true
+                    : activeCategoryIds.includes(cat.id) || isProductInCatActive;
+                  const isExpanded = isSingleCategoryMode ? true : expandedCategoryIds.has(cat.id);
                   const isLoadingProducts = loadingCategoryIds.has(cat.id);
 
                   return (
@@ -639,7 +700,7 @@ export function FilterSidebar({
                           <button
                             type="button"
                             onClick={(e) => toggleCategoryExpand(cat.id, e)}
-                            className="p-1 rounded-md text-[#5A5A5A] hover:text-[#101010] hover:bg-[#F5F5F5] transition-colors cursor-pointer"
+                            className="p-2 -mr-1 rounded-lg text-[#5A5A5A] hover:text-[#101010] hover:bg-[#F5F5F5] active:bg-[#EAF7EC] transition-colors cursor-pointer min-w-[38px] min-h-[38px] flex items-center justify-center shrink-0"
                             title={isExpanded ? "Collapse products" : "Expand products"}
                             aria-label={isExpanded ? "Collapse products" : "Expand products"}
                           >
@@ -656,16 +717,16 @@ export function FilterSidebar({
 
                       {/* Nested Products List underneath this Category */}
                       {isExpanded && (
-                        <div className="pl-6 pr-1 pt-1 pb-1.5 flex flex-col gap-1.5 border-l-2 border-[#E5E5E5] ml-2.5 my-1 animate-in fade-in duration-150">
+                        <div className="pl-6 pr-1 pt-1 pb-1.5 flex flex-col gap-1 border-l-2 border-[#E5E5E5] ml-2.5 my-1 animate-in fade-in duration-150">
                           {/* Option: All in this Category when in single category mode */}
                           {isSingleCategoryMode && (
                             <button
                               type="button"
                               onClick={() => handleAllInCategoryClick(cat.id)}
-                              className={`flex items-center gap-2 py-0.5 text-left cursor-pointer group transition-colors select-none ${
+                              className={`w-full flex items-center gap-2.5 py-1.5 px-2 rounded-lg text-left cursor-pointer group transition-colors select-none min-h-[34px] ${
                                 activeProductIds.length === 0
-                                  ? "text-[#007F06] font-bold"
-                                  : "text-[#4A4A4A] hover:text-[#007F06] font-medium"
+                                  ? "bg-[#EAF7EC]/60 text-[#007F06] font-bold"
+                                  : "text-[#4A4A4A] hover:text-[#007F06] hover:bg-[#FAFAFA] font-medium"
                               }`}
                             >
                               <span
@@ -704,10 +765,10 @@ export function FilterSidebar({
                                   key={prod.id}
                                   type="button"
                                   onClick={() => handleProductToggle(prod.id, cat.id)}
-                                  className={`flex items-center gap-2 py-0.5 text-left cursor-pointer group transition-colors select-none ${
+                                  className={`w-full flex items-center gap-2.5 py-1.5 px-2 rounded-lg text-left cursor-pointer group transition-colors select-none min-h-[34px] ${
                                     isProductActive
-                                      ? "text-[#007F06] font-bold"
-                                      : "text-[#4A4A4A] hover:text-[#007F06] font-medium"
+                                      ? "bg-[#EAF7EC]/60 text-[#007F06] font-bold"
+                                      : "text-[#4A4A4A] hover:text-[#007F06] hover:bg-[#FAFAFA] font-medium"
                                   }`}
                                 >
                                   <span

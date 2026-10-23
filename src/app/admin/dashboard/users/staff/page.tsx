@@ -7,19 +7,23 @@ import {
   Users,
   UserCheck,
   UserX,
-  RotateCcw,
 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import { AdminPageHeader, AdminContent } from "@/components/admin/AdminPageHeader";
 import { DataTable } from "@/components/admin/data-table/DataTable";
+import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
+import { exportToExcel } from "@/lib/excel-export";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { EXPORT_PRESETS } from "@/lib/export-presets";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { useStaffList, useStaffCount, StaffFormModal } from "@/features/staff";
+import { ClearFiltersButton } from "@/components/common/clear-filters-button";
+import { useStaffList, useStaffCount, getStaffList, StaffFormModal } from "@/features/staff";
 import type { StaffResponse } from "@/features/staff/types";
 
 export default function AdminStaffPage() {
@@ -30,6 +34,14 @@ export default function AdminStaffPage() {
 
   const [isFormModalOpen, setIsFormModalOpen] = React.useState(false);
   const [selectedStaff, setSelectedStaff] = React.useState<StaffResponse | null>(null);
+
+  const [selectedRowIds, setSelectedRowIds] = React.useState<Record<string, boolean>>({});
+  const [selectedRows, setSelectedRows] = React.useState<StaffResponse[]>([]);
+
+  React.useEffect(() => {
+    setSelectedRowIds({});
+    setSelectedRows([]);
+  }, [search, statusFilter, page, pageSize]);
 
   // Map statusFilter to boolean or undefined
   const isActiveParam =
@@ -134,11 +146,18 @@ export default function AdminStaffPage() {
       {
         accessorKey: "phone",
         header: "Phone Number",
-        cell: ({ row }) => (
-          <span className="text-sm text-neutral-600">
-            {row.original.phone || "—"}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const rawPhone = row.original.phone;
+          const displayPhone = rawPhone
+            ? rawPhone.replace(/^\+91\s*/, "").replace(/^91\s*/, "").trim()
+            : "";
+
+          return (
+            <span className="text-sm text-neutral-600">
+              {displayPhone || "—"}
+            </span>
+          );
+        },
       },
       {
         accessorKey: "isActive",
@@ -151,8 +170,8 @@ export default function AdminStaffPage() {
               Active
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-error-50 px-2.5 py-1 text-xs font-semibold text-error-700 border border-error-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-error-500" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-600 border border-neutral-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-neutral-400" />
               Inactive
             </span>
           );
@@ -178,7 +197,7 @@ export default function AdminStaffPage() {
         cell: ({ row }) => {
           const staff = row.original;
           return (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <button
                 type="button"
                 onClick={() => handleOpenEditModal(staff)}
@@ -197,7 +216,7 @@ export default function AdminStaffPage() {
   );
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex-1 min-h-0 min-w-0 flex flex-col">
 
       <AdminPageHeader
         title="Staff Management"
@@ -210,28 +229,25 @@ export default function AdminStaffPage() {
           title="Total Staff"
           value={isCountLoading ? "—" : totalCount}
           icon={Users}
-          iconColor="violet"
           description="Total registered staff accounts"
         />
         <StatsCard
           title="Active Staff"
           value={isCountLoading ? "—" : activeCount}
           icon={UserCheck}
-          iconColor="emerald"
           description="Currently active staff members"
         />
         <StatsCard
           title="Inactive Staff"
           value={isCountLoading ? "—" : inactiveCount}
           icon={UserX}
-          iconColor="rose"
           description="Deactivated or suspended accounts"
         />
       </div>
 
       {/* Filter Toolbar: Search Input + Status Dropdown + Reset on Left, Create Staff Button on Right */}
-      <div className="flex-shrink-0 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-shrink-0 mt-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
           <SearchInput
             placeholder="Search staff by name, email, or phone..."
             value={search}
@@ -239,7 +255,7 @@ export default function AdminStaffPage() {
               setSearch(val);
               setPage(1);
             }}
-            className="w-full sm:max-w-xs md:max-w-md"
+            className="w-full max-w-md"
           />
 
           {/* Status Filter Dropdown */}
@@ -256,37 +272,46 @@ export default function AdminStaffPage() {
                 { value: "inactive", label: "Inactive Staff" },
               ]}
               placeholder="Filter by Status"
-              className="h-10 rounded-xl text-xs font-medium"
+              className="h-11 rounded-xl"
             />
           </div>
 
           {hasActiveFilters && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleResetFilters}
-              className="h-10 px-3 text-xs font-semibold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Reset</span>
-            </Button>
+            <ClearFiltersButton onClick={handleResetFilters} />
           )}
         </div>
 
-        <Button
-          type="button"
-          onClick={handleOpenCreateModal}
-          className="h-10 rounded-xl bg-secondary-600 px-4 text-sm font-semibold text-white hover:bg-secondary-700 shadow-xs cursor-pointer shrink-0"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create Staff
-        </Button>
+        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+          <ExportExcelButton
+            data={staffList}
+            fetchData={async () => {
+              const res = await getStaffList({
+                ...queryParams,
+                page: 1,
+                limit: 10000,
+              });
+              return res?.data ?? [];
+            }}
+            totalCount={totalCount}
+            filename="staff_members"
+            sheetName="Staff"
+            columns={EXPORT_PRESETS.staff}
+          />
+
+          <Button
+            type="button"
+            onClick={handleOpenCreateModal}
+            className="h-11 rounded-xl bg-[var(--color-secondary-600)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-secondary-700)] shadow-xs cursor-pointer"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create Staff
+          </Button>
+        </div>
       </div>
 
-      {/* Main Content: Fixed viewport height with scrolling table records */}
-      <AdminContent className="flex-1 min-h-0 flex flex-col mt-4">
-        <div className="flex-1 min-h-0 flex flex-col">
+      {/* Main Content */}
+      <AdminContent className="flex-1 min-h-0 min-w-0">
+        <div className="mt-3 sm:mt-5 flex-1 min-h-0 min-w-0 flex flex-col">
           {isLoading && !data ? (
             <div className="flex-1 flex items-center justify-center p-12">
               <AdminTableSkeleton />
@@ -300,27 +325,52 @@ export default function AdminStaffPage() {
               />
             </div>
           ) : (
-            <DataTable
-              columns={columns}
-              data={staffList}
-              tableClassName="min-w-[1150px]"
-              page={page}
-              pageSize={pageSize}
-              pageSizeOptions={[10, 20, 30, 50]}
-              totalItems={totalItems}
-              totalPages={totalPages}
-              onPageChange={(newPage) => setPage(newPage)}
-              onPageSizeChange={(newSize) => {
-                setPageSize(newSize);
-                setPage(1);
-              }}
-              className="bg-white border border-neutral-200"
-              emptyMessage={
-                search.trim() || statusFilter !== "all"
-                  ? "No staff members matched your filter criteria."
-                  : "No staff members found. Click '+ Create Staff' to add your first staff member."
-              }
-            />
+            <>
+              <BulkActionsBar
+                selectedCount={selectedRows.length}
+                entityName="staff members"
+                filterNotice={search ? `Filtered by "${search}"` : undefined}
+                onClearSelection={() => {
+                  setSelectedRowIds({});
+                  setSelectedRows([]);
+                }}
+                onExport={() => {
+                  exportToExcel({
+                    filename: "selected_staff",
+                    sheetName: "Selected Staff",
+                    data: selectedRows,
+                    columns: EXPORT_PRESETS.staff,
+                  });
+                }}
+              />
+
+              <DataTable
+                columns={columns}
+                data={staffList}
+                page={page}
+                pageSize={pageSize}
+                pageSizeOptions={[10, 20, 30, 50]}
+                totalItems={totalItems}
+                totalPages={totalPages}
+                onPageChange={(newPage) => setPage(newPage)}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize);
+                  setPage(1);
+                }}
+                selectedRowIds={selectedRowIds}
+                onRowSelectionChange={(newSelection, items) => {
+                  setSelectedRowIds(newSelection);
+                  setSelectedRows(items);
+                }}
+                getRowId={(row) => String(row.id)}
+                className="bg-white"
+                emptyMessage={
+                  search.trim() || statusFilter !== "all"
+                    ? "No staff members matched your filter criteria."
+                    : "No staff members found. Click '+ Create Staff' to add your first staff member."
+                }
+              />
+            </>
           )}
         </div>
       </AdminContent>

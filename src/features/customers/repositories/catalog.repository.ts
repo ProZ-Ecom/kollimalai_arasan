@@ -860,6 +860,8 @@ export const catalogRepository = {
     };
 
     // Filter by Product UUIDs or Slugs
+    let pIds: bigint[] = [];
+    let categoriesWithSpecificProducts = new Set<bigint>();
     if (params.productIds && params.productIds.length > 0) {
       const matchingProducts = await db.product.findMany({
         where: {
@@ -870,10 +872,14 @@ export const catalogRepository = {
           isActive: true,
           deleted_at: null,
         },
-        select: { id: true },
+        select: { id: true, categoryId: true },
       });
-      const pIds = matchingProducts.map((p) => p.id);
-      where.productId = { in: pIds };
+      pIds = matchingProducts.map((p) => p.id);
+      categoriesWithSpecificProducts = new Set(
+        matchingProducts
+          .map((p) => p.categoryId)
+          .filter((id): id is bigint => id !== null && id !== undefined)
+      );
     }
 
     // Filter by Brand UUIDs
@@ -890,12 +896,37 @@ export const catalogRepository = {
     }
 
     // Filter by Category UUIDs
+    let cIds: bigint[] = [];
     if (params.categoryIds && params.categoryIds.length > 0) {
       const matchingCategories = await db.productCategory.findMany({
         where: { uuid: { in: params.categoryIds }, isActive: true, deleted_at: null },
         select: { id: true },
       });
-      const cIds = matchingCategories.map((c) => c.id);
+      cIds = matchingCategories.map((c) => c.id);
+    }
+
+    // Combine Product and Category filtering
+    if (pIds.length > 0 && cIds.length > 0) {
+      const wholeCategoryIds = cIds.filter((id) => !categoriesWithSpecificProducts.has(id));
+
+      if (wholeCategoryIds.length > 0) {
+        const productCategoryCondition: Prisma.ProductVariantWhereInput = {
+          OR: [
+            { productId: { in: pIds } },
+            { product: { categoryId: { in: wholeCategoryIds } } },
+          ],
+        };
+        where.AND = Array.isArray(where.AND)
+          ? [...where.AND, productCategoryCondition]
+          : where.AND
+          ? [where.AND, productCategoryCondition]
+          : [productCategoryCondition];
+      } else {
+        where.productId = { in: pIds };
+      }
+    } else if (pIds.length > 0) {
+      where.productId = { in: pIds };
+    } else if (cIds.length > 0) {
       where.product = {
         ...(where.product as Prisma.ProductWhereInput),
         categoryId: { in: cIds },
@@ -922,7 +953,13 @@ export const catalogRepository = {
     };
 
     if (where.OR) {
-      where.AND = [priceCondition];
+      where.AND = Array.isArray(where.AND)
+        ? [...where.AND, priceCondition]
+        : where.AND
+        ? [where.AND, priceCondition]
+        : [priceCondition];
+    } else if (where.AND) {
+      where.AND = Array.isArray(where.AND) ? [...where.AND, priceCondition] : [where.AND, priceCondition];
     } else {
       Object.assign(where, priceCondition);
     }

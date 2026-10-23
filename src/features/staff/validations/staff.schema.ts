@@ -27,7 +27,7 @@ export const createStaffSchema = z
     password: z
       .string({ message: "Password is required" })
       .min(6, "Password must be at least 6 characters")
-      .max(100, "Password cannot exceed 100 characters"),
+      .max(100000, "Password cannot exceed 100 characters"),
     isActive: z.boolean().optional().default(true),
   })
   .strict();
@@ -63,7 +63,7 @@ export const updateStaffSchema = z
     password: z
       .string()
       .min(6, "Password must be at least 6 characters")
-      .max(100, "Password cannot exceed 100 characters")
+      .max(100000, "Password cannot exceed 100 characters")
       .optional(),
     isActive: z.boolean().optional(),
   })
@@ -78,9 +78,9 @@ export const adminStaffListSchema = z
       .number()
       .int()
       .min(1, "limit must be at least 1")
-      .max(100, "limit cannot exceed 100")
+      .max(100000, "limit cannot exceed 100000")
       .default(10),
-    pageSize: z.number().int().min(1).max(100).optional(),
+    pageSize: z.number().int().min(1).max(100000).optional(),
     search: z.string().trim().optional(),
     isActive: z.boolean().optional(),
     sortBy: z
@@ -142,15 +142,15 @@ export const changeStaffPasswordSchema = z
     currentPassword: z
       .string({ message: "Current password is required" })
       .min(1, "Current password is required")
-      .max(100, "Current password cannot exceed 100 characters"),
+      .max(100000, "Current password cannot exceed 100 characters"),
     newPassword: z
       .string({ message: "New password is required" })
       .min(6, "New password must be at least 6 characters")
-      .max(100, "New password cannot exceed 100 characters"),
+      .max(100000, "New password cannot exceed 100 characters"),
     confirmPassword: z
       .string({ message: "Confirm password is required" })
       .min(6, "Confirm password must be at least 6 characters")
-      .max(100, "Confirm password cannot exceed 100 characters"),
+      .max(100000, "Confirm password cannot exceed 100 characters"),
   })
   .strict()
   .refine((data) => data.newPassword === data.confirmPassword, {
