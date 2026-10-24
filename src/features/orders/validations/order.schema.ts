@@ -27,7 +27,7 @@ export const customerCreateOrderSchema = z
     notes: z.string().max(500, "Notes cannot exceed 500 characters").optional(),
     paymentMethod: z.enum(["CARD", "UPI", "WHATSAPP", "CALL"]).default("CARD").optional(),
     paymentDetails: z.record(z.string(), z.any()).optional(),
-    courierType: z.enum(["st_courier", "mss"]).default("st_courier").optional(),
+    courierType: z.enum(["st_courier", "mss", "shiprocket"]).default("st_courier").optional(),
   })
   .strict();
 

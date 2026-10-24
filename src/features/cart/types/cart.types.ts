@@ -67,7 +67,7 @@ export interface CartSummary {
   grandTotal: number;
   totalItems: number;
   totalWeightKg?: number;
-  courierType?: "st_courier" | "mss";
+  courierType?: "st_courier" | "mss" | "shiprocket";
   courierName?: string;
   rateDescription?: string;
 }

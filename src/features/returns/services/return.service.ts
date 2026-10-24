@@ -100,10 +100,26 @@ export const returnService = {
       throw ApiError.forbidden("You do not have access to this order");
     }
 
-    // 4. Order Status Check (Only delivered orders can be returned)
+    // 4. Order Status & 5-Day Return Window Check (Only delivered orders within 5 days can be returned)
     if (order.order_status !== "delivered") {
       throw ApiError.badRequest(
         `Cannot create return request for order with status '${order.order_status}'. Only 'delivered' orders can be returned.`
+      );
+    }
+
+    const deliveredDate =
+      (order as any).shipments?.[0]?.delivered_at ||
+      (order as any).shipments?.[0]?.deliveredAt ||
+      order.updatedAt ||
+      order.createdAt;
+
+    const deliveredTime = new Date(deliveredDate).getTime();
+    const fiveDaysInMs = 5 * 24 * 60 * 60 * 1000;
+    const elapsedMs = Date.now() - deliveredTime;
+
+    if (elapsedMs > fiveDaysInMs) {
+      throw ApiError.badRequest(
+        "The 5-day return window for this order has expired. Return requests can only be placed within 5 days of delivery."
       );
     }
 

@@ -197,11 +197,24 @@ export function ProductVariantSelector({
               label: formatMeasurementLabel(up.measurement),
               price: up.sellingPrice,
               comparePrice: up.basePrice > up.sellingPrice ? up.basePrice : null,
-              inStock: !variant.outOfStock,
+              inStock:
+                !variant.outOfStock &&
+                !up.outOfStock &&
+                (up.stock === undefined || up.stock > 0),
             }));
 
             const defaultUnit =
-              variant.unitPrices?.find((u) => u.isDefault) || variant.unitPrices?.[0];
+              variant.unitPrices?.find(
+                (u) =>
+                  u.isDefault &&
+                  !u.outOfStock &&
+                  (u.stock === undefined || u.stock > 0)
+              ) ||
+              variant.unitPrices?.find(
+                (u) => !u.outOfStock && (u.stock === undefined || u.stock > 0)
+              ) ||
+              variant.unitPrices?.find((u) => u.isDefault) ||
+              variant.unitPrices?.[0];
 
             const isWishlisted = !!wishlist?.items.some((i) =>
               variant.unitPrices?.some((u) => u.id === i.variantUnitPriceId)

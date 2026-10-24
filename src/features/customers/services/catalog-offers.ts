@@ -58,10 +58,17 @@ async function applyOffers(rows: PricedUnitPrice[]): Promise<void> {
  */
 function syncVariantHeadlinePrice(variant: CustomerVariantListItemDto): void {
   const defaultUnitPrice =
-    variant.unitPrices.find((up) => up.isDefault) ?? variant.unitPrices[0] ?? null;
+    variant.unitPrices.find((up) => up.isDefault && !up.outOfStock) ??
+    variant.unitPrices.find((up) => !up.outOfStock) ??
+    variant.unitPrices.find((up) => up.isDefault) ??
+    variant.unitPrices[0] ??
+    null;
   if (!defaultUnitPrice) return;
   variant.basePrice = defaultUnitPrice.basePrice;
   variant.salePrice = defaultUnitPrice.sellingPrice;
+  if (defaultUnitPrice.measurement) {
+    variant.measurement = defaultUnitPrice.measurement;
+  }
 }
 
 export const catalogOffers = {

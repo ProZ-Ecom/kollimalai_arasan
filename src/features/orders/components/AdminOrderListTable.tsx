@@ -18,6 +18,7 @@ import {
   AlertCircle,
   ExternalLink,
   Send,
+  RotateCcw,
 } from "lucide-react";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
@@ -36,6 +37,7 @@ import { cn, formatDateTime, formatPrice } from "@/lib/utils";
 import { AssignStaffModal } from "@/features/orders/components/AssignStaffModal";
 import { ShipOrderModal } from "@/features/orders/components/ShipOrderModal";
 import { LiveTrackingModal } from "@/features/orders/components/LiveTrackingModal";
+import { ReturnRefundModal } from "@/features/orders/components/ReturnRefundModal";
 import {
   useAdminOrders,
   useAdminOrder,
@@ -76,6 +78,23 @@ export function AdminOrderListTable({
   const [assignStaffOrder, setAssignStaffOrder] = useState<{
     id: string;
     orderNumber: string;
+  } | null>(null);
+
+  const [returnRefundOrder, setReturnRefundOrder] = useState<{
+    id: string;
+    orderNumber: string;
+    totalAmount: number;
+    paymentStatus?: string;
+    customerName?: string;
+    orderStatus?: string;
+    returnRequest?: {
+      id: string;
+      status: string;
+      reason?: string | null;
+      returnAwb?: string | null;
+      labelUrl?: string | null;
+      courierName?: string | null;
+    } | null;
   } | null>(null);
 
   const [shipCourierOrder, setShipCourierOrder] = useState<{
@@ -223,7 +242,16 @@ export function AdminOrderListTable({
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
+      cell: ({ row }) => (
+        <div className="flex flex-col gap-1 items-start">
+          <OrderStatusBadge status={row.original.status} />
+          {row.original.returnRequest && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-300 bg-purple-50 text-purple-800">
+              Return {row.original.returnRequest.status === "approved" ? "Approved" : row.original.returnRequest.status === "picked_up" ? "Picked Up" : row.original.returnRequest.status === "refunded" ? "Completed" : "Requested"}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       accessorKey: "delivery",
@@ -414,9 +442,10 @@ export function AdminOrderListTable({
                       id: row.original.id,
                       orderNumber: row.original.orderNumber,
                       customerName: row.original.customer?.name,
+                      partnerCode: delivery?.deliveryPartner?.code,
                     })
                   }
-                  title="Ship via ST Courier"
+                  title={`Ship via ${delivery?.deliveryPartner?.name || "Courier"}`}
                   className="text-[11px] font-semibold text-amber-700 hover:underline cursor-pointer"
                 >
                   Courier
@@ -588,6 +617,44 @@ export function AdminOrderListTable({
               </button>
             )}
 
+            {/* Process Return / Refund button - ONLY shown when customer raises return or cancelled order needs refund, and not yet refunded */}
+            {row.original.paymentStatus !== "refunded" &&
+              row.original.status !== "returned" &&
+              (!!row.original.returnRequest ||
+                (orderStatus === "cancelled" &&
+                  (row.original.paymentStatus === "paid" ||
+                    row.original.paymentStatus === "partial_refund"))) && (
+              <button
+                type="button"
+                onClick={() =>
+                  setReturnRefundOrder({
+                    id: row.original.id,
+                    orderNumber: row.original.orderNumber,
+                    totalAmount: Number(row.original.totalAmount),
+                    paymentStatus: row.original.paymentStatus,
+                    customerName: row.original.customer?.name,
+                    orderStatus: row.original.status,
+                    returnRequest: row.original.returnRequest,
+                  })
+                }
+                title={
+                  row.original.returnRequest
+                    ? `Process Customer Return: ${row.original.returnRequest.reason || "Customer requested return"}`
+                    : orderStatus === "cancelled"
+                    ? "Approve & Process Refund"
+                    : "Process Return / Refund"
+                }
+                className={`grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                  row.original.returnRequest
+                    ? "border-purple-400 bg-purple-100 text-purple-800 hover:bg-purple-200 ring-2 ring-purple-300"
+                    : "border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100"
+                }`}
+                disabled={isTransitionPending}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => setViewOrderId(row.original.id)}
@@ -756,6 +823,12 @@ export function AdminOrderListTable({
                 {orderDetail.paymentStatus && (
                   <PaymentStatusBadge status={orderDetail.paymentStatus} />
                 )}
+                {orderDetail.returnRequest && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-300">
+                    <RotateCcw className="h-3 w-3" />
+                    Return {orderDetail.returnRequest.status === "approved" ? "Approved" : orderDetail.returnRequest.status === "picked_up" ? "Picked Up" : "Requested"}
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -876,6 +949,37 @@ export function AdminOrderListTable({
                   </>
                 )}
 
+                {/* Refund / Return Action for Admin - ONLY shown when return/refund is pending, and not yet refunded */}
+                {orderDetail.paymentStatus !== "refunded" &&
+                  currentDetailStatus !== "returned" &&
+                  (!!orderDetail.returnRequest ||
+                    (currentDetailStatus === "cancelled" &&
+                      (orderDetail.paymentStatus === "paid" ||
+                        orderDetail.paymentStatus === "partial_refund"))) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                    onClick={() =>
+                      setReturnRefundOrder({
+                        id: orderDetail.id,
+                        orderNumber: orderDetail.orderNumber,
+                        totalAmount: Number(orderDetail.totalAmount),
+                        paymentStatus: orderDetail.paymentStatus,
+                        customerName: orderDetail.customer?.name,
+                        orderStatus: orderDetail.status,
+                        returnRequest: orderDetail.returnRequest,
+                      })
+                    }
+                    disabled={isTransitionPending}
+                  >
+                    <RotateCcw className="mr-1.5 h-4 w-4" />
+                    {currentDetailStatus === "cancelled"
+                      ? "Approve / Process Refund"
+                      : "Process Return / Refund"}
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -952,6 +1056,20 @@ export function AdminOrderListTable({
         awb={liveTrackingModal.awb}
         courierName={liveTrackingModal.courierName}
         orderNumber={liveTrackingModal.orderNumber}
+      />
+
+      {/* Return & Refund Dialog with 30%, 40%, 50%, 100% or Custom Partial Refund */}
+      <ReturnRefundModal
+        open={!!returnRefundOrder}
+        onClose={() => setReturnRefundOrder(null)}
+        order={returnRefundOrder}
+        onSuccess={() => {
+          setReturnRefundOrder(null);
+          refetch();
+          if (viewOrderId) {
+            refetchDetail();
+          }
+        }}
       />
 
       {/* Cancel Order Dialog */}

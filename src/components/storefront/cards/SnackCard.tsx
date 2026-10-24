@@ -142,7 +142,10 @@ export function SnackCard({
         sku: up.sku,
         price: up.sellingPrice,
         comparePrice: up.basePrice > up.sellingPrice ? up.basePrice : null,
-        inStock: !product.outOfStock,
+        inStock:
+          !product.outOfStock &&
+          !up.outOfStock &&
+          (up.stock === undefined || up.stock > 0),
       }));
     }
     return [];
@@ -184,15 +187,34 @@ export function SnackCard({
     return wDefault <= wHighest ? [defaultVar, highestVar] : [highestVar, defaultVar];
   }, [resolvedVariants]);
 
-  // Uncontrolled or controlled selected variant
-  const defaultVariantId = displayedVariants[0]?.id || resolvedVariants[0]?.id || "";
+  // Uncontrolled or controlled selected variant: prefer in-stock variant!
+  const defaultVariantId = React.useMemo(() => {
+    const inStock =
+      displayedVariants.find((v) => v.inStock !== false) ||
+      resolvedVariants.find((v) => v.inStock !== false);
+    return inStock?.id || displayedVariants[0]?.id || resolvedVariants[0]?.id || "";
+  }, [displayedVariants, resolvedVariants]);
+
   const [internalSelectedId, setInternalSelectedId] = React.useState(defaultVariantId);
 
   React.useEffect(() => {
+    // If the currently selected variant is missing or out of stock, auto-switch to in-stock variant
+    const currentIsStocked = displayedVariants.some(
+      (v) => v.id === internalSelectedId && v.inStock !== false
+    );
+    if (!currentIsStocked) {
+      const inStock =
+        displayedVariants.find((v) => v.inStock !== false) ||
+        resolvedVariants.find((v) => v.inStock !== false);
+      if (inStock && inStock.id !== internalSelectedId) {
+        setInternalSelectedId(inStock.id);
+        return;
+      }
+    }
     if (displayedVariants.length > 0 && !displayedVariants.some((v) => v.id === internalSelectedId)) {
       setInternalSelectedId(displayedVariants[0].id);
     }
-  }, [displayedVariants, internalSelectedId]);
+  }, [displayedVariants, resolvedVariants, internalSelectedId]);
 
   const activeVariantId =
     controlledSelectedVariantId !== undefined
@@ -338,15 +360,22 @@ export function SnackCard({
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
                   {displayedVariants.map((v) => {
                     const isSelected = v.id === activeVariant?.id;
+                    const isOutOfStock = v.inStock === false;
                     return (
                       <button
                         key={v.id}
                         type="button"
                         onClick={() => handleSelectVariant(v.id)}
-                        className={`px-2 sm:px-2.5 py-0.5 text-xs font-bold rounded-[2px] transition-all cursor-pointer select-none ${isSelected
-                          ? "bg-[var(--secondary-600)] text-white border border-[var(--secondary-600)]"
-                          : "bg-white text-[var(--secondary-600)] border border-[var(--secondary-600)] hover:bg-[var(--cream-50)]"
-                          }`}
+                        title={isOutOfStock ? `${v.label} (Out of stock)` : undefined}
+                        className={`px-2 sm:px-2.5 py-0.5 text-xs font-bold rounded-[2px] transition-all cursor-pointer select-none ${
+                          isSelected
+                            ? isOutOfStock
+                              ? "bg-neutral-500 text-white border border-neutral-500 opacity-80"
+                              : "bg-[var(--secondary-600)] text-white border border-[var(--secondary-600)]"
+                            : isOutOfStock
+                            ? "bg-neutral-100 text-neutral-400 border border-dashed border-neutral-300 hover:bg-neutral-200 line-through"
+                            : "bg-white text-[var(--secondary-600)] border border-[var(--secondary-600)] hover:bg-[var(--cream-50)]"
+                        }`}
                       >
                         {variantLabel(v.label)}
                       </button>

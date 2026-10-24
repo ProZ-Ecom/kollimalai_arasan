@@ -1,5 +1,5 @@
 export interface ShippingCalculationResult {
-  courierType: "st_courier" | "mss";
+  courierType: "st_courier" | "mss" | "shiprocket";
   courierName: string;
   totalWeightKg: number;
   billableKg: number;
@@ -62,7 +62,7 @@ export function calculateVariantWeightKg(unitPrice?: {
  * Note: Free shipping is completely eliminated.
  */
 export function calculateShippingCharge(
-  courierType: "st_courier" | "mss" = "st_courier",
+  courierType: "st_courier" | "mss" | "shiprocket" = "st_courier",
   totalWeightKg: number = 0.5
 ): ShippingCalculationResult {
   const safeWeight = Math.max(0.01, Number(totalWeightKg) || 0.5);
@@ -81,6 +81,20 @@ export function calculateShippingCharge(
     };
   }
 
+  if (courierType === "shiprocket") {
+    // Shiprocket Pan-India Express (Delhivery/Bluedart): ₹60 per kg
+    const billableKg = Math.max(1, Math.ceil(safeWeight));
+    const shippingCharge = billableKg * 60;
+    return {
+      courierType: "shiprocket",
+      courierName: "Shiprocket Express (All India)",
+      totalWeightKg: Number(safeWeight.toFixed(3)),
+      billableKg,
+      shippingCharge,
+      rateDescription: `₹${shippingCharge} (₹60 × ${billableKg} kg)`,
+    };
+  }
+
   // ST Courier: within 1kg -> ₹40, above 1kg -> ceil(kg) * 40
   const billableKg = Math.max(1, Math.ceil(safeWeight));
   const shippingCharge = billableKg * 40;
@@ -94,3 +108,4 @@ export function calculateShippingCharge(
     rateDescription: `₹${shippingCharge} (₹40 × ${billableKg} kg)`,
   };
 }
+

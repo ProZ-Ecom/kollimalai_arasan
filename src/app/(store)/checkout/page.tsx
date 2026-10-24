@@ -119,7 +119,7 @@ export default function CheckoutPage() {
 
   // Selected state
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
-  const [courierType, setCourierType] = useState<"st_courier" | "mss">(
+  const [courierType, setCourierType] = useState<"st_courier" | "mss" | "shiprocket">(
     "st_courier"
   );
   const [paymentMethod, setPaymentMethod] = useState<"CARD" | "WHATSAPP" | "CALL">(
@@ -360,12 +360,86 @@ export default function CheckoutPage() {
     return Number(computed.toFixed(2));
   }, [cart?.totalWeightKg, items]);
 
+  const selectedAddress = useMemo(() => {
+    return (
+      addresses.find(
+        (a) => a.id === effectiveAddressId || (a as any).uuid === effectiveAddressId
+      ) || null
+    );
+  }, [addresses, effectiveAddressId]);
+
+  const deliveryPincode = selectedAddress?.pincode?.trim() || "";
+
+  const [liveShiprocketQuote, setLiveShiprocketQuote] = useState<{
+    rate: number;
+    courierName: string;
+    etd: string;
+    isServiceable: boolean;
+  } | null>(null);
+  const [isLoadingShiprocketQuote, setIsLoadingShiprocketQuote] = useState(false);
+
   const stBillableKg = Math.max(1, Math.ceil(totalWeightKg));
+
+  useEffect(() => {
+    if (!deliveryPincode || !/^\d{6}$/.test(deliveryPincode)) {
+      setLiveShiprocketQuote(null);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingShiprocketQuote(true);
+
+    fetch(
+      `/api/shipping/serviceability?pincode=${encodeURIComponent(
+        deliveryPincode
+      )}&weight=${totalWeightKg}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data.success && data.isServiceable && data.recommendedCourier) {
+          setLiveShiprocketQuote({
+            rate: Math.ceil(data.recommendedCourier.rate),
+            courierName: data.recommendedCourier.name || "Shiprocket Express",
+            etd: data.recommendedCourier.etd || "2 - 5 days",
+            isServiceable: true,
+          });
+        } else if (data.success && !data.isServiceable) {
+          setLiveShiprocketQuote({
+            rate: stBillableKg * 60,
+            courierName: "Shiprocket Express",
+            etd: "2 - 5 days",
+            isServiceable: false,
+          });
+        } else {
+          setLiveShiprocketQuote(null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLiveShiprocketQuote(null);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingShiprocketQuote(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [deliveryPincode, totalWeightKg, stBillableKg]);
+
   const stShippingCharge = stBillableKg * 40;
+  const shiprocketShippingCharge =
+    liveShiprocketQuote && liveShiprocketQuote.isServiceable && liveShiprocketQuote.rate > 0
+      ? liveShiprocketQuote.rate
+      : stBillableKg * 60;
   const mssShippingCharge = Math.max(1, Math.ceil(totalWeightKg / 20)) * 200;
 
   const baseShippingCharge =
-    courierType === "mss" ? mssShippingCharge : stShippingCharge;
+    courierType === "mss"
+      ? mssShippingCharge
+      : courierType === "shiprocket"
+      ? shiprocketShippingCharge
+      : stShippingCharge;
   const isWhatsApp = paymentMethod === "WHATSAPP";
   const shippingCharge = isWhatsApp ? 0 : baseShippingCharge;
   const grandTotal = payableBeforeShipping + shippingCharge;
@@ -646,7 +720,11 @@ export default function CheckoutPage() {
 
     const selectedAddr = addresses.find((a) => a.id === effectiveAddressId);
     const courierName =
-      courierType === "mss" ? "Mettur Super Services (MSS)" : "ST Courier";
+      courierType === "mss"
+        ? "Mettur Super Services (MSS)"
+        : courierType === "shiprocket"
+        ? "Shiprocket Express (All India)"
+        : "ST Courier";
 
     let msg = `*NEW ORDER INQUIRY - KOLLIMALAI ARASAN*\n\n`;
     msg += `*Items Ordered:*\n`;
@@ -1196,7 +1274,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
               {/* ST Courier */}
               <div
                 onClick={() => setCourierType("st_courier")}
@@ -1245,7 +1323,54 @@ export default function CheckoutPage() {
                 </p>
                 <p className="text-[11px] text-theme-text-muted pl-6 flex items-center gap-1 mt-1">
                   <Clock className="h-3 w-3" />
-                  Est. 2 - 4 days • Automated tracking
+                  Est. 2 - 4 days
+                </p>
+              </div>
+
+              {/* Shiprocket All-India Express */}
+              <div
+                onClick={() => setCourierType("shiprocket")}
+                className={`rounded-xl border p-4 cursor-pointer transition-all ${
+                  courierType === "shiprocket"
+                    ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
+                    : "border-theme-border bg-theme-surface hover:border-theme-border-accent"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
+                        courierType === "shiprocket"
+                          ? "border-theme-primary bg-theme-primary text-white"
+                          : "border-theme-border-input bg-white"
+                      }`}
+                    >
+                      {courierType === "shiprocket" && (
+                        <Check className="h-2.5 w-2.5 stroke-[3]" />
+                      )}
+                    </span>
+                    <span className="text-xs font-bold text-theme-text-primary">
+                      {liveShiprocketQuote?.courierName
+                        ? `Shiprocket (${liveShiprocketQuote.courierName})`
+                        : "Shiprocket Express"}
+                    </span>
+                  </div>
+                  <span className="text-xs font-extrabold text-theme-primary flex items-center gap-1">
+                    {isLoadingShiprocketQuote ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-neutral-400" />
+                    ) : (
+                      `₹${shiprocketShippingCharge}`
+                    )}
+                  </span>
+                </div>
+                <p className="text-[11px] text-theme-text-subtle pl-6">
+                  {liveShiprocketQuote?.isServiceable
+                    ? `Live rate quote for PIN ${deliveryPincode} • ${liveShiprocketQuote.courierName}`
+                    : `All-India (Delhivery/Blue Dart) • ₹60/kg`}
+                </p>
+                <p className="text-[11px] text-theme-text-muted pl-6 flex items-center gap-1 mt-1">
+                  <Clock className="h-3 w-3" />
+                  Est. {liveShiprocketQuote?.etd || "2 - 5 days"} • Pan-India
                 </p>
               </div>
 
@@ -1270,7 +1395,7 @@ export default function CheckoutPage() {
                       )}
                     </span>
                     <span className="text-xs font-bold text-theme-text-primary">
-                      MSS (Mettur Super Services)
+                      MSS Cargo
                     </span>
                   </div>
                   <div className="text-right">
@@ -1297,7 +1422,7 @@ export default function CheckoutPage() {
                 </p>
                 <p className="text-[11px] text-theme-text-muted pl-6 flex items-center gap-1 mt-1">
                   <Clock className="h-3 w-3" />
-                  Est. 3 - 5 days • Handled via MSS
+                  Est. 3 - 5 days • Branch parcel
                 </p>
               </div>
             </div>
@@ -1411,7 +1536,7 @@ export default function CheckoutPage() {
                     Order Directly on WhatsApp
                   </h3>
                   <p className="text-[11px] text-emerald-800 mt-1 leading-relaxed">
-                    Clicking below will format your order details, selected courier ({courierType === "mss" ? "MSS" : "ST Courier"}), and delivery address into a message and open WhatsApp ({KOLLIMALAI_WHATSAPP_DISPLAY}). Shipping fee is waived at checkout and will be calculated and confirmed on WhatsApp based on your location.
+                    Clicking below will format your order details, selected courier ({courierType === "mss" ? "MSS" : courierType === "shiprocket" ? "Shiprocket" : "ST Courier"}), and delivery address into a message and open WhatsApp ({KOLLIMALAI_WHATSAPP_DISPLAY}). Shipping fee is waived at checkout and will be calculated and confirmed on WhatsApp based on your location.
                   </p>
                 </div>
                 <Button
@@ -1531,7 +1656,15 @@ export default function CheckoutPage() {
 
                 <div className="flex justify-between text-theme-text-subtle items-center">
                   <span>
-                    Shipping ({courierType === "mss" ? "MSS Courier" : "ST Courier"})
+                    Shipping (
+                    {courierType === "mss"
+                      ? "MSS Courier"
+                      : courierType === "shiprocket"
+                      ? liveShiprocketQuote?.courierName
+                        ? `Shiprocket (${liveShiprocketQuote.courierName})`
+                        : "Shiprocket Express"
+                      : "ST Courier"}
+                    )
                   </span>
                   {isWhatsApp ? (
                     <div className="text-right">

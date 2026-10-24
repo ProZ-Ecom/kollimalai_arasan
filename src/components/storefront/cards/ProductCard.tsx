@@ -84,7 +84,18 @@ export function ProductCard({
   }, [unitPrices]);
 
   const defaultUnitPriceId =
-    displayedUnitPrices.find((u) => u.isDefault)?.id ?? displayedUnitPrices[0]?.id ?? "";
+    displayedUnitPrices.find(
+      (u) =>
+        u.isDefault &&
+        !u.outOfStock &&
+        (u.stock === undefined || u.stock > 0)
+    )?.id ??
+    displayedUnitPrices.find(
+      (u) => !u.outOfStock && (u.stock === undefined || u.stock > 0)
+    )?.id ??
+    displayedUnitPrices.find((u) => u.isDefault)?.id ??
+    displayedUnitPrices[0]?.id ??
+    "";
 
   const [selectedUnitPriceId, setSelectedUnitPriceId] = React.useState(defaultUnitPriceId);
   // Reset the selected pack size during render (not in an effect) whenever
@@ -95,6 +106,21 @@ export function ProductCard({
     setTrackedProductId(product.id);
     setSelectedUnitPriceId(defaultUnitPriceId);
   }
+
+  React.useEffect(() => {
+    // If current selected pack is out of stock, auto-switch to in-stock
+    const current = displayedUnitPrices.find((u) => u.id === selectedUnitPriceId);
+    const isCurrentOutOfStock =
+      current?.outOfStock || (current?.stock !== undefined && current.stock <= 0);
+    if (!current || isCurrentOutOfStock) {
+      const inStock = displayedUnitPrices.find(
+        (u) => !u.outOfStock && (u.stock === undefined || u.stock > 0)
+      );
+      if (inStock && inStock.id !== selectedUnitPriceId) {
+        setSelectedUnitPriceId(inStock.id);
+      }
+    }
+  }, [displayedUnitPrices, selectedUnitPriceId]);
 
   const selectedUnitPrice =
     displayedUnitPrices.find((u) => u.id === selectedUnitPriceId) ??
@@ -260,34 +286,45 @@ export function ProductCard({
         <div className="flex flex-col items-end shrink-0">
           {isProduct && displayedUnitPrices.length > 0 && (
             <div className="flex flex-wrap gap-1 justify-end">
-              {displayedUnitPrices.map((unitPrice) => (
-                <button
-                  key={unitPrice.id}
-                  type="button"
-                  onClick={() => setSelectedUnitPriceId(unitPrice.id)}
-                  className={`
-                    px-1
-                    sm:px-2
-                    py-[2px]
-                    text-[9px]
-                    sm:text-[10px]
-                    font-medium
-                    border
-                    cursor-pointer
-                    transition-all
-                    duration-300
-                    hover:scale-105
-                    rounded-xs
-                    ${
-                      selectedUnitPriceId === unitPrice.id
-                        ? "bg-[var(--secondary-600)] text-white border-[var(--secondary-600)]"
-                        : "bg-white text-[var(--secondary-600)] border-[var(--secondary-600)]"
-                    }
-                  `}
-                >
-                  {unitPrice.label}
-                </button>
-              ))}
+              {displayedUnitPrices.map((unitPrice) => {
+                const isOutOfStock =
+                  unitPrice.outOfStock ||
+                  (unitPrice.stock !== undefined && unitPrice.stock <= 0);
+                const isSelected = selectedUnitPriceId === unitPrice.id;
+                return (
+                  <button
+                    key={unitPrice.id}
+                    type="button"
+                    onClick={() => setSelectedUnitPriceId(unitPrice.id)}
+                    title={isOutOfStock ? `${unitPrice.label} (Out of stock)` : undefined}
+                    className={`
+                      px-1
+                      sm:px-2
+                      py-[2px]
+                      text-[9px]
+                      sm:text-[10px]
+                      font-medium
+                      border
+                      cursor-pointer
+                      transition-all
+                      duration-300
+                      hover:scale-105
+                      rounded-xs
+                      ${
+                        isSelected
+                          ? isOutOfStock
+                            ? "bg-neutral-500 text-white border-neutral-500 opacity-80"
+                            : "bg-[var(--secondary-600)] text-white border-[var(--secondary-600)]"
+                          : isOutOfStock
+                          ? "bg-neutral-100 text-neutral-400 border-dashed border-neutral-300 hover:bg-neutral-200 line-through"
+                          : "bg-white text-[var(--secondary-600)] border-[var(--secondary-600)]"
+                      }
+                    `}
+                  >
+                    {unitPrice.label}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -341,28 +378,37 @@ export function ProductCard({
 
       {/* Button */}
       <div className="w-full flex justify-end mt-4">
-        <PrimaryButton
-          onClick={() => {
-            if (disabled || product.outOfStock || !selectedUnitPrice) return;
-            if (isProduct) onAddToCart?.(selectedUnitPrice.id);
-            else onButtonClick?.(selectedUnitPrice.id);
-          }}
-          variant="yellow"
-          disabled={disabled || product.outOfStock || !selectedUnitPrice}
-          className="w-[80%] sm:w-[70%] block uppercase"
-        >
-          {disabled
-            ? "..."
-            : !selectedUnitPrice
-              ? "Coming Soon"
-              : product.outOfStock
-                ? "Out of Stock"
-                : isCart
-                  ? "Buy Now"
-                  : isWishlist
-                    ? "Move to Cart"
-                    : "Add To Cart"}
-        </PrimaryButton>
+        {(() => {
+          const isSelectedPackOutOfStock =
+            product.outOfStock ||
+            selectedUnitPrice?.outOfStock ||
+            (selectedUnitPrice?.stock !== undefined && selectedUnitPrice.stock <= 0);
+
+          return (
+            <PrimaryButton
+              onClick={() => {
+                if (disabled || isSelectedPackOutOfStock || !selectedUnitPrice) return;
+                if (isProduct) onAddToCart?.(selectedUnitPrice.id);
+                else onButtonClick?.(selectedUnitPrice.id);
+              }}
+              variant="yellow"
+              disabled={disabled || isSelectedPackOutOfStock || !selectedUnitPrice}
+              className="w-[80%] sm:w-[70%] block uppercase"
+            >
+              {disabled
+                ? "..."
+                : !selectedUnitPrice
+                  ? "Coming Soon"
+                  : isSelectedPackOutOfStock
+                    ? "Out of Stock"
+                    : isCart
+                      ? "Buy Now"
+                      : isWishlist
+                        ? "Move to Cart"
+                        : "Add To Cart"}
+            </PrimaryButton>
+          );
+        })()}
       </div>
     </div>
   );
