@@ -441,7 +441,9 @@ export default function CheckoutPage() {
       ? shiprocketShippingCharge
       : stShippingCharge;
   const isWhatsApp = paymentMethod === "WHATSAPP";
-  const shippingCharge = isWhatsApp ? 0 : baseShippingCharge;
+  const isCall = paymentMethod === "CALL";
+  const isShippingWaived = isWhatsApp || isCall;
+  const shippingCharge = isShippingWaived ? 0 : baseShippingCharge;
   const grandTotal = payableBeforeShipping + shippingCharge;
 
   // Authentication gate
@@ -1300,12 +1302,12 @@ export default function CheckoutPage() {
                     </span>
                   </div>
                   <div className="text-right">
-                    {isWhatsApp ? (
+                    {isShippingWaived ? (
                       <div className="flex items-center gap-1.5">
                         <span className="text-[11px] text-theme-text-muted line-through">
                           ₹{stShippingCharge}
                         </span>
-                        <span className="text-xs font-black text-emerald-600">
+                        <span className={cn("text-xs font-black", isWhatsApp ? "text-emerald-600" : "text-blue-600")}>
                           ₹0.00
                         </span>
                       </div>
@@ -1319,6 +1321,8 @@ export default function CheckoutPage() {
                 <p className="text-[11px] text-theme-text-subtle pl-6">
                   {isWhatsApp
                     ? `Rate: ₹40/kg (${stBillableKg} kg) · Waived / Calculated on WhatsApp`
+                    : isCall
+                    ? `Rate: ₹40/kg (${stBillableKg} kg) · Waived / Confirmed on Call`
                     : `Rate: ₹40 per kg (${stBillableKg} kg billable)`}
                 </p>
                 <p className="text-[11px] text-theme-text-muted pl-6 flex items-center gap-1 mt-1">
@@ -1355,18 +1359,39 @@ export default function CheckoutPage() {
                         : "Shiprocket Express"}
                     </span>
                   </div>
-                  <span className="text-xs font-extrabold text-theme-primary flex items-center gap-1">
-                    {isLoadingShiprocketQuote ? (
-                      <Loader2 className="h-3 w-3 animate-spin text-neutral-400" />
+                  <div className="text-right">
+                    {isShippingWaived ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-theme-text-muted line-through">
+                          ₹{shiprocketShippingCharge}
+                        </span>
+                        <span className={cn("text-xs font-black", isWhatsApp ? "text-emerald-600" : "text-blue-600")}>
+                          ₹0.00
+                        </span>
+                      </div>
                     ) : (
-                      `₹${shiprocketShippingCharge}`
+                      <span className="text-xs font-extrabold text-theme-primary flex items-center gap-1">
+                        {isLoadingShiprocketQuote ? (
+                          <Loader2 className="h-3 w-3 animate-spin text-neutral-400" />
+                        ) : (
+                          `₹${shiprocketShippingCharge}`
+                        )}
+                      </span>
                     )}
-                  </span>
+                  </div>
                 </div>
                 <p className="text-[11px] text-theme-text-subtle pl-6">
-                  {liveShiprocketQuote?.isServiceable
-                    ? `Live rate quote for PIN ${deliveryPincode} • ${liveShiprocketQuote.courierName}`
-                    : `All-India (Delhivery/Blue Dart) • ₹60/kg`}
+                  {isWhatsApp
+                    ? (liveShiprocketQuote?.isServiceable
+                        ? `Live rate quote for PIN ${deliveryPincode} • ${liveShiprocketQuote.courierName} · Waived / Calculated on WhatsApp`
+                        : `All-India (Delhivery/Blue Dart) · Waived / Calculated on WhatsApp`)
+                    : isCall
+                    ? (liveShiprocketQuote?.isServiceable
+                        ? `Live rate quote for PIN ${deliveryPincode} • ${liveShiprocketQuote.courierName} · Waived / Confirmed on Call`
+                        : `All-India (Delhivery/Blue Dart) · Waived / Confirmed on Call`)
+                    : (liveShiprocketQuote?.isServiceable
+                        ? `Live rate quote for PIN ${deliveryPincode} • ${liveShiprocketQuote.courierName}`
+                        : `All-India (Delhivery/Blue Dart) • ₹60/kg`)}
                 </p>
                 <p className="text-[11px] text-theme-text-muted pl-6 flex items-center gap-1 mt-1">
                   <Clock className="h-3 w-3" />
@@ -1399,12 +1424,12 @@ export default function CheckoutPage() {
                     </span>
                   </div>
                   <div className="text-right">
-                    {isWhatsApp ? (
+                    {isShippingWaived ? (
                       <div className="flex items-center gap-1.5">
                         <span className="text-[11px] text-theme-text-muted line-through">
                           ₹{mssShippingCharge}
                         </span>
-                        <span className="text-xs font-black text-emerald-600">
+                        <span className={cn("text-xs font-black", isWhatsApp ? "text-emerald-600" : "text-blue-600")}>
                           ₹0.00
                         </span>
                       </div>
@@ -1418,6 +1443,8 @@ export default function CheckoutPage() {
                 <p className="text-[11px] text-theme-text-subtle pl-6">
                   {isWhatsApp
                     ? "Flat ₹200 for 1 to 20 kg · Waived / Calculated on WhatsApp"
+                    : isCall
+                    ? "Flat ₹200 for 1 to 20 kg · Waived / Confirmed on Call"
                     : "Flat ₹200 for 1 to 20 kg"}
                 </p>
                 <p className="text-[11px] text-theme-text-muted pl-6 flex items-center gap-1 mt-1">
@@ -1558,7 +1585,7 @@ export default function CheckoutPage() {
                     Place Order by Phone Call
                   </h3>
                   <p className="text-[11px] text-blue-800 mt-1 leading-relaxed">
-                    Prefer phone ordering? Tap below to call our support team ({KOLLIMALAI_CALL_DISPLAY}) directly. We will take your order and guide you.
+                    Prefer phone ordering? Tap below to call our support team ({KOLLIMALAI_CALL_DISPLAY}) directly. We will take your order and guide you. Shipping fee is waived at checkout and will be confirmed on call based on your delivery location.
                   </p>
                 </div>
                 <Button
@@ -1567,7 +1594,7 @@ export default function CheckoutPage() {
                   className="w-full min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2"
                 >
                   <Phone className="h-4 w-4" />
-                  Call Now ({KOLLIMALAI_CALL_DISPLAY})
+                  Call Now ({KOLLIMALAI_CALL_DISPLAY}) · {formatPrice(grandTotal)}
                 </Button>
               </div>
             )}
@@ -1666,18 +1693,18 @@ export default function CheckoutPage() {
                       : "ST Courier"}
                     )
                   </span>
-                  {isWhatsApp ? (
+                  {isShippingWaived ? (
                     <div className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <span className="line-through text-theme-text-muted text-[11px]">
                           {formatPrice(baseShippingCharge)}
                         </span>
-                        <span className="font-bold text-emerald-700 text-xs">
+                        <span className={cn("font-bold text-xs", isWhatsApp ? "text-emerald-700" : "text-blue-700")}>
                           ₹0.00
                         </span>
                       </div>
-                      <span className="text-[10px] text-emerald-600 font-semibold block">
-                        Calculated on WhatsApp
+                      <span className={cn("text-[10px] font-semibold block", isWhatsApp ? "text-emerald-600" : "text-blue-600")}>
+                        {isWhatsApp ? "Calculated on WhatsApp" : "Confirmed on Call"}
                       </span>
                     </div>
                   ) : (
@@ -1692,7 +1719,7 @@ export default function CheckoutPage() {
                     <span className="text-sm font-bold text-theme-text-primary block">
                       Total Amount
                     </span>
-                    {isWhatsApp && (
+                    {isShippingWaived && (
                       <span className="text-[10px] text-theme-text-muted font-medium">
                         (Items Subtotal · Shipping excluded)
                       </span>
