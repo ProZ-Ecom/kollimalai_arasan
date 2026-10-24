@@ -113,6 +113,20 @@ export const orderDetailInclude = Prisma.validator<Prisma.OrderInclude>()({
       },
     },
   },
+  return_requests: {
+    where: { is_active: true },
+    select: {
+      id: true,
+      uuid: true,
+      status: true,
+      reason: true,
+      return_awb_code: true,
+      return_label_url: true,
+      courier_partner_name: true,
+    },
+    orderBy: { id: "desc" },
+    take: 1,
+  },
 });
 
 export function formatOrderAddress(
@@ -258,6 +272,8 @@ export function formatOrderDelivery(
     status: latest.status ?? null,
     shippedAt: latest.shipped_at ? latest.shipped_at.toISOString() : null,
     deliveryNotes: latest.delivery_notes ?? null,
+    labelUrl: (latest as any).label_url ?? null,
+    courierPartnerName: (latest as any).courier_partner_name ?? null,
   };
 }
 
@@ -306,6 +322,16 @@ export function formatOrderDetail(
     shippingAddress,
     billingAddress,
     statusHistory,
+    returnRequest: (order as any).return_requests?.[0]
+      ? {
+          id: (order as any).return_requests[0].uuid || String((order as any).return_requests[0].id),
+          status: (order as any).return_requests[0].status,
+          reason: (order as any).return_requests[0].reason ?? null,
+          returnAwb: (order as any).return_requests[0].return_awb_code ?? null,
+          labelUrl: (order as any).return_requests[0].return_label_url ?? null,
+          courierName: (order as any).return_requests[0].courier_partner_name ?? null,
+        }
+      : null,
   };
 }
 
@@ -359,6 +385,16 @@ export function formatOrderListItem(
     placedAt: order.placed_at ?? null,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
+    returnRequest: (order as any).return_requests?.[0]
+      ? {
+          id: (order as any).return_requests[0].uuid || String((order as any).return_requests[0].id),
+          status: (order as any).return_requests[0].status,
+          reason: (order as any).return_requests[0].reason ?? null,
+          returnAwb: (order as any).return_requests[0].return_awb_code ?? null,
+          labelUrl: (order as any).return_requests[0].return_label_url ?? null,
+          courierName: (order as any).return_requests[0].courier_partner_name ?? null,
+        }
+      : null,
   };
 }
 
@@ -398,6 +434,7 @@ export const orderRepository = {
     orderStatus?: "pending" | "confirmed";
     paymentStatus?: "pending" | "paid";
     paymentMethod?: string;
+    courierType?: "st_courier" | "mss" | "shiprocket";
     shippingAddress: {
       fullName: string;
       phone: string;
@@ -541,6 +578,47 @@ export const orderRepository = {
               ? `Order confirmed with payment via ${params.paymentMethod ?? "CARD"}`
               : "Order placed by customer"),
           changed_by: params.userId,
+          is_active: true,
+          created_by: params.userId,
+          updated_by: params.userId,
+        },
+      });
+
+      // 4b. Create Initial Shipment Record with Selected Courier Partner
+      let partnerCode = "ST_COURIER";
+      let fallbackName = "ST Courier (South Express)";
+      if (params.courierType === "shiprocket") {
+        partnerCode = "SHIPROCKET";
+        fallbackName = "Shiprocket Multi-Carrier";
+      } else if (params.courierType === "mss") {
+        partnerCode = "MSS";
+        fallbackName = "Mettur Super Services";
+      }
+
+      const partner = await tx.delivery_partners.findFirst({
+        where: {
+          OR: [
+            { code: partnerCode },
+            { courier_type: params.courierType || "st_courier" },
+          ],
+          is_active: true,
+        },
+      });
+
+      await tx.shipments.create({
+        data: {
+          uuid: crypto.randomUUID(),
+          order_id: createdOrder.id,
+          delivery_partner_id: partner ? partner.id : null,
+          courier_partner_name: partner ? partner.name : fallbackName,
+          status: "pending",
+          assignment_status: "pending",
+          delivery_notes:
+            params.courierType === "shiprocket"
+              ? "Order booked via Shiprocket Express"
+              : params.courierType === "mss"
+              ? "Order booked via MSS Courier"
+              : "Order booked via ST Courier",
           is_active: true,
           created_by: params.userId,
           updated_by: params.userId,
@@ -974,6 +1052,20 @@ export const orderRepository = {
                   contact_number: true,
                 },
               },
+            },
+          },
+          return_requests: {
+            where: { is_active: true },
+            orderBy: { id: "desc" },
+            take: 1,
+            select: {
+              id: true,
+              uuid: true,
+              status: true,
+              reason: true,
+              return_awb_code: true,
+              return_label_url: true,
+              courier_partner_name: true,
             },
           },
         },

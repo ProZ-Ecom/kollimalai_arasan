@@ -3,7 +3,7 @@ import { z } from "zod";
 export const createRazorpayOrderSchema = z.object({
   orderId: z.string().optional(),
   shippingAddressId: z.string().optional(),
-  courierType: z.enum(["st_courier", "mss"]).optional(),
+  courierType: z.enum(["st_courier", "mss", "shiprocket"]).optional(),
 });
 
 export type CreateRazorpayOrderInput = z.infer<typeof createRazorpayOrderSchema>;
@@ -13,7 +13,7 @@ export const verifyRazorpayPaymentSchema = z.object({
   shippingAddressId: z.string().optional(),
   billingAddressId: z.string().optional(),
   notes: z.string().optional(),
-  courierType: z.enum(["st_courier", "mss"]).optional(),
+  courierType: z.enum(["st_courier", "mss", "shiprocket"]).optional(),
   razorpay_order_id: z.string().min(1, "Razorpay Order ID is required"),
   razorpay_payment_id: z.string().min(1, "Razorpay Payment ID is required"),
   razorpay_signature: z.string().min(1, "Razorpay Signature is required"),

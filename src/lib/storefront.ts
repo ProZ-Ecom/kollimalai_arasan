@@ -45,6 +45,8 @@ export function mapVariantToStorefrontProduct(
       basePrice: up.basePrice,
       sellingPrice: up.sellingPrice,
       isDefault: up.isDefault,
+      stock: up.stock,
+      outOfStock: up.outOfStock,
     })),
   };
 }

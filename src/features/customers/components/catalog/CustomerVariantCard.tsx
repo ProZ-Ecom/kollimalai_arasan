@@ -35,23 +35,59 @@ export function CustomerVariantCard({ variant }: CustomerVariantCardProps) {
           ? up.measurement
           : formatMeasurementLabel(up.measurement as any) || "Standard";
 
+      const inStock =
+        !variant.outOfStock &&
+        !up.outOfStock &&
+        (up.stock === undefined || up.stock > 0);
+
       return {
         id: up.id,
         label,
         price: up.sellingPrice,
         comparePrice: up.basePrice > up.sellingPrice ? up.basePrice : null,
-        inStock: !variant.outOfStock,
+        inStock,
       };
     });
   }, [variant.unitPrices, variant.outOfStock]);
 
-  const defaultUnit =
-    variant.unitPrices?.find((u) => u.isDefault) || variant.unitPrices?.[0];
+  const defaultUnit = React.useMemo(() => {
+    // 1. Prefer in-stock default
+    const inStockDefault = variant.unitPrices?.find(
+      (u) =>
+        u.isDefault &&
+        !u.outOfStock &&
+        (u.stock === undefined || u.stock > 0)
+    );
+    if (inStockDefault) return inStockDefault;
+
+    // 2. Automatically switch to first in-stock pack size
+    const anyInStock = variant.unitPrices?.find(
+      (u) => !u.outOfStock && (u.stock === undefined || u.stock > 0)
+    );
+    if (anyInStock) return anyInStock;
+
+    // 3. Fallback to marked default or first
+    return (
+      variant.unitPrices?.find((u) => u.isDefault) ||
+      variant.unitPrices?.[0] ||
+      null
+    );
+  }, [variant.unitPrices]);
+
   const [selectedUnitPriceId, setSelectedUnitPriceId] = React.useState(
     defaultUnit?.id || packVariants[0]?.id || ""
   );
 
   React.useEffect(() => {
+    // If currently selected pack size is out of stock, auto-switch to the available in-stock pack
+    const current = packVariants.find((v) => v.id === selectedUnitPriceId);
+    if (!current || current.inStock === false) {
+      const firstInStock = packVariants.find((v) => v.inStock);
+      if (firstInStock && firstInStock.id !== selectedUnitPriceId) {
+        setSelectedUnitPriceId(firstInStock.id);
+        return;
+      }
+    }
     if (packVariants.length > 0 && !packVariants.some((v) => v.id === selectedUnitPriceId)) {
       setSelectedUnitPriceId(packVariants[0].id);
     }

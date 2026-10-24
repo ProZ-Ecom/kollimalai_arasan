@@ -12,6 +12,7 @@
     "db:push": "node scripts/db-sync.cjs",
     "db:sync": "node scripts/db-sync.cjs",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:prod": "node scripts/migrate-production.cjs",
     "db:seed": "node --experimental-strip-types prisma/seed.ts",
     "db:reset:prod": "node scripts/reset-for-production.cjs",
     "db:dump:clean": "node scripts/export-clean-deployment-sql.mjs",

@@ -12,6 +12,9 @@ import {
   DollarSign,
   Percent,
   HelpCircle,
+  Rocket,
+  Loader2,
+  ExternalLink,
 } from "lucide-react";
 
 interface ReturnRefundModalProps {
@@ -24,6 +27,14 @@ interface ReturnRefundModalProps {
     paymentStatus?: string;
     customerName?: string;
     orderStatus?: string;
+    returnRequest?: {
+      id: string;
+      status: string;
+      reason?: string | null;
+      returnAwb?: string | null;
+      labelUrl?: string | null;
+      courierName?: string | null;
+    } | null;
   } | null;
   onSuccess: () => void;
 }
@@ -67,6 +78,23 @@ export function ReturnRefundModal({
   const [note, setNote] = useState<string>("");
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Shiprocket Doorstep Reverse Pickup state
+  const [activeReturn, setActiveReturn] = useState<{
+    id: string;
+    status: string;
+    reason?: string | null;
+    returnAwb?: string | null;
+    labelUrl?: string | null;
+    courierName?: string | null;
+  } | null>(order?.returnRequest || null);
+  const [isBookingPickup, setIsBookingPickup] = useState(false);
+  const [pickupSuccess, setPickupSuccess] = useState<{
+    returnAwb: string;
+    courierName: string;
+    labelUrl?: string | null;
+  } | null>(null);
+  const [pickupError, setPickupError] = useState<string | null>(null);
+
   const returnOrder = useReturnAdminOrder();
 
   const totalAmount = order?.totalAmount || 0;
@@ -85,8 +113,73 @@ export function ReturnRefundModal({
       );
       setNote("");
       setValidationError(null);
+
+      // Initialize reverse pickup status if already booked
+      if (order.returnRequest) {
+        setActiveReturn(order.returnRequest);
+        if (order.returnRequest.returnAwb) {
+          setPickupSuccess({
+            returnAwb: order.returnRequest.returnAwb,
+            courierName: order.returnRequest.courierName || "Shiprocket Reverse Courier",
+            labelUrl: order.returnRequest.labelUrl,
+          });
+        } else {
+          setPickupSuccess(null);
+        }
+      } else if (order.id) {
+        // Fallback fetch order details to see if returnRequest exists in DB
+        fetch(`/api/admin/orders/${order.id}`)
+          .then((r) => r.json())
+          .then((res) => {
+            const ret = res.data?.returnRequest;
+            if (ret) {
+              setActiveReturn(ret);
+              if (ret.returnAwb) {
+                setPickupSuccess({
+                  returnAwb: ret.returnAwb,
+                  courierName: ret.courierName || "Shiprocket Reverse Courier",
+                  labelUrl: ret.labelUrl,
+                });
+              }
+            }
+          })
+          .catch(() => {});
+      } else {
+        setActiveReturn(null);
+        setPickupSuccess(null);
+      }
+      setPickupError(null);
     }
   }, [order, open]);
+
+  const handleBookShiprocketPickup = async () => {
+    const returnId = activeReturn?.id || order?.returnRequest?.id;
+    if (!returnId) return;
+    setIsBookingPickup(true);
+    setPickupError(null);
+
+    try {
+      const res = await fetch(`/api/admin/returns/${returnId}/shiprocket`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || data.error?.message || "Failed to schedule return pickup");
+      }
+      const retData = data.data || {};
+      setPickupSuccess({
+        returnAwb: retData.returnAwb || "AWB-CONFIRMED",
+        courierName: retData.courierName || "Shiprocket Reverse",
+        labelUrl: retData.labelUrl,
+      });
+      onSuccess();
+    } catch (err: any) {
+      setPickupError(err.message || "Failed to book reverse pickup with Shiprocket");
+    } finally {
+      setIsBookingPickup(false);
+    }
+  };
 
   const handleSelectPreset = (preset: number | "custom") => {
     setSelectedPreset(preset);
@@ -163,6 +256,10 @@ export function ReturnRefundModal({
   if (!order) return null;
 
   const isCancelled = order.orderStatus === "cancelled";
+  const isAlreadyRefunded =
+    order.paymentStatus === "refunded" ||
+    order.orderStatus === "returned" ||
+    activeReturn?.status === "refunded";
 
   return (
     <FormModal
@@ -205,9 +302,101 @@ export function ReturnRefundModal({
           </div>
         </div>
 
-        {/* Preset Percentage Selector */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-2">
+        {/* Customer Return Request & Shiprocket Doorstep Reverse Pickup */}
+        {activeReturn && (
+          <div className="rounded-2xl border-2 border-purple-200 bg-purple-50/70 p-4 space-y-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-600 text-white shadow-xs">
+                  <Rocket className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                    Doorstep Reverse Pickup via Shiprocket
+                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-purple-200/80 text-purple-900 font-semibold text-[10px]">
+                      Customer Return
+                    </span>
+                  </h4>
+                  {activeReturn.reason && (
+                    <p className="text-xs text-purple-800 mt-0.5">
+                      <span className="font-semibold">Reason:</span> {activeReturn.reason}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {pickupError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                <span>{pickupError}</span>
+              </div>
+            )}
+
+            {pickupSuccess ? (
+              <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 space-y-2 text-emerald-950">
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="flex items-center gap-1.5 text-emerald-800">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    Reverse Pickup Booked ({pickupSuccess.courierName})
+                  </span>
+                  <span className="font-mono bg-white px-2 py-0.5 rounded border border-emerald-200 font-bold text-emerald-900">
+                    AWB: {pickupSuccess.returnAwb}
+                  </span>
+                </div>
+                <p className="text-[11.5px] text-emerald-800 leading-relaxed">
+                  Courier partner will arrive at customer&apos;s delivery address to collect the parcel.
+                </p>
+                {pickupSuccess.labelUrl && (
+                  <a
+                    href={pickupSuccess.labelUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 underline"
+                  >
+                    Download Return Shipping Label (PDF) <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+            ) : (
+              <Button
+                type="button"
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold h-10 rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                onClick={handleBookShiprocketPickup}
+                disabled={isBookingPickup}
+              >
+                {isBookingPickup ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Booking Reverse Pickup with Shiprocket...
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="h-4 w-4" />
+                    Book Doorstep Reverse Pickup via Shiprocket
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Refund Form or Already Refunded Notice */}
+        {isAlreadyRefunded ? (
+          <div className="rounded-xl border border-emerald-300 bg-emerald-50/80 p-4 text-emerald-950 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-sm text-emerald-900">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+              Return & Refund Already Completed
+            </div>
+            <p className="text-xs text-emerald-800 leading-relaxed">
+              This order has already been fully refunded ({formatPrice(totalAmount)}) and marked as returned. No further refund or return action can be submitted.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Preset Percentage Selector */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-2">
             Select Refund Option
           </label>
           <div className="grid grid-cols-5 gap-2">
@@ -355,6 +544,8 @@ export function ReturnRefundModal({
             className="w-full p-2.5 rounded-lg border border-neutral-300 text-xs text-neutral-800 focus:border-secondary-600 focus:ring-1 focus:ring-secondary-600 outline-none resize-none"
           />
         </div>
+          </>
+        )}
 
         {/* Modal Actions */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100">
@@ -364,28 +555,30 @@ export function ReturnRefundModal({
             onClick={onClose}
             disabled={returnOrder.isPending}
           >
-            Cancel
+            {isAlreadyRefunded ? "Close" : "Cancel"}
           </Button>
-          <Button
-            size="sm"
-            onClick={handleSubmit}
-            disabled={
-              returnOrder.isPending ||
-              !!validationError ||
-              currentRefundNum <= 0 ||
-              currentRefundNum > totalAmount
-            }
-            className="bg-secondary-600 hover:bg-secondary-700 text-white font-bold"
-          >
-            {returnOrder.isPending ? (
-              "Recording Refund..."
-            ) : (
-              <>
-                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                Confirm Personal Refund ({formatPrice(currentRefundNum)})
-              </>
-            )}
-          </Button>
+          {!isAlreadyRefunded && (
+            <Button
+              size="sm"
+              onClick={handleSubmit}
+              disabled={
+                returnOrder.isPending ||
+                !!validationError ||
+                currentRefundNum <= 0 ||
+                currentRefundNum > totalAmount
+              }
+              className="bg-secondary-600 hover:bg-secondary-700 text-white font-bold cursor-pointer"
+            >
+              {returnOrder.isPending ? (
+                "Recording Refund..."
+              ) : (
+                <>
+                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                  Confirm Personal Refund ({formatPrice(currentRefundNum)})
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </FormModal>

@@ -7,6 +7,7 @@ import {
   calculateShippingCharge,
   calculateVariantWeightKg,
 } from "@/features/shipping/utils/shipping-calculator";
+import { calculateShippingChargeAsync } from "@/features/shipping/utils/server-shipping-calculator";
 import {
   orderRepository,
   orderDetailInclude,
@@ -216,7 +217,11 @@ export const orderService = {
       totalWeightKg += w * item.quantity;
     }
 
-    const shippingResult = calculateShippingCharge(courierType, totalWeightKg);
+    const shippingResult = await calculateShippingChargeAsync(
+      courierType,
+      totalWeightKg,
+      shippingAddress.pincode ?? undefined
+    );
     const shippingCharge = shippingResult.shippingCharge;
     const payableBeforeShipping = Math.max(0, subtotal - offerDiscount);
     const totalAmount = payableBeforeShipping + shippingCharge;
@@ -232,6 +237,7 @@ export const orderService = {
       orderStatus,
       paymentStatus,
       paymentMethod,
+      courierType,
       notes: input.notes,
       shippingAddress: {
         fullName: shippingAddress.full_name,
@@ -462,6 +468,11 @@ export const orderService = {
 
     const successPayment = order.payments[0];
     const totalOrderAmount = Number(order.totalAmount);
+
+    if (order.payment_status === "refunded") {
+      throw ApiError.badRequest("This order has already been fully refunded.");
+    }
+
     const refundAmount = amount ? Math.min(amount, totalOrderAmount) : totalOrderAmount;
     const isPartial = refundAmount < totalOrderAmount;
 
@@ -553,6 +564,18 @@ export const orderService = {
         },
       });
 
+      // 5b. Update return_requests status if order has an active return request
+      if (!isPartial) {
+        await tx.return_requests.updateMany({
+          where: { order_id: orderId, is_active: true },
+          data: {
+            status: "refunded",
+            updated_at: new Date(),
+            updated_by: adminInternalId,
+          },
+        });
+      }
+
       // 6. Record in order status history
       await tx.order_status_history.create({
         data: {
@@ -584,6 +607,14 @@ export const orderService = {
 
     if (!order) {
       throw ApiError.notFound("Order not found");
+    }
+
+    if (order.order_status === "returned") {
+      throw ApiError.badRequest("This order has already been returned.");
+    }
+
+    if (order.payment_status === "refunded") {
+      throw ApiError.badRequest("This order has already been fully refunded.");
     }
 
     // If order was cancelled and paid, process admin personal refund directly

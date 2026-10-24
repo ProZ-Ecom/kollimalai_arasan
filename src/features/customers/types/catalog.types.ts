@@ -40,6 +40,8 @@ export interface CustomerProductListItemDto {
     label: string;
     basePrice: number;
     sellingPrice: number;
+    stock?: number;
+    outOfStock?: boolean;
     /** The offer that produced `sellingPrice`, or null when none applied. */
     offer?: OfferBreakdown | null;
     discountAmount?: number;
@@ -60,6 +62,8 @@ export interface CustomerVariantUnitPriceDto {
   basePrice: number;
   sellingPrice: number;
   isDefault: boolean;
+  stock?: number;
+  outOfStock?: boolean;
   /** The offer that produced `sellingPrice`, or null when none applied. */
   offer?: OfferBreakdown | null;
   discountAmount?: number;

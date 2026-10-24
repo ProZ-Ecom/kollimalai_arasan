@@ -75,6 +75,51 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // If test mode AWB, return simulated checkpoints
+    if (awb.startsWith("TEST-SR")) {
+      const today = new Date().toLocaleDateString("en-IN");
+      return NextResponse.json({
+        success: true,
+        awb,
+        courier: "Delhivery Surface (Sandbox)",
+        summary: {
+          currentStatus: "IN TRANSIT",
+          origin: "Kolli Hills Hub (637411)",
+          destination: "Customer Destination",
+          bookedDate: today,
+          deliveredDate: null,
+          edd: "2 - 3 business days",
+        },
+        checkpoints: [
+          {
+            date: today,
+            time: "10:30 AM",
+            location: "Kolli Hills Hub",
+            status: "Shipment Picked Up & Consignment Assigned via Shiprocket Sandbox",
+            isDelivered: false,
+          },
+          {
+            date: today,
+            time: "02:45 PM",
+            location: "Salem Transit Center",
+            status: "Package In Transit to Destination",
+            isDelivered: false,
+          },
+        ],
+        isDelivered: false,
+      });
+    }
+
+    // If Shiprocket, fetch live tracking via Shiprocket API
+    if (courier === "shiprocket" || courier.includes("shiprocket")) {
+      const { trackShiprocketAwb } = await import("@/lib/shiprocket");
+      const result = await trackShiprocketAwb(awb);
+      return NextResponse.json(result, {
+        status: 200,
+        headers: { "Cache-Control": "private, max-age=60" },
+      });
+    }
+
     // Default to ST Courier tracking
     const result = await fetchSTCourierTracking(awb);
 

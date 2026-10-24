@@ -66,3 +66,23 @@ export function useCancelCustomerOrder() {
     },
   });
 }
+
+export function useRequestCustomerReturn() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      uuid,
+      payload,
+    }: {
+      uuid: string;
+      payload?: { note?: string };
+    }) => customerOrdersApi.requestReturn(uuid, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: CUSTOMER_ORDERS_QUERY_KEY });
+      queryClient.invalidateQueries({
+        queryKey: [...CUSTOMER_ORDERS_QUERY_KEY, "detail", variables.uuid],
+      });
+    },
+  });
+}

@@ -5,6 +5,7 @@ import { userRepository } from "@/features/users/repositories/user.repository";
 import { cartService } from "@/features/cart/services/cart.service";
 import { orderService } from "@/features/orders/services/order.service";
 import { calculateShippingCharge } from "@/features/shipping/utils/shipping-calculator";
+import { calculateShippingChargeAsync } from "@/features/shipping/utils/server-shipping-calculator";
 import { getRazorpayClient, getRazorpayPublicKey } from "../config/razorpay.config";
 import { paymentRepository } from "../repositories/payment.repository";
 import type {
@@ -73,7 +74,27 @@ export const razorpayService = {
       const payableBeforeShipping = cart.total;
       const courierType = input.courierType || "st_courier";
       const totalWeightKg = cart.totalWeightKg ?? 0.5;
-      const shippingCharge = calculateShippingCharge(courierType, totalWeightKg).shippingCharge;
+
+      let destinationPincode: string | undefined;
+      if (input.shippingAddressId) {
+        try {
+          const addrIdNum = Number(input.shippingAddressId);
+          const addr = await db.customerAddress.findFirst({
+            where: {
+              userId,
+              ...(isNaN(addrIdNum) ? { uuid: input.shippingAddressId } : { id: addrIdNum }),
+            },
+          });
+          if (addr?.pincode) {
+            destinationPincode = addr.pincode;
+          }
+        } catch {
+          // ignore error
+        }
+      }
+
+      const shippingResult = await calculateShippingChargeAsync(courierType, totalWeightKg, destinationPincode);
+      const shippingCharge = shippingResult.shippingCharge;
       const payableAmount = payableBeforeShipping + shippingCharge;
       if (payableAmount <= 0) {
         throw ApiError.badRequest("Invalid cart payable amount.");

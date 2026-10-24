@@ -315,4 +315,33 @@ export async function shipOrderCourier(
   return response.data!;
 }
 
+export interface ShiprocketDispatchPayload {
+  notes?: string;
+  pickupLocation?: string;
+  courierId?: number;
+}
+
+export interface ShiprocketDispatchResponse {
+  orderNumber: string;
+  awbCode: string;
+  courierName: string;
+  labelUrl?: string | null;
+  shiprocketOrderId: string;
+  shiprocketShipmentId: string;
+  alreadyDispatched?: boolean;
+  message: string;
+}
+
+export async function shipOrderWithShiprocket(
+  uuid: string | number,
+  payload: ShiprocketDispatchPayload = {}
+): Promise<ShiprocketDispatchResponse> {
+  const response = await apiClient.post<ShiprocketDispatchResponse>(
+    `/api/admin/orders/${uuid}/shiprocket`,
+    payload
+  );
+  return response.data!;
+}
+
+
 

@@ -18,6 +18,8 @@ import {
   Check,
   ExternalLink,
   CheckCircle2,
+  Printer,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatPrice } from "@/lib/utils";
@@ -31,6 +33,9 @@ interface OrderDetailViewProps {
   onCancel?: () => void;
   isCancelling?: boolean;
   canCancel?: boolean;
+  onRequestReturn?: () => void;
+  isReturning?: boolean;
+  canReturn?: boolean;
 }
 
 function getStatusBadgeMeta(status?: string) {
@@ -81,6 +86,9 @@ export function OrderDetailView({
   onCancel,
   isCancelling = false,
   canCancel = false,
+  onRequestReturn,
+  isReturning = false,
+  canReturn = false,
 }: OrderDetailViewProps) {
   const [awbCopied, setAwbCopied] = useState(false);
   const [liveTrackingOpen, setLiveTrackingOpen] = useState(false);
@@ -131,13 +139,16 @@ export function OrderDetailView({
       ? `${Math.round(totalWeightKg * 1000)} g`
       : `${Math.round(totalWeightKg * 1000000)} mg`;
 
+  const courierPartnerName =
+    delivery?.deliveryPartner?.name ||
+    delivery?.courierPartnerName ||
+    (Number(shippingCharge) === 200 ? "MSS (Mettur Super Services)" : "Shiprocket Multi-Carrier");
+
   const weightDetails =
     totalWeightKg > 0
       ? {
           formattedWeight,
-          courierName:
-            delivery?.deliveryPartner?.name ||
-            (Number(shippingCharge) === 200 ? "MSS" : "ST Courier"),
+          courierName: courierPartnerName,
         }
       : null;
 
@@ -193,8 +204,45 @@ export function OrderDetailView({
               Cancel Order
             </Button>
           )}
+
+          {/* Request Return Action for Delivered Orders */}
+          {canReturn && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-purple-700 border-purple-200 hover:bg-purple-50 rounded-xl text-xs font-semibold min-h-[36px]"
+              onClick={onRequestReturn}
+              disabled={isReturning}
+            >
+              {isReturning ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Request Return
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Return Request Active Notice */}
+      {(order as any).returnRequest && (
+        <div className="flex items-start gap-3 rounded-2xl border border-purple-200 bg-purple-50 p-4 text-purple-900 shadow-2xs">
+          <RotateCcw className="h-5 w-5 text-purple-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h4 className="text-xs sm:text-sm font-bold text-purple-950">
+              Return Request {(order as any).returnRequest.status === "approved" ? "Approved" : (order as any).returnRequest.status === "picked_up" ? "Picked Up" : "Under Review"}
+            </h4>
+            <p className="text-xs text-purple-800 leading-relaxed">
+              {(order as any).returnRequest.status === "approved"
+                ? "Your return request has been approved. Reverse courier pickup is scheduled at your delivery address."
+                : (order as any).returnRequest.status === "picked_up"
+                ? "Package has been picked up by the courier and is on its way to our Kolli Hills warehouse."
+                : "Your return request has been received and is currently under review by our store team. We will arrange doorstep reverse courier pickup upon verification."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Refund Processing Notice for Cancelled Orders */}
       {String(order.status).toLowerCase() === "cancelled" &&
@@ -344,7 +392,7 @@ export function OrderDetailView({
                         Courier Partner
                       </div>
                       <div className="font-bold text-sm text-theme-text-primary">
-                        {delivery.deliveryPartner?.name || "ST Courier"}
+                        {delivery.deliveryPartner?.name || delivery.courierPartnerName || courierPartnerName}
                       </div>
                       {delivery.deliveryPartner?.contactNumber && (
                         <div className="text-[11px] text-theme-text-muted mt-0.5">
@@ -395,6 +443,19 @@ export function OrderDetailView({
                           <Truck className="h-3.5 w-3.5" />
                           <span>Live Tracking Timeline</span>
                         </button>
+
+                        {delivery.labelUrl && (
+                          <a
+                            href={delivery.labelUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors cursor-pointer"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            <span>Print Shipping Label</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
                       </div>
                     </div>
 
@@ -410,7 +471,7 @@ export function OrderDetailView({
                       Pending Dispatch
                     </span>
                     <p className="text-xs text-theme-text-muted mt-2">
-                      Order will be dispatched via ST Courier once packed.
+                      Order will be dispatched via {courierPartnerName} once packed.
                     </p>
                   </div>
                 )}
