@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { ArrowLeft, RefreshCw, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   useCustomerOrderDetail,
@@ -239,17 +240,13 @@ export default function OrderDetailPage() {
             <label className="block text-xs font-bold uppercase tracking-wider text-theme-text-primary mb-1.5">
               Reason for Return *
             </label>
-            <select
+            <Select
               value={returnReason}
-              onChange={(e) => setReturnReason(e.target.value)}
-              className="w-full py-2 px-3 rounded-xl border border-theme-border bg-theme-surface text-xs font-semibold text-theme-text-primary focus:border-theme-primary outline-none"
-            >
-              {RETURN_REASONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
+              onValueChange={(val) => setReturnReason(val)}
+              options={RETURN_REASONS.map((r) => ({ value: r, label: r }))}
+              placeholder="Select a reason for return"
+              size="md"
+            />
           </div>
 
           <div>

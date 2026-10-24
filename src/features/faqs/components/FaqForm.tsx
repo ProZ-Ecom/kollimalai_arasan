@@ -11,6 +11,9 @@ import { FormTextarea } from "@/components/forms/form-textarea";
 import { FormSelect } from "@/components/forms/form-select";
 import { FormSwitch } from "@/components/forms/FormSwitch";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
+import { Select, type SelectOption } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/forms/label";
 import { FAQ_ICON_OPTIONS, type FaqIconKey } from "../constants/faq-icons";
 import { FAQ_ICON_COMPONENTS } from "../constants/faq-icon-map";
 import type { FaqDto, FaqStatus } from "../types/faq.types";
@@ -84,7 +87,6 @@ export function FaqForm({
   onCancel,
   onSubmit,
 }: FaqFormProps) {
-  const categoryListId = React.useId();
 
   const getFormDefaults = React.useCallback(
     (): FaqFormData => ({
@@ -108,6 +110,29 @@ export function FaqForm({
   const isActive = useWatch({ control, name: "isActive" });
   const answer = useWatch({ control, name: "answer" });
   const icon = useWatch({ control, name: "icon" });
+  const currentCategory = useWatch({ control, name: "category" });
+
+  const [isAddingNewCategory, setIsAddingNewCategory] = React.useState(false);
+  const [newCategoryName, setNewCategoryName] = React.useState("");
+
+  const categoryOptions = React.useMemo(() => {
+    const list: SelectOption[] = [
+      { value: "", label: "No Category (General / Unassigned)" },
+      ...categories.map((c) => ({ value: c, label: c })),
+      { value: "__NEW_CATEGORY__", label: "+ Add / Type New Category..." },
+    ];
+    if (
+      currentCategory &&
+      !categories.includes(currentCategory) &&
+      currentCategory !== "__NEW_CATEGORY__"
+    ) {
+      list.splice(list.length - 1, 0, {
+        value: currentCategory,
+        label: currentCategory,
+      });
+    }
+    return list;
+  }, [categories, currentCategory]);
 
   const resetToDefaults = React.useCallback(() => {
     reset(getFormDefaults());
@@ -193,19 +218,58 @@ export function FaqForm({
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <FormInput
-                name="category"
-                label="Category"
-                maxLength={100}
-                placeholder="e.g. Orders & Shipping"
-                list={categoryListId}
-                description="Optional. Leave empty to list this FAQ without a group."
-              />
-              <datalist id={categoryListId}>
-                {categories.map((category) => (
-                  <option key={category} value={category} />
-                ))}
-              </datalist>
+              {isAddingNewCategory ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="new-faq-category">New Category Name</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingNewCategory(false);
+                        setValue("category", "", { shouldDirty: true });
+                      }}
+                      className="text-xs text-theme-primary hover:underline font-semibold cursor-pointer"
+                    >
+                      ← Choose existing
+                    </button>
+                  </div>
+                  <Input
+                    id="new-faq-category"
+                    placeholder="e.g. Orders & Shipping"
+                    maxLength={100}
+                    value={newCategoryName}
+                    onChange={(e) => {
+                      setNewCategoryName(e.target.value);
+                      setValue("category", e.target.value, { shouldDirty: true });
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the name of your new category.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="faq-category-select">Category</Label>
+                  <Select
+                    id="faq-category-select"
+                    value={currentCategory || ""}
+                    onValueChange={(val) => {
+                      if (val === "__NEW_CATEGORY__") {
+                        setIsAddingNewCategory(true);
+                        setNewCategoryName("");
+                        setValue("category", "", { shouldDirty: true });
+                      } else {
+                        setValue("category", val, { shouldDirty: true });
+                      }
+                    }}
+                    options={categoryOptions}
+                    placeholder="Select category or enter new..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Optional. FAQs are grouped by category on the customer FAQ page.
+                  </p>
+                </div>
+              )}
             </div>
 
             <FormInput

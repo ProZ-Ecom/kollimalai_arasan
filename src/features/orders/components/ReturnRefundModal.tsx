@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { FormModal } from "@/components/common/FormModal";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { useReturnAdminOrder } from "@/features/orders/hooks";
 import { formatPrice } from "@/lib/utils";
 import {
@@ -462,17 +463,13 @@ export function ReturnRefundModal({
             <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5">
               Admin Payment Mode
             </label>
-            <select
+            <Select
               value={paymentMode}
-              onChange={(e) => setPaymentMode(e.target.value)}
-              className="w-full py-2 px-3 rounded-lg border border-neutral-300 text-xs font-semibold text-neutral-800 focus:border-secondary-600 focus:ring-1 focus:ring-secondary-600 outline-none"
-            >
-              {PAYMENT_MODES.map((mode) => (
-                <option key={mode} value={mode}>
-                  {mode}
-                </option>
-              ))}
-            </select>
+              onValueChange={(val) => setPaymentMode(val)}
+              options={PAYMENT_MODES.map((mode) => ({ value: mode, label: mode }))}
+              placeholder="Select Payment Mode"
+              size="sm"
+            />
           </div>
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5">
@@ -518,17 +515,13 @@ export function ReturnRefundModal({
           <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5">
             Refund Reason
           </label>
-          <select
+          <Select
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            className="w-full py-2 px-3 rounded-lg border border-neutral-300 text-xs font-medium text-neutral-800 focus:border-secondary-600 focus:ring-1 focus:ring-secondary-600 outline-none"
-          >
-            {PRESET_REASONS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+            onValueChange={(val) => setReason(val)}
+            options={PRESET_REASONS.map((r) => ({ value: r, label: r }))}
+            placeholder="Select Refund Reason"
+            size="sm"
+          />
         </div>
 
         {/* Admin Notes */}

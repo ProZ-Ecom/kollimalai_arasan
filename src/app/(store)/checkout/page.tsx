@@ -27,6 +27,7 @@ import {
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { formatPrice, cn } from "@/lib/utils";
 import { formatMeasurementLabel } from "@/features/variants/utils/measurement.util";
 import { ICONS, contacts } from "@/constants/storefront";
@@ -1107,18 +1108,16 @@ export default function CheckoutPage() {
                       <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
                         Select Post Office / Locality ({pincodePostalData.postOffices.length} found)
                       </label>
-                      <select
+                      <Select
                         value={newAddressForm.addressLine2}
-                        onChange={(e) => handleAddressFieldChange("addressLine2", e.target.value)}
-                        className="w-full min-h-[44px] rounded-xl border border-theme-border-input bg-white px-3 text-xs text-theme-text-primary focus:outline-none focus:border-theme-primary transition-colors cursor-pointer"
-                      >
-                        <option value="">-- Choose your nearest Post Office / Area --</option>
-                        {pincodePostalData.postOffices.map((po) => (
-                          <option key={po.name} value={po.name}>
-                            {po.name} ({po.branchType} • {po.deliveryStatus})
-                          </option>
-                        ))}
-                      </select>
+                        onValueChange={(val) => handleAddressFieldChange("addressLine2", val)}
+                        placeholder="-- Choose your nearest Post Office / Area --"
+                        options={pincodePostalData.postOffices.map((po) => ({
+                          value: po.name,
+                          label: `${po.name} (${po.branchType} • ${po.deliveryStatus})`,
+                        }))}
+                        size="md"
+                      />
                       <p className="mt-1 text-[11px] text-theme-text-muted">
                         Selecting your post office helps delivery executives locate your address accurately.
                       </p>
