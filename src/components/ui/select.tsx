@@ -219,6 +219,8 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       }
     };
 
+    const triggerButtonRef = React.useRef<HTMLButtonElement | null>(null);
+
     return (
       <div
         className={cn("w-full relative", wrapperClassName, isOpen && "z-[60]")}
@@ -229,6 +231,11 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={(node) => {
             hiddenSelectRef.current = node;
+            if (node) {
+              node.focus = (options?: FocusOptions) => {
+                triggerButtonRef.current?.focus(options);
+              };
+            }
             if (typeof ref === "function") {
               ref(node);
             } else if (ref) {
@@ -236,13 +243,14 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             }
           }}
           name={name}
-          id={id}
+          id={id ? `${id}-hidden-native-select` : undefined}
           value={internalValue}
           onChange={onChange || (() => {})}
           disabled={disabled}
           tabIndex={-1}
           aria-hidden="true"
-          className="sr-only pointer-events-none"
+          style={{ display: "none" }}
+          className="hidden"
           {...props}
         >
           {placeholder && (
@@ -259,6 +267,8 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 
         {/* Custom Select Trigger Button */}
         <button
+          ref={triggerButtonRef}
+          id={id || name}
           type="button"
           disabled={disabled}
           onClick={() => !disabled && setIsOpen((prev) => !prev)}
@@ -268,6 +278,10 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             "outline-none focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/20",
             isOpen
               ? "border-theme-primary ring-2 ring-theme-primary/20 bg-theme-surface"
+              : variant === "warm"
+              ? "border-theme-border-input bg-theme-surface-warm hover:border-theme-border"
+              : variant === "ghost"
+              ? "border-transparent bg-transparent hover:bg-theme-surface-warm"
               : "border-theme-border hover:border-theme-border-accent hover:bg-theme-surface-warm",
             error && "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10",
             disabled && "cursor-not-allowed bg-theme-surface-alt opacity-60 hover:border-theme-border",
@@ -276,6 +290,8 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           aria-invalid={!!error}
+          aria-label={props["aria-label"]}
+          aria-labelledby={props["aria-labelledby"]}
         >
           <div className="flex items-center gap-2 truncate">
             {leftIcon && (
