@@ -87,9 +87,37 @@ interface ShiprocketTrackingResponse {
 // In-memory token cache to prevent spamming Shiprocket's login endpoint
 let cachedToken: string | null = null;
 let cachedEmail: string | null = null;
+let cachedIsSandbox: boolean | null = null;
 let tokenExpiresAt: number = 0;
 
-const SHIPROCKET_BASE_URL = "https://apiv2.shiprocket.in/v1/external";
+export function isShiprocketSandbox(): boolean {
+  syncShiprocketEnv();
+  return process.env.SHIPROCKET_TEST_MODE === "true";
+}
+
+export function getShiprocketBaseUrl(): string {
+  return isShiprocketSandbox()
+    ? "https://api-sandbox.shiprocket.in/v1/external"
+    : "https://apiv2.shiprocket.in/v1/external";
+}
+
+export function getShiprocketHeaders(token?: string): Record<string, string> {
+  const isSandbox = isShiprocketSandbox();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  if (isSandbox) {
+    headers.Origin = "https://sandbox.shiprocket.in";
+    headers.Referer = "https://sandbox.shiprocket.in/";
+    headers["User-Agent"] =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+  }
+  return headers;
+}
 
 function syncShiprocketEnv() {
   if (typeof window !== "undefined") return;
@@ -122,6 +150,7 @@ export async function getShiprocketToken(): Promise<string> {
   syncShiprocketEnv();
   const email = process.env.SHIPROCKET_EMAIL;
   const password = process.env.SHIPROCKET_PASSWORD;
+  const isSandbox = isShiprocketSandbox();
 
   if (!email || !password) {
     throw new Error(
@@ -130,22 +159,21 @@ export async function getShiprocketToken(): Promise<string> {
   }
 
   const now = Date.now();
-  if (cachedToken && cachedEmail === email && tokenExpiresAt > now) {
+  if (cachedToken && cachedEmail === email && cachedIsSandbox === isSandbox && tokenExpiresAt > now) {
     return cachedToken;
   }
 
-  const res = await fetch(`${SHIPROCKET_BASE_URL}/auth/login`, {
+  const baseUrl = getShiprocketBaseUrl();
+  const res = await fetch(`${baseUrl}/auth/login`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers: getShiprocketHeaders(),
     body: JSON.stringify({ email, password }),
   });
 
   if (!res.ok) {
     cachedToken = null;
     cachedEmail = null;
+    cachedIsSandbox = null;
     const errorText = await res.text();
     console.error("Shiprocket authentication error:", res.status, errorText);
     throw new Error(`Shiprocket Auth Failed (${res.status}): ${errorText}`);
@@ -158,6 +186,7 @@ export async function getShiprocketToken(): Promise<string> {
 
   cachedToken = data.token;
   cachedEmail = email;
+  cachedIsSandbox = isSandbox;
   // Cache for 23 hours (Shiprocket tokens expire in 24 hours)
   tokenExpiresAt = now + 23 * 60 * 60 * 1000;
   return cachedToken;
@@ -234,7 +263,8 @@ export async function checkShiprocketServiceability(params: {
   const weight = Math.max(0.1, params.weightKg || 0.5);
   const cod = params.isCod ? 1 : 0;
 
-  const url = `${SHIPROCKET_BASE_URL}/courier/serviceability?pickup_postcode=${encodeURIComponent(
+  const baseUrl = getShiprocketBaseUrl();
+  const url = `${baseUrl}/courier/serviceability?pickup_postcode=${encodeURIComponent(
     pickup
   )}&delivery_postcode=${encodeURIComponent(
     delivery
@@ -242,10 +272,7 @@ export async function checkShiprocketServiceability(params: {
 
   const res = await fetch(url, {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+    headers: getShiprocketHeaders(token),
   });
 
   if (!res.ok) {
@@ -374,13 +401,10 @@ export async function createShiprocketOrder(
     weight: Math.max(0.1, Number(data.totalWeightKg.toFixed(3))),
   };
 
-  const res = await fetch(`${SHIPROCKET_BASE_URL}/orders/create/adhoc`, {
+  const baseUrl = getShiprocketBaseUrl();
+  const res = await fetch(`${baseUrl}/orders/create/adhoc`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+    headers: getShiprocketHeaders(token),
     body: JSON.stringify(payload),
   });
 
@@ -417,13 +441,10 @@ export async function assignShiprocketAwb(
     body.courier_id = courierId;
   }
 
-  const res = await fetch(`${SHIPROCKET_BASE_URL}/courier/assign/awb`, {
+  const baseUrl = getShiprocketBaseUrl();
+  const res = await fetch(`${baseUrl}/courier/assign/awb`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+    headers: getShiprocketHeaders(token),
     body: JSON.stringify(body),
   });
 
@@ -455,13 +476,10 @@ export async function generateShiprocketLabel(
 ): Promise<string> {
   const token = await getShiprocketToken();
 
-  const res = await fetch(`${SHIPROCKET_BASE_URL}/courier/generate/label`, {
+  const baseUrl = getShiprocketBaseUrl();
+  const res = await fetch(`${baseUrl}/courier/generate/label`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+    headers: getShiprocketHeaders(token),
     body: JSON.stringify({ shipment_id: [shipmentId] }),
   });
 
@@ -490,13 +508,10 @@ export async function requestShiprocketPickup(
     body.pickup_date = [pickupDate];
   }
 
-  const res = await fetch(`${SHIPROCKET_BASE_URL}/courier/generate/pickup`, {
+  const baseUrl = getShiprocketBaseUrl();
+  const res = await fetch(`${baseUrl}/courier/generate/pickup`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+    headers: getShiprocketHeaders(token),
     body: JSON.stringify(body),
   });
 
@@ -513,14 +528,12 @@ export async function requestShiprocketPickup(
 export async function trackShiprocketAwb(awbCode: string) {
   const token = await getShiprocketToken();
 
+  const baseUrl = getShiprocketBaseUrl();
   const res = await fetch(
-    `${SHIPROCKET_BASE_URL}/courier/track/awb/${encodeURIComponent(awbCode)}`,
+    `${baseUrl}/courier/track/awb/${encodeURIComponent(awbCode)}`,
     {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
+      headers: getShiprocketHeaders(token),
     }
   );
 
@@ -665,13 +678,10 @@ export async function createShiprocketReturnOrder(
     weight: Math.max(0.1, Number(data.totalWeightKg.toFixed(3))),
   };
 
-  const res = await fetch(`${SHIPROCKET_BASE_URL}/orders/create/return`, {
+  const baseUrl = getShiprocketBaseUrl();
+  const res = await fetch(`${baseUrl}/orders/create/return`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+    headers: getShiprocketHeaders(token),
     body: JSON.stringify(payload),
   });
 
