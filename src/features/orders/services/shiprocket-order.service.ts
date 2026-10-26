@@ -14,6 +14,35 @@ export interface ShipWithShiprocketOptions {
   courierId?: number;
 }
 
+async function getOrCreateShiprocketPartner() {
+  let partner = await db.delivery_partners.findFirst({
+    where: {
+      is_active: true,
+      OR: [
+        { code: "SHIPROCKET" },
+        { code: "SHIPROCKET_MOCK" },
+        { courier_type: "shiprocket" },
+        { courier_type: "shiprocket_mock" },
+        { name: { contains: "Shiprocket" } },
+      ],
+    },
+  });
+
+  if (!partner) {
+    partner = await db.delivery_partners.create({
+      data: {
+        code: "SHIPROCKET",
+        name: "Shiprocket Express",
+        courier_type: "shiprocket",
+        contact_number: "011-41187600",
+        is_active: true,
+      },
+    });
+  }
+
+  return partner;
+}
+
 export async function shipOrderViaShiprocket(
   adminSessionUserId: string,
   orderIdentifier: string,
@@ -193,12 +222,7 @@ export async function shipOrderViaShiprocket(
       courierName = awbResult.courierName;
     } catch (awbErr: any) {
       // Find or use SHIPROCKET partner to link the shipment
-      const shiprocketPartner = await db.delivery_partners.findFirst({
-        where: {
-          is_active: true,
-          OR: [{ code: "SHIPROCKET" }, { courier_type: "shiprocket" }],
-        },
-      });
+      const shiprocketPartner = await getOrCreateShiprocketPartner();
 
       const existingShipment = await db.shipments.findFirst({
         where: { order_id: order.id, is_active: true },
@@ -240,12 +264,7 @@ export async function shipOrderViaShiprocket(
   }
 
   // 5. Find or use SHIPROCKET partner
-  const shiprocketPartner = await db.delivery_partners.findFirst({
-    where: {
-      is_active: true,
-      OR: [{ code: "SHIPROCKET" }, { courier_type: "shiprocket" }],
-    },
-  });
+  const shiprocketPartner = await getOrCreateShiprocketPartner();
 
   // 6. Update database transactionally
   await db.$transaction(async (tx) => {

@@ -32,6 +32,7 @@ interface ShipOrderModalProps {
   customerName?: string;
   initialPartnerCode?: string;
   initialTrackingNumber?: string;
+  isCod?: boolean;
   onSuccess?: () => void;
 }
 
@@ -43,6 +44,7 @@ export function ShipOrderModal({
   customerName,
   initialPartnerCode,
   initialTrackingNumber,
+  isCod,
   onSuccess,
 }: ShipOrderModalProps) {
   const { data: partners = [], isLoading: partnersLoading } = useDeliveryPartners();
@@ -59,7 +61,7 @@ export function ShipOrderModal({
     labelUrl?: string | null;
   } | null>(null);
 
-  // Default to ST Courier or existing courier
+  // Default to Shiprocket for COD, or ST Courier / existing courier for prepaid
   useEffect(() => {
     if (open) {
       if (initialTrackingNumber) {
@@ -73,29 +75,98 @@ export function ShipOrderModal({
       setShiprocketSuccess(null);
 
       if (partners.length > 0) {
-        const matchedPartner = initialPartnerCode
-          ? partners.find(
-              (p) =>
-                p.code?.toLowerCase() === initialPartnerCode.toLowerCase() ||
-                p.name?.toLowerCase().includes(initialPartnerCode.toLowerCase())
-            )
-          : null;
-        const stPartner = partners.find(
+        const shiprocketPartner = partners.find(
           (p) =>
-            p.code === "ST_COURIER" ||
-            p.name.toLowerCase().includes("st courier")
+            p.code?.toUpperCase() === "SHIPROCKET" ||
+            p.name.toLowerCase().includes("shiprocket")
         );
-        setSelectedPartnerId(String(matchedPartner ? matchedPartner.id : stPartner ? stPartner.id : partners[0].id));
+
+        if (isCod) {
+          // If COD, MUST default to Shiprocket
+          setSelectedPartnerId(
+            String(shiprocketPartner ? shiprocketPartner.id : partners[0].id)
+          );
+        } else {
+          const matchedPartner = initialPartnerCode
+            ? partners.find(
+                (p) =>
+                  p.code?.toLowerCase() === initialPartnerCode.toLowerCase() ||
+                  p.name?.toLowerCase().includes(initialPartnerCode.toLowerCase())
+              )
+            : null;
+          const stPartner = partners.find(
+            (p) =>
+              p.code === "ST_COURIER" ||
+              p.name.toLowerCase().includes("st courier")
+          );
+          setSelectedPartnerId(
+            String(
+              matchedPartner
+                ? matchedPartner.id
+                : stPartner
+                ? stPartner.id
+                : partners[0].id
+            )
+          );
+        }
       }
     }
-  }, [open, partners, initialPartnerCode, initialTrackingNumber]);
+  }, [open, partners, initialPartnerCode, initialTrackingNumber, isCod]);
+
+  // Keep partner locked to Shiprocket if order is COD
+  useEffect(() => {
+    if (isCod && partners.length > 0) {
+      const shiprocketPartner = partners.find(
+        (p) =>
+          p.code?.toUpperCase() === "SHIPROCKET" ||
+          p.name.toLowerCase().includes("shiprocket")
+      );
+      if (
+        shiprocketPartner &&
+        String(selectedPartnerId) !== String(shiprocketPartner.id)
+      ) {
+        setSelectedPartnerId(String(shiprocketPartner.id));
+      }
+    }
+  }, [isCod, partners, selectedPartnerId]);
 
   const partnerOptions: SelectOption[] = useMemo(() => {
-    return partners.map((partner) => ({
-      value: String(partner.id),
-      label: `${partner.name} (${partner.code})`,
-    }));
-  }, [partners]);
+    if (isCod) {
+      // For COD orders: Only allow Shiprocket partner
+      const shiprocketPartners = partners.filter(
+        (p) =>
+          p.code?.toUpperCase() === "SHIPROCKET" ||
+          p.name.toLowerCase().includes("shiprocket")
+      );
+      if (shiprocketPartners.length > 0) {
+        return shiprocketPartners.map((partner) => {
+          const cleanName = partner.name
+            .replace(/\(Sandbox\)|\(Test Mode\)/gi, "")
+            .trim() || partner.name;
+          return {
+            value: String(partner.id),
+            label: `${cleanName} — Exclusive COD Partner`,
+          };
+        });
+      }
+      return [
+        {
+          value: selectedPartnerId || "SHIPROCKET",
+          label: "Shiprocket Express — Exclusive COD Partner",
+        },
+      ];
+    }
+
+    return partners.map((partner) => {
+      const cleanName = partner.name
+        .replace(/\(Sandbox\)|\(Test Mode\)/gi, "")
+        .trim() || partner.name;
+      return {
+        value: String(partner.id),
+        label: `${cleanName} (${partner.code})`,
+      };
+    });
+  }, [partners, isCod, selectedPartnerId]);
 
   const activePartner = useMemo(() => {
     return partners.find((p) => String(p.id) === String(selectedPartnerId));
@@ -152,6 +223,13 @@ export function ShipOrderModal({
 
     if (!selectedPartnerId) {
       setValidationError("Please select a courier partner");
+      return;
+    }
+
+    if (isCod && !isShiprocket) {
+      setValidationError(
+        "This order was placed with Cash on Delivery (COD). COD orders must be assigned to Shiprocket Express."
+      );
       return;
     }
 
@@ -312,11 +390,28 @@ export function ShipOrderModal({
           </div>
         )}
 
+        {/* COD Notice Banner */}
+        {isCod && (
+          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-start gap-2.5">
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+            <div className="leading-relaxed">
+              <span className="font-bold">Cash on Delivery (COD) Order:</span> This customer selected Cash on Delivery. ST Courier and MSS Cargo do not support Cash on Delivery. The courier service is restricted exclusively to <strong>Shiprocket Express</strong>.
+            </div>
+          </div>
+        )}
+
         {/* Courier Partner Selection */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider">
-            Courier Service Partner <span className="text-red-500">*</span>
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider">
+              Courier Service Partner <span className="text-red-500">*</span>
+            </label>
+            {isCod && (
+              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                Shiprocket Only (COD)
+              </span>
+            )}
+          </div>
           {partnersLoading ? (
             <div className="h-11 w-full bg-neutral-100 rounded-xl animate-pulse" />
           ) : (

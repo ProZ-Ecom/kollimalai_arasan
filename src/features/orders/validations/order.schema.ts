@@ -22,14 +22,36 @@ export const PAYMENT_STATUS_ENUM = [
 
 export const customerCreateOrderSchema = z
   .object({
-    shippingAddressId: z.string().uuid("Invalid shippingAddressId UUID format"),
-    billingAddressId: z.string().uuid("Invalid billingAddressId UUID format").optional(),
+    shippingAddressId: z.string().min(1, "Shipping address is required"),
+    billingAddressId: z.string().min(1).optional(),
     notes: z.string().max(500, "Notes cannot exceed 500 characters").optional(),
-    paymentMethod: z.enum(["CARD", "UPI", "WHATSAPP", "CALL"]).default("CARD").optional(),
+    paymentMethod: z
+      .enum(["CARD", "UPI", "WHATSAPP", "CALL", "COD", "CASH_ON_DELIVERY"])
+      .default("CARD")
+      .optional(),
     paymentDetails: z.record(z.string(), z.any()).optional(),
-    courierType: z.enum(["st_courier", "mss", "shiprocket"]).default("st_courier").optional(),
+    courierType: z
+      .enum(["st_courier", "mss", "shiprocket"])
+      .default("st_courier")
+      .optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (data) => {
+      const isCod =
+        data.paymentMethod === "COD" ||
+        data.paymentMethod === "CASH_ON_DELIVERY";
+      if (isCod && data.courierType && data.courierType !== "shiprocket") {
+        return false;
+      }
+      return true;
+    },
+    {
+      message:
+        "Cash on Delivery (COD) is only supported with the Shiprocket courier partner",
+      path: ["courierType"],
+    }
+  );
 
 export type CustomerCreateOrderInput = z.infer<typeof customerCreateOrderSchema>;
 
@@ -184,6 +206,7 @@ export const placeOrderSchema = z
     deliveryMethod: z.string().optional().default("STANDARD"),
     couponCode: z.string().trim().max(50).optional(),
     paymentMethod: z.string().optional(),
+    courierType: z.enum(["st_courier", "mss", "shiprocket"]).optional(),
     notes: z.string().max(500).optional(),
     paymentDetails: z.record(z.string(), z.any()).optional(),
   })

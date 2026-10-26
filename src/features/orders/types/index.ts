@@ -94,6 +94,8 @@ export interface OrderListItemResponse {
   customer: OrderCustomerDto;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
+  isCod?: boolean;
+  paymentMethod?: string | null;
   subtotal: number;
   discountAmount: number;
   taxAmount: number;
@@ -193,6 +195,7 @@ export interface PlaceOrderInput {
   addressId?: number | string | null;
   billingAddressId?: string;
   deliveryMethod?: string;
+  courierType?: "st_courier" | "mss" | "shiprocket" | string;
   couponCode?: string | null;
   paymentMethod?: string;
   notes?: string;

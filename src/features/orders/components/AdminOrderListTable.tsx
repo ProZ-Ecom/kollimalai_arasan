@@ -19,6 +19,7 @@ import {
   ExternalLink,
   Send,
   RotateCcw,
+  Rocket,
 } from "lucide-react";
 import { DataTable } from "@/components/admin/data-table/DataTable";
 import { BulkActionsBar } from "@/components/admin/data-table/BulkActionsBar";
@@ -59,6 +60,43 @@ import {
   type OrderStatus,
   type PaymentStatus,
 } from "@/features/orders/types";
+
+export function getCleanCourierDisplay(
+  rawName?: string | null,
+  isShiprocket?: boolean
+): { label: string; full: string } {
+  if (!rawName) {
+    return isShiprocket
+      ? { label: "Shiprocket Express", full: "Shiprocket Express" }
+      : { label: "ST Courier", full: "ST Courier" };
+  }
+
+  // Remove debug/test mode/sandbox noise
+  const cleaned = rawName
+    .replace(/\(Sandbox\)|\(Test Mode\)|Sandbox|Test Mode/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (isShiprocket || cleaned.toLowerCase().includes("shiprocket")) {
+    const match = cleaned.match(/Shiprocket\s*\(([^)]+)\)/i);
+    if (match && match[1]) {
+      const carrier = match[1].replace(/Surface|Express|Standard/gi, "").trim() || match[1].trim();
+      return {
+        label: `Shiprocket · ${carrier}`,
+        full: cleaned || `Shiprocket (${carrier})`,
+      };
+    }
+    return {
+      label: "Shiprocket Express",
+      full: cleaned || "Shiprocket Express",
+    };
+  }
+
+  return {
+    label: cleaned || "ST Courier",
+    full: cleaned || "ST Courier",
+  };
+}
 
 interface AdminOrderListTableProps {
   status?: OrderStatus;
@@ -103,6 +141,7 @@ export function AdminOrderListTable({
     customerName?: string;
     partnerCode?: string;
     trackingNumber?: string;
+    isCod?: boolean;
   } | null>(null);
 
   const [liveTrackingModal, setLiveTrackingModal] = useState<{
@@ -236,6 +275,11 @@ export function AdminOrderListTable({
       cell: ({ row }) => (
         <div className="space-y-1">
           <PaymentStatusBadge status={row.original.paymentStatus} />
+          {row.original.isCod && (
+            <span className="inline-flex items-center gap-1 rounded bg-amber-100 text-amber-900 px-1.5 py-0.5 text-[10px] font-bold border border-amber-300">
+              COD · Shiprocket
+            </span>
+          )}
         </div>
       ),
     },
@@ -263,16 +307,42 @@ export function AdminOrderListTable({
         const orderStatus = (row.original.status || "").toLowerCase();
         const assignmentStatus = (delivery?.assignmentStatus || "pending").toLowerCase();
 
-        // 1. Courier Delivery (ST Courier / Tracking Number)
+        // 1. Courier Delivery (Shiprocket / ST Courier / Tracking Number)
         if (trackingNum) {
-          const partnerName = delivery.deliveryPartner?.name || "ST Courier";
+          const isShiprocket = Boolean(
+            delivery.deliveryPartner?.code?.toUpperCase().includes("SHIPROCKET") ||
+            delivery.deliveryPartner?.name?.toLowerCase().includes("shiprocket") ||
+            delivery.courierPartnerName?.toLowerCase().includes("shiprocket") ||
+            trackingNum.startsWith("TEST-SR-") ||
+            trackingNum.startsWith("SR-") ||
+            row.original.isCod
+          );
+
+          const rawPartnerName =
+            delivery.deliveryPartner?.name ||
+            delivery.courierPartnerName ||
+            (isShiprocket ? "Shiprocket Express" : "ST Courier");
+
+          const courierDisplay = getCleanCourierDisplay(rawPartnerName, isShiprocket);
 
           return (
-            <div className="leading-tight max-w-[210px]">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-secondary-800 bg-secondary-50 border border-secondary-200 px-2 py-0.5 rounded-full">
-                  <Truck className="h-3 w-3 text-secondary-600" />
-                  {partnerName}
+            <div className="leading-tight w-full max-w-[210px] min-w-0">
+              <div className="flex items-center justify-between gap-1.5 min-w-0">
+                <span
+                  title={courierDisplay.full}
+                  className={cn(
+                    "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border min-w-0 max-w-[155px]",
+                    isShiprocket
+                      ? "text-emerald-800 bg-emerald-50 border-emerald-200"
+                      : "text-secondary-800 bg-secondary-50 border-secondary-200"
+                  )}
+                >
+                  {isShiprocket ? (
+                    <Rocket className="h-3 w-3 text-emerald-600 shrink-0" />
+                  ) : (
+                    <Truck className="h-3 w-3 text-secondary-600 shrink-0" />
+                  )}
+                  <span className="truncate">{courierDisplay.label}</span>
                 </span>
                 <button
                   type="button"
@@ -281,32 +351,43 @@ export function AdminOrderListTable({
                       id: row.original.id,
                       orderNumber: row.original.orderNumber,
                       customerName: row.original.customer?.name,
-                      partnerCode: delivery.deliveryPartner?.code,
+                      partnerCode: delivery.deliveryPartner?.code || (isShiprocket ? "SHIPROCKET" : undefined),
                       trackingNumber: trackingNum,
+                      isCod: row.original.isCod,
                     })
                   }
                   title="Edit Courier Tracking"
-                  className="text-[10px] text-neutral-400 hover:text-secondary-600 underline cursor-pointer"
+                  className={cn(
+                    "text-[10px] underline cursor-pointer shrink-0 ml-auto font-medium",
+                    isShiprocket
+                      ? "text-neutral-400 hover:text-emerald-700"
+                      : "text-neutral-400 hover:text-secondary-600"
+                  )}
                 >
                   Edit
                 </button>
               </div>
-              <div className="flex items-center gap-1 text-[11px] font-mono text-neutral-700 font-semibold mt-1">
+              <div className="flex items-center gap-1 text-[11px] font-mono text-neutral-700 font-semibold mt-1 min-w-0">
                 <button
                   type="button"
                   onClick={() =>
                     setLiveTrackingModal({
                       open: true,
                       awb: trackingNum,
-                      courierName: partnerName,
+                      courierName: courierDisplay.full,
                       orderNumber: row.original.orderNumber,
                     })
                   }
-                  title="Open Live ST Courier Tracking"
-                  className="text-secondary-700 hover:text-secondary-900 font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  title={`Open Live ${courierDisplay.label} Tracking`}
+                  className={cn(
+                    "font-bold hover:underline inline-flex items-center gap-1 cursor-pointer min-w-0 max-w-full",
+                    isShiprocket
+                      ? "text-emerald-700 hover:text-emerald-900"
+                      : "text-secondary-700 hover:text-secondary-900"
+                  )}
                 >
-                  <span>AWB: {trackingNum}</span>
-                  <ExternalLink className="h-3 w-3 text-secondary-600" />
+                  <span className="truncate">AWB: {trackingNum}</span>
+                  <ExternalLink className={cn("h-3 w-3 shrink-0", isShiprocket ? "text-emerald-600" : "text-secondary-600")} />
                 </button>
               </div>
             </div>
@@ -421,20 +502,24 @@ export function AdminOrderListTable({
             </span>
             {["confirmed", "processing", "packed"].includes(orderStatus) && (
               <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setAssignStaffOrder({
-                      id: row.original.id,
-                      orderNumber: row.original.orderNumber,
-                    })
-                  }
-                  title="Assign Delivery Staff"
-                  className="text-[11px] font-semibold text-secondary-600 hover:underline cursor-pointer"
-                >
-                  Staff
-                </button>
-                <span className="text-neutral-300">|</span>
+                {!row.original.isCod && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAssignStaffOrder({
+                          id: row.original.id,
+                          orderNumber: row.original.orderNumber,
+                        })
+                      }
+                      title="Assign Delivery Staff"
+                      className="text-[11px] font-semibold text-secondary-600 hover:underline cursor-pointer"
+                    >
+                      Staff
+                    </button>
+                    <span className="text-neutral-300">|</span>
+                  </>
+                )}
                 <button
                   type="button"
                   onClick={() =>
@@ -442,13 +527,22 @@ export function AdminOrderListTable({
                       id: row.original.id,
                       orderNumber: row.original.orderNumber,
                       customerName: row.original.customer?.name,
-                      partnerCode: delivery?.deliveryPartner?.code,
+                      partnerCode: delivery?.deliveryPartner?.code || (row.original.isCod ? "SHIPROCKET" : undefined),
+                      trackingNumber: delivery?.trackingNumber || "",
+                      isCod: row.original.isCod,
                     })
                   }
-                  title={`Ship via ${delivery?.deliveryPartner?.name || "Courier"}`}
-                  className="text-[11px] font-semibold text-amber-700 hover:underline cursor-pointer"
+                  title={
+                    row.original.isCod
+                      ? "Ship via Shiprocket Express (Exclusive COD Partner)"
+                      : `Ship via ${delivery?.deliveryPartner?.name || "Courier"}`
+                  }
+                  className={cn(
+                    "text-[11px] font-semibold hover:underline cursor-pointer",
+                    row.original.isCod ? "text-emerald-700 font-bold" : "text-amber-700"
+                  )}
                 >
-                  Courier
+                  {row.original.isCod ? "Shiprocket (COD)" : "Courier"}
                 </button>
               </div>
             )}
@@ -460,7 +554,7 @@ export function AdminOrderListTable({
       accessorKey: "placedAt",
       header: "Placed At",
       cell: ({ row }) => (
-        <div className="leading-snug text-xs text-neutral-700">
+        <div className="leading-snug text-xs text-neutral-700 whitespace-nowrap min-w-[95px]">
           <div>
             {new Date(
               row.original.placedAt || row.original.createdAt
@@ -547,35 +641,36 @@ export function AdminOrderListTable({
             {orderStatus === "packed" && (
               <>
                 {/* 1. Staff assignment button (if not already accepted by staff) */}
-                {row.original.delivery?.assignmentStatus?.toLowerCase() !== "accepted" && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAssignStaffOrder({
-                        id: row.original.id,
-                        orderNumber: row.original.orderNumber,
-                      })
-                    }
-                    title={
-                      row.original.delivery?.assignmentStatus?.toLowerCase() === "rejected"
-                        ? "Reassign Delivery Staff (Previous staff declined)"
-                        : row.original.delivery?.isAssigned && row.original.delivery?.staff
-                        ? "Change Delivery Staff"
-                        : "Assign Delivery Staff"
-                    }
-                    className={cn(
-                      "grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer shadow-xs",
-                      row.original.delivery?.assignmentStatus?.toLowerCase() === "rejected"
-                        ? "border-rose-600 bg-rose-600 text-white hover:bg-rose-700"
-                        : row.original.delivery?.isAssigned && row.original.delivery?.staff
-                        ? "border-amber-600 bg-amber-600 text-white hover:bg-amber-700"
-                        : "border-secondary-600 bg-secondary-600 text-white hover:bg-secondary-700"
-                    )}
-                    disabled={isTransitionPending}
-                  >
-                    <Truck className="h-3.5 w-3.5" />
-                  </button>
-                )}
+                {row.original.delivery?.assignmentStatus?.toLowerCase() !== "accepted" &&
+                  !row.original.isCod && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAssignStaffOrder({
+                          id: row.original.id,
+                          orderNumber: row.original.orderNumber,
+                        })
+                      }
+                      title={
+                        row.original.delivery?.assignmentStatus?.toLowerCase() === "rejected"
+                          ? "Reassign Delivery Staff (Previous staff declined)"
+                          : row.original.delivery?.isAssigned && row.original.delivery?.staff
+                          ? "Change Delivery Staff"
+                          : "Assign Delivery Staff"
+                      }
+                      className={cn(
+                        "grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer shadow-xs",
+                        row.original.delivery?.assignmentStatus?.toLowerCase() === "rejected"
+                          ? "border-rose-600 bg-rose-600 text-white hover:bg-rose-700"
+                          : row.original.delivery?.isAssigned && row.original.delivery?.staff
+                          ? "border-amber-600 bg-amber-600 text-white hover:bg-amber-700"
+                          : "border-secondary-600 bg-secondary-600 text-white hover:bg-secondary-700"
+                      )}
+                      disabled={isTransitionPending}
+                    >
+                      <Truck className="h-3.5 w-3.5" />
+                    </button>
+                  )}
 
                 {/* 2. Ship via Courier button */}
                 <button
@@ -587,10 +682,20 @@ export function AdminOrderListTable({
                       customerName: row.original.customer?.name,
                       partnerCode: row.original.delivery?.deliveryPartner?.code,
                       trackingNumber: row.original.delivery?.trackingNumber || "",
+                      isCod: row.original.isCod,
                     })
                   }
-                  title="Ship via Courier (ST Courier)"
-                  className="grid h-8 w-8 place-items-center rounded-lg border border-amber-600 bg-amber-600 text-white hover:bg-amber-700 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+                  title={
+                    row.original.isCod
+                      ? "Ship via Shiprocket Express (COD Order)"
+                      : "Ship via Courier (ST Courier)"
+                  }
+                  className={cn(
+                    "grid h-8 w-8 place-items-center rounded-lg border text-white text-xs font-semibold transition-all cursor-pointer shadow-xs",
+                    row.original.isCod
+                      ? "border-emerald-600 bg-emerald-600 hover:bg-emerald-700"
+                      : "border-amber-600 bg-amber-600 hover:bg-amber-700"
+                  )}
                   disabled={isTransitionPending}
                 >
                   <Send className="h-3.5 w-3.5" />
@@ -599,23 +704,49 @@ export function AdminOrderListTable({
             )}
 
             {/* Quick Live Tracking Button for Active Courier Shipments */}
-            {row.original.delivery?.trackingNumber && (
-              <button
-                type="button"
-                onClick={() =>
-                  setLiveTrackingModal({
-                    open: true,
-                    awb: row.original.delivery!.trackingNumber!,
-                    courierName: row.original.delivery?.deliveryPartner?.name || "ST Courier",
-                    orderNumber: row.original.orderNumber,
-                  })
-                }
-                title="Live Shipment Tracking"
-                className="grid h-8 w-8 place-items-center rounded-lg border border-secondary-600 bg-secondary-50 text-secondary-700 hover:bg-secondary-100 text-xs font-semibold transition-all cursor-pointer shadow-xs"
-              >
-                <Truck className="h-3.5 w-3.5 text-secondary-700 animate-pulse" />
-              </button>
-            )}
+            {row.original.delivery?.trackingNumber && (() => {
+              const trackingNum = row.original.delivery.trackingNumber;
+              const isShiprocket = Boolean(
+                row.original.delivery.deliveryPartner?.code?.toUpperCase().includes("SHIPROCKET") ||
+                row.original.delivery.deliveryPartner?.name?.toLowerCase().includes("shiprocket") ||
+                row.original.delivery.courierPartnerName?.toLowerCase().includes("shiprocket") ||
+                trackingNum.startsWith("TEST-SR-") ||
+                trackingNum.startsWith("SR-") ||
+                row.original.isCod
+              );
+              const rawPartnerName =
+                row.original.delivery.deliveryPartner?.name ||
+                row.original.delivery.courierPartnerName ||
+                (isShiprocket ? "Shiprocket Express" : "ST Courier");
+              const courierDisplay = getCleanCourierDisplay(rawPartnerName, isShiprocket);
+
+              return (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLiveTrackingModal({
+                      open: true,
+                      awb: trackingNum,
+                      courierName: courierDisplay.full,
+                      orderNumber: row.original.orderNumber,
+                    })
+                  }
+                  title={`Live Shipment Tracking (${courierDisplay.label})`}
+                  className={cn(
+                    "grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer shadow-xs",
+                    isShiprocket
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                      : "border-secondary-600 bg-secondary-50 text-secondary-700 hover:bg-secondary-100"
+                  )}
+                >
+                  {isShiprocket ? (
+                    <Rocket className="h-3.5 w-3.5 text-emerald-700 animate-pulse" />
+                  ) : (
+                    <Truck className="h-3.5 w-3.5 text-secondary-700 animate-pulse" />
+                  )}
+                </button>
+              );
+            })()}
 
             {/* Process Return / Refund button - ONLY shown when customer raises return or cancelled order needs refund, and not yet refunded */}
             {row.original.paymentStatus !== "refunded" &&
@@ -912,26 +1043,33 @@ export function AdminOrderListTable({
 
                 {currentDetailStatus === "packed" && (
                   <>
-                    <Button
-                      size="sm"
-                      className="bg-secondary-600 hover:bg-secondary-700 text-white cursor-pointer"
-                      onClick={() => {
-                        setAssignStaffOrder({
-                          id: orderDetail.id,
-                          orderNumber: orderDetail.orderNumber,
-                        });
-                      }}
-                      disabled={isTransitionPending}
-                    >
-                      <Truck className="mr-1.5 h-4 w-4" />
-                      {orderDetail.delivery?.isAssigned && orderDetail.delivery?.staff
-                        ? "Reassign Staff"
-                        : "Assign Staff"}
-                    </Button>
+                    {!orderDetail.isCod && (
+                      <Button
+                        size="sm"
+                        className="bg-secondary-600 hover:bg-secondary-700 text-white cursor-pointer"
+                        onClick={() => {
+                          setAssignStaffOrder({
+                            id: orderDetail.id,
+                            orderNumber: orderDetail.orderNumber,
+                          });
+                        }}
+                        disabled={isTransitionPending}
+                      >
+                        <Truck className="mr-1.5 h-4 w-4" />
+                        {orderDetail.delivery?.isAssigned && orderDetail.delivery?.staff
+                          ? "Reassign Staff"
+                          : "Assign Staff"}
+                      </Button>
+                    )}
 
                     <Button
                       size="sm"
-                      className="bg-amber-600 hover:bg-amber-700 text-white cursor-pointer"
+                      className={cn(
+                        "text-white cursor-pointer",
+                        orderDetail.isCod
+                          ? "bg-emerald-600 hover:bg-emerald-700"
+                          : "bg-amber-600 hover:bg-amber-700"
+                      )}
                       onClick={() => {
                         setShipCourierOrder({
                           id: orderDetail.id,
@@ -939,12 +1077,13 @@ export function AdminOrderListTable({
                           customerName: orderDetail.customer?.name,
                           partnerCode: orderDetail.delivery?.deliveryPartner?.code,
                           trackingNumber: orderDetail.delivery?.trackingNumber || "",
+                          isCod: orderDetail.isCod,
                         });
                       }}
                       disabled={isTransitionPending}
                     >
                       <Send className="mr-1.5 h-4 w-4" />
-                      Ship via Courier
+                      {orderDetail.isCod ? "Ship via Shiprocket (COD)" : "Ship via Courier"}
                     </Button>
                   </>
                 )}
@@ -1039,6 +1178,7 @@ export function AdminOrderListTable({
         customerName={shipCourierOrder?.customerName}
         initialPartnerCode={shipCourierOrder?.partnerCode}
         initialTrackingNumber={shipCourierOrder?.trackingNumber}
+        isCod={shipCourierOrder?.isCod}
         onSuccess={() => {
           refetch();
           if (viewOrderId) {

@@ -90,6 +90,7 @@ export default function CheckoutPaymentPage() {
           addressId: checkout.addressId,
           shippingAddressId: String(checkout.addressId),
           deliveryMethod: checkout.deliveryMethod,
+          courierType: "shiprocket",
           couponCode: checkout.couponCode ?? undefined,
           paymentMethod: "CASH_ON_DELIVERY",
           notes: checkout.notes || undefined,

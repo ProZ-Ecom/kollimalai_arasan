@@ -139,10 +139,15 @@ export function OrderDetailView({
       ? `${Math.round(totalWeightKg * 1000)} g`
       : `${Math.round(totalWeightKg * 1000000)} mg`;
 
-  const courierPartnerName =
+  const rawCourierPartnerName =
     delivery?.deliveryPartner?.name ||
     delivery?.courierPartnerName ||
-    (Number(shippingCharge) === 200 ? "MSS (Mettur Super Services)" : "Shiprocket Multi-Carrier");
+    (Number(shippingCharge) === 200 ? "MSS (Mettur Super Services)" : "Shiprocket Express");
+
+  const courierPartnerName = rawCourierPartnerName
+    .replace(/\(Sandbox\)|\(Test Mode\)|Sandbox|Test Mode/gi, "")
+    .replace(/\s+/g, " ")
+    .trim() || rawCourierPartnerName;
 
   const weightDetails =
     totalWeightKg > 0

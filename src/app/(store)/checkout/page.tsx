@@ -25,6 +25,9 @@ import {
   Phone,
   Clock,
   Check,
+  Banknote,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -36,6 +39,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useCustomerAddresses,
   useCreateCustomerAddress,
+  useUpdateCustomerAddress,
+  useDeleteCustomerAddress,
 } from "@/features/customers/hooks/use-customer-address";
 import {
   useCreateCustomerOrder,
@@ -114,6 +119,8 @@ export default function CheckoutPage() {
   const { data: addresses = [], isLoading: addressesLoading } =
     useCustomerAddresses();
   const createAddressMutation = useCreateCustomerAddress();
+  const updateAddressMutation = useUpdateCustomerAddress();
+  const deleteAddressMutation = useDeleteCustomerAddress();
   const createOrderMutation = useCreateCustomerOrder();
   const createRazorpayOrderMutation = useCreateRazorpayOrder();
   const verifyRazorpayPaymentMutation = useVerifyRazorpayPayment();
@@ -123,16 +130,24 @@ export default function CheckoutPage() {
   const [courierType, setCourierType] = useState<"st_courier" | "mss" | "shiprocket">(
     "st_courier"
   );
-  const [paymentMethod, setPaymentMethod] = useState<"CARD" | "WHATSAPP" | "CALL">(
-    "CARD"
-  );
+  const [paymentMethod, setPaymentMethod] = useState<
+    "CARD" | "COD" | "WHATSAPP" | "CALL"
+  >("CARD");
   const [orderNotes, setOrderNotes] = useState<string>("");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // In-flight payment guard
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [isPlacingCodOrder, setIsPlacingCodOrder] = useState(false);
   const [pendingOrder] = useState<null>(null);
+
+  // CRITICAL FLOW GUARD: If customer chooses Cash On Delivery (COD), the courier partner MUST be Shiprocket only!
+  useEffect(() => {
+    if (paymentMethod === "COD" && courierType !== "shiprocket") {
+      setCourierType("shiprocket");
+    }
+  }, [paymentMethod, courierType]);
 
   // Reset in-flight payment loading state when user returns to this page (BFCache / browser Back button)
   useEffect(() => {
@@ -157,8 +172,11 @@ export default function CheckoutPage() {
   }, []);
 
 
-  // Add Address Modal state
+  // Add / Edit Address state
   const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [addressToDelete, setAddressToDelete] = useState<CustomerAddressResponse | null>(null);
+  const [deleteAddressError, setDeleteAddressError] = useState<string | null>(null);
   const [newAddressForm, setNewAddressForm] = useState({
     fullName: "",
     phone: "",
@@ -169,12 +187,15 @@ export default function CheckoutPage() {
     state: "Tamil Nadu",
     pincode: "",
     country: "India",
-    addressType: "shipping" as const,
+    addressType: "shipping" as "shipping" | "billing",
     isDefault: true,
   });
   const [addressFieldErrors, setAddressFieldErrors] = useState<Record<string, string>>({});
   const [touchedAddressFields, setTouchedAddressFields] = useState<Record<string, boolean>>({});
   const [addressFormError, setAddressFormError] = useState<string | null>(null);
+
+  const isSavingAddress =
+    createAddressMutation.isPending || updateAddressMutation.isPending;
 
   // India Post PIN code verification hook
   const {
@@ -312,6 +333,7 @@ export default function CheckoutPage() {
 
   const handleCloseAddressForm = () => {
     setIsAddingAddress(false);
+    setEditingAddressId(null);
     resetPincodeVerification();
     setAddressFieldErrors({});
     setTouchedAddressFields({});
@@ -327,8 +349,97 @@ export default function CheckoutPage() {
       pincode: "",
       country: "India",
       addressType: "shipping",
-      isDefault: true,
+      isDefault: addresses.length === 0,
     });
+  };
+
+  const handleStartAddAddress = () => {
+    handleCloseAddressForm();
+    setIsAddingAddress(true);
+    setEditingAddressId(null);
+    setNewAddressForm((prev) => ({
+      ...prev,
+      isDefault: addresses.length === 0,
+    }));
+  };
+
+  const handleStartEditAddress = (
+    addr: CustomerAddressResponse,
+    e?: React.MouseEvent
+  ) => {
+    if (e) e.stopPropagation();
+    setEditingAddressId(addr.id);
+    setIsAddingAddress(true);
+    setAddressFormError(null);
+    setAddressFieldErrors({});
+    setTouchedAddressFields({});
+
+    const rawPhone = addr.phone
+      ? addr.phone.replace(/^\+91/, "").replace(/\D/g, "").slice(-10)
+      : "";
+
+    setNewAddressForm({
+      fullName: addr.fullName || "",
+      phone: rawPhone,
+      addressLine1: addr.addressLine1 || "",
+      addressLine2: addr.addressLine2 || "",
+      landmark: addr.landmark || "",
+      city: addr.city || "",
+      state: addr.state || "Tamil Nadu",
+      pincode: addr.pincode || "",
+      country: addr.country || "India",
+      addressType: (addr.addressType as "shipping" | "billing") || "shipping",
+      isDefault: Boolean(addr.isDefault),
+    });
+
+    if (addr.pincode && addr.pincode.trim().length === 6) {
+      verifyPincode(addr.pincode.trim());
+    } else {
+      resetPincodeVerification();
+    }
+  };
+
+  const handlePromptDeleteAddress = (
+    addr: CustomerAddressResponse,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    setDeleteAddressError(null);
+    setAddressToDelete(addr);
+  };
+
+  const handleConfirmDeleteAddress = async () => {
+    if (!addressToDelete) return;
+    setDeleteAddressError(null);
+
+    try {
+      const targetId = addressToDelete.id;
+      await deleteAddressMutation.mutateAsync(targetId);
+
+      // If the deleted address was currently selected or effective, switch selection
+      if (selectedAddressId === targetId || effectiveAddressId === targetId) {
+        const remaining = addresses.filter((a) => a.id !== targetId);
+        const nextDefault = remaining.find((a) => a.isDefault);
+        if (nextDefault) {
+          setSelectedAddressId(nextDefault.id);
+        } else if (remaining.length > 0) {
+          setSelectedAddressId(remaining[0].id);
+        } else {
+          setSelectedAddressId("");
+        }
+      }
+
+      // If the address was currently being edited, close the edit form
+      if (editingAddressId === targetId) {
+        handleCloseAddressForm();
+      }
+
+      setAddressToDelete(null);
+    } catch (err: any) {
+      setDeleteAddressError(
+        err.message || "Failed to delete address. Please try again."
+      );
+    }
   };
 
 
@@ -375,49 +486,69 @@ export default function CheckoutPage() {
     rate: number;
     courierName: string;
     etd: string;
-    isServiceable: boolean;
   } | null>(null);
   const [isLoadingShiprocketQuote, setIsLoadingShiprocketQuote] = useState(false);
+  const [isShiprocketChecked, setIsShiprocketChecked] = useState(false);
+  const [isShiprocketAvailable, setIsShiprocketAvailable] = useState(false);
+  const [shiprocketErrorMessage, setShiprocketErrorMessage] = useState<string | null>(null);
 
   const stBillableKg = Math.max(1, Math.ceil(totalWeightKg));
 
   useEffect(() => {
     if (!deliveryPincode || !/^\d{6}$/.test(deliveryPincode)) {
       setLiveShiprocketQuote(null);
+      setIsShiprocketChecked(false);
+      setIsShiprocketAvailable(false);
+      setShiprocketErrorMessage(null);
+      setIsLoadingShiprocketQuote(false);
       return;
     }
 
     let isMounted = true;
     setIsLoadingShiprocketQuote(true);
+    setShiprocketErrorMessage(null);
 
+    const codParam = paymentMethod === "COD" ? "&cod=1" : "";
     fetch(
       `/api/shipping/serviceability?pincode=${encodeURIComponent(
         deliveryPincode
-      )}&weight=${totalWeightKg}`
+      )}&weight=${totalWeightKg}${codParam}`
     )
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
-        if (data.success && data.isServiceable && data.recommendedCourier) {
+        setIsShiprocketChecked(true);
+        if (
+          data &&
+          data.success &&
+          data.isServiceable &&
+          data.recommendedCourier &&
+          data.recommendedCourier.rate > 0
+        ) {
           setLiveShiprocketQuote({
             rate: Math.ceil(data.recommendedCourier.rate),
             courierName: data.recommendedCourier.name || "Shiprocket Express",
             etd: data.recommendedCourier.etd || "2 - 5 days",
-            isServiceable: true,
           });
-        } else if (data.success && !data.isServiceable) {
-          setLiveShiprocketQuote({
-            rate: stBillableKg * 60,
-            courierName: "Shiprocket Express",
-            etd: "2 - 5 days",
-            isServiceable: false,
-          });
+          setIsShiprocketAvailable(true);
+          setShiprocketErrorMessage(null);
         } else {
+          // API failed or PIN code is not serviceable: mark unavailable, never fallback to default rate!
           setLiveShiprocketQuote(null);
+          setIsShiprocketAvailable(false);
+          setShiprocketErrorMessage(
+            data?.error || "Shiprocket delivery is unavailable for this PIN code."
+          );
         }
       })
       .catch(() => {
-        if (isMounted) setLiveShiprocketQuote(null);
+        if (!isMounted) return;
+        setIsShiprocketChecked(true);
+        setLiveShiprocketQuote(null);
+        setIsShiprocketAvailable(false);
+        setShiprocketErrorMessage(
+          "Delivery service check failed. Shiprocket is unavailable."
+        );
       })
       .finally(() => {
         if (isMounted) setIsLoadingShiprocketQuote(false);
@@ -426,26 +557,43 @@ export default function CheckoutPage() {
     return () => {
       isMounted = false;
     };
-  }, [deliveryPincode, totalWeightKg, stBillableKg]);
+  }, [deliveryPincode, totalWeightKg, paymentMethod]);
+
+  // If Shiprocket is unavailable for this PIN code, safely fall back to ST Courier / Online Payment
+  useEffect(() => {
+    if (isShiprocketChecked && !isShiprocketAvailable) {
+      if (paymentMethod === "COD") {
+        setPaymentMethod("CARD");
+        setCourierType("st_courier");
+        setCheckoutError(
+          deliveryPincode
+            ? `Cash on Delivery is unavailable because Shiprocket delivery is not available for PIN ${deliveryPincode}. Switched to Online Payment with ST Courier.`
+            : "Cash on Delivery is unavailable. Switched to Online Payment with ST Courier."
+        );
+      } else if (courierType === "shiprocket") {
+        setCourierType("st_courier");
+      }
+    }
+  }, [isShiprocketChecked, isShiprocketAvailable, paymentMethod, courierType, deliveryPincode]);
 
   const stShippingCharge = stBillableKg * 40;
   const shiprocketShippingCharge =
-    liveShiprocketQuote && liveShiprocketQuote.isServiceable && liveShiprocketQuote.rate > 0
-      ? liveShiprocketQuote.rate
-      : stBillableKg * 60;
+    isShiprocketAvailable && liveShiprocketQuote ? liveShiprocketQuote.rate : null;
   const mssShippingCharge = Math.max(1, Math.ceil(totalWeightKg / 20)) * 200;
 
   const baseShippingCharge =
     courierType === "mss"
       ? mssShippingCharge
       : courierType === "shiprocket"
-      ? shiprocketShippingCharge
+      ? (shiprocketShippingCharge ?? 0)
       : stShippingCharge;
   const isWhatsApp = paymentMethod === "WHATSAPP";
   const isCall = paymentMethod === "CALL";
   const isShippingWaived = isWhatsApp || isCall;
   const shippingCharge = isShippingWaived ? 0 : baseShippingCharge;
   const grandTotal = payableBeforeShipping + shippingCharge;
+  const isSelectedCourierUnavailable =
+    courierType === "shiprocket" && isShiprocketChecked && !isShiprocketAvailable;
 
   // Authentication gate
   if (authStatus === "loading" || (cartLoading && !cart) || addressesLoading) {
@@ -508,8 +656,8 @@ export default function CheckoutPage() {
   }
 
 
-  // Handle address form creation
-  const handleCreateAddress = async (e: React.FormEvent) => {
+  // Handle address form creation or update
+  const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddressFormError(null);
 
@@ -553,24 +701,50 @@ export default function CheckoutPage() {
     try {
       const cleanPhone = `+91${newAddressForm.phone.replace(/\D/g, "").slice(-10)}`;
 
-      const created = await createAddressMutation.mutateAsync({
-        fullName: newAddressForm.fullName.trim(),
-        phone: cleanPhone,
-        addressLine1: newAddressForm.addressLine1.trim(),
-        addressLine2: newAddressForm.addressLine2.trim() || undefined,
-        landmark: newAddressForm.landmark.trim() || undefined,
-        city: newAddressForm.city.trim(),
-        state: newAddressForm.state.trim() || "Tamil Nadu",
-        pincode: newAddressForm.pincode.trim(),
-        country: "India",
-        addressType: "shipping",
-        isDefault: newAddressForm.isDefault,
-      });
+      if (editingAddressId) {
+        // UPDATE EXISTING ADDRESS
+        const updated = await updateAddressMutation.mutateAsync({
+          uuid: editingAddressId,
+          data: {
+            fullName: newAddressForm.fullName.trim(),
+            phone: cleanPhone,
+            addressLine1: newAddressForm.addressLine1.trim(),
+            addressLine2: newAddressForm.addressLine2.trim() || null,
+            landmark: newAddressForm.landmark.trim() || null,
+            city: newAddressForm.city.trim(),
+            state: newAddressForm.state.trim() || "Tamil Nadu",
+            pincode: newAddressForm.pincode.trim(),
+            country: "India",
+            addressType: newAddressForm.addressType,
+            isDefault: newAddressForm.isDefault,
+          },
+        });
 
-      setSelectedAddressId(created.id);
-      handleCloseAddressForm();
+        setSelectedAddressId(updated.id);
+        handleCloseAddressForm();
+      } else {
+        // CREATE NEW ADDRESS
+        const created = await createAddressMutation.mutateAsync({
+          fullName: newAddressForm.fullName.trim(),
+          phone: cleanPhone,
+          addressLine1: newAddressForm.addressLine1.trim(),
+          addressLine2: newAddressForm.addressLine2.trim() || undefined,
+          landmark: newAddressForm.landmark.trim() || undefined,
+          city: newAddressForm.city.trim(),
+          state: newAddressForm.state.trim() || "Tamil Nadu",
+          pincode: newAddressForm.pincode.trim(),
+          country: "India",
+          addressType: "shipping",
+          isDefault: newAddressForm.isDefault,
+        });
+
+        setSelectedAddressId(created.id);
+        handleCloseAddressForm();
+      }
     } catch (err: any) {
-      setAddressFormError(err.message || "Failed to save address");
+      setAddressFormError(
+        err.message || (editingAddressId ? "Failed to update address" : "Failed to save address")
+      );
     }
   };
 
@@ -766,6 +940,80 @@ export default function CheckoutPage() {
     window.location.href = `tel:+${KOLLIMALAI_CALL_NUMBER}`;
   };
 
+  // Cash on Delivery (COD) Order Handler
+  const handlePlaceCodOrder = async () => {
+    if (isAdminUser) {
+      setCheckoutError("You are admin kindly comes with customer login");
+      return;
+    }
+
+    if (!effectiveAddressId) {
+      setCheckoutError("Please select or add a delivery address to proceed.");
+      return;
+    }
+
+    if (isShiprocketChecked && !isShiprocketAvailable) {
+      setCheckoutError(
+        deliveryPincode
+          ? `Cash on Delivery is unavailable because Shiprocket delivery is not available for PIN ${deliveryPincode}. Please select Online Payment.`
+          : "Cash on Delivery is unavailable. Please select Online Payment."
+      );
+      return;
+    }
+
+    setIsPlacingCodOrder(true);
+    setCheckoutError(null);
+
+    try {
+      // 1. Pre-order stock validation — ensure no out-of-stock items
+      try {
+        const stockRes = await fetch("/api/customer/cart/validate-stock", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!stockRes.ok) {
+          const stockData = await stockRes.json().catch(() => ({}));
+          setIsPlacingCodOrder(false);
+          setCheckoutError(
+            stockData?.message ||
+              "Some items in your cart are no longer available. Please update your cart."
+          );
+          return;
+        }
+      } catch {
+        // Network error — backend will catch stock validation in transaction
+      }
+
+      // 2. Create customer order with COD (courier partner is forced to Shiprocket)
+      const createdOrder = await createOrderMutation.mutateAsync({
+        shippingAddressId: effectiveAddressId,
+        billingAddressId: effectiveAddressId,
+        notes: orderNotes.trim() || undefined,
+        paymentMethod: "COD",
+        courierType: "shiprocket",
+      });
+
+      setIsOrderPlaced(true);
+      queryClient.invalidateQueries({ queryKey: CUSTOMER_ORDERS_QUERY_KEY, refetchType: "all" });
+      queryClient.invalidateQueries({ queryKey: ["customer", "cart"], refetchType: "all" });
+      queryClient.invalidateQueries({ queryKey: ["cart"], refetchType: "all" });
+
+      const params = new URLSearchParams();
+      if (createdOrder.id) {
+        params.set("orderId", String(createdOrder.id));
+      }
+      if (createdOrder.orderNumber) {
+        params.set("orderNumber", String(createdOrder.orderNumber));
+      }
+      router.push(`/checkout/success${params.toString() ? `?${params.toString()}` : ""}`);
+    } catch (err: any) {
+      setIsPlacingCodOrder(false);
+      setCheckoutError(
+        err.message || "Failed to place Cash on Delivery order. Please try again."
+      );
+    }
+  };
+
   // Place Order Handler
   const handlePlaceOrder = async () => {
     setCheckoutError(null);
@@ -780,7 +1028,21 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (isProcessingPayment || isVerifyingPayment || createOrderMutation.isPending) {
+    if (courierType === "shiprocket" && isShiprocketChecked && !isShiprocketAvailable) {
+      setCheckoutError(
+        deliveryPincode
+          ? `Shiprocket Express is currently unavailable for PIN ${deliveryPincode}. Please select ST Courier or MSS Cargo.`
+          : "Shiprocket Express is currently unavailable. Please select ST Courier or MSS Cargo."
+      );
+      return;
+    }
+
+    if (
+      isProcessingPayment ||
+      isVerifyingPayment ||
+      isPlacingCodOrder ||
+      createOrderMutation.isPending
+    ) {
       return;
     }
 
@@ -791,6 +1053,11 @@ export default function CheckoutPage() {
 
     if (paymentMethod === "CALL") {
       handleOrderByCall();
+      return;
+    }
+
+    if (paymentMethod === "COD") {
+      await handlePlaceCodOrder();
       return;
     }
 
@@ -880,7 +1147,7 @@ export default function CheckoutPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsAddingAddress(true)}
+                  onClick={handleStartAddAddress}
                   className="rounded-xl border-theme-border text-xs font-bold text-theme-primary hover:bg-theme-surface-alt min-h-[36px]"
                 >
                   <Plus className="mr-1 h-3.5 w-3.5" />
@@ -903,7 +1170,7 @@ export default function CheckoutPage() {
                     </p>
                     <Button
                       type="button"
-                      onClick={() => setIsAddingAddress(true)}
+                      onClick={handleStartAddAddress}
                       className="min-h-[44px] rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-semibold px-4"
                     >
                       <Plus className="mr-1.5 h-4 w-4" />
@@ -914,49 +1181,111 @@ export default function CheckoutPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                     {addresses.map((addr) => {
                       const isSelected = effectiveAddressId === addr.id;
+                      const isBeingEdited = editingAddressId === addr.id;
                       return (
                         <div
                           key={addr.id}
                           onClick={() => setSelectedAddressId(addr.id)}
-                          className={`relative rounded-xl border p-4 cursor-pointer transition-all ${isSelected
+                          className={`group relative rounded-xl border p-4 cursor-pointer transition-all flex flex-col justify-between ${isSelected
                             ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
+                            : isBeingEdited
+                            ? "border-amber-400 bg-amber-50/20"
                             : "border-theme-border bg-theme-surface hover:border-theme-border-accent hover:bg-theme-surface-warm"
                             }`}
                         >
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${isSelected
-                                  ? "border-theme-primary bg-theme-primary text-white"
-                                  : "border-theme-border-input bg-white"
-                                  }`}
-                              >
-                                {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
-                              </span>
-                              <span className="font-bold text-sm text-theme-text-primary line-clamp-1">
-                                {addr.fullName}
-                              </span>
+                          <div>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${isSelected
+                                    ? "border-theme-primary bg-theme-primary text-white"
+                                    : "border-theme-border-input bg-white"
+                                    }`}
+                                >
+                                  {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                                </span>
+                                <span className="font-bold text-sm text-theme-text-primary line-clamp-1">
+                                  {addr.fullName}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {isBeingEdited && (
+                                  <span className="rounded-md bg-amber-100 text-amber-800 px-2 py-0.5 text-[10px] font-extrabold">
+                                    Editing
+                                  </span>
+                                )}
+                                {addr.isDefault && (
+                                  <span className="shrink-0 rounded-md bg-theme-status-del-bg px-2 py-0.5 text-[10px] font-extrabold text-theme-status-del-fg">
+                                    Default
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
-                            {addr.isDefault && (
-                              <span className="shrink-0 rounded-md bg-theme-status-del-bg px-2 py-0.5 text-[10px] font-extrabold text-theme-status-del-fg">
-                                Default
-                              </span>
-                            )}
+                            <div className="text-xs text-theme-text-subtle space-y-1 pl-6">
+                              <p className="line-clamp-2">
+                                {addr.addressLine1}
+                                {addr.addressLine2 ? `, ${addr.addressLine2}` : ""}
+                              </p>
+                              {addr.landmark && (
+                                <p className="text-[11px] text-theme-text-muted italic">
+                                  Landmark: {addr.landmark}
+                                </p>
+                              )}
+                              <p>
+                                {addr.city}, {addr.state} - {addr.pincode}
+                              </p>
+                              <p className="flex items-center gap-1 text-theme-text-muted pt-0.5">
+                                <Phone className="h-3 w-3" />
+                                {addr.phone}
+                              </p>
+                            </div>
                           </div>
 
-                          <div className="text-xs text-theme-text-subtle space-y-1 pl-6">
-                            <p className="line-clamp-2">
-                              {addr.addressLine1}
-                              {addr.addressLine2 ? `, ${addr.addressLine2}` : ""}
-                            </p>
-                            <p>
-                              {addr.city}, {addr.state} - {addr.pincode}
-                            </p>
-                            <p className="flex items-center gap-1 text-theme-text-muted pt-0.5">
-                              <Phone className="h-3 w-3" />
-                              {addr.phone}
-                            </p>
+                          {/* Address Card Actions: Set Default, Edit, Delete */}
+                          <div className="flex items-center justify-between pt-3 mt-3 border-t border-theme-border-subtle pl-6">
+                            <div>
+                              {!addr.isDefault ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateAddressMutation.mutate({
+                                      uuid: addr.id,
+                                      data: { isDefault: true },
+                                    });
+                                  }}
+                                  disabled={updateAddressMutation.isPending || deleteAddressMutation.isPending}
+                                  className="text-[11px] font-semibold text-theme-primary hover:text-theme-primary-hover hover:underline cursor-pointer disabled:opacity-50"
+                                >
+                                  Set as default
+                                </button>
+                              ) : null}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={(e) => handleStartEditAddress(addr, e)}
+                                disabled={updateAddressMutation.isPending || deleteAddressMutation.isPending}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border border-theme-border text-theme-text-secondary bg-theme-surface hover:bg-theme-surface-alt hover:text-theme-primary transition-colors cursor-pointer disabled:opacity-50"
+                                title="Edit Address"
+                              >
+                                <Pencil className="h-3 w-3" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handlePromptDeleteAddress(addr, e)}
+                                disabled={updateAddressMutation.isPending || deleteAddressMutation.isPending}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border border-error-200 text-error-600 bg-error-50/50 hover:bg-error-50 hover:text-error-700 transition-colors cursor-pointer disabled:opacity-50"
+                                title="Delete Address"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -966,21 +1295,28 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* Inline Add Address Form */}
+            {/* Inline Add / Edit Address Form */}
             {isAddingAddress && (
               <form
-                onSubmit={handleCreateAddress}
+                onSubmit={handleSaveAddress}
                 noValidate
                 className="rounded-xl border border-theme-border bg-theme-surface-warm p-4 sm:p-5 space-y-4"
               >
                 <div className="flex items-center justify-between border-b border-theme-border pb-2.5">
-                  <h3 className="text-sm font-bold text-theme-text-primary">
-                    New Delivery Address
-                  </h3>
+                  <div>
+                    <h3 className="text-sm font-bold text-theme-text-primary">
+                      {editingAddressId ? "Edit Delivery Address" : "New Delivery Address"}
+                    </h3>
+                    <p className="text-[11px] text-theme-text-muted mt-0.5">
+                      {editingAddressId
+                        ? "Update your recipient details or PIN code below."
+                        : "Enter your complete delivery address for courier dispatch."}
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={handleCloseAddressForm}
-                    className="text-theme-text-subtle hover:text-theme-text-primary"
+                    className="p-1 rounded-lg text-theme-text-subtle hover:text-theme-text-primary hover:bg-theme-surface-alt transition-colors"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -1164,6 +1500,21 @@ export default function CheckoutPage() {
                     />
                   </div>
 
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
+                      Landmark / Nearby Place (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Near Amman Temple, Opposite Primary Health Centre"
+                      value={newAddressForm.landmark}
+                      onChange={(e) =>
+                        handleAddressFieldChange("landmark", e.target.value)
+                      }
+                      className="w-full min-h-[44px] rounded-xl border border-theme-border-input bg-white px-3 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:outline-none focus:border-theme-primary transition-colors"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-xs font-semibold text-theme-text-secondary mb-1">
                       City / District <span className="text-error-600 font-bold ml-0.5">*</span>
@@ -1226,31 +1577,47 @@ export default function CheckoutPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Set as Default Checkbox */}
+                  <label className="flex items-center gap-2 cursor-pointer select-none pt-1 sm:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={newAddressForm.isDefault}
+                      onChange={(e) =>
+                        handleAddressFieldChange("isDefault", e.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-theme-border-input text-theme-primary accent-theme-primary cursor-pointer"
+                    />
+                    <span className="text-xs font-medium text-theme-text-primary">
+                      Set as default delivery address
+                    </span>
+                  </label>
                 </div>
 
-                <div className="flex items-center justify-end gap-2.5 pt-2">
+                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-theme-border/60">
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
+                    disabled={isSavingAddress}
                     onClick={handleCloseAddressForm}
-                    className="min-h-[40px] text-xs font-semibold rounded-xl text-theme-text-subtle"
+                    className="min-h-[40px] text-xs font-semibold rounded-xl text-theme-text-subtle hover:bg-theme-surface-alt"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     size="sm"
-                    disabled={createAddressMutation.isPending}
-                    className="min-h-[40px] px-4 text-xs font-bold rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white"
+                    disabled={isSavingAddress}
+                    className="min-h-[40px] px-5 text-xs font-bold rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white shadow-xs"
                   >
-                    {createAddressMutation.isPending ? (
+                    {isSavingAddress ? (
                       <>
                         <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                        Saving Address...
+                        {editingAddressId ? "Updating Address..." : "Saving Address..."}
                       </>
                     ) : (
-                      "Save Address"
+                      editingAddressId ? "Update Address" : "Save Address"
                     )}
                   </Button>
                 </div>
@@ -1275,24 +1642,47 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            {paymentMethod === "COD" && (
+              <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/90 p-3 text-xs text-amber-900">
+                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <span className="font-bold">Cash On Delivery (COD) Active:</span> ST Courier and MSS Cargo do not support Cash On Delivery. <strong>Shiprocket Express</strong> is the exclusive courier partner enabled for COD orders.
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
               {/* ST Courier */}
               <div
-                onClick={() => setCourierType("st_courier")}
-                className={`rounded-xl border p-4 cursor-pointer transition-all ${courierType === "st_courier"
-                  ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
-                  : "border-theme-border bg-theme-surface hover:border-theme-border-accent"
-                  }`}
+                onClick={() => {
+                  if (paymentMethod === "COD") {
+                    setCheckoutError(
+                      "ST Courier does not support Cash On Delivery (COD). Only Shiprocket Express is available for COD orders."
+                    );
+                    return;
+                  }
+                  setCourierType("st_courier");
+                }}
+                className={`rounded-xl border p-4 transition-all ${
+                  paymentMethod === "COD"
+                    ? "opacity-50 cursor-not-allowed bg-neutral-100/70 border-dashed border-neutral-300 dark:bg-neutral-800/40 select-none"
+                    : courierType === "st_courier"
+                    ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary cursor-pointer"
+                    : "border-theme-border bg-theme-surface hover:border-theme-border-accent cursor-pointer"
+                }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${courierType === "st_courier"
-                        ? "border-theme-primary bg-theme-primary text-white"
-                        : "border-theme-border-input bg-white"
-                        }`}
+                      className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
+                        paymentMethod === "COD"
+                          ? "border-neutral-300 bg-neutral-200"
+                          : courierType === "st_courier"
+                          ? "border-theme-primary bg-theme-primary text-white"
+                          : "border-theme-border-input bg-white"
+                      }`}
                     >
-                      {courierType === "st_courier" && (
+                      {paymentMethod !== "COD" && courierType === "st_courier" && (
                         <Check className="h-2.5 w-2.5 stroke-[3]" />
                       )}
                     </span>
@@ -1318,7 +1708,9 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <p className="text-[11px] text-theme-text-subtle pl-6">
-                  {isWhatsApp
+                  {paymentMethod === "COD"
+                    ? "Unavailable for Cash on Delivery"
+                    : isWhatsApp
                     ? `Rate: ₹40/kg (${stBillableKg} kg) · Waived / Calculated on WhatsApp`
                     : isCall
                     ? `Rate: ₹40/kg (${stBillableKg} kg) · Waived / Confirmed on Call`
@@ -1332,23 +1724,38 @@ export default function CheckoutPage() {
 
               {/* Shiprocket All-India Express */}
               <div
-                onClick={() => setCourierType("shiprocket")}
-                className={`rounded-xl border p-4 cursor-pointer transition-all ${
-                  courierType === "shiprocket"
-                    ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
-                    : "border-theme-border bg-theme-surface hover:border-theme-border-accent"
-                }`}
+                onClick={() => {
+                  if (isShiprocketChecked && !isShiprocketAvailable) {
+                    setCheckoutError(
+                      deliveryPincode
+                        ? `Shiprocket Express is currently unavailable for PIN ${deliveryPincode}. Please select ST Courier or MSS Cargo.`
+                        : "Shiprocket Express is currently unavailable. Please select ST Courier or MSS Cargo."
+                    );
+                    return;
+                  }
+                  setCourierType("shiprocket");
+                  setCheckoutError(null);
+                }}
+                className={cn(
+                  "rounded-xl border p-4 transition-all",
+                  isShiprocketChecked && !isShiprocketAvailable
+                    ? "border-neutral-200 bg-neutral-50/70 opacity-65 cursor-not-allowed"
+                    : courierType === "shiprocket"
+                    ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary cursor-pointer"
+                    : "border-theme-border bg-theme-surface hover:border-theme-border-accent cursor-pointer"
+                )}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
-                        courierType === "shiprocket"
+                      className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded-full border transition-colors",
+                        courierType === "shiprocket" && isShiprocketAvailable
                           ? "border-theme-primary bg-theme-primary text-white"
                           : "border-theme-border-input bg-white"
-                      }`}
+                      )}
                     >
-                      {courierType === "shiprocket" && (
+                      {courierType === "shiprocket" && isShiprocketAvailable && (
                         <Check className="h-2.5 w-2.5 stroke-[3]" />
                       )}
                     </span>
@@ -1359,7 +1766,13 @@ export default function CheckoutPage() {
                     </span>
                   </div>
                   <div className="text-right">
-                    {isShippingWaived ? (
+                    {isLoadingShiprocketQuote ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-400" />
+                    ) : isShiprocketChecked && !isShiprocketAvailable ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
+                        Unavailable
+                      </span>
+                    ) : isShippingWaived ? (
                       <div className="flex items-center gap-1.5">
                         <span className="text-[11px] text-theme-text-muted line-through">
                           ₹{shiprocketShippingCharge}
@@ -1370,51 +1783,80 @@ export default function CheckoutPage() {
                       </div>
                     ) : (
                       <span className="text-xs font-extrabold text-theme-primary flex items-center gap-1">
-                        {isLoadingShiprocketQuote ? (
-                          <Loader2 className="h-3 w-3 animate-spin text-neutral-400" />
-                        ) : (
-                          `₹${shiprocketShippingCharge}`
-                        )}
+                        ₹{shiprocketShippingCharge}
                       </span>
                     )}
                   </div>
                 </div>
-                <p className="text-[11px] text-theme-text-subtle pl-6">
-                  {isWhatsApp
-                    ? (liveShiprocketQuote?.isServiceable
-                        ? `Live rate quote for PIN ${deliveryPincode} • ${liveShiprocketQuote.courierName} · Waived / Calculated on WhatsApp`
-                        : `All-India (Delhivery/Blue Dart) · Waived / Calculated on WhatsApp`)
-                    : isCall
-                    ? (liveShiprocketQuote?.isServiceable
-                        ? `Live rate quote for PIN ${deliveryPincode} • ${liveShiprocketQuote.courierName} · Waived / Confirmed on Call`
-                        : `All-India (Delhivery/Blue Dart) · Waived / Confirmed on Call`)
-                    : (liveShiprocketQuote?.isServiceable
-                        ? `Live rate quote for PIN ${deliveryPincode} • ${liveShiprocketQuote.courierName}`
-                        : `All-India (Delhivery/Blue Dart) • ₹60/kg`)}
+                <p className="text-[11px] pl-6">
+                  {isLoadingShiprocketQuote ? (
+                    <span className="text-theme-text-muted">Checking PIN {deliveryPincode} serviceability...</span>
+                  ) : isShiprocketChecked && !isShiprocketAvailable ? (
+                    <span className="text-rose-600 font-medium">
+                      Service unavailable for PIN {deliveryPincode}. Please select ST Courier or MSS Cargo.
+                    </span>
+                  ) : !deliveryPincode || !/^\d{6}$/.test(deliveryPincode) ? (
+                    <span className="text-theme-text-muted">Enter delivery address with 6-digit PIN code to check rates</span>
+                  ) : isWhatsApp ? (
+                    <span className="text-theme-text-subtle">
+                      Live rate quote for PIN {deliveryPincode} • {liveShiprocketQuote?.courierName || "Shiprocket"} · Waived / Calculated on WhatsApp
+                    </span>
+                  ) : isCall ? (
+                    <span className="text-theme-text-subtle">
+                      Live rate quote for PIN {deliveryPincode} • {liveShiprocketQuote?.courierName || "Shiprocket"} · Waived / Confirmed on Call
+                    </span>
+                  ) : (
+                    <span className="text-theme-text-subtle">
+                      Live rate quote for PIN {deliveryPincode} • {liveShiprocketQuote?.courierName || "Shiprocket"}
+                    </span>
+                  )}
                 </p>
-                <p className="text-[11px] text-theme-text-muted pl-6 flex items-center gap-1 mt-1">
-                  <Clock className="h-3 w-3" />
-                  Est. {liveShiprocketQuote?.etd || "2 - 5 days"} • Pan-India
+                <p className="text-[11px] pl-6 flex items-center gap-1 mt-1">
+                  {isShiprocketChecked && !isShiprocketAvailable ? (
+                    <span className="text-rose-500 font-medium flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3 text-rose-500" />
+                      Shiprocket service unavailable
+                    </span>
+                  ) : (
+                    <span className="text-theme-text-muted flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Est. {liveShiprocketQuote?.etd || "2 - 5 days"} • Pan-India
+                    </span>
+                  )}
                 </p>
               </div>
 
               {/* MSS (Mettur Super Services) */}
               <div
-                onClick={() => setCourierType("mss")}
-                className={`rounded-xl border p-4 cursor-pointer transition-all ${courierType === "mss"
-                  ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary"
-                  : "border-theme-border bg-theme-surface hover:border-theme-border-accent"
-                  }`}
+                onClick={() => {
+                  if (paymentMethod === "COD") {
+                    setCheckoutError(
+                      "MSS Cargo does not support Cash On Delivery (COD). Only Shiprocket Express is available for COD orders."
+                    );
+                    return;
+                  }
+                  setCourierType("mss");
+                }}
+                className={`rounded-xl border p-4 transition-all ${
+                  paymentMethod === "COD"
+                    ? "opacity-50 cursor-not-allowed bg-neutral-100/70 border-dashed border-neutral-300 dark:bg-neutral-800/40 select-none"
+                    : courierType === "mss"
+                    ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-1 ring-theme-primary cursor-pointer"
+                    : "border-theme-border bg-theme-surface hover:border-theme-border-accent cursor-pointer"
+                }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${courierType === "mss"
-                        ? "border-theme-primary bg-theme-primary text-white"
-                        : "border-theme-border-input bg-white"
-                        }`}
+                      className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
+                        paymentMethod === "COD"
+                          ? "border-neutral-300 bg-neutral-200"
+                          : courierType === "mss"
+                          ? "border-theme-primary bg-theme-primary text-white"
+                          : "border-theme-border-input bg-white"
+                      }`}
                     >
-                      {courierType === "mss" && (
+                      {paymentMethod !== "COD" && courierType === "mss" && (
                         <Check className="h-2.5 w-2.5 stroke-[3]" />
                       )}
                     </span>
@@ -1440,7 +1882,9 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <p className="text-[11px] text-theme-text-subtle pl-6">
-                  {isWhatsApp
+                  {paymentMethod === "COD"
+                    ? "Unavailable for Cash on Delivery"
+                    : isWhatsApp
                     ? "Flat ₹200 for 1 to 20 kg · Waived / Calculated on WhatsApp"
                     : isCall
                     ? "Flat ₹200 for 1 to 20 kg · Waived / Confirmed on Call"
@@ -1473,8 +1917,8 @@ export default function CheckoutPage() {
               </span>
             </div>
 
-            {/* Payment Method Selector Tabs: Online vs WhatsApp vs Call */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+            {/* Payment Method Selector Tabs: Online vs COD vs WhatsApp vs Call */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
               {/* Online Payment */}
               <button
                 type="button"
@@ -1490,6 +1934,48 @@ export default function CheckoutPage() {
                 </div>
                 <span className="text-[11px] font-medium text-theme-text-muted">
                   UPI / Cards / NetBanking
+                </span>
+              </button>
+
+              {/* Cash On Delivery (COD) */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isShiprocketChecked && !isShiprocketAvailable) {
+                    setCheckoutError(
+                      deliveryPincode
+                        ? `Cash on Delivery is unavailable because Shiprocket delivery is not available for PIN ${deliveryPincode}. Please select Pay Online.`
+                        : "Cash on Delivery is unavailable. Please select Pay Online."
+                    );
+                    return;
+                  }
+                  setPaymentMethod("COD");
+                  setCourierType("shiprocket");
+                  setCheckoutError(null);
+                }}
+                disabled={isShiprocketChecked && !isShiprocketAvailable}
+                className={cn(
+                  "flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[72px]",
+                  isShiprocketChecked && !isShiprocketAvailable
+                    ? "border-neutral-200 bg-neutral-50/70 text-neutral-400 opacity-60 cursor-not-allowed"
+                    : paymentMethod === "COD"
+                    ? "border-emerald-600 bg-emerald-50/90 font-bold text-emerald-900 shadow-xs ring-1 ring-emerald-600 cursor-pointer"
+                    : "border-theme-border bg-theme-surface text-theme-text-subtle hover:bg-theme-surface-warm cursor-pointer"
+                )}
+              >
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Banknote className="h-4 w-4 text-emerald-700" />
+                  <span className="text-xs font-black text-emerald-900">Cash on Delivery</span>
+                  {isShiprocketChecked && !isShiprocketAvailable && (
+                    <span className="text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-1 rounded">
+                      Unavailable
+                    </span>
+                  )}
+                </div>
+                <span className="text-[11px] font-medium text-theme-text-muted">
+                  {isShiprocketChecked && !isShiprocketAvailable
+                    ? `Unavailable for PIN ${deliveryPincode || ""}`
+                    : "Shiprocket Only · Pay at Door"}
                 </span>
               </button>
 
@@ -1551,6 +2037,27 @@ export default function CheckoutPage() {
                 <p className="text-[11px] text-theme-text-subtle leading-relaxed">
                   Support all UPI apps (GPay, PhonePe, Paytm), Debit/Credit Cards & NetBanking. Instant automated confirmation.
                 </p>
+              </div>
+            )}
+
+            {paymentMethod === "COD" && (
+              <div className="rounded-xl border border-emerald-300 bg-emerald-50/80 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                    <Banknote className="h-4 w-4 text-emerald-700" />
+                    Cash On Delivery (COD) · Powered by Shiprocket
+                  </h3>
+                  <span className="text-[10px] bg-emerald-200/80 text-emerald-900 border border-emerald-300 rounded px-2 py-0.5 font-bold">
+                    Shiprocket Exclusive
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-900 leading-relaxed">
+                  Pay with cash or UPI directly to the delivery courier when your package arrives at your doorstep. Cash On Delivery is exclusively handled and insured through <strong>Shiprocket Express</strong>. ST Courier and MSS Cargo do not support Cash On Delivery.
+                </p>
+                <div className="flex items-center gap-2 text-[11px] text-emerald-800 pt-1 border-t border-emerald-200">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
+                  <span>Exact cash or QR payment is accepted at the time of delivery. Total: {formatPrice(grandTotal)}</span>
+                </div>
               </div>
             )}
 
@@ -1690,9 +2197,14 @@ export default function CheckoutPage() {
                         ? `Shiprocket (${liveShiprocketQuote.courierName})`
                         : "Shiprocket Express"
                       : "ST Courier"}
+                    {paymentMethod === "COD" ? " · COD" : ""}
                     )
                   </span>
-                  {isShippingWaived ? (
+                  {courierType === "shiprocket" && isShiprocketChecked && !isShiprocketAvailable ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
+                      Unavailable
+                    </span>
+                  ) : isShippingWaived ? (
                     <div className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <span className="line-through text-theme-text-muted text-[11px]">
@@ -1718,6 +2230,11 @@ export default function CheckoutPage() {
                     <span className="text-sm font-bold text-theme-text-primary block">
                       Total Amount
                     </span>
+                    {paymentMethod === "COD" && (
+                      <span className="text-[10px] text-emerald-700 font-bold block">
+                        (Payable in cash on delivery)
+                      </span>
+                    )}
                     {isShippingWaived && (
                       <span className="text-[10px] text-theme-text-muted font-medium">
                         (Items Subtotal · Shipping excluded)
@@ -1744,22 +2261,33 @@ export default function CheckoutPage() {
                   createOrderMutation.isPending ||
                   isProcessingPayment ||
                   isVerifyingPayment ||
+                  isPlacingCodOrder ||
                   addressesLoading ||
-                  !effectiveAddressId
+                  !effectiveAddressId ||
+                  isSelectedCourierUnavailable
                 }
                 className={cn(
                   "w-full min-h-[48px] rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2",
                   isAdminUser
                     ? "bg-neutral-200 text-neutral-500 cursor-not-allowed border border-neutral-300 shadow-none hover:bg-neutral-200"
-                    : paymentMethod === "WHATSAPP"
-                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                      : paymentMethod === "CALL"
-                        ? "bg-blue-600 hover:bg-blue-700 text-white"
-                        : "bg-theme-primary hover:bg-theme-primary-hover text-white disabled:opacity-50"
+                    : isSelectedCourierUnavailable
+                      ? "bg-neutral-200 text-neutral-500 cursor-not-allowed border border-neutral-300 shadow-none"
+                      : paymentMethod === "COD"
+                        ? "bg-emerald-700 hover:bg-emerald-800 text-white shadow-md shadow-emerald-700/20"
+                        : paymentMethod === "WHATSAPP"
+                          ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                          : paymentMethod === "CALL"
+                            ? "bg-blue-600 hover:bg-blue-700 text-white"
+                            : "bg-theme-primary hover:bg-theme-primary-hover text-white disabled:opacity-50"
                 )}
               >
                 {isAdminUser ? (
                   "Booking Disabled for Admin"
+                ) : isSelectedCourierUnavailable ? (
+                  <>
+                    <AlertCircle className="mr-2 h-4 w-4" />
+                    Selected Courier Unavailable
+                  </>
                 ) : isVerifyingPayment ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1769,6 +2297,16 @@ export default function CheckoutPage() {
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Opening Payment Gateway...
+                  </>
+                ) : isPlacingCodOrder || createOrderMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Placing Cash on Delivery Order...
+                  </>
+                ) : paymentMethod === "COD" ? (
+                  <>
+                    <Banknote className="mr-2 h-4 w-4" />
+                    Place Order with COD ({formatPrice(grandTotal)})
                   </>
                 ) : paymentMethod === "WHATSAPP" ? (
                   <>
@@ -1794,11 +2332,128 @@ export default function CheckoutPage() {
                 )}
               </Button>
 
+              {/* COD Option in Order Summary Section (Below Pay Button) */}
+              {paymentMethod !== "COD" ? (
+                <div className="pt-2">
+                  <div className="relative flex items-center py-1">
+                    <div className="flex-grow border-t border-theme-border-subtle" />
+                    <span className="flex-shrink mx-2 text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">
+                      Or choose COD
+                    </span>
+                    <div className="flex-grow border-t border-theme-border-subtle" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isShiprocketChecked && !isShiprocketAvailable) {
+                        setCheckoutError(
+                          deliveryPincode
+                            ? `Cash on Delivery is unavailable because Shiprocket delivery is not available for PIN ${deliveryPincode}. Please select Pay Online.`
+                            : "Please select an address first to check Cash on Delivery availability."
+                        );
+                        return;
+                      }
+                      setPaymentMethod("COD");
+                      setCourierType("shiprocket");
+                      setCheckoutError(null);
+                    }}
+                    disabled={isShiprocketChecked && !isShiprocketAvailable}
+                    className={cn(
+                      "w-full rounded-xl border p-3 transition-all text-left flex items-center justify-between group",
+                      isShiprocketChecked && !isShiprocketAvailable
+                        ? "border-neutral-200 bg-neutral-50/70 opacity-60 cursor-not-allowed"
+                        : "border-emerald-300 bg-emerald-50/70 hover:bg-emerald-100/80 hover:border-emerald-400 text-emerald-950 shadow-xs cursor-pointer"
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className={cn(
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
+                          isShiprocketChecked && !isShiprocketAvailable
+                            ? "border-neutral-300 bg-neutral-100 text-neutral-400"
+                            : "border-emerald-300 bg-emerald-100 text-emerald-700"
+                        )}
+                      >
+                        <Banknote className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-theme-text-primary">
+                            Cash on Delivery (COD)
+                          </span>
+                          {isShiprocketChecked && !isShiprocketAvailable ? (
+                            <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded">
+                              Unavailable
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/90 border border-emerald-200 px-1.5 py-0.2 rounded">
+                              Pay at Doorstep
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-theme-text-muted leading-tight mt-0.5">
+                          {isShiprocketChecked && !isShiprocketAvailable
+                            ? `Not available for PIN ${deliveryPincode || ""}`
+                            : "Pay via Cash or QR code on delivery"}
+                        </p>
+                      </div>
+                    </div>
+                    {(!isShiprocketChecked || isShiprocketAvailable) && (
+                      <span className="text-xs font-bold text-emerald-700 group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                        Choose COD &rarr;
+                      </span>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="pt-2">
+                  <div className="rounded-xl border border-emerald-300 bg-emerald-50/90 p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
+                        <Check className="h-4 w-4 stroke-[3]" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-black text-emerald-950">
+                            Cash on Delivery Selected
+                          </span>
+                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-200/80 px-1.5 py-0.2 rounded">
+                            Active
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-emerald-800 leading-tight mt-0.5">
+                          Pay with cash or QR code to courier on delivery
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod("CARD");
+                        setCourierType("st_courier");
+                        setCheckoutError(null);
+                      }}
+                      className="text-xs font-bold text-theme-primary hover:text-theme-primary-hover underline underline-offset-2 ml-2 shrink-0 cursor-pointer"
+                    >
+                      Switch to Online
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="text-[11px] text-center text-theme-text-muted space-y-1 pt-1">
-                <p className="flex items-center justify-center gap-1.5 font-medium text-emerald-700">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                  256-bit Bank-Grade Encryption by Razorpay
-                </p>
+                {paymentMethod === "COD" ? (
+                  <p className="flex items-center justify-center gap-1.5 font-medium text-emerald-700">
+                    <Truck className="h-3.5 w-3.5 text-emerald-600" />
+                    Cash On Delivery exclusively via Shiprocket Express
+                  </p>
+                ) : (
+                  <p className="flex items-center justify-center gap-1.5 font-medium text-emerald-700">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                    256-bit Bank-Grade Encryption by Razorpay
+                  </p>
+                )}
                 <p>Pure hill spices, traditional rice & forest honey from Kolli Hills delivered to your door.</p>
               </div>
 
@@ -1806,6 +2461,98 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Address Confirmation Modal */}
+      {addressToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-md rounded-2xl border border-theme-border bg-theme-surface p-6 shadow-xl space-y-4 animate-in zoom-in-95 duration-200"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-error-50 border border-error-200 text-error-600">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-theme-text-primary">
+                  Delete Address?
+                </h3>
+                <p className="text-xs text-theme-text-subtle">
+                  This address will be removed from your saved addresses.
+                </p>
+              </div>
+            </div>
+
+            {deleteAddressError && (
+              <div className="rounded-xl bg-error-50 border border-error-200 p-3 text-xs text-error-600 font-medium">
+                {deleteAddressError}
+              </div>
+            )}
+
+            <div className="rounded-xl border border-theme-border bg-theme-surface-warm p-3.5 text-xs text-theme-text-secondary space-y-1">
+              <p className="font-bold text-theme-text-primary">
+                {addressToDelete.fullName}
+              </p>
+              <p>
+                {addressToDelete.addressLine1}
+                {addressToDelete.addressLine2 ? `, ${addressToDelete.addressLine2}` : ""}
+              </p>
+              {addressToDelete.landmark && (
+                <p className="text-[11px] text-theme-text-muted italic">
+                  Landmark: {addressToDelete.landmark}
+                </p>
+              )}
+              <p>
+                {addressToDelete.city}, {addressToDelete.state} - {addressToDelete.pincode}
+              </p>
+              <p className="text-theme-text-muted flex items-center gap-1 pt-0.5">
+                <Phone className="h-3 w-3" />
+                {addressToDelete.phone}
+              </p>
+            </div>
+
+            <p className="text-xs text-theme-text-muted">
+              Are you sure you want to delete this address? You can add it back later if needed.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-theme-border-subtle">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={deleteAddressMutation.isPending}
+                onClick={() => {
+                  setAddressToDelete(null);
+                  setDeleteAddressError(null);
+                }}
+                className="min-h-[40px] text-xs font-semibold rounded-xl text-theme-text-subtle hover:bg-theme-surface-alt"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={deleteAddressMutation.isPending}
+                onClick={handleConfirmDeleteAddress}
+                className="min-h-[40px] px-4 text-xs font-bold rounded-xl bg-error-600 hover:bg-error-700 text-white shadow-xs"
+              >
+                {deleteAddressMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete Address
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

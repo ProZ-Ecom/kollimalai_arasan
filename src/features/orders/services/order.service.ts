@@ -206,11 +206,23 @@ export const orderService = {
 
     const paymentMethod = input.paymentMethod || "CARD";
     const isPaid = paymentMethod === "CARD" || paymentMethod === "UPI";
+    const isCod = paymentMethod === "COD" || paymentMethod === "CASH_ON_DELIVERY";
+
+    // Enforce courier rule: If COD is selected, courier partner must be Shiprocket only!
+    let courierType = input.courierType || "st_courier";
+    if (isCod) {
+      if (input.courierType && input.courierType !== "shiprocket") {
+        throw ApiError.badRequest(
+          "Cash on Delivery (COD) is available only with Shiprocket courier partner."
+        );
+      }
+      courierType = "shiprocket";
+    }
+
     const paymentStatus: "paid" | "pending" = isPaid ? "paid" : "pending";
-    const orderStatus: "confirmed" | "pending" = isPaid ? "confirmed" : "pending";
+    const orderStatus: "confirmed" | "pending" = isPaid || isCod ? "confirmed" : "pending";
 
     // Weight-based shipping charge calculation (no free delivery)
-    const courierType = input.courierType || "st_courier";
     let totalWeightKg = 0;
     for (const item of cart.items) {
       const w = calculateVariantWeightKg(item.variant_unit_price);
@@ -220,7 +232,8 @@ export const orderService = {
     const shippingResult = await calculateShippingChargeAsync(
       courierType,
       totalWeightKg,
-      shippingAddress.pincode ?? undefined
+      shippingAddress.pincode ?? undefined,
+      isCod
     );
     const shippingCharge = shippingResult.shippingCharge;
     const payableBeforeShipping = Math.max(0, subtotal - offerDiscount);
@@ -813,6 +826,18 @@ export const orderService = {
           ...(isNumeric ? [{ id: BigInt(uuid) }] : []),
         ],
       },
+      include: {
+        payments: {
+          where: { is_active: true },
+          include: {
+            payment_methods: true,
+          },
+        },
+        order_status_history: {
+          where: { is_active: true },
+          take: 5,
+        },
+      },
     });
 
     if (!order) {
@@ -844,6 +869,34 @@ export const orderService = {
 
     if (!partner) {
       throw ApiError.notFound("Delivery partner not found or is inactive");
+    }
+
+    // Enforce courier partner rule for Cash on Delivery (COD) orders:
+    // If order was placed via COD, the courier partner MUST be Shiprocket only!
+    const isCodOrder =
+      order.payments?.some(
+        (p) =>
+          p.gateway?.toUpperCase() === "COD" ||
+          p.payment_methods?.code?.toUpperCase() === "COD"
+      ) ||
+      (order.notes && order.notes.toLowerCase().includes("cod")) ||
+      order.order_status_history?.some(
+        (h) =>
+          (h.note || "").toLowerCase().includes("cash on delivery") ||
+          (h.note || "").toLowerCase().includes("(cod)")
+      );
+
+    if (isCodOrder) {
+      const isShiprocket =
+        partner.code?.toUpperCase() === "SHIPROCKET" ||
+        (partner as any).courier_type === "shiprocket" ||
+        partner.name.toLowerCase().includes("shiprocket");
+
+      if (!isShiprocket) {
+        throw ApiError.badRequest(
+          "This order was placed with Cash on Delivery (COD). COD orders can only be assigned to Shiprocket courier partner."
+        );
+      }
     }
 
     const trackingNum = input.trackingNumber.trim();
@@ -936,6 +989,7 @@ export const orderService = {
       notes: input.notes,
       paymentMethod: input.paymentMethod || "CARD",
       paymentDetails: input.paymentDetails,
+      courierType: input.courierType,
     });
   },
 

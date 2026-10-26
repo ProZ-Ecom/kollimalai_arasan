@@ -7,8 +7,12 @@ const indiaPhoneSchema = z
   .trim()
   .min(1, "Phone Number is required")
   .transform((val) => {
-    if (/^[6-9]\d{9}$/.test(val)) {
-      return `+91${val}`;
+    const digits = val.replace(/\D/g, "");
+    if (digits.length === 10 && /^[6-9]/.test(digits)) {
+      return `+91${digits}`;
+    }
+    if (digits.length === 12 && digits.startsWith("91") && /^[6-9]/.test(digits.slice(2))) {
+      return `+${digits}`;
     }
     return val;
   })
@@ -20,7 +24,8 @@ const pincodeSchema = z
   .string()
   .trim()
   .min(1, "PIN Code is required")
-  .refine((val) => /^\d{6}$/.test(val), {
+  .transform((val) => val.replace(/\D/g, ""))
+  .refine((val) => /^[1-9]\d{5}$/.test(val), {
     message: "PIN code must be a valid 6-digit Indian postal code (e.g. 637001)",
   });
 

@@ -177,6 +177,9 @@ export const deliveryRepository = {
       where: { uuid, is_active: true },
       include: {
         user: true,
+        payments: {
+          where: { is_active: true },
+        },
       },
     });
   },

@@ -127,6 +127,22 @@ export const orderDetailInclude = Prisma.validator<Prisma.OrderInclude>()({
     orderBy: { id: "desc" },
     take: 1,
   },
+  payments: {
+    where: { is_active: true },
+    select: {
+      id: true,
+      gateway: true,
+      status: true,
+      payment_methods: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+        },
+      },
+    },
+    take: 1,
+  },
 });
 
 export function formatOrderAddress(
@@ -261,14 +277,63 @@ export function formatOrderDelivery(
     assignedAt: latest.created_at ? latest.created_at.toISOString() : null,
     trackingNumber: latest.tracking_number ?? null,
     deliveryPartnerId: latest.delivery_partner_id ? String(latest.delivery_partner_id) : null,
-    deliveryPartner: partner
-      ? {
-          id: String(partner.id),
-          name: partner.name,
-          code: partner.code,
-          contactNumber: partner.contact_number ?? null,
+    deliveryPartner: (() => {
+      const isShiprocket = Boolean(
+        (latest as any).shiprocket_shipment_id ||
+        (latest as any).shiprocket_order_id ||
+        (latest.tracking_number && (latest.tracking_number.startsWith("TEST-SR-") || latest.tracking_number.startsWith("SR-"))) ||
+        partner?.code?.toUpperCase().includes("SHIPROCKET") ||
+        (partner as any)?.courier_type?.toLowerCase().includes("shiprocket") ||
+        partner?.name?.toLowerCase().includes("shiprocket") ||
+        (latest.delivery_notes && latest.delivery_notes.toLowerCase().includes("shiprocket"))
+      );
+
+      let resolvedPartnerName = "ST Courier";
+      if (isShiprocket) {
+        let subCarrier = (latest as any).courier_partner_name || "";
+        subCarrier = subCarrier
+          .replace(/\(Sandbox\)|\(Test Mode\)|Sandbox|Test Mode/gi, "")
+          .trim();
+
+        if (subCarrier && !subCarrier.toLowerCase().includes("shiprocket")) {
+          const cleanCarrier = subCarrier.replace(/Surface|Express|Standard/gi, "").trim() || subCarrier;
+          resolvedPartnerName = `Shiprocket (${cleanCarrier})`;
+        } else {
+          resolvedPartnerName = "Shiprocket Express";
         }
-      : null,
+      } else {
+        const raw = partner?.name || (latest as any).courier_partner_name || "ST Courier";
+        resolvedPartnerName = raw
+          .replace(/\(Sandbox\)|\(Test Mode\)/gi, "")
+          .trim() || "ST Courier";
+      }
+
+      const resolvedPartnerCode = partner
+        ? partner.code
+        : isShiprocket
+        ? "SHIPROCKET"
+        : "ST_COURIER";
+
+      if (partner) {
+        return {
+          id: String(partner.id),
+          name: resolvedPartnerName,
+          code: resolvedPartnerCode,
+          contactNumber: partner.contact_number ?? null,
+        };
+      }
+
+      if (latest.tracking_number || isShiprocket || (latest as any).courier_partner_name) {
+        return {
+          id: isShiprocket ? "shiprocket" : "courier",
+          name: resolvedPartnerName,
+          code: resolvedPartnerCode,
+          contactNumber: null,
+        };
+      }
+
+      return null;
+    })(),
     status: latest.status ?? null,
     shippedAt: latest.shipped_at ? latest.shipped_at.toISOString() : null,
     deliveryNotes: latest.delivery_notes ?? null,
@@ -301,12 +366,31 @@ export function formatOrderDetail(
     formatOrderStatusHistory
   );
 
+  const isCod = Boolean(
+    (order as any).payments?.some(
+      (p: any) =>
+        p.gateway?.toUpperCase() === "COD" ||
+        p.payment_methods?.code?.toUpperCase() === "COD"
+    ) ||
+      ((order as any).notes && (order as any).notes.toLowerCase().includes("cod")) ||
+      (order as any).order_status_history?.some(
+        (h: any) =>
+          (h.note || "").toLowerCase().includes("cash on delivery") ||
+          (h.note || "").toLowerCase().includes("(cod)")
+      )
+  );
+
+  const paymentMethod =
+    (order as any).payments?.[0]?.gateway || (isCod ? "COD" : null);
+
   return {
     id: order.uuid || String(order.id),
     orderNumber: order.orderNumber,
     customer,
     status: order.order_status,
     paymentStatus: order.payment_status,
+    isCod,
+    paymentMethod,
     subtotal: Number(order.subtotal),
     discountAmount: Number(order.discountAmount),
     taxAmount: Number(order.taxAmount),
@@ -368,12 +452,31 @@ export function formatOrderListItem(
     0
   );
 
+  const isCod = Boolean(
+    (order as any).payments?.some(
+      (p: any) =>
+        p.gateway?.toUpperCase() === "COD" ||
+        p.payment_methods?.code?.toUpperCase() === "COD"
+    ) ||
+      ((order as any).notes && (order as any).notes.toLowerCase().includes("cod")) ||
+      (order as any).order_status_history?.some(
+        (h: any) =>
+          (h.note || "").toLowerCase().includes("cash on delivery") ||
+          (h.note || "").toLowerCase().includes("(cod)")
+      )
+  );
+
+  const paymentMethod =
+    (order as any).payments?.[0]?.gateway || (isCod ? "COD" : null);
+
   return {
     id: order.uuid || String(order.id),
     orderNumber: order.orderNumber,
     customer,
     status: order.order_status,
     paymentStatus: order.payment_status,
+    isCod,
+    paymentMethod,
     subtotal: Number(order.subtotal),
     discountAmount: Number(order.discountAmount),
     taxAmount: Number(order.taxAmount),
@@ -568,13 +671,19 @@ export const orderRepository = {
       });
 
       // 4. Create Status History
+      const isCod =
+        params.paymentMethod === "COD" ||
+        params.paymentMethod === "CASH_ON_DELIVERY";
+
       await tx.order_status_history.create({
         data: {
           order_id: createdOrder.id,
           status: (params.orderStatus ?? "pending") as any,
           note:
             params.notes ||
-            (params.paymentStatus === "paid"
+            (isCod
+              ? "Order placed with Cash on Delivery (COD) via Shiprocket Express"
+              : params.paymentStatus === "paid"
               ? `Order confirmed with payment via ${params.paymentMethod ?? "CARD"}`
               : "Order placed by customer"),
           changed_by: params.userId,
@@ -583,6 +692,36 @@ export const orderRepository = {
           updated_by: params.userId,
         },
       });
+
+      // 4a. Create Payment Record for COD orders
+      if (isCod) {
+        let codMethod = await tx.payment_methods.findUnique({
+          where: { code: "COD" },
+        });
+        if (!codMethod) {
+          codMethod = await tx.payment_methods.create({
+            data: {
+              name: "Cash on Delivery",
+              code: "COD",
+              is_active: true,
+            },
+          });
+        }
+
+        await tx.payment.create({
+          data: {
+            orderId: createdOrder.id,
+            payment_method_id: codMethod.id,
+            amount: params.totalAmount,
+            currency: "INR",
+            status: "pending",
+            gateway: "COD",
+            gateway_order_id: `COD_${createdOrder.orderNumber}`,
+            created_by: params.userId,
+            updated_by: params.userId,
+          },
+        });
+      }
 
       // 4b. Create Initial Shipment Record with Selected Courier Partner
       let partnerCode = "ST_COURIER";
@@ -599,6 +738,13 @@ export const orderRepository = {
         where: {
           OR: [
             { code: partnerCode },
+            ...(params.courierType === "shiprocket"
+              ? [
+                  { code: "SHIPROCKET_MOCK" },
+                  { courier_type: "shiprocket_mock" },
+                  { name: { contains: "Shiprocket" } },
+                ]
+              : []),
             { courier_type: params.courierType || "st_courier" },
           ],
           is_active: true,

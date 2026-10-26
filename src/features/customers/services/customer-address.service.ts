@@ -184,8 +184,8 @@ export const customerAddressService = {
     if (data.fullName !== undefined) updateData.full_name = data.fullName;
     if (data.phone !== undefined) updateData.phone = data.phone;
     if (data.addressLine1 !== undefined) updateData.address_line1 = data.addressLine1;
-    if (data.addressLine2 !== undefined) updateData.address_line2 = data.addressLine2;
-    if (data.landmark !== undefined) updateData.landmark = data.landmark;
+    if (data.addressLine2 !== undefined) updateData.address_line2 = data.addressLine2 || null;
+    if (data.landmark !== undefined) updateData.landmark = data.landmark || null;
     if (data.city !== undefined) updateData.city = data.city;
     if (data.state !== undefined) updateData.state = data.state;
     if (data.pincode !== undefined) updateData.pincode = data.pincode;
@@ -194,11 +194,23 @@ export const customerAddressService = {
     if (data.longitude !== undefined) updateData.longitude = data.longitude;
     if (data.isDefault !== undefined) updateData.isDefault = data.isDefault;
 
-    const updated = await customerAddressRepository.updateByUuidAndUserId(
-      uuid,
-      user.internalId,
-      updateData
-    );
+    const updated = await db.$transaction(async (tx) => {
+      if (data.isDefault) {
+        const targetType = (data.addressType || existing.addressType || "shipping") as AddressType;
+        await customerAddressRepository.clearDefaultAddresses(
+          user.internalId,
+          targetType,
+          tx
+        );
+      }
+
+      return customerAddressRepository.updateByUuidAndUserId(
+        uuid,
+        user.internalId,
+        updateData,
+        tx
+      );
+    });
 
     if (!updated) {
       throw ApiError.notFound("Address not found");
@@ -273,9 +285,10 @@ export const customerAddressService = {
           uuid,
           tx
         );
-        if (replacement && replacement.uuid) {
+        if (replacement) {
+          const promoId = replacement.uuid || String(replacement.id);
           await customerAddressRepository.setDefaultAddress(
-            replacement.uuid,
+            promoId,
             user.internalId,
             tx
           );

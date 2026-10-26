@@ -19,7 +19,7 @@ export interface CreateCustomerOrderPayload {
   shippingAddressId: string;
   billingAddressId?: string;
   notes?: string;
-  paymentMethod?: "CARD" | "UPI" | "WHATSAPP" | "CALL";
+  paymentMethod?: "CARD" | "UPI" | "WHATSAPP" | "CALL" | "COD" | "CASH_ON_DELIVERY";
   paymentDetails?: Record<string, any>;
   courierType?: "st_courier" | "mss" | "shiprocket";
 }

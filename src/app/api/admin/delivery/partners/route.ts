@@ -58,6 +58,58 @@ export const GET = createApiHandler(
         }
       }
 
+      // Ensure Shiprocket is active and included so COD and multi-carrier dispatches are always available
+      const hasShiprocket = partners.some(
+        (p) =>
+          p.code?.toUpperCase() === "SHIPROCKET" ||
+          p.name?.toLowerCase().includes("shiprocket")
+      );
+
+      if (!hasShiprocket) {
+        const existingSr = await db.delivery_partners.findFirst({
+          where: {
+            OR: [
+              { code: "SHIPROCKET" },
+              { courier_type: "shiprocket" },
+              { name: { contains: "Shiprocket" } },
+            ],
+          },
+        });
+
+        if (existingSr) {
+          const updated = await db.delivery_partners.update({
+            where: { id: existingSr.id },
+            data: { is_active: true },
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              contact_number: true,
+              is_active: true,
+            },
+          });
+          partners.push(updated);
+        } else {
+          const created = await db.delivery_partners.create({
+            data: {
+              name: "Shiprocket Express",
+              code: "SHIPROCKET",
+              courier_type: "shiprocket",
+              contact_number: "011-41183344",
+              is_active: true,
+            },
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              contact_number: true,
+              is_active: true,
+            },
+          });
+          partners.push(created);
+        }
+      }
+
       const data = partners.map((p) => ({
         id: String(p.id),
         name: p.name,
