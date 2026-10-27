@@ -39,6 +39,12 @@ export async function GET(request: NextRequest) {
           isMSS: true,
           summary: {
             currentStatus: currentStatus.replace(/_/g, " ").toUpperCase(),
+            bookingDate: shipment?.created_at
+              ? new Date(shipment.created_at).toLocaleDateString("en-IN")
+              : null,
+            deliveryDate: shipment?.delivered_at
+              ? new Date(shipment.delivered_at).toLocaleDateString("en-IN")
+              : null,
             bookedDate: shipment?.created_at
               ? new Date(shipment.created_at).toLocaleDateString("en-IN")
               : null,
@@ -230,10 +236,12 @@ export async function GET(request: NextRequest) {
               simulatedDisplay = "DELIVERED";
               result.isDelivered = true;
               if (result.summary) {
-                result.summary.deliveryDate =
+                const deliveryDateStr =
                   shipment.delivered_at
                     ? new Date(shipment.delivered_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                     : (newSimulatedCheckpoints.find((c) => c.isDelivered)?.date || new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }));
+                result.summary.deliveryDate = deliveryDateStr;
+                result.summary.deliveredDate = deliveryDateStr;
               }
             } else if (maxLocalRank === 4) {
               simulatedDisplay = "OUT FOR DELIVERY";
