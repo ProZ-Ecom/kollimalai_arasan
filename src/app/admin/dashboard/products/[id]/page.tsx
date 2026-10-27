@@ -1183,8 +1183,10 @@ export default function AdminProductDetailsPage() {
               if (formData.categoryId !== (product.categoryId || "")) {
                 payload.categoryId = formData.categoryId;
               }
-              if (formData.brandId !== (product.brandId || "")) {
-                payload.brandId = formData.brandId;
+              const formBrand = formData.brandId || null;
+              const origBrand = product.brandId || null;
+              if (formBrand !== origBrand) {
+                payload.brandId = formBrand;
               }
               const formHsn = formData.hsnCodeId || null;
               const origHsn = product.hsnCodeId || null;

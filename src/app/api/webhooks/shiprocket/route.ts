@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/prisma";
 
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    message: "Shiprocket webhook endpoint is active and listening",
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
 
     // Verify webhook payload
     const awb = body.awb || body.awb_code;

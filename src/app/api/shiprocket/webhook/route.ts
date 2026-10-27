@@ -1,1 +1,1 @@
-export { POST } from "../../webhooks/shiprocket/route";
+export { GET, POST } from "../../webhooks/shiprocket/route";

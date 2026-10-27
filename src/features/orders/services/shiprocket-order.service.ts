@@ -203,16 +203,12 @@ export async function shipOrderViaShiprocket(
     }
   }
 
-  // 2. Assign AWB & Auto-Select Courier
+  // 2. Assign AWB & Auto-Select Courier (calls Shiprocket API)
   let awbCode = shiprocketOrder.awb_code || "";
   let courierName = shiprocketOrder.courier_name || "";
   let labelUrl: string | null = null;
 
-  if (isTestMode) {
-    if (!awbCode) awbCode = `TEST-SR-${Date.now().toString().slice(-8)}`;
-    if (!courierName) courierName = "Delhivery Surface (Sandbox)";
-    labelUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
-  } else if (!awbCode) {
+  if (!awbCode) {
     try {
       const awbResult = await assignShiprocketAwb(
         shiprocketOrder.shipment_id,
@@ -221,39 +217,51 @@ export async function shipOrderViaShiprocket(
       awbCode = awbResult.awbCode;
       courierName = awbResult.courierName;
     } catch (awbErr: any) {
-      // Find or use SHIPROCKET partner to link the shipment
-      const shiprocketPartner = await getOrCreateShiprocketPartner();
-
-      const existingShipment = await db.shipments.findFirst({
-        where: { order_id: order.id, is_active: true },
-        orderBy: { id: "desc" },
-      });
-
-      if (existingShipment) {
-        await db.shipments.update({
-          where: { id: existingShipment.id },
-          data: {
-            delivery_partner_id: shiprocketPartner?.id || null,
-            shiprocket_order_id: String(shiprocketOrder.order_id),
-            shiprocket_shipment_id: String(shiprocketOrder.shipment_id),
-            updated_at: new Date(),
+      if (isTestMode) {
+        console.warn("Shiprocket sandbox AWB notice:", awbErr.message);
+        awbCode = `TEST-SR-${Date.now().toString().slice(-8)}`;
+        courierName = "Ecom Express Air (Sandbox)";
+      } else {
+        // Find or use SHIPROCKET partner to link the shipment
+        const shiprocketPartner = await db.delivery_partners.findFirst({
+          where: {
+            is_active: true,
+            OR: [{ code: "SHIPROCKET" }, { courier_type: "shiprocket" }],
           },
         });
-      }
 
-      throw ApiError.badRequest(
-        `Order registered on Shiprocket (#${shiprocketOrder.order_id}), but AWB could not be generated: ${awbErr.message}`
-      );
+        const existingShipment = await db.shipments.findFirst({
+          where: { order_id: order.id, is_active: true },
+          orderBy: { id: "desc" },
+        });
+
+        if (existingShipment) {
+          await db.shipments.update({
+            where: { id: existingShipment.id },
+            data: {
+              delivery_partner_id: shiprocketPartner?.id || null,
+              shiprocket_order_id: String(shiprocketOrder.order_id),
+              shiprocket_shipment_id: String(shiprocketOrder.shipment_id),
+              updated_at: new Date(),
+            },
+          });
+        }
+
+        throw ApiError.badRequest(
+          `Order registered on Shiprocket (#${shiprocketOrder.order_id}), but AWB could not be generated: ${awbErr.message}`
+        );
+      }
     }
   }
 
-  // 3. Generate Shipping Label PDF (if not already set in test mode)
-  if (!labelUrl) {
-    try {
-      labelUrl = await generateShiprocketLabel(shiprocketOrder.shipment_id);
-    } catch (err) {
-      console.warn("Shiprocket label generation delayed:", err);
-    }
+  // 3. Generate Shipping Label PDF (calls Shiprocket API)
+  try {
+    labelUrl = await generateShiprocketLabel(shiprocketOrder.shipment_id);
+  } catch (err) {
+    console.warn("Shiprocket label generation delayed:", err);
+  }
+  if (!labelUrl && isTestMode) {
+    labelUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
   }
 
   // 4. Request Pickup from Warehouse

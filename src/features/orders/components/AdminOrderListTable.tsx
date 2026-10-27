@@ -45,6 +45,7 @@ import {
   useConfirmAdminOrder,
   useProcessAdminOrder,
   usePackAdminOrder,
+  useDeliverAdminOrder,
   useCancelOrderAdmin,
 } from "@/features/orders/hooks";
 import { getAdminOrders } from "@/features/orders/api/get-orders";
@@ -118,6 +119,11 @@ export function AdminOrderListTable({
     orderNumber: string;
   } | null>(null);
 
+  const [deliverOrderConfirm, setDeliverOrderConfirm] = useState<{
+    id: string;
+    orderNumber: string;
+  } | null>(null);
+
   const [returnRefundOrder, setReturnRefundOrder] = useState<{
     id: string;
     orderNumber: string;
@@ -182,6 +188,7 @@ export function AdminOrderListTable({
   const confirmOrder = useConfirmAdminOrder();
   const processOrder = useProcessAdminOrder();
   const packOrder = usePackAdminOrder();
+  const deliverOrder = useDeliverAdminOrder();
   const cancelOrder = useCancelOrderAdmin();
 
   const orders = data?.data ?? [];
@@ -205,6 +212,7 @@ export function AdminOrderListTable({
     confirmOrder.isPending ||
     processOrder.isPending ||
     packOrder.isPending ||
+    deliverOrder.isPending ||
     cancelOrder.isPending;
 
   const currentDetailStatus = orderDetail?.status?.toLowerCase();
@@ -748,6 +756,25 @@ export function AdminOrderListTable({
               );
             })()}
 
+            {/* Quick Deliver Action for Shipped or Out For Delivery Orders */}
+            {(orderStatus === "shipped" ||
+              orderStatus === "out_for_delivery") && (
+              <button
+                type="button"
+                onClick={() =>
+                  setDeliverOrderConfirm({
+                    id: row.original.id,
+                    orderNumber: row.original.orderNumber,
+                  })
+                }
+                title="Mark as Delivered"
+                className="grid h-8 w-8 place-items-center rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+                disabled={isTransitionPending}
+              >
+                <CheckCircle className="h-3.5 w-3.5" />
+              </button>
+            )}
+
             {/* Process Return / Refund button - ONLY shown when customer raises return or cancelled order needs refund, and not yet refunded */}
             {row.original.paymentStatus !== "refunded" &&
               row.original.status !== "returned" &&
@@ -1234,6 +1261,37 @@ export function AdminOrderListTable({
         confirmText="Cancel Order"
         variant="destructive"
         isLoading={cancelOrder.isPending}
+      />
+
+      {/* Mark as Delivered Warning Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!deliverOrderConfirm}
+        onClose={() => setDeliverOrderConfirm(null)}
+        onConfirm={() => {
+          if (deliverOrderConfirm) {
+            deliverOrder.mutate(
+              {
+                id: deliverOrderConfirm.id,
+                note: "Order marked as delivered by admin",
+              },
+              {
+                onSuccess: () => {
+                  setDeliverOrderConfirm(null);
+                  refetch();
+                  if (viewOrderId) {
+                    refetchDetail();
+                  }
+                },
+              }
+            );
+          }
+        }}
+        title={`Mark Order #${deliverOrderConfirm?.orderNumber} as Delivered?`}
+        description="⚠️ Warning: Are you sure you want to manually mark this order as Delivered? This will immediately advance the order status, record the delivery timestamp, and update the payment status to Paid (if Cash on Delivery)."
+        confirmText="Yes, Mark Delivered"
+        cancelText="Go Back"
+        variant="default"
+        isLoading={deliverOrder.isPending}
       />
     </div>
   );

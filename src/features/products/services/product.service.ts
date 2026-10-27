@@ -162,19 +162,21 @@ export const productService = {
       throw ApiError.badRequest("Invalid or inactive category");
     }
 
-    // 2. Resolve & Validate Brand UUID (Optional)
+    // 2. Resolve & Validate Brand UUID (optional, fallback to default store brand)
     let resolvedBrandId: bigint | null = null;
     if (data.brandId) {
       const brand = await brandRepository.findByUuid(data.brandId);
-      if (brand && brand.isActive) {
-        resolvedBrandId = brand.id;
+      if (!brand || !brand.isActive) {
+        throw ApiError.badRequest("Invalid or inactive brand");
       }
+      resolvedBrandId = brand.id;
     } else {
-      // If brandId is not provided, fall back to first active brand if any exists, otherwise null
-      const defaultBrand = await db.productBrand.findFirst({
-        where: { isActive: true, deleted_at: null },
-        orderBy: { id: "asc" },
-      });
+      const defaultBrand =
+        (await brandRepository.findBySlug("kollimalai-arasan")) ??
+        (await db.productBrand.findFirst({
+          where: { isActive: true, deleted_at: null },
+          orderBy: { id: "asc" },
+        }));
       if (defaultBrand) {
         resolvedBrandId = defaultBrand.id;
       }
@@ -411,11 +413,10 @@ export const productService = {
         updateData.brandId = null;
       } else {
         const brand = await brandRepository.findByUuid(data.brandId);
-        if (brand && brand.isActive) {
-          updateData.brandId = brand.id;
-        } else {
-          updateData.brandId = null;
+        if (!brand || !brand.isActive) {
+          throw ApiError.badRequest("Invalid or inactive brand");
         }
+        updateData.brandId = brand.id;
       }
     }
 

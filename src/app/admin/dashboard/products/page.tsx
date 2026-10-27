@@ -456,7 +456,7 @@ export default function AdminProductsPage() {
               name: formData.name,
               slug: formData.slug,
               categoryId: formData.categoryId,
-              brandId: formData.brandId || undefined,
+              brandId: formData.brandId || null,
               hsnCodeId: formData.hsnCodeId || null,
             };
 
@@ -516,14 +516,14 @@ export default function AdminProductsPage() {
                 payload.categoryId = formData.categoryId;
               }
 
-              const newBrandId = formData.brandId ?? null;
-              const currentBrandId = selectedProduct.brandId ?? null;
+              const newBrandId = formData.brandId || null;
+              const currentBrandId = selectedProduct.brandId || null;
               if (newBrandId !== currentBrandId) {
                 payload.brandId = newBrandId;
               }
 
-              const newHsnCodeId = formData.hsnCodeId ?? null;
-              const currentHsnCodeId = (selectedProduct as any).hsnCodeId ?? null;
+              const newHsnCodeId = formData.hsnCodeId || null;
+              const currentHsnCodeId = (selectedProduct as any).hsnCodeId || null;
               if (newHsnCodeId !== currentHsnCodeId) {
                 payload.hsnCodeId = newHsnCodeId;
               }

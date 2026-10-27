@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const getBrandsQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(1000).default(10),
+  limit: z.coerce.number().int().positive().max(100000).default(10),
   search: z.string().optional(),
   isActive: z.coerce.boolean().optional(),
 });

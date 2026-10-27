@@ -698,9 +698,12 @@ export const orderService = {
       throw ApiError.unauthorized("Session expired. Please log in again.");
     }
 
+    const isNumericId = /^\d+$/.test(uuid);
     const order = await db.order.findFirst({
       where: {
-        uuid,
+        ...(isNumericId
+          ? { OR: [{ uuid }, { id: BigInt(uuid) }] }
+          : { uuid }),
         is_active: true,
       },
     });
