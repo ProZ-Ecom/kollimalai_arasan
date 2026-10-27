@@ -1,4 +1,3 @@
-import "server-only";
 import { checkShiprocketServiceability } from "@/lib/shiprocket";
 import {
   calculateShippingCharge,
