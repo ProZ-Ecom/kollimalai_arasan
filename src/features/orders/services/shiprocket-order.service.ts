@@ -7,6 +7,7 @@ import {
   requestShiprocketPickup,
 } from "@/lib/shiprocket";
 import { userRepository } from "@/features/users/repositories/user.repository";
+import { isProduction, isShiprocketMockFallbackAllowed } from "@/lib/env-config";
 
 export interface ShipWithShiprocketOptions {
   notes?: string;
@@ -81,6 +82,9 @@ export async function shipOrderViaShiprocket(
         where: { is_active: true },
         orderBy: { id: "desc" },
         take: 1,
+        include: {
+          delivery_partners: true,
+        },
       },
       user: {
         select: {
@@ -103,8 +107,28 @@ export async function shipOrderViaShiprocket(
     );
   }
 
-  // Guard against duplicate Shiprocket booking
+  // Guard against courier mismatch: customer must have selected Shiprocket
   const activeShipment = order.shipments[0];
+  if (activeShipment) {
+    const existingPartner = activeShipment.delivery_partners;
+    const isShiprocketPartner = Boolean(
+      existingPartner?.code?.toUpperCase().includes("SHIPROCKET") ||
+      (existingPartner as any)?.courier_type?.toLowerCase().includes("shiprocket") ||
+      existingPartner?.name?.toLowerCase().includes("shiprocket") ||
+      activeShipment.courier_partner_name?.toLowerCase().includes("shiprocket") ||
+      activeShipment.delivery_notes?.toLowerCase().includes("shiprocket")
+    );
+
+    if (!isShiprocketPartner) {
+      const partnerDisplayName =
+        existingPartner?.name || activeShipment.courier_partner_name || "a non-Shiprocket courier";
+      throw ApiError.badRequest(
+        `Courier mismatch: Order #${order.orderNumber} was placed with '${partnerDisplayName}'. Automated Shiprocket dispatch is prohibited for this order.`
+      );
+    }
+  }
+
+  // Guard against duplicate Shiprocket booking
   if (activeShipment?.shiprocket_shipment_id && activeShipment?.tracking_number) {
     return {
       orderNumber: order.orderNumber,
@@ -154,7 +178,8 @@ export async function shipOrderViaShiprocket(
   const customerEmail = order.user.email || "";
 
   // 1. Create order on Shiprocket
-  const isTestMode = process.env.SHIPROCKET_TEST_MODE === "true";
+  const isProd = isProduction();
+  const allowMockFallback = isShiprocketMockFallbackAllowed();
   let shiprocketOrder: {
     order_id: number;
     shipment_id: number;
@@ -187,8 +212,8 @@ export async function shipOrderViaShiprocket(
       totalWeightKg,
     });
   } catch (err: any) {
-    if (isTestMode) {
-      console.warn("Shiprocket sandbox fallback (test mode active):", err.message);
+    if (allowMockFallback) {
+      console.warn("Shiprocket forward sandbox fallback (local mock active):", err.message);
       const simulatedId = Math.floor(1000000000 + Math.random() * 9000000000);
       shiprocketOrder = {
         order_id: simulatedId,
@@ -196,7 +221,7 @@ export async function shipOrderViaShiprocket(
         status: "NEW",
         status_code: 200,
         awb_code: `TEST-SR-${Date.now().toString().slice(-8)}`,
-        courier_name: "Delhivery Surface (Sandbox)",
+        courier_name: "Delhivery Surface (Local Mock)",
       };
     } else {
       throw err;
@@ -217,10 +242,10 @@ export async function shipOrderViaShiprocket(
       awbCode = awbResult.awbCode;
       courierName = awbResult.courierName;
     } catch (awbErr: any) {
-      if (isTestMode) {
-        console.warn("Shiprocket sandbox AWB notice:", awbErr.message);
+      if (allowMockFallback) {
+        console.warn("Shiprocket forward sandbox AWB fallback (local mock active):", awbErr.message);
         awbCode = `TEST-SR-${Date.now().toString().slice(-8)}`;
-        courierName = "Ecom Express Air (Sandbox)";
+        courierName = "Ecom Express Air (Local Mock)";
       } else {
         // Find or use SHIPROCKET partner to link the shipment
         const shiprocketPartner = await db.delivery_partners.findFirst({
@@ -260,7 +285,7 @@ export async function shipOrderViaShiprocket(
   } catch (err) {
     console.warn("Shiprocket label generation delayed:", err);
   }
-  if (!labelUrl && isTestMode) {
+  if (!labelUrl && allowMockFallback) {
     labelUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
   }
 

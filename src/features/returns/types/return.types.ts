@@ -1,3 +1,11 @@
+export type ReturnRequestStatus =
+  | "requested"
+  | "approved"
+  | "rejected"
+  | "picked_up"
+  | "delivered"
+  | "refunded";
+
 export interface ReturnItemInfo {
   orderItemId: string;
   productName: string;
@@ -7,6 +15,8 @@ export interface ReturnItemInfo {
   returnQuantity: number;
   unitPrice: number;
   totalPrice: number;
+  refundAmount?: number | null;
+  primaryImage?: string | null;
   reason: string | null;
 }
 
@@ -26,6 +36,23 @@ export interface ReturnOrderInfo {
   createdAt: Date;
 }
 
+export interface ReturnPayoutDetails {
+  method: "upi" | "bank_transfer" | "other";
+  upiId?: string;
+  accountHolderName?: string;
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+}
+
+export interface ReturnRefundRecord {
+  id: string;
+  amount: number;
+  status: string;
+  reason?: string | null;
+  processedAt?: Date | null;
+}
+
 export interface ReturnRequestListItem {
   id: string;
   orderId: string;
@@ -33,7 +60,10 @@ export interface ReturnRequestListItem {
   orderStatus: string;
   customer?: ReturnCustomerInfo;
   reason: string;
-  status: "requested" | "approved" | "rejected" | "picked_up" | "refunded";
+  videoUrl?: string | null;
+  status: ReturnRequestStatus;
+  adminNotes?: string | null;
+  inspectedAt?: Date | null;
   totalItems: number;
   requestedAt: Date;
   approvedAt: Date | null;
@@ -48,7 +78,21 @@ export interface ReturnRequestDetailResponse {
   orderStatus: string;
   customer: ReturnCustomerInfo;
   reason: string;
-  status: "requested" | "approved" | "rejected" | "picked_up" | "refunded";
+  videoUrl?: string | null;
+  status: ReturnRequestStatus;
+  adminNotes?: string | null;
+  inspectedAt?: Date | null;
+  returnAwb?: string | null;
+  returnShipmentId?: string | null;
+  returnLabelUrl?: string | null;
+  courierName?: string | null;
+  paymentMethod?: string | null;
+  paymentStatus?: string | null;
+  isCod?: boolean;
+  totalAmount?: number;
+  eligibleRefundAmount?: number;
+  payoutDetails?: ReturnPayoutDetails | null;
+  refunds?: ReturnRefundRecord[];
   requestedAt: Date;
   approvedAt: Date | null;
   items: ReturnItemInfo[];
@@ -62,6 +106,7 @@ export interface CreateReturnRequestResult {
   orderNumber: string;
   status: "requested";
   reason: string;
+  videoUrl?: string | null;
   requestedAt: Date;
   items: {
     orderItemId: string;
@@ -91,4 +136,25 @@ export interface PickupReturnResult {
   orderNumber: string;
   returnStatus: "picked_up";
   orderStatus: "returned";
+}
+
+export interface ReviewReturnResult {
+  id: string;
+  orderId: string;
+  status: ReturnRequestStatus;
+  adminNotes: string;
+  inspectedAt: Date;
+}
+
+export interface ProcessReturnRefundResult {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  refundAmount: number;
+  paymentMode: string;
+  referenceId?: string;
+  returnStatus: "refunded";
+  orderPaymentStatus: string;
+  isSimulated?: boolean;
+  message: string;
 }

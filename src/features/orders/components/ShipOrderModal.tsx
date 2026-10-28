@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import { FormModal } from "@/components/common/FormModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, type SelectOption } from "@/components/ui/select";
 import {
   useDeliveryPartners,
   useShipOrderCourier,
@@ -22,7 +21,9 @@ import {
   Rocket,
   Sparkles,
   Printer,
+  Lock,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ShipOrderModalProps {
   open: boolean;
@@ -78,36 +79,47 @@ export function ShipOrderModal({
         const shiprocketPartner = partners.find(
           (p) =>
             p.code?.toUpperCase() === "SHIPROCKET" ||
+            p.code?.toUpperCase() === "SHIPROCKET_MOCK" ||
             p.name.toLowerCase().includes("shiprocket")
         );
+        const mssPartner = partners.find(
+          (p) =>
+            p.code?.toUpperCase() === "MSS" ||
+            p.name.toLowerCase().includes("mettur") ||
+            p.name.toLowerCase().includes("mss")
+        );
+        const stPartner = partners.find(
+          (p) =>
+            p.code === "ST_COURIER" ||
+            p.name.toLowerCase().includes("st courier")
+        );
 
+        let targetPartner = null;
         if (isCod) {
-          // If COD, MUST default to Shiprocket
-          setSelectedPartnerId(
-            String(shiprocketPartner ? shiprocketPartner.id : partners[0].id)
-          );
-        } else {
-          const matchedPartner = initialPartnerCode
-            ? partners.find(
-                (p) =>
-                  p.code?.toLowerCase() === initialPartnerCode.toLowerCase() ||
-                  p.name?.toLowerCase().includes(initialPartnerCode.toLowerCase())
-              )
-            : null;
-          const stPartner = partners.find(
-            (p) =>
-              p.code === "ST_COURIER" ||
-              p.name.toLowerCase().includes("st courier")
-          );
-          setSelectedPartnerId(
-            String(
-              matchedPartner
-                ? matchedPartner.id
-                : stPartner
-                ? stPartner.id
-                : partners[0].id
-            )
-          );
+          targetPartner = shiprocketPartner;
+        } else if (initialPartnerCode) {
+          const codeUpper = initialPartnerCode.toUpperCase();
+          if (codeUpper.includes("SHIPROCKET")) {
+            targetPartner = shiprocketPartner;
+          } else if (codeUpper.includes("MSS")) {
+            targetPartner = mssPartner;
+          } else if (codeUpper.includes("ST_COURIER") || codeUpper === "ST") {
+            targetPartner = stPartner;
+          } else {
+            targetPartner = partners.find(
+              (p) =>
+                p.code?.toLowerCase() === initialPartnerCode.toLowerCase() ||
+                p.name?.toLowerCase().includes(initialPartnerCode.toLowerCase())
+            );
+          }
+        }
+
+        if (!targetPartner) {
+          targetPartner = stPartner || partners[0];
+        }
+
+        if (targetPartner) {
+          setSelectedPartnerId(String(targetPartner.id));
         }
       }
     }
@@ -119,6 +131,7 @@ export function ShipOrderModal({
       const shiprocketPartner = partners.find(
         (p) =>
           p.code?.toUpperCase() === "SHIPROCKET" ||
+          p.code?.toUpperCase() === "SHIPROCKET_MOCK" ||
           p.name.toLowerCase().includes("shiprocket")
       );
       if (
@@ -130,54 +143,27 @@ export function ShipOrderModal({
     }
   }, [isCod, partners, selectedPartnerId]);
 
-  const partnerOptions: SelectOption[] = useMemo(() => {
-    if (isCod) {
-      // For COD orders: Only allow Shiprocket partner
-      const shiprocketPartners = partners.filter(
-        (p) =>
-          p.code?.toUpperCase() === "SHIPROCKET" ||
-          p.name.toLowerCase().includes("shiprocket")
-      );
-      if (shiprocketPartners.length > 0) {
-        return shiprocketPartners.map((partner) => {
-          const cleanName = partner.name
-            .replace(/\(Sandbox\)|\(Test Mode\)/gi, "")
-            .trim() || partner.name;
-          return {
-            value: String(partner.id),
-            label: `${cleanName} — Exclusive COD Partner`,
-          };
-        });
-      }
-      return [
-        {
-          value: selectedPartnerId || "SHIPROCKET",
-          label: "Shiprocket Express — Exclusive COD Partner",
-        },
-      ];
-    }
-
-    return partners.map((partner) => {
-      const cleanName = partner.name
-        .replace(/\(Sandbox\)|\(Test Mode\)/gi, "")
-        .trim() || partner.name;
-      return {
-        value: String(partner.id),
-        label: `${cleanName} (${partner.code})`,
-      };
-    });
-  }, [partners, isCod, selectedPartnerId]);
-
   const activePartner = useMemo(() => {
     return partners.find((p) => String(p.id) === String(selectedPartnerId));
   }, [partners, selectedPartnerId]);
 
   const isShiprocket = useMemo(() => {
-    return (
-      activePartner?.code === "SHIPROCKET" ||
-      activePartner?.name?.toLowerCase().includes("shiprocket")
+    return Boolean(
+      activePartner?.code?.toUpperCase().includes("SHIPROCKET") ||
+      activePartner?.name?.toLowerCase().includes("shiprocket") ||
+      initialPartnerCode?.toUpperCase().includes("SHIPROCKET") ||
+      isCod
     );
-  }, [activePartner]);
+  }, [activePartner, initialPartnerCode, isCod]);
+
+  const isMss = useMemo(() => {
+    return Boolean(
+      activePartner?.code?.toUpperCase() === "MSS" ||
+      activePartner?.name?.toLowerCase().includes("mettur") ||
+      activePartner?.name?.toLowerCase().includes("mss") ||
+      initialPartnerCode?.toUpperCase().includes("MSS")
+    );
+  }, [activePartner, initialPartnerCode]);
 
   const handleClose = () => {
     setTrackingNumber("");
@@ -336,23 +322,22 @@ export function ShipOrderModal({
           ? `Add courier dispatch details & live tracking for Order #${orderNumber}${customerName ? ` (${customerName})` : ""}`
           : "Add courier dispatch details & live tracking"
       }
-      size="md"
-      overflowVisible={true}
+      size="lg"
       footer={
-        <div className="flex items-center justify-end gap-3 w-full">
+        <div className="flex items-center justify-end gap-2.5 sm:gap-3 w-full">
           <Button
             variant="outline"
             type="button"
             onClick={handleClose}
             disabled={shipMutation.isPending || shiprocketMutation.isPending}
-            className="h-10 px-5"
+            className="h-9 sm:h-10 px-4 sm:px-5 text-xs sm:text-sm font-medium"
           >
             Cancel
           </Button>
           {!isShiprocket && (
             <Button
               type="button"
-              className="bg-secondary-600 hover:bg-secondary-700 text-white flex items-center gap-2 h-10 px-6 font-semibold"
+              className="bg-secondary-600 hover:bg-secondary-700 text-white flex items-center gap-2 h-9 sm:h-10 px-5 sm:px-6 text-xs sm:text-sm font-semibold shadow-xs"
               onClick={handleShip}
               disabled={shipMutation.isPending}
             >
@@ -372,7 +357,7 @@ export function ShipOrderModal({
         </div>
       }
     >
-      <form onSubmit={handleShip} className="space-y-6 py-2">
+      <form onSubmit={handleShip} className="space-y-4 sm:space-y-5 py-1">
         {validationError && (
           <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2.5">
             <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
@@ -400,47 +385,86 @@ export function ShipOrderModal({
           </div>
         )}
 
-        {/* Courier Partner Selection */}
+        {/* Courier Service Partner (Locked to Customer's Selection) */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider">
-              Courier Service Partner <span className="text-red-500">*</span>
+              Courier Service Partner <span className="text-neutral-400 font-normal text-[11px] lowercase">(locked to order)</span>
             </label>
-            {isCod && (
-              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+            {isCod ? (
+              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full shrink-0">
                 Shiprocket Only (COD)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-secondary-800 bg-secondary-50 border border-secondary-200 px-2.5 py-0.5 rounded-full shrink-0">
+                <Lock className="h-3 w-3 text-secondary-600" />
+                Customer Choice
               </span>
             )}
           </div>
           {partnersLoading ? (
-            <div className="h-11 w-full bg-neutral-100 rounded-xl animate-pulse" />
+            <div className="h-14 w-full bg-neutral-100 rounded-xl animate-pulse" />
           ) : (
-            <Select
-              options={partnerOptions}
-              value={selectedPartnerId}
-              onValueChange={(val) => setSelectedPartnerId(val)}
-              placeholder="Select Courier Partner"
-              leftIcon={<Truck className="h-4 w-4 text-neutral-400" />}
-              size="md"
-            />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/80">
+              <div className="flex items-start sm:items-center gap-3 min-w-0">
+                <div
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-xs border mt-0.5 sm:mt-0",
+                    isShiprocket
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                      : isMss
+                      ? "bg-blue-50 border-blue-200 text-blue-600"
+                      : "bg-amber-50 border-amber-200 text-secondary-600"
+                  )}
+                >
+                  {isShiprocket ? (
+                    <Rocket className="h-5 w-5" />
+                  ) : (
+                    <Truck className="h-5 w-5" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-xs sm:text-sm text-neutral-900 flex items-center gap-1.5 flex-wrap">
+                    <span>
+                      {activePartner?.name || (isShiprocket ? "Shiprocket Express" : isMss ? "Mettur Super Services (MSS)" : "ST Courier")}
+                    </span>
+                    <span className="text-[10px] font-semibold text-neutral-500 bg-white border border-neutral-200 px-1.5 py-0.5 rounded font-mono shrink-0">
+                      {activePartner?.code || (isShiprocket ? "SHIPROCKET" : isMss ? "MSS" : "ST_COURIER")}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 mt-0.5 leading-relaxed">
+                    {isShiprocket
+                      ? "Order will be dispatched using Shiprocket Multi-Carrier API."
+                      : isMss
+                      ? "Dispatched via Mettur Super Services (MSS) parcel branch."
+                      : "Dispatched via ST Courier South Express delivery."}
+                  </p>
+                </div>
+              </div>
+              <span className="self-start sm:self-center text-[10px] font-semibold text-neutral-500 bg-white border border-neutral-200 px-2 py-1 rounded-md shrink-0">
+                Authoritative Courier
+              </span>
+            </div>
           )}
         </div>
 
         {/* Special 1-Click Shiprocket Banner */}
         {isShiprocket ? (
-          <div className="rounded-2xl border-2 border-primary-200 bg-gradient-to-br from-primary-50/80 to-amber-50/50 p-4 space-y-3.5">
+          <div className="rounded-xl sm:rounded-2xl border-2 border-primary-200 bg-gradient-to-br from-primary-50/80 to-amber-50/50 p-3.5 sm:p-4 space-y-3 sm:space-y-3.5">
             <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white shadow-sm">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white shadow-sm mt-0.5">
                 <Rocket className="h-5 w-5" />
               </div>
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
-                  Automated 1-Click Dispatch via Shiprocket
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-xs sm:text-sm font-bold text-neutral-900">
+                    Automated 1-Click Dispatch via Shiprocket
+                  </h4>
                   <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold text-[10px]">
                     <Sparkles className="h-3 w-3" /> Recommended
                   </span>
-                </h4>
-                <p className="text-[11.5px] text-neutral-600 leading-relaxed">
+                </div>
+                <p className="text-[11px] sm:text-[11.5px] text-neutral-600 leading-relaxed">
                   Automatically calculates parcel weight, sends order to Shiprocket, assigns the fastest courier (Delhivery, Bluedart, etc.), generates AWB, and generates your printable shipping label.
                 </p>
               </div>
@@ -448,7 +472,7 @@ export function ShipOrderModal({
 
             <Button
               type="button"
-              className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold h-11 rounded-xl shadow-md flex items-center justify-center gap-2"
+              className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold h-10 sm:h-11 rounded-xl shadow-md flex items-center justify-center gap-2 text-xs sm:text-sm transition-all"
               onClick={handleShiprocketAutoBook}
               disabled={shiprocketMutation.isPending}
             >
@@ -467,7 +491,7 @@ export function ShipOrderModal({
 
             <div className="relative flex items-center py-1">
               <div className="flex-grow border-t border-neutral-300"></div>
-              <span className="flex-shrink mx-3 text-[11px] text-neutral-500 uppercase tracking-wider">
+              <span className="flex-shrink mx-3 text-[11px] text-neutral-500 uppercase tracking-wider font-semibold">
                 or enter manual AWB
               </span>
               <div className="flex-grow border-t border-neutral-300"></div>
@@ -478,31 +502,33 @@ export function ShipOrderModal({
               <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider">
                 Existing AWB Number
               </label>
-              <Input
-                type="text"
-                value={trackingNumber}
-                onChange={(e) => setTrackingNumber(e.target.value)}
-                placeholder="Enter AWB if already booked on Shiprocket dashboard"
-                className="h-10 rounded-xl font-mono text-xs bg-white text-neutral-900 border-neutral-300"
-              />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  type="text"
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  placeholder="Enter AWB if already booked on Shiprocket dashboard"
+                  className="h-10 rounded-xl font-mono text-xs bg-white text-neutral-900 border-neutral-300 flex-1"
+                />
+                {trackingNumber.trim() && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 px-4 text-xs font-semibold shrink-0 bg-white hover:bg-neutral-50 border-neutral-300"
+                    onClick={handleShip}
+                    disabled={shipMutation.isPending}
+                  >
+                    Save Manual AWB
+                  </Button>
+                )}
+              </div>
             </div>
-            {trackingNumber && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-9 text-xs font-semibold"
-                onClick={handleShip}
-                disabled={shipMutation.isPending}
-              >
-                Save Manual AWB
-              </Button>
-            )}
           </div>
         ) : (
           /* Standard Manual Tracking / AWB Number Input for ST Courier and MSS */
           <div className="space-y-2">
             <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider">
-              Tracking / AWB Number <span className="text-red-500">*</span>
+              {isMss ? "MSS LR / Waybill Number" : "ST Courier Tracking / AWB Number"} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
@@ -513,16 +539,16 @@ export function ShipOrderModal({
                 value={trackingNumber}
                 onChange={(e) => setTrackingNumber(e.target.value)}
                 placeholder={
-                  activePartner?.code === "MSS"
+                  isMss
                     ? "e.g. MSS-LR-94821"
                     : "e.g. 64414926026"
                 }
-                className="pl-10 h-11 rounded-xl font-mono tracking-wider text-sm font-semibold text-neutral-900 border-neutral-300 focus:border-secondary-500 focus:ring-secondary-500"
+                className="pl-10 h-10 sm:h-11 rounded-xl font-mono tracking-wider text-xs sm:text-sm font-semibold text-neutral-900 border-neutral-300 focus:border-secondary-500 focus:ring-secondary-500"
                 autoFocus
               />
             </div>
-            <p className="text-[11.5px] text-neutral-500 pt-0.5">
-              {activePartner?.code === "MSS"
+            <p className="text-[11px] sm:text-[11.5px] text-neutral-500 pt-0.5">
+              {isMss
                 ? "Enter the Mettur Super Services (MSS) LR / Waybill number."
                 : "Enter the consignment note / AWB barcode number provided on the ST Courier receipt."}
             </p>
@@ -530,7 +556,7 @@ export function ShipOrderModal({
         )}
 
         {/* Optional Notes */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider">
             Dispatch Notes / Remarks <span className="text-neutral-400 font-normal text-[11px] lowercase">(optional)</span>
           </label>
@@ -543,7 +569,7 @@ export function ShipOrderModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Dispatched via evening pickup from Kolli Hills branch"
-              className="w-full pl-10 pr-3.5 py-2.5 bg-white border border-neutral-300 rounded-xl text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all resize-none"
+              className="w-full pl-10 pr-3.5 py-2 bg-white border border-neutral-300 rounded-xl text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all resize-none"
             />
           </div>
         </div>

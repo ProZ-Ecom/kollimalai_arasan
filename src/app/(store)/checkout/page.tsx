@@ -149,6 +149,31 @@ export default function CheckoutPage() {
     }
   }, [paymentMethod, courierType]);
 
+  // Restore courier selection across browser refreshes or payment retries
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("checkout_courier_type");
+      if (saved === "st_courier" || saved === "mss" || saved === "shiprocket") {
+        if (paymentMethod === "COD") {
+          setCourierType("shiprocket");
+        } else {
+          setCourierType(saved);
+        }
+      }
+    } catch {
+      // sessionStorage not available in SSR / restricted environments
+    }
+  }, [paymentMethod]);
+
+  // Persist customer courier selection to sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("checkout_courier_type", courierType);
+    } catch {
+      // sessionStorage not available in SSR / restricted environments
+    }
+  }, [courierType]);
+
   // Reset in-flight payment loading state when user returns to this page (BFCache / browser Back button)
   useEffect(() => {
     const handleReset = () => {

@@ -547,10 +547,22 @@ export function AdminOrderListTable({
                   }
                   className={cn(
                     "text-[11px] font-semibold hover:underline cursor-pointer",
-                    row.original.isCod ? "text-emerald-700 font-bold" : "text-amber-700"
+                    row.original.isCod
+                      ? "text-emerald-700 font-bold"
+                      : delivery?.deliveryPartner?.code === "MSS"
+                      ? "text-blue-700 font-bold"
+                      : delivery?.deliveryPartner?.code?.toUpperCase().includes("SHIPROCKET")
+                      ? "text-emerald-700 font-bold"
+                      : "text-amber-700 font-bold"
                   )}
                 >
-                  {row.original.isCod ? "Shiprocket (COD)" : "Courier"}
+                  {row.original.isCod
+                    ? "Shiprocket (COD)"
+                    : delivery?.deliveryPartner?.code === "MSS"
+                    ? "MSS Cargo"
+                    : delivery?.deliveryPartner?.code?.toUpperCase().includes("SHIPROCKET")
+                    ? "Shiprocket"
+                    : "ST Courier"}
                 </button>
               </div>
             )}

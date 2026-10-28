@@ -653,6 +653,46 @@ export const orderService = {
       return formatOrderDetail(updated);
     }
 
+    // If order has an active return request, enforce delivery and inspection gates
+    const activeReturnReq = await db.return_requests.findFirst({
+      where: { order_id: order.id, is_active: true },
+      orderBy: { id: "desc" },
+    });
+    if (
+      activeReturnReq &&
+      activeReturnReq.status !== "refunded" &&
+      activeReturnReq.status !== "rejected"
+    ) {
+      if (activeReturnReq.status !== "delivered") {
+        throw ApiError.badRequest(
+          `Cannot process refund: The customer return parcel has not been delivered yet (current status: '${activeReturnReq.status}'). It must reach 'delivered' status and pass physical inspection before authorizing a refund.`
+        );
+      }
+      if (!activeReturnReq.inspected_at) {
+        throw ApiError.badRequest(
+          "Cannot process refund: The returned product must be physically inspected and reviewed before authorizing a refund."
+        );
+      }
+      const { returnService } = await import("@/features/returns/services/return.service");
+      await returnService.processReturnRefund(
+        adminSessionUserId,
+        activeReturnReq.uuid || String(activeReturnReq.id),
+        {
+          amount: input?.amount,
+          paymentMode: input?.paymentMode,
+          referenceId: input?.referenceId,
+          note: input?.note,
+          restockInventory: true,
+        }
+      );
+
+      const updated = await db.order.findUniqueOrThrow({
+        where: { id: order.id },
+        include: orderDetailInclude,
+      });
+      return formatOrderDetail(updated);
+    }
+
     if (!["delivered", "shipped", "out_for_delivery"].includes(order.order_status)) {
       throw ApiError.badRequest(
         `Cannot process return for order with status '${order.order_status}'. Only delivered, shipped, or out for delivery orders can be returned.`
@@ -902,19 +942,58 @@ export const orderService = {
       }
     }
 
+    // Find active shipment for this order to verify customer's selected courier
+    const existingShipment = await db.shipments.findFirst({
+      where: {
+        order_id: order.id,
+        is_active: true,
+      },
+      orderBy: { id: "desc" },
+      include: {
+        delivery_partners: true,
+      },
+    });
+
+    // BACKEND GUARD: The requested delivery partner MUST match the customer's selected courier partner!
+    if (existingShipment?.delivery_partners) {
+      const existingPartner = existingShipment.delivery_partners;
+      const isExistingShiprocket = Boolean(
+        existingPartner.code?.toUpperCase().includes("SHIPROCKET") ||
+        (existingPartner as any).courier_type?.toLowerCase().includes("shiprocket")
+      );
+      const isRequestedShiprocket = Boolean(
+        partner.code?.toUpperCase().includes("SHIPROCKET") ||
+        (partner as any).courier_type?.toLowerCase().includes("shiprocket")
+      );
+
+      const isMatch =
+        existingPartner.id === partner.id ||
+        existingPartner.code === partner.code ||
+        (isExistingShiprocket && isRequestedShiprocket);
+
+      if (!isMatch) {
+        throw ApiError.badRequest(
+          `Courier mismatch: This order was placed with '${existingPartner.name}' (${existingPartner.code}). You cannot ship using '${partner.name}' (${partner.code}).`
+        );
+      }
+    } else if (existingShipment?.courier_partner_name) {
+      const existingName = existingShipment.courier_partner_name.toLowerCase();
+      const requestedCode = partner.code?.toLowerCase() || "";
+      const isShiprocketMismatch = existingName.includes("shiprocket") && !requestedCode.includes("shiprocket");
+      const isMssMismatch = (existingName.includes("mss") || existingName.includes("mettur")) && requestedCode !== "mss";
+      const isStMismatch = existingName.includes("st courier") && requestedCode !== "st_courier";
+
+      if (isShiprocketMismatch || isMssMismatch || isStMismatch) {
+        throw ApiError.badRequest(
+          `Courier mismatch: This order was placed with '${existingShipment.courier_partner_name}'. You cannot ship using '${partner.name}'.`
+        );
+      }
+    }
+
     const trackingNum = input.trackingNumber.trim();
     const cleanNotes = input.notes?.trim() || null;
 
     await db.$transaction(async (tx) => {
-      // Find active shipment for this order
-      const existingShipment = await tx.shipments.findFirst({
-        where: {
-          order_id: order.id,
-          is_active: true,
-        },
-        orderBy: { id: "desc" },
-      });
-
       if (existingShipment) {
         await tx.shipments.update({
           where: { id: existingShipment.id },

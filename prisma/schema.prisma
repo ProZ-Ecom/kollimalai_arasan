@@ -2042,6 +2042,7 @@ model return_requests {
   order_id                                BigInt                 @db.UnsignedBigInt
   user_id                                 BigInt                 @db.UnsignedBigInt
   reason                                  String                 @db.VarChar(255)
+  video_url                               String?                @db.VarChar(500)
   status                                  return_requests_status @default(requested)
   requested_at                            DateTime               @default(now()) @db.Timestamp(0)
   approved_at                             DateTime?              @db.Timestamp(0)
@@ -2049,6 +2050,8 @@ model return_requests {
   return_shipment_id                      String?                @db.VarChar(100)
   return_label_url                        String?                @db.VarChar(500)
   courier_partner_name                    String?                @db.VarChar(100)
+  admin_notes                             String?                @db.VarChar(1000)
+  inspected_at                            DateTime?              @db.Timestamp(0)
   created_at                              DateTime               @default(now()) @db.Timestamp(0)
   updated_at                              DateTime               @default(now()) @db.Timestamp(0)
   is_active                               Boolean                @default(true)
@@ -2459,6 +2462,7 @@ enum return_requests_status {
   approved
   rejected
   picked_up
+  delivered
   refunded
 }
 

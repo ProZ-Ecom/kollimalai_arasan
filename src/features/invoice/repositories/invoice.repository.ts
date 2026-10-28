@@ -33,6 +33,18 @@ export const invoiceRepository = {
           where: { is_active: true },
           orderBy: { id: "asc" },
           include: {
+            variant_unit_price: {
+              select: {
+                unit_value: true,
+                weight_kg: true,
+                product_units: {
+                  select: {
+                    name: true,
+                    code: true,
+                  },
+                },
+              },
+            },
             product: {
               select: {
                 name: true,

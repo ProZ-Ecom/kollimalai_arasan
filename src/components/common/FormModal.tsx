@@ -60,7 +60,7 @@ function FormModal({
 
   const modal = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 md:p-6 overflow-y-auto"
       onClick={onClose}
     >
       <div
@@ -70,20 +70,20 @@ function FormModal({
         aria-describedby={description ? "form-modal-desc" : undefined}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "relative w-full rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh]",
-          overflowVisible && "overflow-visible",
+          "relative w-full rounded-2xl bg-white shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] my-auto",
+          overflowVisible ? "overflow-visible" : "overflow-hidden",
           "animate-in zoom-in-95 duration-200",
           sizeStyles[size],
           className
         )}
       >
-        <div className="flex items-start justify-between border-b border-gray-200 p-6 shrink-0">
-          <div>
-            <h2 id="form-modal-title" className="text-lg font-semibold text-gray-900">
+        <div className="flex items-start justify-between border-b border-gray-200 p-4 sm:p-5 shrink-0">
+          <div className="min-w-0 pr-3">
+            <h2 id="form-modal-title" className="text-base sm:text-lg font-semibold text-gray-900 leading-snug">
               {title}
             </h2>
             {description && (
-              <p id="form-modal-desc" className="mt-1 text-sm text-gray-500">
+              <p id="form-modal-desc" className="mt-1 text-xs sm:text-sm text-gray-500 leading-relaxed">
                 {description}
               </p>
             )}
@@ -92,7 +92,7 @@ function FormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer shrink-0"
           >
             <X className="h-5 w-5" />
           </button>
@@ -100,7 +100,7 @@ function FormModal({
 
         <div
           className={cn(
-            "flex-1 p-6 scrollbar-thin",
+            "flex-1 p-4 sm:p-6 scrollbar-thin",
             overflowVisible ? "overflow-visible" : "overflow-y-auto",
             contentClassName
           )}
@@ -109,7 +109,7 @@ function FormModal({
         </div>
 
         {footer && (
-          <div className="flex items-center justify-end gap-3 border-t border-gray-200 p-6 shrink-0">
+          <div className="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50/70 p-3.5 sm:p-4 sm:px-6 shrink-0">
             {footer}
           </div>
         )}

@@ -24,6 +24,23 @@ export interface CreateCustomerOrderPayload {
   courierType?: "st_courier" | "mss" | "shiprocket";
 }
 
+import type { RefundDetailsInput } from "@/features/returns/validations/return.schema";
+
+export interface CustomerReturnItemPayload {
+  orderItemId: string;
+  quantity: number;
+  reason?: string;
+}
+
+export interface CustomerReturnRequestPayload {
+  reason: string;
+  description?: string;
+  videoUrl?: string;
+  items?: CustomerReturnItemPayload[];
+  refundDetails?: RefundDetailsInput;
+  note?: string;
+}
+
 export interface CancelCustomerOrderPayload {
   note?: string;
 }
@@ -134,7 +151,7 @@ export const customerOrdersApi = {
    */
   async requestReturn(
     uuid: string,
-    payload: { note?: string } = {}
+    payload: CustomerReturnRequestPayload | { note?: string } = { reason: "Return requested by customer" }
   ): Promise<any> {
     const response = await apiClient.post<any>(
       `/api/customer/orders/${uuid}/return`,

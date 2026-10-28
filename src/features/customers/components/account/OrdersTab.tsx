@@ -8,7 +8,6 @@ import type { OrderDetailResponse } from "@/features/orders/types";
 import {
   useCustomerOrders,
   useCancelCustomerOrder,
-  useRequestCustomerReturn,
 } from "../../hooks/use-customer-orders";
 import { useAddToCartMutation } from "../../hooks/use-customer-cart";
 import { CustomDropdown, type DropdownOption } from "./CustomDropdown";
@@ -16,16 +15,8 @@ import { Select } from "@/components/ui/select";
 import { SearchInput } from "@/components/common/search-input";
 import { ProductImage } from "@/components/common/ProductImage";
 import { LiveTrackingModal } from "@/features/orders/components/LiveTrackingModal";
-import { FormModal } from "@/components/common/FormModal";
 import { toast } from "@/components/ui/Toast";
-
-const RETURN_REASONS = [
-  "Damaged product on delivery",
-  "Quality or freshness issue",
-  "Wrong item received",
-  "Package broken or seal tampered",
-  "Other / Customer dissatisfaction",
-];
+import { CustomerReturnRequestModal } from "@/features/returns/components/CustomerReturnRequestModal";
 
 export function getReturnWindowInfo(order: OrderDetailResponse) {
   if (order.status?.toLowerCase() !== "delivered") {
@@ -111,11 +102,8 @@ export function OrdersTab({
 
   const cancelMutation = useCancelCustomerOrder();
   const addToCartMutation = useAddToCartMutation();
-  const returnMutation = useRequestCustomerReturn();
 
   const [returnModalOrder, setReturnModalOrder] = useState<OrderDetailResponse | null>(null);
-  const [returnReason, setReturnReason] = useState<string>(RETURN_REASONS[0]);
-  const [returnNote, setReturnNote] = useState<string>("");
 
   const {
     data: ordersResponse,
@@ -572,11 +560,7 @@ export function OrdersTab({
                       return (
                         <button
                           type="button"
-                          onClick={() => {
-                            setReturnModalOrder(order);
-                            setReturnReason(RETURN_REASONS[0]);
-                            setReturnNote("");
-                          }}
+                          onClick={() => setReturnModalOrder(order)}
                           className="border border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold uppercase tracking-wider py-2.5 px-4 rounded-lg transition-colors cursor-pointer min-h-[40px] inline-flex items-center gap-1.5"
                         >
                           <RotateCcw className="h-3.5 w-3.5" />
@@ -847,97 +831,12 @@ export function OrdersTab({
 
       {/* Customer 5-Day Return Request Modal */}
       {returnModalOrder && (
-        <FormModal
+        <CustomerReturnRequestModal
           open={!!returnModalOrder}
           onClose={() => setReturnModalOrder(null)}
-          title={`Request Return for #${returnModalOrder.orderNumber}`}
-          description="Returns are accepted within 5 days of delivery. Select the reason below and our team will arrange doorstep reverse courier pickup."
-          size="md"
-        >
-          <div className="space-y-4 pt-1">
-            <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-900 flex items-center justify-between">
-              <span>5-Day Return Window Active:</span>
-              <span className="font-bold">
-                {getReturnWindowInfo(returnModalOrder).daysLeft}{" "}
-                {getReturnWindowInfo(returnModalOrder).daysLeft === 1 ? "day" : "days"} remaining
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-theme-text-primary mb-1.5">
-                Reason for Return *
-              </label>
-              <Select
-                value={returnReason}
-                onValueChange={(val) => setReturnReason(val)}
-                options={RETURN_REASONS.map((r) => ({ value: r, label: r }))}
-                placeholder="Select a reason for return"
-                size="md"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-theme-text-primary mb-1.5">
-                Additional Comments / Issue Details (Optional)
-              </label>
-              <textarea
-                rows={3}
-                value={returnNote}
-                onChange={(e) => setReturnNote(e.target.value)}
-                placeholder="Describe any defects, damage or reason for returning..."
-                className="w-full p-3 rounded-xl border border-theme-border bg-theme-surface text-xs text-theme-text-primary focus:border-theme-primary outline-none resize-none"
-              />
-            </div>
-
-            <div className="rounded-xl border border-theme-border-subtle bg-theme-surface-alt p-3 text-[11px] text-theme-text-muted leading-relaxed">
-              📦 Our courier partner will pick up the package directly from your delivery address. Please ensure all items and packaging are intact.
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-theme-border-subtle">
-              <button
-                type="button"
-                onClick={() => setReturnModalOrder(null)}
-                disabled={returnMutation.isPending}
-                className="py-2 px-4 rounded-xl text-xs font-semibold border border-theme-border hover:bg-theme-surface-alt cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const fullNote = returnNote.trim()
-                    ? `${returnReason}: ${returnNote.trim()}`
-                    : returnReason;
-
-                  returnMutation.mutate(
-                    {
-                      uuid: returnModalOrder.id,
-                      payload: { note: fullNote },
-                    },
-                    {
-                      onSuccess: () => {
-                        setReturnModalOrder(null);
-                        setReturnNote("");
-                        toast.success(
-                          "Return Request Submitted",
-                          "Your request has been placed. Doorstep pickup will be scheduled after quick verification."
-                        );
-                        handleRefetch();
-                      },
-                      onError: (err: any) => {
-                        toast.error(err?.message || "Failed to submit return request");
-                      },
-                    }
-                  );
-                }}
-                disabled={returnMutation.isPending}
-                className="py-2 px-5 rounded-xl text-xs font-bold bg-purple-700 hover:bg-purple-800 text-white cursor-pointer disabled:opacity-50"
-              >
-                {returnMutation.isPending ? "Submitting..." : "Confirm Return Request"}
-              </button>
-            </div>
-          </div>
-        </FormModal>
+          order={returnModalOrder}
+          onSuccess={handleRefetch}
+        />
       )}
     </div>
   );

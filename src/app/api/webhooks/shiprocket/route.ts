@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/prisma";
+import { isProduction, isDevelopment, isLocalTrackingSimulationAllowed } from "@/lib/env-config";
 
 export async function GET() {
   return NextResponse.json({
@@ -12,27 +13,38 @@ export async function POST(req: NextRequest) {
   try {
     // 1. Verify Webhook Secret Token (Production Safety Requirement)
     const expectedToken = process.env.SHIPROCKET_WEBHOOK_TOKEN;
-    const isDev = process.env.NODE_ENV === "development";
-    if (expectedToken) {
-      const incomingKey =
-        req.headers.get("x-api-key") ||
-        req.headers.get("authorization") ||
-        req.headers.get("x-auth-token") ||
-        req.headers.get("token");
+    const isProd = isProduction();
+    const isDev = isDevelopment();
+    const isSimAllowed = isLocalTrackingSimulationAllowed();
 
-      const isKeyValid =
-        incomingKey === expectedToken ||
-        incomingKey === `Bearer ${expectedToken}`;
+    // In production, token is strictly mandatory
+    if (isProd && !expectedToken) {
+      console.error("[SECURITY ALERT] SHIPROCKET_WEBHOOK_TOKEN is not configured in production environment.");
+      return NextResponse.json(
+        { success: false, message: "Server configuration error: Webhook token missing" },
+        { status: 500 }
+      );
+    }
 
-      // In production, strictly reject if token is missing or invalid.
-      // In development, reject if an invalid token is explicitly supplied, but allow unauthenticated local testing.
-      if (!isKeyValid) {
-        if (!isDev || incomingKey) {
-          return NextResponse.json(
-            { success: false, message: "Invalid or missing webhook authentication token" },
-            { status: 401 }
-          );
-        }
+    const incomingKey =
+      req.headers.get("x-api-key") ||
+      req.headers.get("authorization") ||
+      req.headers.get("x-auth-token") ||
+      req.headers.get("token");
+
+    const isKeyValid = Boolean(
+      expectedToken &&
+      (incomingKey === expectedToken || incomingKey === `Bearer ${expectedToken}`)
+    );
+
+    if (!isKeyValid) {
+      // In production: Always reject missing or invalid token
+      // In development: Allow unauthenticated requests ONLY IF isLocalTrackingSimulationAllowed is true
+      if (isProd || (!isSimAllowed && !incomingKey) || (incomingKey && !isKeyValid)) {
+        return NextResponse.json(
+          { success: false, message: "Invalid or missing webhook authentication token." },
+          { status: 401 }
+        );
       }
     }
 
@@ -131,15 +143,61 @@ export async function POST(req: NextRequest) {
 
     if (returnReq) {
       const now = new Date();
+
+      // Protect terminal states: rejected and refunded returns must never be modified by webhooks
+      if (returnReq.status === "refunded" || returnReq.status === "rejected") {
+        return NextResponse.json({
+          success: true,
+          message: `Return Request #${returnReq.id} is in terminal status '${returnReq.status}', skipping webhook update.`,
+        });
+      }
+
+      // Handle delivery event
+      if (normalizedStatus === "DELIVERED") {
+        if (returnReq.status === "delivered") {
+          return NextResponse.json({
+            success: true,
+            message: `Return Request #${returnReq.id} is already in 'delivered' status (idempotent event acknowledged).`,
+          });
+        }
+
+        await db.return_requests.update({
+          where: { id: returnReq.id },
+          data: { status: "delivered", updated_at: now },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: `Shiprocket Return Webhook processed: Return Request #${returnReq.id} marked as 'delivered'. (Note: Financial refund is never triggered automatically by delivery).`,
+          returnRequestId: returnReq.uuid || String(returnReq.id),
+        });
+      }
+
+      // Handle picked up or in transit events
       if (normalizedStatus === "PICKED_UP" || normalizedStatus === "IN_TRANSIT") {
+        // Prevent status regression: never regress if already delivered or beyond
+        if (returnReq.status === "delivered") {
+          return NextResponse.json({
+            success: true,
+            message: `Return Request #${returnReq.id} is already delivered; ignoring out-of-order '${normalizedStatus}' event to prevent regression.`,
+          });
+        }
+
         await db.return_requests.update({
           where: { id: returnReq.id },
           data: { status: "picked_up", updated_at: now },
         });
+
+        return NextResponse.json({
+          success: true,
+          message: `Shiprocket Return Webhook processed: Return Request #${returnReq.id} status updated to 'picked_up'.`,
+          returnRequestId: returnReq.uuid || String(returnReq.id),
+        });
       }
+
       return NextResponse.json({
         success: true,
-        message: `Shiprocket Return Webhook processed for Return Request #${returnReq.id}`,
+        message: `Shiprocket Return Webhook acknowledged for Return Request #${returnReq.id} (Status '${normalizedStatus}' recorded).`,
       });
     }
 
@@ -169,10 +227,18 @@ export async function POST(req: NextRequest) {
     });
 
     if (!shipment || !shipment.orders) {
-      // Return 200 to acknowledge receipt even if order not found locally
+      if (isDev) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "No matching forward or return shipment found for this AWB / shipment ID.",
+          },
+          { status: 404 }
+        );
+      }
       return NextResponse.json({
         success: true,
-        message: "Shipment not found locally, webhook acknowledged",
+        message: "Shipment not found in local records, webhook acknowledged.",
       });
     }
 

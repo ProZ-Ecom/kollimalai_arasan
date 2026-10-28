@@ -6,6 +6,7 @@ import {
   type CustomerOrdersQueryParams,
   type CreateCustomerOrderPayload,
   type CancelCustomerOrderPayload,
+  type CustomerReturnRequestPayload,
 } from "../api/customer-orders.api";
 
 export const CUSTOMER_ORDERS_QUERY_KEY = ["customer", "orders"] as const;
@@ -76,7 +77,7 @@ export function useRequestCustomerReturn() {
       payload,
     }: {
       uuid: string;
-      payload?: { note?: string };
+      payload?: CustomerReturnRequestPayload | { note?: string };
     }) => customerOrdersApi.requestReturn(uuid, payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: CUSTOMER_ORDERS_QUERY_KEY });
