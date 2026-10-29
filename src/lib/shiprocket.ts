@@ -153,6 +153,10 @@ let cachedEmail: string | null = null;
 let cachedIsSandbox: boolean | null = null;
 let tokenExpiresAt: number = 0;
 
+function cleanBaseUrl(rawUrl: string): string {
+  return rawUrl.trim().replace(/\/+$/, "");
+}
+
 export function isShiprocketSandbox(): boolean {
   syncShiprocketEnv();
   return process.env.SHIPROCKET_TEST_MODE === "true";
@@ -160,16 +164,31 @@ export function isShiprocketSandbox(): boolean {
 
 export function getShiprocketBaseUrl(): string {
   syncShiprocketEnv();
-  if (process.env.SHIPROCKET_API_BASE_URL) {
-    let url = process.env.SHIPROCKET_API_BASE_URL.replace(/\/+$/, "");
-    if (url.startsWith("http://api-sandbox.shiprocket.in")) {
-      url = url.replace("http://api-sandbox.shiprocket.in", "https://api-sandbox.shiprocket.in");
+
+  const isSandbox = isShiprocketSandbox();
+
+  if (isSandbox) {
+    const sandboxUrl = process.env.SHIPROCKET_SANDBOX_BASE_URL;
+    if (!sandboxUrl) {
+      throw new Error("SHIPROCKET_SANDBOX_BASE_URL is not configured in .env");
     }
-    return url;
+    return cleanBaseUrl(sandboxUrl);
   }
-  return isShiprocketSandbox()
-    ? "https://api-sandbox.shiprocket.in/v1/external"
-    : "https://apiv2.shiprocket.in/v1/external";
+
+  const officialUrl = process.env.SHIPROCKET_OFFICIAL_BASE_URL;
+  if (!officialUrl) {
+    throw new Error("SHIPROCKET_OFFICIAL_BASE_URL is not configured in .env");
+  }
+  return cleanBaseUrl(officialUrl);
+}
+
+export function getShiprocketPortalUrl(): string {
+  syncShiprocketEnv();
+  const isSandbox = isShiprocketSandbox();
+  if (isSandbox) {
+    return process.env.SHIPROCKET_SANDBOX_PORTAL_URL || "https://sandbox.shiprocket.in";
+  }
+  return process.env.SHIPROCKET_OFFICIAL_TRACKING_URL || "https://shiprocket.co/tracking";
 }
 
 export function getShiprocketHeaders(token?: string): Record<string, string> {
@@ -839,7 +858,7 @@ export async function getShiprocketShipmentTracking(options: {
       courier: options.courierPartnerName || "Shiprocket Express (Sandbox)",
       checkpoints: [],
       error: `Shipment details unavailable on Shiprocket Sandbox (${cleanAwb || options.orderNumber || "No ID"})`,
-      officialUrl: isSandbox ? "https://sandbox.shiprocket.in" : "https://shiprocket.co/tracking",
+      officialUrl: getShiprocketPortalUrl(),
     };
   }
 
@@ -974,7 +993,7 @@ export async function getShiprocketShipmentTracking(options: {
     },
     checkpoints,
     isDelivered,
-    officialUrl: isSandbox ? "https://sandbox.shiprocket.in" : "https://shiprocket.co/tracking",
+    officialUrl: getShiprocketPortalUrl(),
     shipmentDetails: {
       id: sData.id,
       order_id: sData.order_id,

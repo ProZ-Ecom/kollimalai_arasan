@@ -120,10 +120,12 @@ export const invoiceService = {
         invoiceDate = orderDate;
       } else {
         // New order or series active: atomically allocate from official WEB/YY-YY/XXXX series
+        const prefix = process.env.INVOICE_SERIES_PREFIX?.trim() || "WEB";
         const issueDate = new Date();
         const allocated = await invoiceRepository.allocateInvoiceNumberForOrder(
           order.id,
-          issueDate
+          issueDate,
+          prefix
         );
         invoiceNumber = allocated.invoiceNumber;
         invoiceDate = allocated.invoiceDate;
