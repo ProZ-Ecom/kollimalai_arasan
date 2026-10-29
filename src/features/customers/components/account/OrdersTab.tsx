@@ -19,13 +19,14 @@ import { toast } from "@/components/ui/Toast";
 import { CustomerReturnRequestModal } from "@/features/returns/components/CustomerReturnRequestModal";
 
 export function getReturnWindowInfo(order: OrderDetailResponse) {
-  if (order.status?.toLowerCase() !== "delivered") {
+  const statusLower = order.status?.toLowerCase();
+  if (statusLower !== "delivered" && statusLower !== "returned") {
     return { isEligible: false, daysLeft: 0, expired: false, hasReturnRequest: false, returnStatus: null };
   }
 
   // Check if an active return request already exists
   const activeReturn = (order as any).returnRequest;
-  if (activeReturn && activeReturn.status !== "cancelled" && activeReturn.status !== "rejected") {
+  if (activeReturn && activeReturn.status !== "cancelled") {
     return {
       isEligible: false,
       daysLeft: 0,
@@ -33,6 +34,10 @@ export function getReturnWindowInfo(order: OrderDetailResponse) {
       hasReturnRequest: true,
       returnStatus: activeReturn.status,
     };
+  }
+
+  if (statusLower === "returned") {
+    return { isEligible: false, daysLeft: 0, expired: true, hasReturnRequest: false, returnStatus: null };
   }
 
   const deliveredDate =
@@ -415,16 +420,42 @@ export function OrdersTab({
                           Refund within 1 week
                         </span>
                       )}
-                    {order.status?.toLowerCase() === "cancelled" &&
-                      (order.paymentStatus?.toLowerCase() === "refunded" ||
-                        order.paymentStatus?.toLowerCase() === "partial_refund") && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800">
-                          Refunded
-                        </span>
-                      )}
-                    {order.status?.toLowerCase() === "delivered" && (order as any).returnRequest && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border border-purple-200 bg-purple-50 text-purple-800">
-                        Return {(order as any).returnRequest.status === "approved" ? "Approved" : (order as any).returnRequest.status === "picked_up" ? "Picked Up" : "Requested"}
+                    {(order.paymentStatus?.toLowerCase() === "refunded" ||
+                      order.paymentStatus?.toLowerCase() === "partial_refund") && (
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                          order.paymentStatus?.toLowerCase() === "partial_refund"
+                            ? "border-amber-200 bg-amber-50 text-amber-800"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                        }`}
+                      >
+                        {order.paymentStatus?.toLowerCase() === "partial_refund"
+                          ? "Partial Refund"
+                          : "Refunded"}
+                      </span>
+                    )}
+                    {(order as any).returnRequest && (
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                          (order as any).returnRequest.status === "refunded"
+                            ? "border-purple-300 bg-purple-50 text-purple-800"
+                            : (order as any).returnRequest.status === "rejected"
+                            ? "border-rose-200 bg-rose-50 text-rose-800"
+                            : "border-purple-200 bg-purple-50 text-purple-800"
+                        }`}
+                      >
+                        Return{" "}
+                        {(order as any).returnRequest.status === "approved"
+                          ? "Approved"
+                          : (order as any).returnRequest.status === "picked_up"
+                          ? "Picked Up"
+                          : (order as any).returnRequest.status === "delivered"
+                          ? "Delivered"
+                          : (order as any).returnRequest.status === "refunded"
+                          ? "Completed"
+                          : (order as any).returnRequest.status === "rejected"
+                          ? "Rejected"
+                          : "Requested"}
                       </span>
                     )}
                   </div>
@@ -541,17 +572,39 @@ export function OrdersTab({
                     </button>
                   </Link>
 
-                  {/* 5-Day Return Option after Delivery */}
-                  {order.status?.toLowerCase() === "delivered" && (() => {
+                  {/* 5-Day Return Option after Delivery / Return status */}
+                  {(order.status?.toLowerCase() === "delivered" ||
+                    order.status?.toLowerCase() === "returned" ||
+                    Boolean((order as any).returnRequest)) && (() => {
                     const returnInfo = getReturnWindowInfo(order);
                     if (returnInfo.hasReturnRequest) {
                       return (
-                        <span className="inline-flex items-center gap-1.5 border border-purple-200 bg-purple-50 text-purple-700 text-xs font-semibold py-2 px-3 rounded-lg">
-                          <RotateCcw className="h-3.5 w-3.5" />
+                        <span
+                          className={`inline-flex items-center gap-1.5 border text-xs font-semibold py-2 px-3 rounded-lg ${
+                            returnInfo.returnStatus === "refunded"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                              : returnInfo.returnStatus === "rejected"
+                              ? "border-rose-200 bg-rose-50 text-rose-800"
+                              : "border-purple-200 bg-purple-50 text-purple-700"
+                          }`}
+                        >
+                          {returnInfo.returnStatus === "refunded" ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          ) : returnInfo.returnStatus === "rejected" ? (
+                            <X className="h-3.5 w-3.5 text-rose-600" />
+                          ) : (
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          )}
                           {returnInfo.returnStatus === "approved"
                             ? "Return Approved (Pickup Scheduled)"
                             : returnInfo.returnStatus === "picked_up"
                             ? "Return Picked Up"
+                            : returnInfo.returnStatus === "delivered"
+                            ? "Return Delivered (Under Inspection)"
+                            : returnInfo.returnStatus === "refunded"
+                            ? "Return Completed"
+                            : returnInfo.returnStatus === "rejected"
+                            ? "Return Rejected"
                             : "Return Requested"}
                         </span>
                       );

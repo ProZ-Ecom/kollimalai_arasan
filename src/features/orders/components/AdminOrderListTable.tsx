@@ -299,7 +299,18 @@ export function AdminOrderListTable({
           <OrderStatusBadge status={row.original.status} />
           {row.original.returnRequest && (
             <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-300 bg-purple-50 text-purple-800">
-              Return {row.original.returnRequest.status === "approved" ? "Approved" : row.original.returnRequest.status === "picked_up" ? "Picked Up" : row.original.returnRequest.status === "refunded" ? "Completed" : "Requested"}
+              Return{" "}
+              {row.original.returnRequest.status === "approved"
+                ? "Approved"
+                : row.original.returnRequest.status === "picked_up"
+                ? "Picked Up"
+                : row.original.returnRequest.status === "delivered"
+                ? "Delivered"
+                : row.original.returnRequest.status === "refunded"
+                ? "Completed"
+                : row.original.returnRequest.status === "rejected"
+                ? "Rejected"
+                : "Requested"}
             </span>
           )}
         </div>

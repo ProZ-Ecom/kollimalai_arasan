@@ -185,12 +185,17 @@ export function OrderDetailView({
           {/* Payment Status Badge */}
           {paymentStatus && (
             <span
-              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${paymentStatus.toLowerCase() === "paid"
-                ? "bg-secondary-50 text-secondary-700 border-secondary-200"
-                : "bg-primary-50 text-primary-700 border-primary-200"
-                }`}
+              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                paymentStatus.toLowerCase() === "paid"
+                  ? "bg-secondary-50 text-secondary-700 border-secondary-200"
+                  : paymentStatus.toLowerCase() === "refunded"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : paymentStatus.toLowerCase() === "partial_refund"
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-primary-50 text-primary-700 border-primary-200"
+              }`}
             >
-              {paymentStatus}
+              {paymentStatus.replace(/_/g, " ")}
             </span>
           )}
 
@@ -232,17 +237,63 @@ export function OrderDetailView({
 
       {/* Return Request Active Notice */}
       {(order as any).returnRequest && (
-        <div className="flex items-start gap-3 rounded-2xl border border-purple-200 bg-purple-50 p-4 text-purple-900 shadow-2xs">
-          <RotateCcw className="h-5 w-5 text-purple-600 shrink-0 mt-0.5" />
+        <div
+          className={`flex items-start gap-3 rounded-2xl border p-4 shadow-2xs ${
+            (order as any).returnRequest.status === "refunded"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-950"
+              : (order as any).returnRequest.status === "rejected"
+              ? "border-rose-200 bg-rose-50 text-rose-950"
+              : "border-purple-200 bg-purple-50 text-purple-900"
+          }`}
+        >
+          {(order as any).returnRequest.status === "refunded" ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+          ) : (order as any).returnRequest.status === "rejected" ? (
+            <Clock className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+          ) : (
+            <RotateCcw className="h-5 w-5 text-purple-600 shrink-0 mt-0.5" />
+          )}
           <div className="space-y-1">
-            <h4 className="text-xs sm:text-sm font-bold text-purple-950">
-              Return Request {(order as any).returnRequest.status === "approved" ? "Approved" : (order as any).returnRequest.status === "picked_up" ? "Picked Up" : "Under Review"}
+            <h4
+              className={`text-xs sm:text-sm font-bold ${
+                (order as any).returnRequest.status === "refunded"
+                  ? "text-emerald-950"
+                  : (order as any).returnRequest.status === "rejected"
+                  ? "text-rose-950"
+                  : "text-purple-950"
+              }`}
+            >
+              {(order as any).returnRequest.status === "approved"
+                ? "Return Request Approved"
+                : (order as any).returnRequest.status === "picked_up"
+                ? "Return Picked Up"
+                : (order as any).returnRequest.status === "delivered"
+                ? "Return Delivered (Under Inspection)"
+                : (order as any).returnRequest.status === "refunded"
+                ? "Return Completed & Refund Processed"
+                : (order as any).returnRequest.status === "rejected"
+                ? "Return Request Rejected"
+                : "Return Request Under Review"}
             </h4>
-            <p className="text-xs text-purple-800 leading-relaxed">
+            <p
+              className={`text-xs leading-relaxed ${
+                (order as any).returnRequest.status === "refunded"
+                  ? "text-emerald-800"
+                  : (order as any).returnRequest.status === "rejected"
+                  ? "text-rose-800"
+                  : "text-purple-800"
+              }`}
+            >
               {(order as any).returnRequest.status === "approved"
                 ? "Your return request has been approved. Reverse courier pickup is scheduled at your delivery address."
                 : (order as any).returnRequest.status === "picked_up"
                 ? "Package has been picked up by the courier and is on its way to our Kolli Hills warehouse."
+                : (order as any).returnRequest.status === "delivered"
+                ? "The returned package has reached our warehouse and is currently undergoing product inspection."
+                : (order as any).returnRequest.status === "refunded"
+                ? "Your returned items have been verified and refund has been authorized and completed."
+                : (order as any).returnRequest.status === "rejected"
+                ? "Your return request could not be accepted. Please contact customer support if you need assistance."
                 : "Your return request has been received and is currently under review by our store team. We will arrange doorstep reverse courier pickup upon verification."}
             </p>
           </div>

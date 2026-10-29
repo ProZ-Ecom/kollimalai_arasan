@@ -56,7 +56,7 @@ export const returnDetailInclude = {
           status: true,
           reason: true,
           processed_at: true,
-          createdAt: true,
+          created_at: true,
         },
       },
     },
@@ -82,7 +82,7 @@ export const returnDetailInclude = {
           quantity: true,
           unit_price: true,
           total_price: true,
-          variant_unit_price_id: true,
+          variantUnitPriceId: true,
           product: {
             select: {
               images: {
@@ -545,7 +545,7 @@ export const returnRepository = {
       // 5. Restock inventory only for returned items if requested
       if (params.restockInventory) {
         for (const item of returnReq.return_items) {
-          const vupId = item.order_items.variant_unit_price_id;
+          const vupId = item.order_items.variantUnitPriceId;
           if (!vupId) continue;
 
           const inv = await tx.inventory.findFirst({
