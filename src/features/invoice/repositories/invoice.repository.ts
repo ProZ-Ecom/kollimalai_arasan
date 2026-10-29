@@ -82,7 +82,7 @@ export const invoiceRepository = {
   async allocateInvoiceNumberForOrder(
     orderId: bigint,
     issueDate: Date = new Date(),
-    prefix = "WEB"
+    prefix: string
   ): Promise<{ invoiceNumber: string; invoiceDate: Date }> {
     return db.$transaction(async (tx) => {
       // 1. Re-check order with fresh read inside transaction to prevent concurrent duplicate allocation
