@@ -211,9 +211,9 @@ export type AdminReviewReturnInput = z.infer<typeof adminReviewReturnSchema>;
 export const adminProcessReturnRefundSchema = z
   .object({
     amount: z.number().positive("Refund amount must be greater than 0").optional(),
+    refundMethod: z.enum(["gateway", "manual"]).optional(),
     paymentMode: z.string().trim().min(1, "Payment mode is required").optional(),
     referenceId: z.string().trim().max(100).optional(),
-    restockInventory: z.boolean().default(true),
     note: z.string().trim().max(500).optional(),
   })
   .strict();

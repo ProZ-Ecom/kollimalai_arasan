@@ -1,5 +1,6 @@
 import type { orders_order_status, orders_payment_status, order_addresses_type } from "@/generated/prisma";
 import type { VariantMeasurement } from "@/features/variants/utils/measurement.util";
+import type { ReturnPayoutDetails } from "@/features/returns/types/return.types";
 
 export type OrderStatus = orders_order_status;
 export type PaymentStatus = orders_payment_status;
@@ -111,6 +112,7 @@ export interface OrderListItemResponse {
     id: string;
     status: string;
     reason?: string | null;
+    payoutDetails?: ReturnPayoutDetails | null;
     returnAwb?: string | null;
     labelUrl?: string | null;
     courierName?: string | null;

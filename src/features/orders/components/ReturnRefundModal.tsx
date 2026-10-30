@@ -29,6 +29,10 @@ import {
   Building2,
   Smartphone,
   Info,
+  CreditCard,
+  Copy,
+  Check,
+  Banknote,
 } from "lucide-react";
 import type {
   ReturnRequestDetailResponse,
@@ -75,11 +79,11 @@ const PRESET_REASONS = [
   "Other admin decision",
 ];
 
-const COD_PAYMENT_MODES = [
+const MANUAL_PAYMENT_MODES = [
   "UPI (GPay / PhonePe / Paytm / BHIM)",
   "Bank Transfer (NEFT / IMPS / RTGS)",
   "Cash",
-  "Other Transfer",
+  "Other Manual Transfer",
 ];
 
 export function ReturnRefundModal({
@@ -110,13 +114,20 @@ export function ReturnRefundModal({
   // Refund Form state
   const [selectedPreset, setSelectedPreset] = useState<number | "custom">(100);
   const [refundAmount, setRefundAmount] = useState<string>("");
-  const [paymentMode, setPaymentMode] = useState<string>(COD_PAYMENT_MODES[0]);
+  const [refundMethod, setRefundMethod] = useState<"gateway" | "manual">("gateway");
+  const [paymentMode, setPaymentMode] = useState<string>(MANUAL_PAYMENT_MODES[0]);
   const [referenceId, setReferenceId] = useState<string>("");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [reason, setReason] = useState<string>(PRESET_REASONS[0]);
   const [note, setNote] = useState<string>("");
-  const [restockInventory, setRestockInventory] = useState<boolean>(true);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isProcessingRefund, setIsProcessingRefund] = useState(false);
+
+  const handleCopy = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const returnOrder = useReturnAdminOrder();
 
@@ -153,11 +164,16 @@ export function ReturnRefundModal({
           setRefundAmount(ret.eligibleRefundAmount.toFixed(2));
         }
 
-        // Autofill payout method if customer requested one
+        // Autofill payout method and method preference if customer requested one
+        if (ret.isCod) {
+          setRefundMethod("manual");
+        }
         if (ret.payoutDetails?.method === "upi") {
           setPaymentMode("UPI (GPay / PhonePe / Paytm / BHIM)");
         } else if (ret.payoutDetails?.method === "bank_transfer") {
           setPaymentMode("Bank Transfer (NEFT / IMPS / RTGS)");
+        } else if (ret.isCod) {
+          setPaymentMode(MANUAL_PAYMENT_MODES[0]);
         }
       }
     } catch (err) {
@@ -171,8 +187,13 @@ export function ReturnRefundModal({
     if (order && open) {
       setSelectedPreset(100);
       setRefundAmount(Number(order.totalAmount || 0).toFixed(2));
-      setPaymentMode(COD_PAYMENT_MODES[0]);
+      const orderIsCod = Boolean(
+        order.paymentStatus === "pending" || (order as any).isCod
+      );
+      setRefundMethod(orderIsCod ? "manual" : "gateway");
+      setPaymentMode(orderIsCod ? MANUAL_PAYMENT_MODES[0] : "Razorpay Gateway Refund");
       setReferenceId("");
+      setCopiedField(null);
       setReason(
         order.orderStatus === "cancelled"
           ? PRESET_REASONS[0]
@@ -183,7 +204,6 @@ export function ReturnRefundModal({
       setVideoPlaybackError(false);
       setReviewSuccessMessage(null);
       setPickupError(null);
-      setRestockInventory(true);
 
       const returnId = order.returnRequest?.id;
       if (returnId) {
@@ -406,6 +426,11 @@ export function ReturnRefundModal({
 
     const returnId = returnDetail?.id || order.returnRequest?.id;
 
+    const selectedMode =
+      refundMethod === "gateway"
+        ? "Razorpay Gateway Refund"
+        : paymentMode || MANUAL_PAYMENT_MODES[0];
+
     try {
       if (returnId && !isCancelledOrder) {
         // Dedicated Return Refund endpoint
@@ -414,9 +439,9 @@ export function ReturnRefundModal({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             amount: currentRefundNum,
-            paymentMode,
+            refundMethod,
+            paymentMode: selectedMode,
             referenceId: referenceId.trim() || undefined,
-            restockInventory,
             note: note.trim() || undefined,
           }),
         });
@@ -433,7 +458,7 @@ export function ReturnRefundModal({
       } else {
         // Fallback or Cancelled Order Refund
         const finalReason = note.trim() ? `${reason}: ${note.trim()}` : reason;
-        const auditNote = `Admin sent refund of ${formatPrice(currentRefundNum)} via ${paymentMode}${
+        const auditNote = `Admin processed ${refundMethod === "gateway" ? "gateway" : "manual"} refund of ${formatPrice(currentRefundNum)} via ${selectedMode}${
           referenceId.trim() ? ` (Ref: ${referenceId.trim()})` : ""
         }${note.trim() ? ` - ${note.trim()}` : ""}`;
 
@@ -441,7 +466,7 @@ export function ReturnRefundModal({
           {
             id: order.id,
             amount: currentRefundNum,
-            paymentMode,
+            paymentMode: selectedMode,
             referenceId: referenceId.trim() || undefined,
             reason: finalReason,
             note: auditNote,
@@ -538,6 +563,137 @@ export function ReturnRefundModal({
                 <span className="font-semibold truncate block">{returnDetail.customer.email || "—"}</span>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* SECTION 1B: CUSTOMER REFUND / PAYOUT TRANSFER DETAILS */}
+        {returnDetail?.payoutDetails ? (
+          <div className="rounded-xl border border-emerald-300 bg-emerald-50/60 p-4 text-xs space-y-3 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800">
+                  {returnDetail.payoutDetails.method === "upi" ? (
+                    <Smartphone className="h-4 w-4" />
+                  ) : (
+                    <Building2 className="h-4 w-4" />
+                  )}
+                </span>
+                <div>
+                  <h4 className="font-bold text-neutral-900 text-xs sm:text-sm">
+                    Customer Refund Transfer Details
+                  </h4>
+                  <p className="text-[11px] text-neutral-500 font-normal">
+                    {returnDetail.payoutDetails.method === "upi"
+                      ? "Customer requested refund via Instant UPI Transfer"
+                      : "Customer requested refund via Bank Account Transfer (IMPS/NEFT)"}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wide">
+                {returnDetail.payoutDetails.method === "upi" ? "UPI ID" : "Bank Account"}
+              </span>
+            </div>
+
+            {returnDetail.payoutDetails.method === "upi" ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-xl border border-emerald-200">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block">
+                    Customer UPI ID / VPA
+                  </span>
+                  <span className="font-mono font-bold text-emerald-950 text-sm">
+                    {returnDetail.payoutDetails.upiId}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(returnDetail.payoutDetails?.upiId || "", "upi_banner")}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary-700 hover:text-secondary-900 bg-secondary-50 hover:bg-secondary-100 px-3 py-1.5 rounded-lg border border-secondary-200 transition-colors cursor-pointer"
+                >
+                  {copiedField === "upi_banner" ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-600" /> Copied UPI!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" /> Copy UPI ID
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-white rounded-xl border border-emerald-200">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block">
+                    Account Holder Name
+                  </span>
+                  <span className="font-semibold text-neutral-900 text-xs">
+                    {returnDetail.payoutDetails.accountHolderName || "—"}
+                  </span>
+                </div>
+                {returnDetail.payoutDetails.bankName && (
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block">
+                      Bank Name
+                    </span>
+                    <span className="font-semibold text-neutral-900 text-xs">
+                      {returnDetail.payoutDetails.bankName}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                      Bank Account Number
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(returnDetail.payoutDetails?.accountNumber || "", "acct_banner")}
+                      className="inline-flex items-center gap-1 text-[10px] font-bold text-secondary-700 hover:underline cursor-pointer"
+                    >
+                      {copiedField === "acct_banner" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                      {copiedField === "acct_banner" ? "Copied" : "Copy Account No"}
+                    </button>
+                  </div>
+                  <span className="font-mono font-bold text-neutral-900 text-xs sm:text-sm">
+                    {returnDetail.payoutDetails.accountNumber}
+                  </span>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                      IFSC Code
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(returnDetail.payoutDetails?.ifscCode || "", "ifsc_banner")}
+                      className="inline-flex items-center gap-1 text-[10px] font-bold text-secondary-700 hover:underline cursor-pointer"
+                    >
+                      {copiedField === "ifsc_banner" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                      {copiedField === "ifsc_banner" ? "Copied" : "Copy IFSC"}
+                    </button>
+                  </div>
+                  <span className="font-mono font-bold text-neutral-900 text-xs sm:text-sm">
+                    {returnDetail.payoutDetails.ifscCode}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : !isCancelledOrder && (
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3 text-xs text-neutral-600 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-neutral-400 shrink-0" />
+              <span>
+                {isCod
+                  ? "No manual payout details recorded for this return request."
+                  : "Customer paid online via Razorpay. Online gateway refund reverses funds directly to customer's card/bank."}
+              </span>
+            </div>
+            {!isCod && (
+              <span className="text-[10px] font-semibold text-neutral-500 uppercase bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200">
+                Prepaid Order
+              </span>
+            )}
           </div>
         )}
 
@@ -941,62 +1097,231 @@ export function ReturnRefundModal({
               )}
             </div>
 
-            {/* COD Manual Transfer details OR Razorpay Gateway Notice */}
-            {isCod ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
-                  <Info className="h-4 w-4 text-amber-700" />
-                  <span>Cash on Delivery (COD) Manual Refund Workflow</span>
-                </div>
-                <p className="text-[11.5px] text-amber-900 leading-relaxed">
-                  As this order was paid in cash upon delivery, do <strong>not</strong> attempt an online gateway refund.
-                  Process a direct payout to the customer&apos;s verified bank/UPI account and record the transaction details below.
-                </p>
-
-                {returnDetail?.payoutDetails && (
-                  <div className="rounded-lg bg-white p-3 border border-amber-200 text-xs space-y-1">
-                    <p className="font-bold text-neutral-900">
-                      Customer Requested Payout Destination:
+            {/* REFUND METHOD SELECTION (Prepaid Orders can choose between Gateway vs Manual; COD is always Manual) */}
+            {!isCod ? (
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700">
+                  Refund Method / Channel
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Option 1: Automatic Gateway Refund */}
+                  <div
+                    onClick={() => {
+                      setRefundMethod("gateway");
+                      setPaymentMode("Razorpay Gateway Refund");
+                    }}
+                    className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                      refundMethod === "gateway"
+                        ? "border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-600/20 shadow-xs"
+                        : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50/60"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`p-1.5 rounded-lg ${
+                            refundMethod === "gateway"
+                              ? "bg-emerald-600 text-white"
+                              : "bg-neutral-100 text-neutral-600"
+                          }`}
+                        >
+                          <CreditCard className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-neutral-900 block">
+                            Online Gateway Refund
+                          </span>
+                          <span className="text-[10px] font-semibold text-neutral-500">
+                            Automatic Source Reversal (Razorpay)
+                          </span>
+                        </div>
+                      </div>
+                      <input
+                        type="radio"
+                        name="refundMethod"
+                        checked={refundMethod === "gateway"}
+                        onChange={() => {
+                          setRefundMethod("gateway");
+                          setPaymentMode("Razorpay Gateway Refund");
+                        }}
+                        className="accent-emerald-600 h-4 w-4 mt-0.5 cursor-pointer"
+                      />
+                    </div>
+                    <p className="text-[11px] text-neutral-600 mt-2.5 leading-relaxed">
+                      Reverses the amount directly back to the customer&apos;s original online payment method via Razorpay.
                     </p>
+                  </div>
+
+                  {/* Option 2: Manual Direct Payout */}
+                  <div
+                    onClick={() => {
+                      setRefundMethod("manual");
+                      setPaymentMode(MANUAL_PAYMENT_MODES[0]);
+                    }}
+                    className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                      refundMethod === "manual"
+                        ? "border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-600/20 shadow-xs"
+                        : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50/60"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`p-1.5 rounded-lg ${
+                            refundMethod === "manual"
+                              ? "bg-emerald-600 text-white"
+                              : "bg-neutral-100 text-neutral-600"
+                          }`}
+                        >
+                          <Smartphone className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-neutral-900 block">
+                            Manual Direct Transfer
+                          </span>
+                          <span className="text-[10px] font-semibold text-neutral-500">
+                            UPI / Bank / Cash Payout by Admin
+                          </span>
+                        </div>
+                      </div>
+                      <input
+                        type="radio"
+                        name="refundMethod"
+                        checked={refundMethod === "manual"}
+                        onChange={() => {
+                          setRefundMethod("manual");
+                          setPaymentMode(MANUAL_PAYMENT_MODES[0]);
+                        }}
+                        className="accent-emerald-600 h-4 w-4 mt-0.5 cursor-pointer"
+                      />
+                    </div>
+                    <p className="text-[11px] text-neutral-600 mt-2.5 leading-relaxed">
+                      Admin manually transfers funds to customer (GPay / PhonePe / Bank / Cash) and enters reference ID here.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 flex items-center gap-2.5 text-xs text-amber-950 font-medium">
+                <Building2 className="h-4 w-4 text-amber-700 shrink-0" />
+                <span>
+                  <strong>Cash on Delivery (COD) Order:</strong> Customer paid in cash upon delivery. Manual direct transfer (UPI / Bank / Cash) is used to process this refund.
+                </span>
+              </div>
+            )}
+
+            {/* DETAILS BASED ON SELECTED REFUND METHOD */}
+            {refundMethod === "manual" || isCod ? (
+              <div className="rounded-xl border border-amber-200/90 bg-amber-50/60 p-4 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
+                    <Banknote className="h-4 w-4 text-amber-700" />
+                    <span>Manual Payout Information</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-900">
+                    Admin Direct Transfer
+                  </span>
+                </div>
+
+                {/* Customer Provided Payout Destination (if any) */}
+                {returnDetail?.payoutDetails && (
+                  <div className="rounded-xl bg-white p-3.5 border border-amber-200 text-xs space-y-2 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-neutral-800 flex items-center gap-1.5">
+                        <Smartphone className="h-3.5 w-3.5 text-amber-600" />
+                        Customer Requested Payout Destination:
+                      </span>
+                      <span className="text-[10px] font-semibold text-neutral-400">
+                        Provided by Customer
+                      </span>
+                    </div>
+
                     {returnDetail.payoutDetails.method === "upi" ? (
-                      <p className="font-mono text-emerald-700 font-bold">
-                        UPI: {returnDetail.payoutDetails.upiId}
-                      </p>
+                      <div className="flex items-center justify-between gap-2 p-2 bg-neutral-50 rounded-lg border border-neutral-200 font-mono text-xs">
+                        <span className="font-bold text-emerald-800">
+                          UPI ID: {returnDetail.payoutDetails.upiId}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(returnDetail.payoutDetails?.upiId || "", "upi")}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-secondary-600 hover:text-secondary-800 bg-white px-2 py-0.5 rounded border border-neutral-300 hover:bg-neutral-100 transition-colors cursor-pointer"
+                        >
+                          {copiedField === "upi" ? (
+                            <>
+                              <Check className="h-3 w-3 text-emerald-600" /> Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3" /> Copy UPI
+                            </>
+                          )}
+                        </button>
+                      </div>
                     ) : (
-                      <div className="space-y-0.5 text-neutral-700">
-                        <p>Holder: <strong>{returnDetail.payoutDetails.accountHolderName}</strong></p>
-                        <p>A/C: <span className="font-mono font-bold">{returnDetail.payoutDetails.accountNumber}</span></p>
-                        <p>IFSC: <span className="font-mono font-bold">{returnDetail.payoutDetails.ifscCode}</span></p>
+                      <div className="space-y-1.5 text-neutral-700 p-2.5 bg-neutral-50 rounded-lg border border-neutral-200 text-xs">
+                        <div className="flex justify-between items-center">
+                          <span>A/C Holder: <strong>{returnDetail.payoutDetails.accountHolderName}</strong></span>
+                        </div>
+                        <div className="flex justify-between items-center gap-2">
+                          <span>A/C No: <strong className="font-mono text-neutral-900">{returnDetail.payoutDetails.accountNumber}</strong></span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(returnDetail.payoutDetails?.accountNumber || "", "acct")}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-secondary-600 hover:text-secondary-800 bg-white px-2 py-0.5 rounded border border-neutral-300 hover:bg-neutral-100 transition-colors cursor-pointer"
+                          >
+                            {copiedField === "acct" ? (
+                              <>
+                                <Check className="h-3 w-3 text-emerald-600" /> Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" /> Copy A/C
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>IFSC Code: <strong className="font-mono text-neutral-900">{returnDetail.payoutDetails.ifscCode}</strong></span>
+                        </div>
                       </div>
                     )}
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Form Fields: Payout Channel + Transaction ID */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      Payment Mode
+                      Payout Channel / Mode
                     </label>
                     <Select
                       value={paymentMode}
                       onValueChange={(val) => setPaymentMode(val)}
-                      options={COD_PAYMENT_MODES.map((m) => ({ value: m, label: m }))}
+                      options={MANUAL_PAYMENT_MODES.map((m) => ({ value: m, label: m }))}
                       size="sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      UTR / Transaction ID <span className="text-red-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700">
+                        Transaction ID / UTR No.
+                      </label>
+                      <span className="text-[10px] font-semibold text-neutral-500 bg-white px-1.5 py-0.2 rounded border border-neutral-200">
+                        Optional
+                      </span>
+                    </div>
                     <input
                       type="text"
                       value={referenceId}
                       onChange={(e) => setReferenceId(e.target.value)}
                       placeholder="e.g. UPI Ref / Bank UTR No."
-                      className="w-full py-2 px-3 rounded-lg border border-neutral-300 text-xs font-medium text-neutral-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none bg-white"
+                      className="w-full py-2 px-3 rounded-lg border border-neutral-300 text-xs font-mono font-medium text-neutral-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none bg-white placeholder:font-sans placeholder:text-neutral-400"
                     />
                   </div>
                 </div>
+                <p className="text-[11px] text-amber-900/80 leading-relaxed">
+                  Transfer the refund manually to the customer, then enter the transaction reference / UTR number above so it is logged in order audit history.
+                </p>
               </div>
             ) : (
               <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 space-y-2 text-xs">
@@ -1005,33 +1330,27 @@ export function ReturnRefundModal({
                   <span>Online Prepaid Refund via Razorpay Gateway</span>
                 </div>
                 <p className="text-blue-900 leading-relaxed text-[11.5px]">
-                  Order was paid online at checkout. Authorizing this refund will initiate a direct refund via the payment gateway to the original customer account.
+                  Order was paid online at checkout. Authorizing this refund will request a direct reversal from the Razorpay payment gateway to the original customer bank/card.
                 </p>
                 <div className="pt-1">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Gateway Reference ID (Optional override)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700">
+                      Gateway Reference ID
+                    </label>
+                    <span className="text-[10px] font-semibold text-neutral-500 bg-white px-1.5 py-0.2 rounded border border-neutral-200">
+                      Optional override
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={referenceId}
                     onChange={(e) => setReferenceId(e.target.value)}
                     placeholder="Auto-generated by gateway or enter reference"
-                    className="w-full py-1.5 px-3 rounded-lg border border-neutral-300 text-xs font-medium text-neutral-800 bg-white"
+                    className="w-full py-1.5 px-3 rounded-lg border border-neutral-300 text-xs font-mono font-medium text-neutral-800 bg-white placeholder:font-sans placeholder:text-neutral-400"
                   />
                 </div>
               </div>
             )}
-
-            {/* Restock Inventory Checkbox */}
-            <label className="flex items-center gap-2.5 text-xs text-neutral-800 font-semibold cursor-pointer pt-1">
-              <input
-                type="checkbox"
-                checked={restockInventory}
-                onChange={(e) => setRestockInventory(e.target.checked)}
-                className="h-4 w-4 rounded accent-emerald-600 cursor-pointer"
-              />
-              <span>Restock inspected returned items to available inventory</span>
-            </label>
 
             {/* Internal Notes */}
             <div>
@@ -1069,8 +1388,7 @@ export function ReturnRefundModal({
                 isProcessingRefund ||
                 returnOrder.isPending ||
                 !!validationError ||
-                currentRefundNum <= 0 ||
-                (isCod && !referenceId.trim())
+                currentRefundNum <= 0
               }
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs px-4 cursor-pointer disabled:opacity-50"
             >
@@ -1081,8 +1399,10 @@ export function ReturnRefundModal({
                 </>
               ) : (
                 <>
-                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                  Authorize & Process Refund ({formatPrice(currentRefundNum)})
+                  <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                  {refundMethod === "manual" || isCod
+                    ? `Record Manual Refund (${formatPrice(currentRefundNum)})`
+                    : `Authorize Gateway Refund (${formatPrice(currentRefundNum)})`}
                 </>
               )}
             </Button>

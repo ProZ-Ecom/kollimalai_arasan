@@ -64,6 +64,7 @@ export interface ReturnRequestListItem {
   status: ReturnRequestStatus;
   adminNotes?: string | null;
   inspectedAt?: Date | null;
+  payoutDetails?: ReturnPayoutDetails | null;
   totalItems: number;
   requestedAt: Date;
   approvedAt: Date | null;

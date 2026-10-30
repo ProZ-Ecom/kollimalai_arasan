@@ -17,6 +17,10 @@ import { ProductImage } from "@/components/common/ProductImage";
 import { LiveTrackingModal } from "@/features/orders/components/LiveTrackingModal";
 import { toast } from "@/components/ui/Toast";
 import { CustomerReturnRequestModal } from "@/features/returns/components/CustomerReturnRequestModal";
+import {
+  isWithinReturnWindow,
+  getRemainingReturnBusinessDays,
+} from "@/features/returns/utils/return-window";
 
 export function getReturnWindowInfo(order: OrderDetailResponse) {
   const statusLower = order.status?.toLowerCase();
@@ -46,16 +50,11 @@ export function getReturnWindowInfo(order: OrderDetailResponse) {
     order.updatedAt ||
     order.createdAt;
 
-  const deliveredTime = new Date(deliveredDate).getTime();
-  const fiveDaysInMs = 5 * 24 * 60 * 60 * 1000;
-  const elapsedMs = Date.now() - deliveredTime;
-
-  if (elapsedMs > fiveDaysInMs) {
+  if (!isWithinReturnWindow(deliveredDate)) {
     return { isEligible: false, daysLeft: 0, expired: true, hasReturnRequest: false, returnStatus: null };
   }
 
-  const msLeft = fiveDaysInMs - elapsedMs;
-  const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+  const daysLeft = getRemainingReturnBusinessDays(deliveredDate);
 
   return { isEligible: true, daysLeft: Math.max(1, daysLeft), expired: false, hasReturnRequest: false, returnStatus: null };
 }
@@ -572,7 +571,7 @@ export function OrdersTab({
                     </button>
                   </Link>
 
-                  {/* 5-Day Return Option after Delivery / Return status */}
+                  {/* 7 Business Days Return Option after Delivery / Return status */}
                   {(order.status?.toLowerCase() === "delivered" ||
                     order.status?.toLowerCase() === "returned" ||
                     Boolean((order as any).returnRequest)) && (() => {
@@ -882,7 +881,7 @@ export function OrdersTab({
         orderNumber={liveTrackingModal.orderNumber}
       />
 
-      {/* Customer 5-Day Return Request Modal */}
+      {/* Customer 7 Business Days Return Request Modal */}
       {returnModalOrder && (
         <CustomerReturnRequestModal
           open={!!returnModalOrder}

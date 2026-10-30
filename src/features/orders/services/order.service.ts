@@ -679,10 +679,11 @@ export const orderService = {
         activeReturnReq.uuid || String(activeReturnReq.id),
         {
           amount: input?.amount,
+          refundMethod: (input as any)?.refundMethod,
           paymentMode: input?.paymentMode,
           referenceId: input?.referenceId,
           note: input?.note,
-          restockInventory: true,
+
         }
       );
 

@@ -296,6 +296,21 @@ export function OrderDetailView({
                 ? "Your return request could not be accepted. Please contact customer support if you need assistance."
                 : "Your return request has been received and is currently under review by our store team. We will arrange doorstep reverse courier pickup upon verification."}
             </p>
+            {(order as any).returnRequest?.payoutDetails && (
+              <div className="pt-1.5 flex flex-wrap items-center gap-2 text-[11px]">
+                <span className="font-bold text-neutral-600">Refund Destination:</span>
+                {(order as any).returnRequest.payoutDetails.method === "upi" ? (
+                  <span className="inline-flex items-center gap-1 font-mono font-bold bg-white/90 border border-purple-200 px-2.5 py-0.5 rounded-lg text-purple-950 shadow-2xs">
+                    UPI: {(order as any).returnRequest.payoutDetails.upiId}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 font-mono font-bold bg-white/90 border border-purple-200 px-2.5 py-0.5 rounded-lg text-purple-950 shadow-2xs">
+                    Bank: {(order as any).returnRequest.payoutDetails.bankName ? `${(order as any).returnRequest.payoutDetails.bankName} | ` : ""}
+                    A/C {(order as any).returnRequest.payoutDetails.accountNumber} (IFSC: {(order as any).returnRequest.payoutDetails.ifscCode})
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

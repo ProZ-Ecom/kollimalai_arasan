@@ -324,32 +324,29 @@ export function CustomerReturnRequestModal({
     }
 
     if (step === "refund") {
-      if (isCodOrder) {
-        if (refundMethod === "upi") {
-          const trimmed = upiId.trim();
-          if (!trimmed) {
-            return "Please enter your UPI ID.";
-          }
-          if (!/^[\w.-]+@[\w.-]+$/.test(trimmed)) {
-            return "Please enter a valid UPI ID (e.g. mobile@paytm or name@okaxis).";
-          }
-        } else {
-          if (!accountHolderName.trim() || accountHolderName.trim().length < 2) {
-            return "Please enter the account holder's name (min 2 characters).";
-          }
-          if (!accountNumber.trim() || !/^\d{9,18}$/.test(accountNumber.trim())) {
-            return "Bank account number must be between 9 and 18 digits.";
-          }
-          if (accountNumber.trim() !== confirmAccountNumber.trim()) {
-            return "Bank account numbers do not match.";
-          }
-          if (!ifscCode.trim() || !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(ifscCode.trim())) {
-            return "Please enter a valid 11-digit IFSC code (e.g. SBIN0001234).";
-          }
+      if (refundMethod === "upi") {
+        const trimmed = upiId.trim();
+        if (!trimmed) {
+          return "Please enter your UPI ID.";
+        }
+        if (!/^[\w.-]+@[\w.-]+$/.test(trimmed)) {
+          return "Please enter a valid UPI ID (e.g. mobile@paytm or name@okaxis).";
+        }
+      } else {
+        if (!accountHolderName.trim() || accountHolderName.trim().length < 2) {
+          return "Please enter the account holder's name (min 2 characters).";
+        }
+        if (!accountNumber.trim() || !/^\d{9,18}$/.test(accountNumber.trim())) {
+          return "Bank account number must be between 9 and 18 digits.";
+        }
+        if (accountNumber.trim() !== confirmAccountNumber.trim()) {
+          return "Bank account numbers do not match.";
+        }
+        if (!ifscCode.trim() || !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(ifscCode.trim())) {
+          return "Please enter a valid 11-digit IFSC code (e.g. SBIN0001234).";
         }
       }
     }
-
     return null;
   };
 
@@ -385,8 +382,8 @@ export function CustomerReturnRequestModal({
       return;
     }
 
-    const refundDetails: RefundDetailsInput | undefined = isCodOrder
-      ? refundMethod === "upi"
+    const refundDetails: RefundDetailsInput =
+      refundMethod === "upi"
         ? {
             method: "upi",
             upiId: upiId.trim(),
@@ -398,8 +395,7 @@ export function CustomerReturnRequestModal({
             accountNumber: accountNumber.trim(),
             confirmAccountNumber: confirmAccountNumber.trim(),
             ifscCode: ifscCode.trim().toUpperCase(),
-          }
-      : undefined;
+          };
 
     const itemsPayload = chosenItems.map((item) => ({
       orderItemId: item.id,
@@ -463,7 +459,7 @@ export function CustomerReturnRequestModal({
           </div>
           <div className="text-right">
             <span className="text-xs text-neutral-400">Doorstep Pickup</span>
-            <p className="text-xs font-semibold text-emerald-400">5-Day Return Window</p>
+            <p className="text-xs font-semibold text-emerald-400">7 Business Days Return Window</p>
           </div>
         </div>
 
@@ -861,22 +857,21 @@ export function CustomerReturnRequestModal({
                 </div>
                 <div className="text-xs">
                   <p className="font-bold uppercase tracking-wider text-emerald-900">
-                    {isCodOrder ? "COD Direct Refund Transfer" : "Prepaid Gateway Refund"}
+                    Refund Payout Destination
                   </p>
                   <p className="mt-1 text-emerald-800 leading-relaxed">
                     Estimated refund of{" "}
                     <strong className="font-extrabold text-neutral-900">
                       {formatPrice(refundTotal)}
                     </strong>{" "}
-                    will be credited {isCodOrder ? "to your verified account" : "back to your original payment method"}{" "}
+                    will be transferred directly to your preferred account below{" "}
                     after your parcel is collected and physically inspected by our team.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* COD Payout Destination Form */}
-            {isCodOrder ? (
+            {/* Payout Destination Form */}
               <div className="space-y-4">
                 <div>
                   <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-700">
@@ -1037,19 +1032,7 @@ export function CustomerReturnRequestModal({
                   </div>
                 )}
               </div>
-            ) : (
-              /* Prepaid Order Notice */
-              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 space-y-2 text-xs">
-                <p className="font-bold text-neutral-900 uppercase tracking-wider">
-                  Original Payment Method: Online Payment ({order.paymentMethod || "Razorpay"})
-                </p>
-                <p className="text-neutral-600 leading-relaxed">
-                  Your payment was completed online at checkout. No bank account details are needed from you.
-                  The approved refund will automatically be reversed back to your original payment method (Bank Card, Netbanking, or UPI account).
-                </p>
-              </div>
-            )}
-          </div>
+            </div>
         )}
 
         {/* STEP 5: REVIEW & SUBMIT */}
@@ -1125,29 +1108,20 @@ export function CustomerReturnRequestModal({
                 <p className="font-bold text-neutral-700 uppercase tracking-wider text-[11px]">
                   Refund Destination
                 </p>
-                {isCodOrder ? (
-                  refundMethod === "upi" ? (
-                    <div>
-                      <p className="font-semibold text-neutral-900">UPI Transfer</p>
-                      <p className="font-mono text-emerald-800 text-[11px]">{upiId}</p>
-                    </div>
-                  ) : (
-                    <div className="text-[11px] space-y-0.5">
-                      <p className="font-semibold text-neutral-900">Bank Transfer (IMPS/NEFT)</p>
-                      <p className="text-neutral-700">Holder: {accountHolderName}</p>
-                      {bankName && <p className="text-neutral-700">Bank: {bankName}</p>}
-                      <p className="text-neutral-700 font-mono">
-                        A/C: ••••{accountNumber.slice(-4)}
-                      </p>
-                      <p className="text-neutral-700 font-mono uppercase">IFSC: {ifscCode}</p>
-                    </div>
-                  )
-                ) : (
+                {refundMethod === "upi" ? (
                   <div>
-                    <p className="font-semibold text-neutral-900">Original Payment Method</p>
-                    <p className="text-[11px] text-neutral-600">
-                      Refund reversed online directly to original payment source ({order.paymentMethod || "Online"}).
+                    <p className="font-semibold text-neutral-900">Instant UPI Transfer</p>
+                    <p className="font-mono text-emerald-800 text-[11px] font-bold">{upiId}</p>
+                  </div>
+                ) : (
+                  <div className="text-[11px] space-y-0.5">
+                    <p className="font-semibold text-neutral-900">Bank Transfer (IMPS/NEFT)</p>
+                    <p className="text-neutral-700">A/C Holder: {accountHolderName}</p>
+                    {bankName && <p className="text-neutral-700">Bank: {bankName}</p>}
+                    <p className="text-neutral-900 font-mono font-bold">
+                      A/C No: {accountNumber}
                     </p>
+                    <p className="text-neutral-700 font-mono uppercase font-semibold">IFSC: {ifscCode}</p>
                   </div>
                 )}
               </div>

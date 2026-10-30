@@ -441,7 +441,7 @@ export const returnRepository = {
     note?: string;
     gatewayRefundId?: string;
     isPrepaidGateway: boolean;
-    restockInventory: boolean;
+
     isSimulated?: boolean;
   }) {
     const now = new Date();
@@ -542,52 +542,8 @@ export const returnRepository = {
         },
       });
 
-      // 5. Restock inventory only for returned items if requested
-      if (params.restockInventory) {
-        for (const item of returnReq.return_items) {
-          const vupId = item.order_items.variantUnitPriceId;
-          if (!vupId) continue;
 
-          const inv = await tx.inventory.findFirst({
-            where: { variantUnitPriceId: vupId, is_active: true },
-          });
-
-          if (inv) {
-            const newAvailable = Number(inv.quantity_available) + item.quantity;
-            await tx.inventory.update({
-              where: { id: BigInt(inv.id) },
-              data: {
-                quantity_available: newAvailable,
-                updated_by: params.adminId ?? undefined,
-              },
-            });
-
-            await tx.inventoryTransaction.create({
-              data: {
-                variant_unit_price_id: vupId,
-                type: "in" as any,
-                quantity: item.quantity,
-                note: `RETURN: stock restored for return request #${returnReq.id}`,
-                created_by: params.adminId ?? undefined,
-                updated_by: params.adminId ?? undefined,
-              },
-            });
-          }
-
-          // Sync variant out_of_stock flag
-          const vup = await tx.variantUnitPrice.findFirst({
-            where: { id: vupId, deleted_at: null },
-            select: { variant_id: true },
-          });
-          if (vup) {
-            await tx.productVariant.updateMany({
-              where: { id: vup.variant_id },
-              data: { out_of_stock: false },
-            });
-          }
-        }
-      }
-
+      // 5. Return product is NOT auto-restocked to inventory (Admin will manually manage inventory)
       // 6. Update return_requests status to "refunded"
       const updatedReturn = await tx.return_requests.update({
         where: { id: params.returnRequestId },

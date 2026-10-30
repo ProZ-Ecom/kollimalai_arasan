@@ -3,6 +3,7 @@ import { db } from "@/lib/db/prisma";
 import { Prisma } from "@/generated/prisma";
 import { ApiError } from "@/lib/api/api-error";
 import { formatVariantMeasurement } from "@/features/variants/utils/measurement.util";
+import { parsePayoutDetailsFromReason, cleanReasonText } from "@/features/returns/utils/payout-parser";
 import type {
   OrderDetailResponse,
   OrderListItemResponse,
@@ -410,7 +411,8 @@ export function formatOrderDetail(
       ? {
           id: (order as any).return_requests[0].uuid || String((order as any).return_requests[0].id),
           status: (order as any).return_requests[0].status,
-          reason: (order as any).return_requests[0].reason ?? null,
+          reason: cleanReasonText((order as any).return_requests[0].reason) ?? null,
+          payoutDetails: parsePayoutDetailsFromReason((order as any).return_requests[0].reason),
           returnAwb: (order as any).return_requests[0].return_awb_code ?? null,
           labelUrl: (order as any).return_requests[0].return_label_url ?? null,
           courierName: (order as any).return_requests[0].courier_partner_name ?? null,
@@ -492,7 +494,8 @@ export function formatOrderListItem(
       ? {
           id: (order as any).return_requests[0].uuid || String((order as any).return_requests[0].id),
           status: (order as any).return_requests[0].status,
-          reason: (order as any).return_requests[0].reason ?? null,
+          reason: cleanReasonText((order as any).return_requests[0].reason) ?? null,
+          payoutDetails: parsePayoutDetailsFromReason((order as any).return_requests[0].reason),
           returnAwb: (order as any).return_requests[0].return_awb_code ?? null,
           labelUrl: (order as any).return_requests[0].return_label_url ?? null,
           courierName: (order as any).return_requests[0].courier_partner_name ?? null,
@@ -1374,69 +1377,8 @@ export const orderRepository = {
         },
       });
 
-      // Return stock to available (items physically come back)
-      const orderItems = await tx.orderItem.findMany({
-        where: { orderId: params.orderId, is_active: true },
-        select: { variantUnitPriceId: true, quantity: true },
-      });
-
-      for (const item of orderItems) {
-        if (!item.variantUnitPriceId) continue;
-        const vupId = BigInt(item.variantUnitPriceId);
-
-        const inv = await tx.inventory.findFirst({
-          where: { variantUnitPriceId: vupId, is_active: true },
-        });
-        if (!inv) continue;
-
-        // At return time the order was already delivered: quantity_reserved was
-        // zeroed at delivery. We just add back to quantity_available.
-        const available = Number(inv.quantity_available) + item.quantity;
-
-        await tx.inventory.update({
-          where: { id: BigInt(inv.id) },
-          data: {
-            quantity_available: available,
-            updated_by: params.changedBy,
-          },
-        });
-
-        await tx.inventoryTransaction.create({
-          data: {
-            variant_unit_price_id: vupId,
-            type: "in" as any,
-            quantity: item.quantity,
-            note: `RETURN: stock restored`,
-            created_by: params.changedBy,
-            updated_by: params.changedBy,
-          },
-        });
-      }
-
-      // Sync out_of_stock flags
-      const uniqueVupIds = [
-        ...new Set(
-          orderItems
-            .filter((i) => i.variantUnitPriceId != null)
-            .map((i) => BigInt(i.variantUnitPriceId!))
-        ),
-      ];
-      for (const vupId of uniqueVupIds) {
-        const vup = await tx.variantUnitPrice.findFirst({
-          where: { id: vupId, deleted_at: null },
-          select: { variant_id: true },
-        });
-        if (!vup) continue;
-        const unitPrices = await tx.variantUnitPrice.findMany({
-          where: { variant_id: vup.variant_id, deleted_at: null },
-          include: { inventories: { select: { quantity_available: true } } },
-        });
-        const hasStock = unitPrices.some((up) => up.inventories && up.inventories.quantity_available > 0);
-        await tx.productVariant.updateMany({
-          where: { id: vup.variant_id },
-          data: { out_of_stock: !hasStock },
-        });
-      }
+      // Returned products are NOT automatically added to inventory.
+      // Admin will manually inspect and adjust stock via the Inventory module if needed.
 
       const updated = await tx.order.findUniqueOrThrow({
         where: { id: params.orderId },

@@ -2,6 +2,15 @@ import { ApiError } from "@/lib/api/api-error";
 import { returnRepository } from "../repositories/return.repository";
 import { userRepository } from "@/features/users/repositories/user.repository";
 import {
+  isWithinReturnWindow,
+  RETURN_WINDOW_BUSINESS_DAYS,
+} from "../utils/return-window";
+import {
+  serializePayoutDetails,
+  parsePayoutDetailsFromReason,
+  cleanReasonText,
+} from "../utils/payout-parser";
+import {
   isProduction,
   isDevelopment,
   isRefundSimulationAllowed,
@@ -28,37 +37,6 @@ import type {
   ReturnItemInfo,
   ReturnPayoutDetails,
 } from "../types/return.types";
-
-function parsePayoutDetailsFromReason(reasonText?: string | null): ReturnPayoutDetails | null {
-  if (!reasonText) return null;
-
-  const upiMatch = reasonText.match(/Refund via UPI:\s*([^\s|]+)/i);
-  if (upiMatch && upiMatch[1]) {
-    return {
-      method: "upi",
-      upiId: upiMatch[1].trim(),
-    };
-  }
-
-  const bankMatch = reasonText.match(/Refund via Bank:([^|]+)/i);
-  if (bankMatch && bankMatch[1]) {
-    const detailsStr = bankMatch[1];
-    const acMatch = detailsStr.match(/A\/C:\s*([^\s,]+)/i);
-    const ifscMatch = detailsStr.match(/IFSC:\s*([^\s,]+)/i);
-    const holderMatch = detailsStr.match(/Holder:\s*([^,]+)/i);
-    const bankNameMatch = detailsStr.match(/Bank:\s*([^,]+)/i);
-
-    return {
-      method: "bank_transfer",
-      accountNumber: acMatch ? acMatch[1].trim() : undefined,
-      ifscCode: ifscMatch ? ifscMatch[1].trim() : undefined,
-      accountHolderName: holderMatch ? holderMatch[1].trim() : undefined,
-      bankName: bankNameMatch ? bankNameMatch[1].trim() : undefined,
-    };
-  }
-
-  return null;
-}
 
 function formatReturnItems(returnItems: any[]): ReturnItemInfo[] {
   return (returnItems || []).map((item) => {
@@ -134,7 +112,7 @@ function formatReturnDetail(req: any): ReturnRequestDetailResponse {
       email: req.users_return_requests_user_idTousers.email,
       phone: req.users_return_requests_user_idTousers.phone,
     },
-    reason: req.reason,
+    reason: cleanReasonText(req.reason) || req.reason,
     videoUrl: req.video_url || null,
     status: req.status,
     adminNotes: req.admin_notes || null,
@@ -174,12 +152,13 @@ function formatReturnListItem(req: any): ReturnRequestListItem {
           phone: req.users_return_requests_user_idTousers.phone,
         }
       : undefined,
-    reason: req.reason,
+    reason: cleanReasonText(req.reason) || req.reason,
     videoUrl: req.video_url || null,
     status: req.status,
     adminNotes: req.admin_notes || null,
     inspectedAt: req.inspected_at || null,
     totalItems: req.return_items?.length || 0,
+    payoutDetails: parsePayoutDetailsFromReason(req.reason),
     requestedAt: req.requested_at,
     approvedAt: req.approved_at,
     createdAt: req.created_at,
@@ -217,7 +196,7 @@ export const returnService = {
       throw ApiError.forbidden("You do not have access to this order");
     }
 
-    // 5. Order Status & 5-Day Return Window Check
+    // 5. Order Status & 7 Business Days Return Window Check
     if (order.order_status !== "delivered") {
       throw ApiError.badRequest(
         `Cannot create return request for order with status '${order.order_status}'. Only 'delivered' orders can be returned.`
@@ -230,13 +209,9 @@ export const returnService = {
       order.updatedAt ||
       order.createdAt;
 
-    const deliveredTime = new Date(deliveredDate).getTime();
-    const fiveDaysInMs = 5 * 24 * 60 * 60 * 1000;
-    const elapsedMs = Date.now() - deliveredTime;
-
-    if (elapsedMs > fiveDaysInMs) {
+    if (!isWithinReturnWindow(deliveredDate)) {
       throw ApiError.badRequest(
-        "The 5-day return window for this order has expired. Return requests can only be placed within 5 days of delivery."
+        `The ${RETURN_WINDOW_BUSINESS_DAYS} business days return window for this order has expired. Return requests can only be placed within ${RETURN_WINDOW_BUSINESS_DAYS} business days of delivery.`
       );
     }
 
@@ -302,24 +277,14 @@ export const returnService = {
     }
 
     // Format reason with refund destination and customer notes for admin visibility
-    let fullReason = input.reason;
-    if (input.description && input.description.trim()) {
-      fullReason += ` | Note: ${input.description.trim()}`;
-    }
-    if (input.refundDetails) {
-      if (input.refundDetails.method === "upi" && input.refundDetails.upiId) {
-        fullReason += ` | Refund via UPI: ${input.refundDetails.upiId.trim()}`;
-      } else if (input.refundDetails.method === "bank_transfer") {
-        const bank = input.refundDetails.bankName
-          ? ` ${input.refundDetails.bankName.trim()},`
-          : "";
-        fullReason += ` | Refund via Bank:${bank} A/C: ••••${input.refundDetails.accountNumber
-          ?.trim()
-          .slice(-4)}, IFSC: ${input.refundDetails.ifscCode
-          ?.trim()
-          .toUpperCase()}, Holder: ${input.refundDetails.accountHolderName?.trim()}`;
-      }
-    }
+    // 7. Format Return Reason with Payout Details Tag
+    const payoutTag = serializePayoutDetails(input.refundDetails);
+    let noteText =
+      input.description && input.description.trim()
+        ? `${input.reason} | Note: ${input.description.trim()}`
+        : input.reason;
+
+    let fullReason = payoutTag ? `${payoutTag} ${noteText}` : noteText;
     if (fullReason.length > 255) {
       fullReason = fullReason.slice(0, 252) + "...";
     }
@@ -679,6 +644,13 @@ export const returnService = {
         )
     );
 
+    const isManualRefund =
+      isCod ||
+      input.refundMethod === "manual" ||
+      (input.paymentMode != null &&
+        input.paymentMode !== "Razorpay Gateway Refund" &&
+        input.paymentMode !== "gateway");
+
     let paymentMode = input.paymentMode;
     let referenceId = input.referenceId?.trim();
     let gatewayRefundId: string | undefined;
@@ -687,38 +659,32 @@ export const returnService = {
     const isSimAllowed = isRefundSimulationAllowed();
     let isSimulated = false;
 
-    if (isCod) {
-      // COD Refund Workflow
-      if (!paymentMode) {
+    if (isManualRefund) {
+      // Manual Direct Payout Workflow (For COD orders, or Prepaid orders refunded manually by Admin)
+      if (!paymentMode || paymentMode === "gateway" || paymentMode === "Razorpay Gateway Refund") {
         // Fallback to customer's submitted payout method if present
         const parsed = parsePayoutDetailsFromReason(req.reason);
         paymentMode =
           parsed?.method === "upi"
-            ? "UPI Transfer"
+            ? "UPI (GPay / PhonePe / Paytm / BHIM)"
             : parsed?.method === "bank_transfer"
-            ? "Bank Transfer"
+            ? "Bank Transfer (NEFT / IMPS / RTGS)"
             : "Cash / Manual Transfer";
       }
 
-      // In production, require admin to provide confirmation UTR / bank reference
       if (isProd) {
-        if (!referenceId) {
-          throw ApiError.badRequest(
-            "Production Safety: A valid Bank Reference Number / UTR is required to confirm manual payout for Cash on Delivery returns."
-          );
-        }
         isSimulated = false;
       } else {
-        // In development: if simulation is enabled and referenceId omitted, provide simulated UTR
-        if (isSimAllowed) {
+        // In development: if simulation is enabled and referenceId omitted, provide simulated reference
+        if (isSimAllowed && !referenceId) {
           isSimulated = true;
-          referenceId = referenceId || `SIM_COD_UTR_${Date.now().toString().slice(-8)}`;
+          referenceId = `SIM_MANUAL_UTR_${Date.now().toString().slice(-8)}`;
         }
       }
-      // Strictly do NOT attempt Razorpay gateway API call for COD
+      // Strictly do NOT attempt Razorpay gateway API call for manual refund
     } else {
       // Prepaid Razorpay Refund Workflow
-      paymentMode = paymentMode || "Razorpay Gateway Refund";
+      paymentMode = "Razorpay Gateway Refund";
 
       const successfulPayment = order.payments?.find(
         (p: any) =>
@@ -819,7 +785,7 @@ export const returnService = {
       }
     }
 
-    // 4. Atomically persist refund, audit transaction, restock inventory, and update statuses
+    // 4. Atomically persist refund, audit transaction, and update statuses
     const result = await returnRepository.processReturnRefundTransaction({
       returnRequestId: req.id,
       orderId: order.id,
@@ -829,8 +795,8 @@ export const returnService = {
       referenceId,
       note: input.note,
       gatewayRefundId,
-      isPrepaidGateway: !isCod,
-      restockInventory: input.restockInventory ?? true,
+      isPrepaidGateway: !isManualRefund,
+
       isSimulated,
     });
 
