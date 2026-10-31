@@ -15,7 +15,7 @@ import {
 export const metadata: Metadata = {
   title: "Refund & Replacement Policy | Kollimalai Arasan",
   description:
-    "Learn about our 2-day return, refund, and replacement policy for farm-fresh organic products from Kolli Hills.",
+    "Learn about our 7 business days return, refund, and replacement policy for farm-fresh organic products from Kolli Hills.",
 };
 
 export default function ReturnRefundPolicyPage() {
@@ -77,15 +77,15 @@ export default function ReturnRefundPolicyPage() {
         <div className="flex items-center gap-2 text-primary-700 font-semibold text-lg sm:text-xl">
           <Clock className="w-5 h-5 text-secondary-600" />
           <h2 className="text-neutral-900 font-serif font-bold">
-            3. Time Limit for Claims (2-Day Window)
+            3. Time Limit for Claims (7 Business Days Window)
           </h2>
         </div>
         <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-5 text-neutral-800 space-y-2">
           <p className="font-semibold text-emerald-950 text-base">
-            All refund or replacement requests must be submitted within 2 calendar days of delivery.
+            All refund or replacement requests must be submitted within 7 business days of delivery.
           </p>
           <p className="text-neutral-700 text-sm">
-            Due to the perishable and natural organic nature of agricultural produce and spices, requests made after this 2-day period will unfortunately not be considered.
+            Due to the perishable and natural organic nature of agricultural produce and spices, requests made after this 7 business days period will unfortunately not be considered.
           </p>
         </div>
       </section>
@@ -118,7 +118,7 @@ export default function ReturnRefundPolicyPage() {
         </p>
         <ul className="list-disc pl-6 space-y-2 text-neutral-700">
           <li>Reject return or refund claims that are found to be non-genuine, self-damaged, or tampered with after delivery.</li>
-          <li>Deny requests submitted beyond the permitted 2-day claim window.</li>
+          <li>Deny requests submitted beyond the permitted 7 business days claim window.</li>
           <li>Refuse returns where the product has been substantially consumed or depleted.</li>
         </ul>
       </section>
@@ -148,7 +148,7 @@ export default function ReturnRefundPolicyPage() {
           <h2 className="text-neutral-900 font-serif font-bold">7. How to File a Claim</h2>
         </div>
         <p className="text-neutral-700 leading-relaxed">
-          To file a return, refund, or replacement request within 2 days of delivery:
+          To file a return, refund, or replacement request within 7 business days of delivery:
         </p>
         <div className="bg-neutral-50 rounded-xl p-4 sm:p-5 border border-neutral-200/80 space-y-1 text-sm text-neutral-700">
           <p><strong className="text-neutral-900">Brand:</strong> Kollimalai Arasan</p>

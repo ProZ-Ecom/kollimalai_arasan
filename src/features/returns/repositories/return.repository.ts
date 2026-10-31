@@ -6,16 +6,59 @@ import type {
   AdminReturnListInput,
 } from "../validations/return.schema";
 
-const returnDetailInclude = {
+export const returnDetailInclude = {
   orders: {
     select: {
       id: true,
       uuid: true,
       orderNumber: true,
       order_status: true,
+      payment_status: true,
       totalAmount: true,
+      subtotal: true,
+      discountAmount: true,
+      shipping_charge: true,
+      taxAmount: true,
       placed_at: true,
       createdAt: true,
+      payments: {
+        where: { is_active: true },
+        select: {
+          id: true,
+          gateway: true,
+          status: true,
+          amount: true,
+          currency: true,
+          gateway_payment_id: true,
+          gateway_order_id: true,
+          createdAt: true,
+          payment_methods: {
+            select: { id: true, code: true, name: true },
+          },
+          transactions: {
+            where: { is_active: true },
+            select: {
+              id: true,
+              transaction_type: true,
+              amount: true,
+              status: true,
+              gatewayResponse: true,
+              createdAt: true,
+            },
+          },
+        },
+      },
+      refunds: {
+        where: { is_active: true },
+        select: {
+          id: true,
+          amount: true,
+          status: true,
+          reason: true,
+          processed_at: true,
+          created_at: true,
+        },
+      },
     },
   },
   users_return_requests_user_idTousers: {
@@ -39,6 +82,16 @@ const returnDetailInclude = {
           quantity: true,
           unit_price: true,
           total_price: true,
+          variantUnitPriceId: true,
+          product: {
+            select: {
+              images: {
+                where: { is_active: true, isPrimary: true },
+                select: { image_url: true },
+                take: 1,
+              },
+            },
+          },
         },
       },
     },
@@ -67,6 +120,11 @@ export const returnRepository = {
             phone: true,
           },
         },
+        payments: {
+          where: { is_active: true },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
       },
     });
   },
@@ -77,7 +135,7 @@ export const returnRepository = {
         order_item_id: { in: orderItemIds },
         is_active: true,
         return_requests: {
-          status: { in: ["requested", "approved"] },
+          status: { in: ["requested", "approved", "picked_up", "delivered"] },
           is_active: true,
         },
       },
@@ -104,10 +162,12 @@ export const returnRepository = {
     orderId: bigint;
     userId: bigint;
     reason: string;
+    videoUrl?: string | null;
     items: {
       orderItemId: bigint;
       quantity: number;
       reason?: string | null;
+      refundAmount?: number | null;
     }[];
   }) {
     const returnUuid = crypto.randomUUID();
@@ -120,6 +180,7 @@ export const returnRepository = {
           order_id: params.orderId,
           user_id: params.userId,
           reason: params.reason,
+          video_url: params.videoUrl || null,
           status: "requested",
           requested_at: now,
           is_active: true,
@@ -134,7 +195,7 @@ export const returnRepository = {
           order_item_id: item.orderItemId,
           quantity: item.quantity,
           reason: item.reason || null,
-          refund_amount: null,
+          refund_amount: item.refundAmount !== undefined ? item.refundAmount : null,
           is_active: true,
           created_by: params.userId,
           updated_by: params.userId,
@@ -284,14 +345,41 @@ export const returnRepository = {
     });
   },
 
-  async rejectReturnRequest(returnRequestId: bigint, adminId: bigint) {
+  async rejectReturnRequest(
+    returnRequestId: bigint,
+    adminId: bigint,
+    note?: string
+  ) {
     const now = new Date();
     return db.return_requests.update({
       where: { id: returnRequestId },
       data: {
         status: "rejected",
+        admin_notes: note || undefined,
         updated_at: now,
         updated_by: adminId,
+      },
+      include: returnDetailInclude,
+    });
+  },
+
+  async reviewReturnInspection(params: {
+    returnRequestId: bigint;
+    adminId: bigint;
+    decision: "passed" | "failed";
+    notes: string;
+  }) {
+    const now = new Date();
+    const isFailed = params.decision === "failed";
+
+    return db.return_requests.update({
+      where: { id: params.returnRequestId },
+      data: {
+        status: isFailed ? "rejected" : undefined,
+        admin_notes: params.notes,
+        inspected_at: now,
+        updated_at: now,
+        updated_by: params.adminId ?? undefined,
       },
       include: returnDetailInclude,
     });
@@ -310,7 +398,7 @@ export const returnRepository = {
         data: {
           status: "picked_up",
           updated_at: now,
-          updated_by: params.adminId,
+          updated_by: params.adminId ?? undefined,
         },
         include: returnDetailInclude,
       });
@@ -320,7 +408,7 @@ export const returnRepository = {
         data: {
           order_status: "returned",
           updatedAt: now,
-          updated_by: params.adminId,
+          updated_by: params.adminId ?? undefined,
         },
       });
 
@@ -329,16 +417,193 @@ export const returnRepository = {
           order_id: params.orderId,
           status: "returned",
           note: "Return picked up and order marked returned",
-          changed_by: params.adminId,
+          changed_by: params.adminId ?? undefined,
           is_active: true,
-          created_by: params.adminId,
-          updated_by: params.adminId,
+          created_by: params.adminId ?? undefined,
+          updated_by: params.adminId ?? undefined,
         },
       });
 
       return {
         returnRequest: updatedReturn,
         order: updatedOrder,
+      };
+    });
+  },
+
+  async processReturnRefundTransaction(params: {
+    returnRequestId: bigint;
+    orderId: bigint;
+    adminId: bigint;
+    refundAmount: number;
+    paymentMode: string;
+    referenceId?: string;
+    note?: string;
+    gatewayRefundId?: string;
+    isPrepaidGateway: boolean;
+
+    isSimulated?: boolean;
+  }) {
+    const now = new Date();
+
+    return db.$transaction(async (tx) => {
+      // 1. Fetch fresh return request with order and items
+      const returnReq = await tx.return_requests.findUniqueOrThrow({
+        where: { id: params.returnRequestId },
+        include: returnDetailInclude,
+      });
+
+      const order = returnReq.orders;
+      const totalOrderAmount = Number(order.totalAmount);
+      const refundAmount = params.refundAmount;
+
+      // 2. Resolve or create payment record
+      let paymentId: bigint | null = null;
+      const successPayment = order.payments?.find(
+        (p) => p.status === "success"
+      ) || order.payments?.[0];
+
+      if (successPayment) {
+        paymentId = successPayment.id;
+      } else {
+        let manualMethod = await tx.payment_methods.findFirst({
+          where: { code: params.isPrepaidGateway ? "RAZORPAY" : "COD" },
+        });
+        if (!manualMethod) {
+          manualMethod = await tx.payment_methods.create({
+            data: {
+              code: params.isPrepaidGateway ? "RAZORPAY" : "COD",
+              name: params.isPrepaidGateway ? "Online Payment" : "Cash on Delivery",
+              is_active: true,
+              created_by: params.adminId ?? undefined,
+              updated_by: params.adminId ?? undefined,
+            },
+          });
+        }
+        const newPay = await tx.payment.create({
+          data: {
+            orderId: order.id,
+            payment_method_id: manualMethod.id,
+            amount: totalOrderAmount,
+            currency: "INR",
+            status: "success",
+            gateway: params.isPrepaidGateway ? "RAZORPAY" : "COD",
+            created_by: params.adminId ?? undefined,
+            updated_by: params.adminId ?? undefined,
+          },
+        });
+        paymentId = newPay.id;
+      }
+
+      // 3. Create Refund record
+      const modeText = params.paymentMode;
+      const refText = params.referenceId ? ` (Ref: ${params.referenceId})` : "";
+      const simPrefix = params.isSimulated ? "[SIMULATED REFUND] " : "";
+      const reasonText = `${simPrefix}Customer Return Refund #${returnReq.id} [${modeText}${refText}]${
+        params.note ? ` - ${params.note}` : ""
+      }`;
+
+      await tx.refunds.create({
+        data: {
+          order_id: order.id,
+          payment_id: paymentId,
+          amount: refundAmount,
+          reason: reasonText.slice(0, 255),
+          status: "completed",
+          processed_at: now,
+          created_by: params.adminId ?? undefined,
+          updated_by: params.adminId ?? undefined,
+        },
+      });
+
+      // 4. Create PaymentTransaction audit record
+      await tx.paymentTransaction.create({
+        data: {
+          paymentId,
+          transaction_type: "refund",
+          amount: refundAmount,
+          status: params.isSimulated ? "simulated_refund" : "refunded",
+          gatewayResponse: {
+            isSimulated: Boolean(params.isSimulated),
+            simulationNotice: params.isSimulated
+              ? "LOCAL TEST SIMULATION ONLY - NO REAL FINANCIAL MOVEMENT"
+              : undefined,
+            isPrepaid: params.isPrepaidGateway,
+            paymentMode: params.paymentMode,
+            referenceId: params.referenceId || null,
+            gatewayRefundId: params.gatewayRefundId || null,
+            returnRequestId: String(returnReq.id),
+            returnUuid: returnReq.uuid,
+            note: params.note || null,
+            processedAt: now.toISOString(),
+          },
+          created_by: params.adminId ?? undefined,
+          updated_by: params.adminId ?? undefined,
+        },
+      });
+
+
+      // 5. Return product is NOT auto-restocked to inventory (Admin will manually manage inventory)
+      // 6. Update return_requests status to "refunded"
+      const updatedReturn = await tx.return_requests.update({
+        where: { id: params.returnRequestId },
+        data: {
+          status: "refunded",
+          updated_at: now,
+          updated_by: params.adminId ?? undefined,
+        },
+        include: returnDetailInclude,
+      });
+
+      // 7. Calculate total refunds so far on this order
+      const allRefunds = await tx.refunds.findMany({
+        where: { order_id: order.id, is_active: true, status: "completed" },
+        select: { amount: true },
+      });
+      const totalRefundedSum = allRefunds.reduce(
+        (sum, r) => sum + Number(r.amount),
+        0
+      );
+
+      const isFullyRefunded = totalRefundedSum >= totalOrderAmount - 0.01;
+
+      // 8. Update payment and order status
+      await tx.payment.update({
+        where: { id: paymentId },
+        data: {
+          status: isFullyRefunded ? "refunded" : "success",
+          updated_by: params.adminId ?? undefined,
+        },
+      });
+
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          payment_status: isFullyRefunded ? "refunded" : "partial_refund",
+          order_status: isFullyRefunded ? "returned" : undefined,
+          updatedAt: now,
+          updated_by: params.adminId ?? undefined,
+        },
+      });
+
+      // 9. Record order status history
+      const simStatusPrefix = params.isSimulated ? "[SIMULATED REFUND] " : "";
+      await tx.order_status_history.create({
+        data: {
+          order_id: order.id,
+          status: isFullyRefunded ? "returned" : order.order_status,
+          note: `${simStatusPrefix}Admin processed ${isFullyRefunded ? "full" : "partial"} refund of ₹${refundAmount.toFixed(
+            2
+          )} for Return Request #${returnReq.id} via ${modeText}${refText}`,
+          changed_by: params.adminId ?? undefined,
+          created_by: params.adminId ?? undefined,
+        },
+      });
+
+      return {
+        returnRequest: updatedReturn,
+        refundAmount,
+        isFullyRefunded,
       };
     });
   },

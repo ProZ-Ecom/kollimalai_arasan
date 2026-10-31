@@ -159,6 +159,21 @@ export const deliveryService = {
       );
     }
 
+    // 2b. Validate COD constraint - COD orders must only be fulfilled via Shiprocket Express
+    const isCod =
+      order.payments?.some(
+        (p: any) =>
+          p.gateway?.toUpperCase() === "COD" ||
+          p.payment_methods?.code?.toUpperCase() === "COD"
+      ) ||
+      (order.notes && order.notes.toLowerCase().includes("cod"));
+
+    if (isCod) {
+      throw ApiError.badRequest(
+        "This order was placed with Cash on Delivery (COD). COD orders cannot be assigned to internal staff and must be shipped via Shiprocket Express."
+      );
+    }
+
     // 3. Look up Staff
     const staff = await deliveryRepository.findStaffByUuid(input.staffId);
     if (!staff || staff.role?.slug !== "staff") {

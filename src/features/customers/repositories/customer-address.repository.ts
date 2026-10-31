@@ -135,12 +135,17 @@ export const customerAddressRepository = {
     tx?: Prisma.TransactionClient
   ) {
     const client = tx || db;
+    const isNumeric = /^\d+$/.test(uuid);
     const address = await client.customerAddress.findFirst({
       where: {
-        uuid,
         userId: BigInt(userId),
         is_active: true,
         deleted_at: null,
+        ...(isNumeric
+          ? {
+              OR: [{ uuid }, { id: BigInt(uuid) }],
+            }
+          : { uuid }),
       },
     });
 
@@ -226,12 +231,22 @@ export const customerAddressRepository = {
     tx?: Prisma.TransactionClient
   ) {
     const client = tx || db;
+    const isNumeric = excludeUuid && /^\d+$/.test(excludeUuid);
     return client.customerAddress.findFirst({
       where: {
         userId: BigInt(userId),
         is_active: true,
         deleted_at: null,
-        ...(excludeUuid ? { uuid: { not: excludeUuid } } : {}),
+        ...(excludeUuid
+          ? isNumeric
+            ? {
+                AND: [
+                  { uuid: { not: excludeUuid } },
+                  { id: { not: BigInt(excludeUuid) } },
+                ],
+              }
+            : { uuid: { not: excludeUuid } }
+          : {}),
       },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
     });

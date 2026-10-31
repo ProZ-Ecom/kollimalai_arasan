@@ -112,6 +112,7 @@ export const razorpayService = {
             userId: String(userId),
             checkoutType: "cart",
             shippingAddressId: input.shippingAddressId || "",
+            courierType: courierType || "st_courier",
           },
         });
       } catch (err: any) {
@@ -261,6 +262,25 @@ export const razorpayService = {
         throw ApiError.badRequest("Shipping address is required to complete the order.");
       }
 
+      // Recover courierType from Razorpay order notes if omitted in verify request payload
+      let resolvedCourierType = input.courierType;
+      if (!resolvedCourierType && input.razorpay_order_id) {
+        try {
+          const razorpay = getRazorpayClient();
+          const rzpOrder = await razorpay.orders.fetch(input.razorpay_order_id);
+          const noteCourier = rzpOrder?.notes?.courierType;
+          if (
+            noteCourier === "st_courier" ||
+            noteCourier === "mss" ||
+            noteCourier === "shiprocket"
+          ) {
+            resolvedCourierType = noteCourier;
+          }
+        } catch (fetchErr) {
+          console.warn("[Razorpay] Could not fetch order notes for courierType recovery:", fetchErr);
+        }
+      }
+
       let createdOrder;
       try {
         createdOrder = await orderService.createCustomerOrder(sessionUserId, {
@@ -268,7 +288,7 @@ export const razorpayService = {
           billingAddressId: input.billingAddressId || input.shippingAddressId,
           notes: input.notes,
           paymentMethod: "CARD",
-          courierType: input.courierType,
+          courierType: resolvedCourierType,
           paymentDetails: {
             gateway: "RAZORPAY",
             isPaid: true,

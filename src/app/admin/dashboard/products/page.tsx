@@ -89,7 +89,7 @@ export default function AdminProductsPage() {
     { enabled: isModalOpen }
   );
   const { data: brandsData } = useBrands(
-    { limit: 500 },
+    { limit: 100 },
     { enabled: isModalOpen }
   );
   const { data: hsnData } = useHsnCodes(
@@ -653,23 +653,13 @@ export default function AdminProductsPage() {
             ],
           },
           {
-            key: "brand",
-            header: "Brand Name",
-            info: "Must match an existing brand name. First active brand is used if blank.",
-            samples: [
-              "Kollimalai Arasan",
-              "Kollimalai Arasan",
-              "Kollimalai Arasan",
-            ],
-          },
-          {
             key: "hsn",
             header: "HSN Code",
             info: "Must match an existing HSN code (e.g. 0904, 0409). Optional.",
             samples: ["0904", "0409", "1008"],
           },
         ]}
-        hint="Category, Brand and HSN Code must already exist. Product code will be auto-prefixed with the category code if not already present."
+        hint="Category and HSN Code must already exist. Product code will be auto-prefixed with the category code if not already present."
         prepare={(row) => {
           const find = <T,>(
             list: T[],
@@ -689,16 +679,17 @@ export default function AdminProductsPage() {
             return { error: `Category "${row.category ?? ""}" not found` };
           }
 
-          let brandId: string | undefined = brandOptions[0]?.value;
+          // Optional brand matching (no brand required; auto-assigns first brand if available)
+          let brandId: string | undefined = undefined;
           if (row.brand !== undefined && String(row.brand).trim() !== "") {
-            const brand = find(brandOptions, (b) => b.label, row.brand);
-            if (!brand) return { error: `Brand "${row.brand}" not found` };
-            brandId = brand.value;
-          }
-          if (!brandId) {
-            return {
-              error: "No brand available. Please create a brand first.",
-            };
+            const matchedBrand =
+              find(brandOptions, (b) => b.label, row.brand) ||
+              find(brandOptions, (b) => b.slug || "", row.brand);
+            if (matchedBrand) {
+              brandId = matchedBrand.value;
+            }
+          } else if (brandOptions.length > 0) {
+            brandId = brandOptions[0]?.value;
           }
 
           let hsnCodeId: string | null = null;
