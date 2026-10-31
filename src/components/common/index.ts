@@ -14,3 +14,5 @@ export type { FormModalProps } from "./FormModal";
 export { ImageCropperModal } from "./ImageCropperModal";
 export type { ImageCropperModalProps } from "./ImageCropperModal";
 
+export { LogoutConfirmModal } from "./LogoutConfirmModal";
+export type { LogoutConfirmModalProps } from "./LogoutConfirmModal";

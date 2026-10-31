@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ChevronRight, ArrowRight, Package, Calendar } from "lucide-react";
+import { ChevronRight, ArrowRight, Package, Calendar, Truck, Eye } from "lucide-react";
 import { formatDateTime, formatPrice } from "@/lib/utils";
 import { ProductImage } from "@/components/common/ProductImage";
+import { LiveTrackingModal } from "./LiveTrackingModal";
 import type {
   OrderListItem,
   OrderListItemResponse,
@@ -62,11 +64,55 @@ function getStatusBadgeMeta(status?: string) {
   }
 }
 
+function getOrderStepIndex(status?: string) {
+  switch (status?.toLowerCase()) {
+    case "pending":
+    case "confirmed":
+      return 0;
+    case "processing":
+    case "packed":
+      return 1;
+    case "shipped":
+    case "out_for_delivery":
+      return 2;
+    case "delivered":
+    case "returned":
+    case "cancelled":
+      return 3;
+    default:
+      return 0;
+  }
+}
+
 export function OrderCard({ order }: OrderCardProps) {
+  const [isLiveTrackingOpen, setIsLiveTrackingOpen] = useState(false);
+  const [isStatusTrackingOpen, setIsStatusTrackingOpen] = useState(false);
+
   const anyOrder = order as any;
   const items: any[] = anyOrder.items ?? [];
   const statusMeta = getStatusBadgeMeta(order.status);
   const totalCount = anyOrder.totalItems ?? items.reduce((sum: number, it: any) => sum + (it.quantity || 1), 0);
+
+  const statusLower = String(order.status || "").toLowerCase();
+  const isOngoing =
+    statusLower !== "delivered" &&
+    statusLower !== "cancelled" &&
+    statusLower !== "returned";
+
+  const awb = anyOrder.delivery?.trackingNumber || anyOrder.delivery?.awb || anyOrder.trackingNumber || null;
+  const courierPartner =
+    anyOrder.delivery?.deliveryPartner?.name ||
+    anyOrder.delivery?.courierPartnerName ||
+    anyOrder.courierName ||
+    (Number(anyOrder.shippingCharge) === 200 ? "MSS (Mettur Super Services)" : "Shiprocket Express");
+
+  const handleTrackClick = () => {
+    if (awb) {
+      setIsLiveTrackingOpen(true);
+    } else {
+      setIsStatusTrackingOpen(true);
+    }
+  };
 
   const formattedDate = order.createdAt
     ? new Date(order.createdAt).toLocaleDateString("en-IN", {
@@ -209,7 +255,7 @@ export function OrderCard({ order }: OrderCardProps) {
       </div>
 
       {/* Card Footer Bar with CTA */}
-      <div className="flex items-center justify-between gap-3 px-5 py-3 bg-theme-surface-alt/40 border-t border-theme-border-subtle">
+      <div className="flex items-center justify-between gap-3 px-5 py-3 bg-theme-surface-alt/40 border-t border-theme-border-subtle flex-wrap">
         <div className="text-xs text-theme-text-subtle">
           <span>Total: </span>
           <span className="font-bold text-theme-text-primary">
@@ -222,14 +268,137 @@ export function OrderCard({ order }: OrderCardProps) {
           )}
         </div>
 
-        <Link
-          href={`/orders/${order.id}`}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-theme-border bg-theme-surface px-3.5 py-1.5 text-xs font-bold text-theme-primary hover:bg-theme-surface-warm hover:border-theme-border-accent transition-colors shadow-2xs"
-        >
-          <span>View Details</span>
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
+        <div className="flex items-center gap-2">
+          {isOngoing && (
+            <button
+              type="button"
+              onClick={handleTrackClick}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white px-3.5 py-1.5 text-xs font-bold transition-colors shadow-2xs cursor-pointer min-h-[34px]"
+            >
+              <Truck className="h-3.5 w-3.5" />
+              <span>Track Order</span>
+            </button>
+          )}
+
+          <Link
+            href={`/orders/${order.id}`}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-theme-border bg-theme-surface px-3.5 py-1.5 text-xs font-bold text-theme-primary hover:bg-theme-surface-warm hover:border-theme-border-accent transition-colors shadow-2xs min-h-[34px]"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            <span>View Details</span>
+          </Link>
+        </div>
       </div>
+
+      {/* Live Interactive Tracking Modal (ST Courier / Shiprocket / MSS) */}
+      {awb && (
+        <LiveTrackingModal
+          open={isLiveTrackingOpen}
+          onClose={() => setIsLiveTrackingOpen(false)}
+          awb={awb}
+          courierName={courierPartner}
+          orderNumber={order.orderNumber}
+        />
+      )}
+
+      {/* Fallback Dispatch Status Stepper Modal when AWB is not yet generated */}
+      {isStatusTrackingOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-theme-surface border border-theme-border rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between gap-4 border-b border-theme-border-subtle pb-4">
+              <div>
+                <div className="text-[11px] uppercase tracking-wider font-bold text-theme-text-muted">
+                  Shipment Tracking Status
+                </div>
+                <h3 className="text-base sm:text-lg font-bold font-mono text-theme-text-primary mt-0.5">
+                  Order {order.orderNumber || `#${String(order.id).slice(0, 8)}`}
+                </h3>
+                <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full border mt-1.5 ${statusMeta.bg}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${statusMeta.dot}`} />
+                  {String(order.status).replace(/_/g, " ")}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsStatusTrackingOpen(false)}
+                className="w-8 h-8 rounded-full border border-theme-border flex items-center justify-center text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-surface-alt transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Stepper */}
+            <div className="bg-theme-surface-alt rounded-xl p-4 border border-theme-border-subtle">
+              <div className="grid grid-cols-4 gap-0 items-start">
+                {[
+                  { label: "Placed", desc: "Order Received" },
+                  { label: "Packed", desc: "In Preparation" },
+                  { label: "Dispatched", desc: "Handed to Courier" },
+                  { label: "Delivered", desc: "At your door" },
+                ].map((step, idx) => {
+                  const current = getOrderStepIndex(order.status);
+                  const isDone = idx <= current;
+                  const isLast = idx === 3;
+                  return (
+                    <div key={step.label} className="flex flex-col gap-1.5 min-w-0">
+                      <div className="flex items-center">
+                        <span
+                          className={`w-3.5 h-3.5 rounded-full flex-shrink-0 ${
+                            isDone ? "bg-secondary-500 ring-2 ring-secondary-100" : "bg-theme-border"
+                          }`}
+                        />
+                        {!isLast && (
+                          <span
+                            className={`h-0.5 flex-1 ${
+                              idx < current ? "bg-secondary-400" : "bg-theme-border"
+                            }`}
+                          />
+                        )}
+                      </div>
+                      <span className={`text-[11px] font-semibold truncate ${isDone ? "text-theme-text-primary" : "text-theme-text-muted"}`}>
+                        {step.label}
+                      </span>
+                      <span className="text-[9px] text-theme-text-muted truncate">
+                        {step.desc}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Courier partner info */}
+            <div className="p-3.5 rounded-xl bg-theme-surface-warm border border-theme-border-subtle text-xs space-y-1.5">
+              <div className="font-bold text-theme-text-primary flex items-center gap-1.5">
+                <Truck className="h-4 w-4 text-theme-secondary" />
+                <span>Courier Partner: {courierPartner}</span>
+              </div>
+              <p className="text-theme-text-subtle text-[11px] leading-relaxed">
+                Your order is currently being prepared at our Kolli Hills warehouse. Live tracking updates and AWB consignment number will become active as soon as the courier partner scans the package.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-theme-border-subtle">
+              <Link
+                href={`/orders/${order.id}`}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-theme-border bg-theme-surface px-4 py-2 text-xs font-bold text-theme-primary hover:bg-theme-surface-warm transition-colors cursor-pointer"
+              >
+                <span>View Full Details</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsStatusTrackingOpen(false)}
+                className="rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white px-5 py-2 text-xs font-bold transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,10 +15,12 @@ import {
 import { getInitials } from "@/lib/utils";
 import { ROLES } from "@/lib/constants";
 import { Dropdown, DropdownItem } from "@/components/common/dropdown";
+import { LogoutConfirmModal } from "@/components/common/LogoutConfirmModal";
 
 function UserMenu() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   if (status === "loading") {
     return (
@@ -31,12 +34,6 @@ function UserMenu() {
 
   const user = session.user;
   const isAdmin = user.role === ROLES.ADMIN || user.role === ROLES.STAFF;
-
-  const handleSignOut = async () => {
-    await signOut({ redirect: false });
-    router.push("/");
-    router.refresh();
-  };
 
   return (
     <Dropdown
@@ -91,11 +88,19 @@ function UserMenu() {
       )}
 
       <div className="border-t">
-        <DropdownItem onClick={handleSignOut}>
+        <DropdownItem onClick={() => setShowLogoutModal(true)}>
           <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
+          Logout
         </DropdownItem>
       </div>
+
+      {/* Confirmation modal before signing out */}
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        isAdmin={isAdmin}
+        callbackUrl="/"
+      />
     </Dropdown>
   );
 }

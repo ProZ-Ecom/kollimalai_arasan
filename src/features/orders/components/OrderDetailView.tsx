@@ -91,6 +91,8 @@ export function OrderDetailView({
   canReturn = false,
 }: OrderDetailViewProps) {
   const [awbCopied, setAwbCopied] = useState(false);
+  const [txCopied, setTxCopied] = useState(false);
+  const [gatewayOrderCopied, setGatewayOrderCopied] = useState(false);
   const [liveTrackingOpen, setLiveTrackingOpen] = useState(false);
 
   const shippingAddress =
@@ -109,6 +111,18 @@ export function OrderDetailView({
 
   const statusMeta = getStatusBadgeMeta(order.status);
   const paymentStatus = (order as any).paymentStatus || (order as any).payment_status;
+
+  const paymentDetails = (order as any).paymentDetails || {
+    gateway: (order as any).isCod ? "COD" : (order as any).paymentMethod || "Online Gateway",
+    methodName: (order as any).isCod ? "Cash on Delivery" : "Online Payment (Razorpay)",
+    status: paymentStatus || "pending",
+    amount: Number(order.totalAmount || 0),
+    currency: "INR",
+    transactionId: (order as any).payments?.[0]?.gateway_payment_id || null,
+    gatewayOrderId: (order as any).payments?.[0]?.gateway_order_id || null,
+    paidAt: (order as any).payments?.[0]?.updatedAt || (order as any).payments?.[0]?.createdAt || order.createdAt,
+    isCod: (order as any).isCod,
+  };
 
   const formattedDate = order.createdAt
     ? new Date(order.createdAt).toLocaleDateString("en-IN", {
@@ -365,8 +379,8 @@ export function OrderDetailView({
             </div>
           </div>
 
-          {/* 2. Three Info Cards: Customer, Address & Staff */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-1">
+          {/* 2. Info Cards: Customer, Address, Courier & Payment Details */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Customer Details */}
             {customer && (
               <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-2xs overflow-hidden">
@@ -544,6 +558,165 @@ export function OrderDetailView({
                     <p className="text-xs text-theme-text-muted mt-2">
                       Order will be dispatched via {courierPartnerName} once packed.
                     </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Details Card */}
+            <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-2xs overflow-hidden">
+              <div className="bg-theme-surface-alt border-b border-theme-border-subtle px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-theme-secondary" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-primary">
+                    Payment Details
+                  </h3>
+                </div>
+                {paymentStatus && (
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                      paymentStatus.toLowerCase() === "paid"
+                        ? "bg-secondary-50 text-secondary-700 border-secondary-200"
+                        : paymentStatus.toLowerCase() === "refunded"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : paymentStatus.toLowerCase() === "partial_refund"
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : "bg-orange-50 text-orange-700 border-orange-200"
+                    }`}
+                  >
+                    {paymentStatus.replace(/_/g, " ")}
+                  </span>
+                )}
+              </div>
+              <div className="p-4 text-xs space-y-3 text-theme-text-subtle">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <span className="block text-[11px] font-bold text-theme-text-muted uppercase tracking-wider mb-0.5">
+                      Payment Method
+                    </span>
+                    <span className="font-bold text-sm text-theme-text-primary">
+                      {paymentDetails.isCod
+                        ? "Cash on Delivery (COD)"
+                        : paymentDetails.methodName || "Online Payment (Razorpay)"}
+                    </span>
+                    {paymentDetails.gateway && !paymentDetails.isCod && (
+                      <span className="block text-[11px] text-theme-text-muted capitalize">
+                        Gateway: {paymentDetails.gateway}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="block text-[11px] font-bold text-theme-text-muted uppercase tracking-wider mb-0.5">
+                      Amount Paid
+                    </span>
+                    <span className="font-extrabold text-sm sm:text-base text-theme-primary">
+                      {formatPrice(paymentDetails.amount ?? order.totalAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Transaction & Reference IDs if Online */}
+                {paymentDetails.transactionId && (
+                  <div className="p-3 bg-theme-surface-alt rounded-xl border border-theme-border-subtle space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider">
+                        Transaction / Payment ID
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (paymentDetails.transactionId) {
+                            navigator.clipboard.writeText(paymentDetails.transactionId);
+                            setTxCopied(true);
+                            setTimeout(() => setTxCopied(false), 2000);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary-600 hover:text-secondary-800 cursor-pointer"
+                      >
+                        {txCopied ? (
+                          <>
+                            <Check className="h-3 w-3 text-secondary-600" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="font-mono text-xs font-bold text-neutral-900 break-all select-all">
+                      {paymentDetails.transactionId}
+                    </div>
+                  </div>
+                )}
+
+                {paymentDetails.gatewayOrderId && (
+                  <div className="p-3 bg-theme-surface-alt rounded-xl border border-theme-border-subtle space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider">
+                        Gateway Order ID
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (paymentDetails.gatewayOrderId) {
+                            navigator.clipboard.writeText(paymentDetails.gatewayOrderId);
+                            setGatewayOrderCopied(true);
+                            setTimeout(() => setGatewayOrderCopied(false), 2000);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary-600 hover:text-secondary-800 cursor-pointer"
+                      >
+                        {gatewayOrderCopied ? (
+                          <>
+                            <Check className="h-3 w-3 text-secondary-600" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="font-mono text-xs font-bold text-neutral-900 break-all select-all">
+                      {paymentDetails.gatewayOrderId}
+                    </div>
+                  </div>
+                )}
+
+                {/* Paid At Timestamp */}
+                {paymentDetails.paidAt && (
+                  <div className="text-[11px] text-theme-text-muted flex items-center gap-1.5 pt-0.5">
+                    <Clock className="h-3 w-3 shrink-0" />
+                    <span>
+                      {paymentDetails.status?.toLowerCase() === "paid" ? "Paid on " : "Initiated on "}
+                      {formatDateTime(paymentDetails.paidAt)}
+                    </span>
+                  </div>
+                )}
+
+                {/* COD Specific Notice */}
+                {paymentDetails.isCod && (
+                  <div className="p-3 rounded-xl bg-orange-50/80 border border-orange-200 text-orange-900 text-xs space-y-1">
+                    <div className="font-bold flex items-center gap-1.5 text-orange-950">
+                      <span>Cash on Delivery</span>
+                    </div>
+                    <p className="text-[11px] text-orange-800 leading-relaxed">
+                      Please keep <strong>{formatPrice(order.totalAmount)}</strong> in exact cash ready to hand over to the delivery partner upon arrival.
+                    </p>
+                  </div>
+                )}
+
+                {/* Paid Online Assurance */}
+                {!paymentDetails.isCod && paymentStatus?.toLowerCase() === "paid" && (
+                  <div className="p-2.5 rounded-xl bg-secondary-50/70 border border-secondary-200/80 text-secondary-900 text-[11px] flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-secondary-600 shrink-0" />
+                    <span>Payment verified & secured. No additional payment required at delivery.</span>
                   </div>
                 )}
               </div>

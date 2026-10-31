@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -17,13 +17,23 @@ export function GoogleAuthButton({
 }: GoogleAuthButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
+  // Safety timeout: if redirect takes longer than 6s or gets bounced, reset loading state
+  useEffect(() => {
+    if (!isLoading) return;
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true);
       await signIn("google", {
         callbackUrl,
       });
-    } catch {
+    } catch (err) {
+      console.error("Google sign-in failed:", err);
       setIsLoading(false);
     }
   };

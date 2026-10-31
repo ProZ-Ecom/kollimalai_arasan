@@ -89,6 +89,20 @@ export interface OrderDeliveryDto {
 }
 
 
+export interface OrderPaymentDetail {
+  id?: string;
+  gateway?: string | null;
+  methodName?: string | null;
+  methodCode?: string | null;
+  status: string;
+  amount?: number | null;
+  currency?: string | null;
+  transactionId?: string | null;
+  gatewayOrderId?: string | null;
+  paidAt?: Date | string | null;
+  isCod?: boolean;
+}
+
 export interface OrderListItemResponse {
   id: string; // order.uuid
   orderNumber: string;
@@ -97,6 +111,7 @@ export interface OrderListItemResponse {
   paymentStatus: PaymentStatus;
   isCod?: boolean;
   paymentMethod?: string | null;
+  paymentDetails?: OrderPaymentDetail | null;
   subtotal: number;
   discountAmount: number;
   taxAmount: number;
@@ -174,6 +189,8 @@ export interface OrderListItem {
   createdAt: Date | string;
   items?: OrderItemResponse[];
   customer?: OrderCustomerDto;
+  delivery?: OrderDeliveryDto | null;
+  paymentDetails?: OrderPaymentDetail | null;
 }
 
 export interface OrderDetail extends OrderListItem {

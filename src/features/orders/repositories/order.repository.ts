@@ -12,6 +12,7 @@ import type {
   OrderStatusHistoryResponse,
   OrderListResponse,
   AdminOrdersCountResponse,
+  OrderPaymentDetail,
 } from "../types";
 import type {
   CustomerOrdersQueryInput,
@@ -132,8 +133,14 @@ export const orderDetailInclude = Prisma.validator<Prisma.OrderInclude>()({
     where: { is_active: true },
     select: {
       id: true,
+      amount: true,
+      currency: true,
       gateway: true,
       status: true,
+      gateway_order_id: true,
+      gateway_payment_id: true,
+      createdAt: true,
+      updatedAt: true,
       payment_methods: {
         select: {
           id: true,
@@ -384,6 +391,36 @@ export function formatOrderDetail(
   const paymentMethod =
     (order as any).payments?.[0]?.gateway || (isCod ? "COD" : null);
 
+  const rawPayment = (order as any).payments?.[0];
+  const paymentDetails: OrderPaymentDetail | null = rawPayment
+    ? {
+        id: String(rawPayment.id),
+        gateway: rawPayment.gateway || (isCod ? "COD" : "Razorpay"),
+        methodName: rawPayment.payment_methods?.name || (isCod ? "Cash on Delivery" : "Online Gateway"),
+        methodCode: rawPayment.payment_methods?.code || (isCod ? "COD" : "ONLINE"),
+        status: String(rawPayment.status || order.payment_status),
+        amount: rawPayment.amount != null ? Number(rawPayment.amount) : Number(order.totalAmount),
+        currency: rawPayment.currency || "INR",
+        transactionId: rawPayment.gateway_payment_id || null,
+        gatewayOrderId: rawPayment.gateway_order_id || null,
+        paidAt: rawPayment.updatedAt || rawPayment.createdAt || order.createdAt,
+        isCod,
+      }
+    : isCod
+    ? {
+        gateway: "COD",
+        methodName: "Cash on Delivery",
+        methodCode: "COD",
+        status: String(order.payment_status),
+        amount: Number(order.totalAmount),
+        currency: "INR",
+        transactionId: null,
+        gatewayOrderId: null,
+        paidAt: null,
+        isCod: true,
+      }
+    : null;
+
   return {
     id: order.uuid || String(order.id),
     orderNumber: order.orderNumber,
@@ -392,6 +429,7 @@ export function formatOrderDetail(
     paymentStatus: order.payment_status,
     isCod,
     paymentMethod,
+    paymentDetails,
     subtotal: Number(order.subtotal),
     discountAmount: Number(order.discountAmount),
     taxAmount: Number(order.taxAmount),
@@ -471,6 +509,36 @@ export function formatOrderListItem(
   const paymentMethod =
     (order as any).payments?.[0]?.gateway || (isCod ? "COD" : null);
 
+  const rawPayment = (order as any).payments?.[0];
+  const paymentDetails: OrderPaymentDetail | null = rawPayment
+    ? {
+        id: String(rawPayment.id),
+        gateway: rawPayment.gateway || (isCod ? "COD" : "Razorpay"),
+        methodName: rawPayment.payment_methods?.name || (isCod ? "Cash on Delivery" : "Online Gateway"),
+        methodCode: rawPayment.payment_methods?.code || (isCod ? "COD" : "ONLINE"),
+        status: String(rawPayment.status || order.payment_status),
+        amount: rawPayment.amount != null ? Number(rawPayment.amount) : Number(order.totalAmount),
+        currency: rawPayment.currency || "INR",
+        transactionId: rawPayment.gateway_payment_id || null,
+        gatewayOrderId: rawPayment.gateway_order_id || null,
+        paidAt: rawPayment.updatedAt || rawPayment.createdAt || order.createdAt,
+        isCod,
+      }
+    : isCod
+    ? {
+        gateway: "COD",
+        methodName: "Cash on Delivery",
+        methodCode: "COD",
+        status: String(order.payment_status),
+        amount: Number(order.totalAmount),
+        currency: "INR",
+        transactionId: null,
+        gatewayOrderId: null,
+        paidAt: null,
+        isCod: true,
+      }
+    : null;
+
   return {
     id: order.uuid || String(order.id),
     orderNumber: order.orderNumber,
@@ -479,6 +547,7 @@ export function formatOrderListItem(
     paymentStatus: order.payment_status,
     isCod,
     paymentMethod,
+    paymentDetails,
     subtotal: Number(order.subtotal),
     discountAmount: Number(order.discountAmount),
     taxAmount: Number(order.taxAmount),
