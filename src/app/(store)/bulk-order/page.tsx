@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import { Package, Percent, Truck } from "lucide-react";
 import { BulkOrderForm } from "@/features/bulk-orders/components/BulkOrderForm";
+
+export const metadata: Metadata = {
+  title: "Bulk Order Enquiry | Kollimalai Arasan",
+  description:
+    "Order pure Kolli Hills spices and natural products in bulk with special pricing and custom packaging options.",
+  alternates: {
+    canonical: "/bulk-order",
+  },
+};
 
 export default function BulkOrderPage() {
   return (
