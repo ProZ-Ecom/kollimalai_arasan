@@ -28,6 +28,7 @@ import {
   Banknote,
   Pencil,
   Trash2,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -127,14 +128,17 @@ export default function CheckoutPage() {
   const verifyRazorpayPaymentMutation = useVerifyRazorpayPayment();
   const reconcileRazorpayPaymentMutation = useReconcileRazorpayPayment();
 
+  // Ordering Channel: Web Online (Default) vs WhatsApp vs Call
+  const [orderingChannel, setOrderingChannel] = useState<
+    "ONLINE" | "WHATSAPP" | "CALL"
+  >("ONLINE");
+
   // Selected state
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [courierType, setCourierType] = useState<"st_courier" | "mss" | "shiprocket">(
     "st_courier"
   );
-  const [paymentMethod, setPaymentMethod] = useState<
-    "CARD" | "COD" | "WHATSAPP" | "CALL"
-  >("CARD");
+  const [paymentMethod, setPaymentMethod] = useState<"CARD" | "COD">("CARD");
   const [orderNotes, setOrderNotes] = useState<string>("");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
@@ -694,8 +698,8 @@ export default function CheckoutPage() {
       : courierType === "shiprocket"
       ? (shiprocketShippingCharge ?? 0)
       : stShippingCharge;
-  const isWhatsApp = paymentMethod === "WHATSAPP";
-  const isCall = paymentMethod === "CALL";
+  const isWhatsApp = orderingChannel === "WHATSAPP";
+  const isCall = orderingChannel === "CALL";
   const isShippingWaived = isWhatsApp || isCall;
   const shippingCharge = isShippingWaived ? 0 : baseShippingCharge;
   const grandTotal = payableBeforeShipping + shippingCharge;
@@ -1016,11 +1020,6 @@ export default function CheckoutPage() {
 
   // WhatsApp Order Handler
   const handleOrderByWhatsApp = () => {
-    if (!effectiveAddressId) {
-      setCheckoutError("Please select or add a delivery address to place your order.");
-      return;
-    }
-
     const selectedAddr = addresses.find((a) => a.id === effectiveAddressId);
     const courierName =
       courierType === "mss"
@@ -1040,8 +1039,7 @@ export default function CheckoutPage() {
     if (discount > 0) {
       msg += `*Discount:* -₹${discount}\n`;
     }
-    msg += `*Selected Courier:* ${courierName} (Waived at checkout · Calculated on WhatsApp)\n`;
-    msg += `*Total Amount (Items Subtotal):* ₹${grandTotal}\n`;
+    msg += `*Total Amount (Items Subtotal):* ₹${payableBeforeShipping}\n`;
     msg += `*(Shipping charges will be calculated and confirmed on WhatsApp based on delivery location)*\n\n`;
 
     if (selectedAddr) {
@@ -1050,12 +1048,14 @@ export default function CheckoutPage() {
       msg += `Phone: ${selectedAddr.phone}\n`;
       msg += `Address: ${selectedAddr.addressLine1}${selectedAddr.addressLine2 ? `, ${selectedAddr.addressLine2}` : ""}\n`;
       msg += `City, State: ${selectedAddr.city}, ${selectedAddr.state} - ${selectedAddr.pincode}\n\n`;
+    } else {
+      msg += `*Delivery Address:* Customer will share on WhatsApp\n\n`;
     }
 
     if (orderNotes.trim()) {
       msg += `*Customer Note:* ${orderNotes.trim()}\n\n`;
     }
-    msg += `Please confirm my order and share details. Thank you!`;
+    msg += `Please confirm my order and share payment details. Thank you!`;
 
     const encoded = encodeURIComponent(msg);
     window.open(`https://wa.me/${KOLLIMALAI_WHATSAPP_NUMBER}?text=${encoded}`, "_blank");
@@ -1144,6 +1144,16 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     setCheckoutError(null);
 
+    if (orderingChannel === "WHATSAPP") {
+      handleOrderByWhatsApp();
+      return;
+    }
+
+    if (orderingChannel === "CALL") {
+      handleOrderByCall();
+      return;
+    }
+
     if (isAdminUser) {
       setCheckoutError("You are admin kindly comes with customer login");
       return;
@@ -1169,16 +1179,6 @@ export default function CheckoutPage() {
       isPlacingCodOrder ||
       createOrderMutation.isPending
     ) {
-      return;
-    }
-
-    if (paymentMethod === "WHATSAPP") {
-      handleOrderByWhatsApp();
-      return;
-    }
-
-    if (paymentMethod === "CALL") {
-      handleOrderByCall();
       return;
     }
 
@@ -1292,8 +1292,190 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      {/* Main Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      {/* Top Ordering Channel Selection Banner */}
+      <div className="mb-6 rounded-2xl border border-theme-border bg-theme-surface shadow-xs p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5 pb-3 border-b border-theme-border-subtle">
+          <div>
+            <h2 className="text-sm sm:text-base font-bold text-theme-text-primary flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-theme-surface-alt border border-theme-border text-theme-primary font-bold text-xs">
+                ✓
+              </span>
+              How would you like to place your order?
+            </h2>
+            <p className="text-xs text-theme-text-subtle mt-0.5">
+              Choose your preferred ordering channel below
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-theme-text-muted">
+            <span>3 convenient ways to order</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* 1. Order Online (Web) */}
+          <button
+            type="button"
+            onClick={() => {
+              setOrderingChannel("ONLINE");
+              setCheckoutError(null);
+            }}
+            className={cn(
+              "relative rounded-xl border p-4 text-left transition-all cursor-pointer flex flex-col justify-between group min-h-[92px]",
+              orderingChannel === "ONLINE"
+                ? "border-theme-primary bg-theme-surface-alt/70 shadow-xs ring-2 ring-theme-primary"
+                : "border-theme-border bg-theme-surface hover:border-theme-border-accent hover:bg-theme-surface-warm"
+            )}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-xl transition-colors",
+                    orderingChannel === "ONLINE"
+                      ? "bg-theme-primary text-white"
+                      : "bg-theme-surface-alt text-theme-primary border border-theme-border"
+                  )}
+                >
+                  <Globe className="h-4 w-4" />
+                </div>
+                <span
+                  className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-full border transition-colors",
+                    orderingChannel === "ONLINE"
+                      ? "border-theme-primary bg-theme-primary text-white"
+                      : "border-theme-border-input bg-white group-hover:border-theme-primary/50"
+                  )}
+                >
+                  {orderingChannel === "ONLINE" && <Check className="h-3 w-3 stroke-[3]" />}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-sm text-theme-text-primary">
+                  Order Online (Web)
+                </span>
+                {/* <span className="rounded bg-theme-primary/10 text-theme-primary px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide">
+                  Recommended
+                </span> */}
+              </div>
+              <p className="text-[11px] text-theme-text-subtle mt-1 leading-snug">
+                Fast web checkout with Address, Courier selection & Online/COD payment.
+              </p>
+            </div>
+          </button>
+
+          {/* 2. Order via WhatsApp */}
+          <button
+            type="button"
+            onClick={() => {
+              setOrderingChannel("WHATSAPP");
+              setCheckoutError(null);
+            }}
+            className={cn(
+              "relative rounded-xl border p-4 text-left transition-all cursor-pointer flex flex-col justify-between group min-h-[92px]",
+              orderingChannel === "WHATSAPP"
+                ? "border-emerald-600 bg-emerald-50/80 shadow-xs ring-2 ring-emerald-600"
+                : "border-theme-border bg-theme-surface hover:border-emerald-300 hover:bg-emerald-50/30"
+            )}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-xl transition-colors",
+                    orderingChannel === "WHATSAPP"
+                      ? "bg-emerald-600 text-white"
+                      : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                  )}
+                >
+                  <Image
+                    src={ICONS.whatsapp}
+                    alt="WhatsApp"
+                    width={20}
+                    height={20}
+                    className={orderingChannel === "WHATSAPP" ? "brightness-0 invert" : ""}
+                  />
+                </div>
+                <span
+                  className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-full border transition-colors",
+                    orderingChannel === "WHATSAPP"
+                      ? "border-emerald-600 bg-emerald-600 text-white"
+                      : "border-theme-border-input bg-white group-hover:border-emerald-500/50"
+                  )}
+                >
+                  {orderingChannel === "WHATSAPP" && <Check className="h-3 w-3 stroke-[3]" />}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-sm text-theme-text-primary">
+                  Order via WhatsApp
+                </span>
+                {/* <span className="rounded bg-emerald-100 text-emerald-800 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide">
+                  Instant Chat
+                </span> */}
+              </div>
+              <p className="text-[11px] text-theme-text-subtle mt-1 leading-snug">
+                Send your cart directly on WhatsApp. Confirm address & payment on chat.
+              </p>
+            </div>
+          </button>
+
+          {/* 3. Order via Call */}
+          <button
+            type="button"
+            onClick={() => {
+              setOrderingChannel("CALL");
+              setCheckoutError(null);
+            }}
+            className={cn(
+              "relative rounded-xl border p-4 text-left transition-all cursor-pointer flex flex-col justify-between group min-h-[92px]",
+              orderingChannel === "CALL"
+                ? "border-blue-600 bg-blue-50/80 shadow-xs ring-2 ring-blue-600"
+                : "border-theme-border bg-theme-surface hover:border-blue-300 hover:bg-blue-50/30"
+            )}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-xl transition-colors",
+                    orderingChannel === "CALL"
+                      ? "bg-blue-600 text-white"
+                      : "bg-blue-50 text-blue-600 border border-blue-200"
+                  )}
+                >
+                  <Phone className="h-4 w-4" />
+                </div>
+                <span
+                  className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-full border transition-colors",
+                    orderingChannel === "CALL"
+                      ? "border-blue-600 bg-blue-600 text-white"
+                      : "border-theme-border-input bg-white group-hover:border-blue-500/50"
+                  )}
+                >
+                  {orderingChannel === "CALL" && <Check className="h-3 w-3 stroke-[3]" />}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-sm text-theme-text-primary">
+                  Order via Call
+                </span>
+                {/* <span className="rounded bg-blue-100 text-blue-800 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide">
+                  Assisted
+                </span> */}
+              </div>
+              <p className="text-[11px] text-theme-text-subtle mt-1 leading-snug">
+                Speak directly with our support team to place your order over the phone.
+              </p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {orderingChannel === "ONLINE" ? (
+        /* Main Online Checkout Grid Layout */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Form & Steps (8 cols) */}
         <div className="lg:col-span-8 space-y-6">
           {/* 1. Delivery Address Card */}
@@ -2065,7 +2247,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* 3. Payment & Ordering Method Card */}
+          {/* 3. Payment Method Card */}
           <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-xs p-5 sm:p-6">
             <div className="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-theme-border-subtle">
               <div className="flex items-center gap-2.5">
@@ -2074,7 +2256,7 @@ export default function CheckoutPage() {
                 </span>
                 <h2 className="text-base sm:text-lg font-bold text-theme-text-primary flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-theme-secondary" />
-                  Payment & Ordering Options
+                  Payment Method
                 </h2>
               </div>
 
@@ -2084,13 +2266,13 @@ export default function CheckoutPage() {
               </span>
             </div>
 
-            {/* Payment Method Selector Tabs: Online vs COD vs WhatsApp vs Call */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+            {/* Payment Method Selector Tabs: Online vs COD */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
               {/* Online Payment */}
               <button
                 type="button"
                 onClick={() => setPaymentMethod("CARD")}
-                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[72px] ${paymentMethod === "CARD"
+                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[72px] cursor-pointer ${paymentMethod === "CARD"
                   ? "border-theme-primary bg-theme-surface-alt font-bold text-theme-primary shadow-xs ring-1 ring-theme-primary"
                   : "border-theme-border bg-theme-surface text-theme-text-subtle hover:bg-theme-surface-warm"
                   }`}
@@ -2100,7 +2282,7 @@ export default function CheckoutPage() {
                   <span className="text-xs font-black">Pay Online</span>
                 </div>
                 <span className="text-[11px] font-medium text-theme-text-muted">
-                  UPI / Cards / NetBanking
+                  UPI / Cards / NetBanking (Razorpay)
                 </span>
               </button>
 
@@ -2145,48 +2327,6 @@ export default function CheckoutPage() {
                     : "Shiprocket Only · Pay at Door"}
                 </span>
               </button>
-
-              {/* Order via WhatsApp */}
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("WHATSAPP")}
-                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[72px] ${paymentMethod === "WHATSAPP"
-                  ? "border-emerald-600 bg-emerald-50/80 font-bold text-emerald-800 shadow-xs ring-1 ring-emerald-600"
-                  : "border-theme-border bg-theme-surface text-theme-text-subtle hover:bg-theme-surface-warm"
-                  }`}
-              >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Image
-                    src={ICONS.whatsapp}
-                    alt="WhatsApp"
-                    width={18}
-                    height={18}
-                    className="inline-block"
-                  />
-                  <span className="text-xs font-black text-emerald-800">Order on WhatsApp</span>
-                </div>
-                <span className="text-[11px] font-medium text-theme-text-muted">
-                  Instant Chat & Confirm
-                </span>
-              </button>
-
-              {/* Order via Call */}
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("CALL")}
-                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all min-h-[72px] ${paymentMethod === "CALL"
-                  ? "border-blue-600 bg-blue-50/80 font-bold text-blue-800 shadow-xs ring-1 ring-blue-600"
-                  : "border-theme-border bg-theme-surface text-theme-text-subtle hover:bg-theme-surface-warm"
-                  }`}
-              >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Phone className="h-4 w-4 text-blue-600" />
-                  <span className="text-xs font-black text-blue-800">Order by Call</span>
-                </div>
-                <span className="text-[11px] font-medium text-theme-text-muted">
-                  {KOLLIMALAI_CALL_DISPLAY}
-                </span>
-              </button>
             </div>
 
             {/* Explanatory banner based on selected option */}
@@ -2225,50 +2365,6 @@ export default function CheckoutPage() {
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
                   <span>Exact cash or QR payment is accepted at the time of delivery. Total: {formatPrice(grandTotal)}</span>
                 </div>
-              </div>
-            )}
-
-            {paymentMethod === "WHATSAPP" && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 space-y-3">
-                <div>
-                  <h3 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-                    <Image src={ICONS.whatsapp} alt="WhatsApp" width={16} height={16} />
-                    Order Directly on WhatsApp
-                  </h3>
-                  <p className="text-[11px] text-emerald-800 mt-1 leading-relaxed">
-                    Clicking below will format your order details, selected courier ({courierType === "mss" ? "MSS" : courierType === "shiprocket" ? "Shiprocket" : "ST Courier"}), and delivery address into a message and open WhatsApp ({KOLLIMALAI_WHATSAPP_DISPLAY}). Shipping fee is waived at checkout and will be calculated and confirmed on WhatsApp based on your location.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  onClick={handleOrderByWhatsApp}
-                  className="w-full min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2"
-                >
-                  <Image src={ICONS.whatsapp} alt="WhatsApp" width={16} height={16} className="brightness-200" />
-                  Send Order to WhatsApp ({formatPrice(grandTotal)})
-                </Button>
-              </div>
-            )}
-
-            {paymentMethod === "CALL" && (
-              <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 space-y-3">
-                <div>
-                  <h3 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                    <Phone className="h-4 w-4 text-blue-600" />
-                    Place Order by Phone Call
-                  </h3>
-                  <p className="text-[11px] text-blue-800 mt-1 leading-relaxed">
-                    Prefer phone ordering? Tap below to call our support team ({KOLLIMALAI_CALL_DISPLAY}) directly. We will take your order and guide you. Shipping fee is waived at checkout and will be confirmed on call based on your delivery location.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  onClick={handleOrderByCall}
-                  className="w-full min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2"
-                >
-                  <Phone className="h-4 w-4" />
-                  Call Now ({KOLLIMALAI_CALL_DISPLAY}) · {formatPrice(grandTotal)}
-                </Button>
               </div>
             )}
           </div>
@@ -2441,11 +2537,7 @@ export default function CheckoutPage() {
                       ? "bg-neutral-200 text-neutral-500 cursor-not-allowed border border-neutral-300 shadow-none"
                       : paymentMethod === "COD"
                         ? "bg-emerald-700 hover:bg-emerald-800 text-white shadow-md shadow-emerald-700/20"
-                        : paymentMethod === "WHATSAPP"
-                          ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                          : paymentMethod === "CALL"
-                            ? "bg-blue-600 hover:bg-blue-700 text-white"
-                            : "bg-theme-primary hover:bg-theme-primary-hover text-white disabled:opacity-50"
+                        : "bg-theme-primary hover:bg-theme-primary-hover text-white disabled:opacity-50"
                 )}
               >
                 {isAdminUser ? (
@@ -2474,22 +2566,6 @@ export default function CheckoutPage() {
                   <>
                     <Banknote className="mr-2 h-4 w-4" />
                     Place Order with COD ({formatPrice(grandTotal)})
-                  </>
-                ) : paymentMethod === "WHATSAPP" ? (
-                  <>
-                    <Image
-                      src={ICONS.whatsapp}
-                      alt="WhatsApp"
-                      width={18}
-                      height={18}
-                      className="mr-2 brightness-0 invert inline-block"
-                    />
-                    Order via WhatsApp ({formatPrice(grandTotal)})
-                  </>
-                ) : paymentMethod === "CALL" ? (
-                  <>
-                    <Phone className="mr-2 h-4 w-4" />
-                    Call to Order ({formatPrice(grandTotal)})
                   </>
                 ) : (
                   <>
@@ -2628,6 +2704,236 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+      ) : (
+        /* WhatsApp & Call Direct Order Section: Shows ONLY Order Summary and Call/WhatsApp CTA */
+        <div className="max-w-2xl mx-auto space-y-5 animate-in fade-in duration-200">
+          {/* Informative Channel Banner */}
+          {orderingChannel === "WHATSAPP" ? (
+            <div className="rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 via-emerald-50/70 to-white p-4 sm:p-5 flex items-start sm:items-center gap-3.5 shadow-2xs">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-xs">
+                <Image src={ICONS.whatsapp} alt="WhatsApp" width={26} height={26} className="brightness-0 invert" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-extrabold text-emerald-950">
+                    Order via WhatsApp Chat
+                  </h3>
+                  <span className="rounded-full bg-emerald-200/80 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 text-[10px] font-extrabold">
+                    {KOLLIMALAI_WHATSAPP_DISPLAY}
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-800 mt-0.5">
+                  Review your items below and tap <strong>Order via WhatsApp</strong>. We will receive your cart items instantly and confirm your delivery address and payment on chat.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-blue-300 bg-gradient-to-r from-blue-50 via-blue-50/70 to-white p-4 sm:p-5 flex items-start sm:items-center gap-3.5 shadow-2xs">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-xs">
+                <Phone className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-extrabold text-blue-950">
+                    Order via Phone Call
+                  </h3>
+                  <span className="rounded-full bg-blue-200/80 text-blue-900 border border-blue-300 px-2.5 py-0.5 text-[10px] font-extrabold">
+                    {KOLLIMALAI_CALL_DISPLAY}
+                  </span>
+                </div>
+                <p className="text-xs text-blue-800 mt-0.5">
+                  Review your items below and tap <strong>Call to Order</strong>. Our team will verify item availability, note your address, and arrange courier dispatch.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Dedicated Order Summary Card */}
+          <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-xs overflow-hidden">
+            <div className="border-b border-theme-border-subtle bg-theme-surface-alt px-5 py-4 flex items-center justify-between">
+              <h2 className="text-base font-bold text-theme-text-primary flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4 text-theme-secondary" />
+                Order Summary ({items.length} {items.length === 1 ? "item" : "items"})
+              </h2>
+              <div className="text-xs font-semibold text-theme-text-muted">
+                Cart Weight: <span className="font-bold text-theme-text-primary">{totalWeightKg} kg</span>
+              </div>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-5">
+              {/* Items Mini List */}
+              <div className="max-h-80 overflow-y-auto space-y-3 divide-y divide-theme-border-subtle pr-1">
+                {items.map((item) => (
+                  <div key={item.id} className="pt-3 first:pt-0 flex items-center gap-3.5">
+                    <div className="relative h-14 w-14 rounded-xl border border-theme-border bg-theme-surface-alt shrink-0 overflow-hidden">
+                      <ProductImage
+                        src={item.primaryImage}
+                        alt={item.productName}
+                        fallbackText={item.productName}
+                        containerClassName="w-full h-full"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-bold text-theme-text-primary truncate">
+                        {item.productName}
+                      </p>
+                      <p className="text-[11px] text-theme-text-subtle">
+                        {item.variantName}{" "}
+                        {item.measurement
+                          ? `(${formatMeasurementLabel(item.measurement)})`
+                          : ""}
+                      </p>
+                      <p className="text-[11px] text-theme-text-muted">
+                        Qty: {item.quantity} × {formatPrice(item.currentPrice)}
+                      </p>
+                    </div>
+
+                    <div className="text-xs sm:text-sm font-bold text-theme-text-primary shrink-0">
+                      {formatPrice(item.itemTotal)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Price Calculation Breakdown */}
+              <div className="border-t border-theme-border-subtle pt-4 space-y-2.5 text-xs sm:text-sm">
+                <div className="flex justify-between text-theme-text-subtle">
+                  <span>Items Subtotal</span>
+                  <span className="font-semibold text-theme-text-primary">
+                    {formatPrice(subtotal)}
+                  </span>
+                </div>
+
+                {discount > 0 && (
+                  <div className="flex justify-between text-theme-status-del-fg font-medium">
+                    <span>Special Discount</span>
+                    <span className="font-semibold">
+                      -{formatPrice(discount)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex justify-between text-theme-text-subtle items-center">
+                  <span>Shipping Fee</span>
+                  <div className="text-right">
+                    <span
+                      className={cn(
+                        "text-xs font-bold block",
+                        orderingChannel === "WHATSAPP"
+                          ? "text-emerald-700"
+                          : "text-blue-700"
+                      )}
+                    >
+                      {orderingChannel === "WHATSAPP"
+                        ? "Calculated on WhatsApp"
+                        : "Confirmed on Call"}
+                    </span>
+                    <span className="text-[10px] text-theme-text-muted block">
+                      (Waived at checkout)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t border-theme-border pt-3.5 flex justify-between items-baseline">
+                  <div>
+                    <span className="text-sm sm:text-base font-bold text-theme-text-primary block">
+                      Total Amount
+                    </span>
+                    <span className="text-[10px] text-theme-text-muted font-medium">
+                      (Items Subtotal · Shipping confirmed on {orderingChannel === "WHATSAPP" ? "chat" : "call"})
+                    </span>
+                  </div>
+                  <span className="text-xl sm:text-2xl font-extrabold text-theme-primary">
+                    {formatPrice(payableBeforeShipping)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Optional Customer Note for WhatsApp */}
+              {orderingChannel === "WHATSAPP" && (
+                <div className="border-t border-theme-border-subtle pt-3">
+                  <label className="block text-xs font-semibold text-theme-text-secondary mb-1.5">
+                    Add Note or Special Request (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={200}
+                    placeholder="e.g. Please check courier charges to my area or special requests..."
+                    value={orderNotes}
+                    onChange={(e) => setOrderNotes(e.target.value)}
+                    className="w-full rounded-xl border border-theme-border-input bg-white p-2.5 text-xs text-theme-text-primary placeholder:text-theme-text-muted focus:border-emerald-600 focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {/* Support Hours for Call */}
+              {orderingChannel === "CALL" && (
+                <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs text-blue-900 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-blue-600 shrink-0" />
+                    <span>Support Hours: <strong>9:00 AM – 7:00 PM</strong> (All Days)</span>
+                  </div>
+                  <span className="font-bold text-blue-700">
+                    {KOLLIMALAI_CALL_DISPLAY}
+                  </span>
+                </div>
+              )}
+
+              {/* Direct Channel CTA Button */}
+              {orderingChannel === "WHATSAPP" ? (
+                <Button
+                  type="button"
+                  onClick={handleOrderByWhatsApp}
+                  className="w-full min-h-[50px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm sm:text-base shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Image
+                    src={ICONS.whatsapp}
+                    alt="WhatsApp"
+                    width={20}
+                    height={20}
+                    className="brightness-0 invert inline-block"
+                  />
+                  Order via WhatsApp ({formatPrice(payableBeforeShipping)})
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleOrderByCall}
+                  className="w-full min-h-[50px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Phone className="h-4 w-4" />
+                  Call to Order: {KOLLIMALAI_CALL_DISPLAY} ({formatPrice(payableBeforeShipping)})
+                </Button>
+              )}
+
+              {/* Switch Back to Web Checkout Option */}
+              <div className="text-center pt-2 border-t border-theme-border-subtle">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrderingChannel("ONLINE");
+                    setCheckoutError(null);
+                  }}
+                  className="text-xs font-semibold text-theme-primary hover:text-theme-primary-hover hover:underline inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  <span>Switch to Order Online (Web) for full address & payment options</span>
+                </button>
+              </div>
+
+              <div className="text-[11px] text-center text-theme-text-muted space-y-1">
+                <p className="flex items-center justify-center gap-1.5 font-medium text-emerald-700">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                  100% Authentic Kolli Hills Spices & Herbal Farm Products
+                </p>
+                <p>Direct from hill farmers to your doorstep across India.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Address Confirmation Modal */}
       {addressToDelete && (

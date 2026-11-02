@@ -507,7 +507,8 @@ export const razorpayService = {
     }
 
     // 4. Identify shipping details from order notes or fallback to user's active address
-    const requestedAddressId = rzpOrder.notes?.shippingAddressId?.trim();
+    const rawAddressId = rzpOrder.notes?.shippingAddressId;
+    const requestedAddressId = rawAddressId != null ? String(rawAddressId).trim() : undefined;
     let shippingAddress: any = null;
 
     if (requestedAddressId) {
@@ -542,7 +543,8 @@ export const razorpayService = {
     }
 
     const resolvedAddressId = shippingAddress.uuid || String(shippingAddress.id);
-    const courierType = rzpOrder.notes?.courierType || "st_courier";
+    const rawCourier = rzpOrder.notes?.courierType;
+    const courierType = (rawCourier ? String(rawCourier) : "st_courier") as "st_courier" | "mss" | "shiprocket";
 
     // 5. Create customer order from cart
     let createdOrder: any;
