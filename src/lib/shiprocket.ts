@@ -222,7 +222,7 @@ function syncShiprocketEnv() {
       const dotenv = req("dotenv");
       const parsed = dotenv.parse(content);
       for (const [k, v] of Object.entries(parsed)) {
-        if (k.startsWith("SHIPROCKET_")) {
+        if (k.startsWith("SHIPROCKET_") || k === "APP_ENV") {
           process.env[k] = String(v);
         }
       }

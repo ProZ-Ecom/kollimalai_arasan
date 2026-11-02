@@ -582,6 +582,20 @@ export const deliveryRepository = {
     return db.$transaction(async (tx) => {
       const now = new Date();
 
+      const existingOrder = await tx.order.findUnique({
+        where: { id: orderId },
+        select: {
+          payment_status: true,
+          totalAmount: true,
+          payments: {
+            where: { is_active: true },
+            select: { id: true, status: true },
+          },
+        },
+      });
+
+      const shouldMarkPaymentPaid = existingOrder?.payment_status === "pending";
+
       const updatedShipment = await tx.shipments.update({
         where: { id: shipmentId },
         data: {
@@ -595,9 +609,25 @@ export const deliveryRepository = {
         where: { id: orderId },
         data: {
           order_status: "delivered",
+          ...(shouldMarkPaymentPaid ? { payment_status: "paid" } : {}),
           updated_by: staffInternalId,
         },
       });
+
+      if (shouldMarkPaymentPaid) {
+        await tx.payment.updateMany({
+          where: {
+            orderId: orderId,
+            status: "pending",
+            is_active: true,
+          },
+          data: {
+            status: "success",
+            updatedAt: now,
+            updated_by: staffInternalId,
+          },
+        });
+      }
 
       await tx.order_status_history.create({
         data: {

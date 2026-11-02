@@ -132,11 +132,10 @@ export async function GET(request: NextRequest) {
         courierPartnerName: shipment?.courier_partner_name || undefined,
       });
 
-      // Safe Development-Only Simulation Check
-      // Strictly disabled unless BOTH conditions are true:
-      const isSimulationEnabled =
-        process.env.NODE_ENV === "development" &&
-        process.env.SHIPROCKET_LOCAL_TRACKING_SIMULATION === "true";
+      // Safe Development & Staging Simulation Check
+      // Strictly disabled in live production (isProduction() === true)
+      const { isLocalTrackingSimulationAllowed } = await import("@/lib/env-config");
+      const isSimulationEnabled = isLocalTrackingSimulationAllowed();
 
       if (isSimulationEnabled && shipment) {
         // Retrieve local database tracking checkpoints

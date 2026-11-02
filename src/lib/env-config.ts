@@ -6,12 +6,25 @@
  * 2. Production (strictly enforces live external services, genuine tokens, and blocks any simulated side-effects)
  */
 
+export function isStaging(): boolean {
+  const env = (
+    process.env.APP_ENV ||
+    process.env.NEXT_PUBLIC_APP_ENV ||
+    ""
+  ).toLowerCase().trim();
+  return env === "staging" || env === "testing" || env === "test";
+}
+
 export function isProduction(): boolean {
+  // If explicitly designated as staging/testing, do NOT treat as live production
+  if (isStaging()) {
+    return false;
+  }
   return process.env.NODE_ENV === "production";
 }
 
 export function isDevelopment(): boolean {
-  return process.env.NODE_ENV === "development";
+  return process.env.NODE_ENV === "development" || isStaging();
 }
 
 export function isTest(): boolean {

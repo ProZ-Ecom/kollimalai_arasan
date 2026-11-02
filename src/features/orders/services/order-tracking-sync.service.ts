@@ -127,13 +127,29 @@ export async function syncOrderStatusFromTrackingResult(
     // Only transition from shipped, out_for_delivery, or packed
     if (["shipped", "out_for_delivery", "packed", "processing"].includes(currentOrderStatus)) {
       await db.$transaction(async (tx) => {
+        const shouldMarkPaymentPaid = order.payment_status === "pending";
         await tx.order.update({
           where: { id: order.id },
           data: {
             order_status: "delivered",
+            ...(shouldMarkPaymentPaid ? { payment_status: "paid" } : {}),
             updatedAt: now,
           },
         });
+
+        if (shouldMarkPaymentPaid) {
+          await tx.payment.updateMany({
+            where: {
+              orderId: order.id,
+              status: "pending",
+              is_active: true,
+            },
+            data: {
+              status: "success",
+              updatedAt: now,
+            },
+          });
+        }
 
         await tx.shipments.update({
           where: { id: shipment.id },
