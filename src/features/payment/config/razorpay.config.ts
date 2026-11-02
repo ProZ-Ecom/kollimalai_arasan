@@ -37,12 +37,22 @@ export function getRazorpayClient(): Razorpay {
 }
 
 export function getRazorpayPublicKey(): string {
-  let key_id = (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID)?.trim();
+  const backendKey = process.env.RAZORPAY_KEY_ID?.trim();
+  const publicKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.trim();
+
+  let key_id = (backendKey || publicKey)?.trim();
   if (!key_id) {
     throw new Error("Razorpay Public Key ID is not configured.");
   }
   if (key_id.startsWith("Rzp_")) {
     key_id = "rzp_" + key_id.slice(4);
   }
+
+  if (backendKey && publicKey && backendKey !== publicKey) {
+    console.warn(
+      `[Razorpay Warning] Key mismatch detected! RAZORPAY_KEY_ID (${backendKey}) differs from NEXT_PUBLIC_RAZORPAY_KEY_ID (${publicKey}). Using RAZORPAY_KEY_ID.`
+    );
+  }
+
   return key_id;
 }

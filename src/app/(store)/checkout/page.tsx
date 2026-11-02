@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -49,6 +49,7 @@ import {
 import {
   useCreateRazorpayOrder,
   useVerifyRazorpayPayment,
+  useReconcileRazorpayPayment,
 } from "@/features/customers/hooks/use-customer-payment";
 import { loadRazorpayScript } from "@/features/customers/utils/razorpay-loader";
 import { useCheckout } from "@/features/checkout/checkout-context";
@@ -124,6 +125,7 @@ export default function CheckoutPage() {
   const createOrderMutation = useCreateCustomerOrder();
   const createRazorpayOrderMutation = useCreateRazorpayOrder();
   const verifyRazorpayPaymentMutation = useVerifyRazorpayPayment();
+  const reconcileRazorpayPaymentMutation = useReconcileRazorpayPayment();
 
   // Selected state
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
@@ -139,8 +141,88 @@ export default function CheckoutPage() {
   // In-flight payment guard
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [isReconciling, setIsReconciling] = useState(false);
   const [isPlacingCodOrder, setIsPlacingCodOrder] = useState(false);
   const [pendingOrder] = useState<null>(null);
+  const hasAutoCheckedRef = useRef(false);
+
+  // Warn user before refreshing or navigating away during active payment processing
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isProcessingPayment || isVerifyingPayment) {
+        e.preventDefault();
+        e.returnValue = "Payment is currently processing. Refreshing or leaving will interrupt your order confirmation.";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isProcessingPayment, isVerifyingPayment]);
+
+  // Check and recover payment if user refreshed or disconnected after paying on Razorpay
+  const checkAndRecoverPayment = useCallback(
+    async (manual = false) => {
+      let pendingOrderId: string | undefined;
+      try {
+        const stored = sessionStorage.getItem("kollimalai_pending_rzp");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Date.now() - parsed.timestamp < 2 * 60 * 60 * 1000) {
+            pendingOrderId = parsed.razorpayOrderId;
+          } else {
+            sessionStorage.removeItem("kollimalai_pending_rzp");
+          }
+        }
+      } catch {}
+
+      // For automatic check on mount, only proceed if there is an active pending order in session
+      if (!manual && !pendingOrderId) {
+        return false;
+      }
+
+      try {
+        if (manual) setIsReconciling(true);
+        const res = await reconcileRazorpayPaymentMutation.mutateAsync({
+          razorpayOrderId: pendingOrderId,
+        });
+
+        if (res && res.found && (res.success || res.alreadyProcessed) && res.orderNumber) {
+          try {
+            sessionStorage.removeItem("kollimalai_pending_rzp");
+          } catch {}
+          setIsOrderPlaced(true);
+          queryClient.invalidateQueries({ queryKey: CUSTOMER_ORDERS_QUERY_KEY, refetchType: "all" });
+          queryClient.invalidateQueries({ queryKey: ["customer", "cart"], refetchType: "all" });
+          queryClient.invalidateQueries({ queryKey: ["cart"], refetchType: "all" });
+
+          router.push(`/checkout/success?orderNumber=${res.orderNumber}`);
+          return true;
+        } else if (manual) {
+          setCheckoutError(
+            res?.message ||
+              "No completed payment was found to recover. If money was debited from your account, please contact support with your Payment ID."
+          );
+        }
+      } catch (err: any) {
+        if (manual) {
+          setCheckoutError(err?.message || "Failed to check payment status.");
+        }
+      } finally {
+        if (manual) setIsReconciling(false);
+      }
+      return false;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  // Auto-check on page load for any in-flight / interrupted payment (runs strictly ONCE per load)
+  useEffect(() => {
+    if (session?.user && !hasAutoCheckedRef.current) {
+      hasAutoCheckedRef.current = true;
+      checkAndRecoverPayment(false);
+    }
+  }, [session?.user, checkAndRecoverPayment]);
 
   // CRITICAL FLOW GUARD: If customer chooses Cash On Delivery (COD), the courier partner MUST be Shiprocket only!
   useEffect(() => {
@@ -875,6 +957,10 @@ export default function CheckoutPage() {
               razorpay_signature: response.razorpay_signature,
             });
 
+            try {
+              sessionStorage.removeItem("kollimalai_pending_rzp");
+            } catch {}
+
             setIsOrderPlaced(true);
             queryClient.invalidateQueries({ queryKey: CUSTOMER_ORDERS_QUERY_KEY, refetchType: "all" });
             queryClient.invalidateQueries({ queryKey: ["customer", "cart"], refetchType: "all" });
@@ -897,9 +983,24 @@ export default function CheckoutPage() {
         },
       };
 
+      try {
+        sessionStorage.setItem(
+          "kollimalai_pending_rzp",
+          JSON.stringify({
+            razorpayOrderId: rzpOrder.razorpayOrderId,
+            shippingAddressId: shippingId,
+            courierType,
+            timestamp: Date.now(),
+          })
+        );
+      } catch {}
+
       const rzpInstance = new (window as any).Razorpay(options);
       rzpInstance.on("payment.failed", function (response: any) {
         setIsProcessingPayment(false);
+        try {
+          sessionStorage.removeItem("kollimalai_pending_rzp");
+        } catch {}
         setCheckoutError(
           response?.error?.description || "Payment was declined. Please try another payment method."
         );
@@ -1146,6 +1247,47 @@ export default function CheckoutPage() {
           <div className="flex-1">
             <p className="font-semibold">Unable to complete checkout</p>
             <p className="text-xs mt-0.5">{checkoutError}</p>
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => checkAndRecoverPayment(true)}
+                disabled={isReconciling}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {isReconciling ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Checking Payment Status...
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    I already paid / Check Payment Status
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isVerifyingPayment && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center space-y-4 border border-zinc-200 dark:border-zinc-800 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-center">
+              <div className="h-14 w-14 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center">
+                <Loader2 className="h-7 w-7 text-emerald-600 animate-spin" />
+              </div>
+            </div>
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+              Verifying Your Payment
+            </h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              We are securely verifying your transaction with Razorpay and preparing your order receipt...
+            </p>
+            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-xs text-amber-900 dark:text-amber-200 font-medium">
+              ⚠️ Please do not refresh, go back, or close this window.
+            </div>
           </div>
         </div>
       )}
