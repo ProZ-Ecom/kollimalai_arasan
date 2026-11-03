@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "FAQs - Kollimalai Arasan | Orders, Quality & Delivery",
   description:
     "Answers to common questions about delivery, organic ingredients, packaging, bulk orders, returns and cancellations at Kollimalai Arasan.",
+  alternates: {
+    canonical: "/faqs",
+  },
 };
 
 export default function FaqPage() {

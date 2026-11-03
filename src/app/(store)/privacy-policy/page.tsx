@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: "Privacy Policy | Kollimalai Arasan",
   description:
     "Learn how Kollimalai Arasan collects, uses, safeguards, and protects your personal information.",
+  alternates: {
+    canonical: "/privacy-policy",
+  },
 };
 
 export default function PrivacyPolicyPage() {

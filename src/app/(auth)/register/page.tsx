@@ -151,11 +151,10 @@ function RegisterForm() {
       { email: regData.email },
       {
         onSuccess: () => {
-          const targetUrl = `/register/verify-otp${
-            callbackUrl !== "/"
-              ? `?callbackUrl=${encodeURIComponent(callbackUrl)}`
-              : ""
-          }`;
+          const targetUrl = `/register/verify-otp${callbackUrl !== "/"
+            ? `?callbackUrl=${encodeURIComponent(callbackUrl)}`
+            : ""
+            }`;
           router.push(targetUrl);
         },
         onError: (err: any) => {
@@ -220,113 +219,113 @@ function RegisterForm() {
             onSubmit={methods.handleSubmit(onSubmit)}
             className="space-y-5 md:space-y-6"
           >
-          {/* Server Error */}
-          {methods.formState.errors.root?.message && (
-            <div className="flex items-center gap-2 rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-600">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {methods.formState.errors.root.message}
-            </div>
-          )}
-
-          <FormInput
-            name="name"
-            label="Full Name"
-            placeholder="Enter your full name"
-            autoComplete="name"
-            leftIcon={<User size={18} />}
-            required
-          />
-
-          <FormInput
-            name="email"
-            label="Email Address"
-            type="email"
-            placeholder="Enter your email"
-            autoComplete="email"
-            leftIcon={<Mail size={18} />}
-            required
-          />
-
-          <FormInput
-            name="phone"
-            label="Mobile Number"
-            type="tel"
-            placeholder="Enter 10-digit mobile number"
-            autoComplete="tel"
-            maxLength={10}
-            leftIcon={<Phone size={18} />}
-            inputPrefix="+91"
-            required
-          />
-
-          <FormPasswordInput
-            name="password"
-            label="Password"
-            placeholder="Enter your password"
-            leftIcon={<LockKeyhole size={18} />}
-            required
-          />
-
-          {password.length > 0 && strength && (
-            <div className="mt-3">
-              <div className="mb-2 flex items-center justify-between text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                <span>Password Strength</span>
-                <span>{strength.label}</span>
+            {/* Server Error */}
+            {methods.formState.errors.root?.message && (
+              <div className="flex items-center gap-2 rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-600">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {methods.formState.errors.root.message}
               </div>
-
-              <div className="h-[4px] w-full rounded-full bg-neutral-200">
-                <div
-                  className={`h-[4px] rounded-full transition-all duration-300 ${strength.color}`}
-                  style={{ width: strength.width }}
-                />
-              </div>
-
-              <p className="mt-2 text-xs text-neutral-500">
-                {strength.suggestion}
-              </p>
-            </div>
-          )}
-
-          <FormPasswordInput
-            name="confirmPassword"
-            label="Confirm Password"
-            placeholder="Confirm your password"
-            leftIcon={<LockKeyhole size={18} />}
-            required
-          />
-
-          <div className="pt-1">
-            <Checkbox
-              checked={acceptTerms}
-              onChange={(e) => setAcceptTerms(e.target.checked)}
-              label={
-                <>
-                  I agree to the{" "}
-                  <Link
-                    href="/terms-and-conditions"
-                    onClick={(e) => e.stopPropagation()}
-                    className="font-medium text-secondary-600 hover:underline"
-                  >
-                    Terms & Conditions
-                  </Link>
-                </>
-              }
-            />
-          </div>
-
-          <FormSubmitButton
-            size="xl"
-            disabled={sendEmailOtpMutation.isPending}
-            className="mt-2 h-11 w-full rounded-lg bg-gradient-to-r from-secondary-600 to-secondary-700 text-sm font-medium text-white shadow-sm transition-all hover:from-secondary-700 hover:to-secondary-800 hover:shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
-          >
-            {sendEmailOtpMutation.isPending ? (
-              <Spinner size="sm" className="text-white" />
-            ) : (
-              "Create Account"
             )}
-          </FormSubmitButton>
-        </form>
-      </FormProvider>
+
+            <FormInput
+              name="name"
+              label="Full Name"
+              placeholder="Enter your full name"
+              autoComplete="name"
+              leftIcon={<User size={18} />}
+              required
+            />
+
+            <FormInput
+              name="email"
+              label="Email Address"
+              type="email"
+              placeholder="Enter your email"
+              autoComplete="email"
+              leftIcon={<Mail size={18} />}
+              required
+            />
+
+            <FormInput
+              name="phone"
+              label="Mobile Number"
+              type="tel"
+              placeholder="Enter 10-digit mobile number"
+              autoComplete="tel"
+              maxLength={10}
+              leftIcon={<Phone size={18} />}
+              inputPrefix="+91"
+              required
+            />
+
+            <FormPasswordInput
+              name="password"
+              label="Password"
+              placeholder="Enter your password"
+              leftIcon={<LockKeyhole size={18} />}
+              required
+            />
+
+            {password.length > 0 && strength && (
+              <div className="mt-3">
+                <div className="mb-2 flex items-center justify-between text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                  <span>Password Strength</span>
+                  <span>{strength.label}</span>
+                </div>
+
+                <div className="h-[4px] w-full rounded-full bg-neutral-200">
+                  <div
+                    className={`h-[4px] rounded-full transition-all duration-300 ${strength.color}`}
+                    style={{ width: strength.width }}
+                  />
+                </div>
+
+                <p className="mt-2 text-xs text-neutral-500">
+                  {strength.suggestion}
+                </p>
+              </div>
+            )}
+
+            <FormPasswordInput
+              name="confirmPassword"
+              label="Confirm Password"
+              placeholder="Confirm your password"
+              leftIcon={<LockKeyhole size={18} />}
+              required
+            />
+
+            <div className="pt-1">
+              <Checkbox
+                checked={acceptTerms}
+                onChange={(e) => setAcceptTerms(e.target.checked)}
+                label={
+                  <>
+                    I agree to the{" "}
+                    <Link
+                      href="/terms-and-conditions"
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-medium text-secondary-600 hover:underline"
+                    >
+                      Terms & Conditions
+                    </Link>
+                  </>
+                }
+              />
+            </div>
+
+            <FormSubmitButton
+              size="xl"
+              disabled={sendEmailOtpMutation.isPending}
+              className="mt-2 h-11 w-full rounded-lg bg-gradient-to-r from-secondary-600 to-secondary-700 text-sm font-medium text-white shadow-sm transition-all hover:from-secondary-700 hover:to-secondary-800 hover:shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
+            >
+              {sendEmailOtpMutation.isPending ? (
+                <Spinner size="sm" className="text-white" />
+              ) : (
+                "Create Account"
+              )}
+            </FormSubmitButton>
+          </form>
+        </FormProvider>
       </div>
     </AuthFormLayout>
   );

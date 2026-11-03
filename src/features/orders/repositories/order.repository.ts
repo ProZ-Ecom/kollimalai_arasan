@@ -12,6 +12,7 @@ import type {
   OrderStatusHistoryResponse,
   OrderListResponse,
   AdminOrdersCountResponse,
+  OrderPaymentDetail,
 } from "../types";
 import type {
   CustomerOrdersQueryInput,
@@ -132,8 +133,14 @@ export const orderDetailInclude = Prisma.validator<Prisma.OrderInclude>()({
     where: { is_active: true },
     select: {
       id: true,
+      amount: true,
+      currency: true,
       gateway: true,
       status: true,
+      gateway_order_id: true,
+      gateway_payment_id: true,
+      createdAt: true,
+      updatedAt: true,
       payment_methods: {
         select: {
           id: true,
@@ -384,6 +391,36 @@ export function formatOrderDetail(
   const paymentMethod =
     (order as any).payments?.[0]?.gateway || (isCod ? "COD" : null);
 
+  const rawPayment = (order as any).payments?.[0];
+  const paymentDetails: OrderPaymentDetail | null = rawPayment
+    ? {
+        id: String(rawPayment.id),
+        gateway: rawPayment.gateway || (isCod ? "COD" : "Razorpay"),
+        methodName: rawPayment.payment_methods?.name || (isCod ? "Cash on Delivery" : "Online Gateway"),
+        methodCode: rawPayment.payment_methods?.code || (isCod ? "COD" : "ONLINE"),
+        status: String(rawPayment.status || order.payment_status),
+        amount: rawPayment.amount != null ? Number(rawPayment.amount) : Number(order.totalAmount),
+        currency: rawPayment.currency || "INR",
+        transactionId: rawPayment.gateway_payment_id || null,
+        gatewayOrderId: rawPayment.gateway_order_id || null,
+        paidAt: rawPayment.updatedAt || rawPayment.createdAt || order.createdAt,
+        isCod,
+      }
+    : isCod
+    ? {
+        gateway: "COD",
+        methodName: "Cash on Delivery",
+        methodCode: "COD",
+        status: String(order.payment_status),
+        amount: Number(order.totalAmount),
+        currency: "INR",
+        transactionId: null,
+        gatewayOrderId: null,
+        paidAt: null,
+        isCod: true,
+      }
+    : null;
+
   return {
     id: order.uuid || String(order.id),
     orderNumber: order.orderNumber,
@@ -392,6 +429,7 @@ export function formatOrderDetail(
     paymentStatus: order.payment_status,
     isCod,
     paymentMethod,
+    paymentDetails,
     subtotal: Number(order.subtotal),
     discountAmount: Number(order.discountAmount),
     taxAmount: Number(order.taxAmount),
@@ -471,6 +509,36 @@ export function formatOrderListItem(
   const paymentMethod =
     (order as any).payments?.[0]?.gateway || (isCod ? "COD" : null);
 
+  const rawPayment = (order as any).payments?.[0];
+  const paymentDetails: OrderPaymentDetail | null = rawPayment
+    ? {
+        id: String(rawPayment.id),
+        gateway: rawPayment.gateway || (isCod ? "COD" : "Razorpay"),
+        methodName: rawPayment.payment_methods?.name || (isCod ? "Cash on Delivery" : "Online Gateway"),
+        methodCode: rawPayment.payment_methods?.code || (isCod ? "COD" : "ONLINE"),
+        status: String(rawPayment.status || order.payment_status),
+        amount: rawPayment.amount != null ? Number(rawPayment.amount) : Number(order.totalAmount),
+        currency: rawPayment.currency || "INR",
+        transactionId: rawPayment.gateway_payment_id || null,
+        gatewayOrderId: rawPayment.gateway_order_id || null,
+        paidAt: rawPayment.updatedAt || rawPayment.createdAt || order.createdAt,
+        isCod,
+      }
+    : isCod
+    ? {
+        gateway: "COD",
+        methodName: "Cash on Delivery",
+        methodCode: "COD",
+        status: String(order.payment_status),
+        amount: Number(order.totalAmount),
+        currency: "INR",
+        transactionId: null,
+        gatewayOrderId: null,
+        paidAt: null,
+        isCod: true,
+      }
+    : null;
+
   return {
     id: order.uuid || String(order.id),
     orderNumber: order.orderNumber,
@@ -479,6 +547,7 @@ export function formatOrderListItem(
     paymentStatus: order.payment_status,
     isCod,
     paymentMethod,
+    paymentDetails,
     subtotal: Number(order.subtotal),
     discountAmount: Number(order.discountAmount),
     taxAmount: Number(order.taxAmount),
@@ -1398,20 +1467,106 @@ export const orderRepository = {
     return db.$transaction(async (tx) => {
       const now = new Date();
 
+      const existingOrder = await tx.order.findUnique({
+        where: { id: params.orderId },
+        select: {
+          id: true,
+          payment_status: true,
+          totalAmount: true,
+          notes: true,
+          payments: {
+            where: { is_active: true },
+            select: { id: true, status: true, gateway: true },
+          },
+          order_status_history: {
+            select: { note: true },
+          },
+        },
+      });
+
+      const isDelivered = params.status === "delivered";
+      const isCod = Boolean(
+        existingOrder?.payments?.some(
+          (p: any) => p.gateway?.toUpperCase() === "COD"
+        ) ||
+          (existingOrder?.notes && existingOrder.notes.toLowerCase().includes("cod")) ||
+          existingOrder?.order_status_history?.some(
+            (h: any) =>
+              (h.note || "").toLowerCase().includes("cash on delivery") ||
+              (h.note || "").toLowerCase().includes("(cod)")
+          )
+      );
+
+      // When marking order as delivered: if it is COD or payment is pending,
+      // update payment_status to 'paid' so COD lifecycle and returns can proceed.
+      const shouldMarkPaymentPaid =
+        isDelivered && (isCod || existingOrder?.payment_status === "pending");
+
       await tx.order.update({
         where: { id: params.orderId },
         data: {
           order_status: params.status as any,
+          ...(shouldMarkPaymentPaid ? { payment_status: "paid" } : {}),
           updatedAt: now,
           updated_by: params.changedBy,
         },
       });
 
+      if (shouldMarkPaymentPaid) {
+        // 1. Update any pending payment records for this order to "success"
+        const updateResult = await tx.payment.updateMany({
+          where: {
+            orderId: params.orderId,
+            status: "pending",
+            is_active: true,
+          },
+          data: {
+            status: "success",
+            updatedAt: now,
+            updated_by: params.changedBy,
+          },
+        });
+
+        // 2. If no payment record existed, create one for COD
+        if (updateResult.count === 0 && (!existingOrder?.payments || existingOrder.payments.length === 0)) {
+          const codMethod = await tx.payment_methods.findFirst({
+            where: {
+              OR: [
+                { code: "COD" },
+                { code: "cod" },
+                { name: { contains: "Cash on Delivery" } },
+              ],
+              is_active: true,
+            },
+          });
+
+          if (codMethod && existingOrder) {
+            await tx.payment.create({
+              data: {
+                orderId: params.orderId,
+                payment_method_id: codMethod.id,
+                amount: existingOrder.totalAmount,
+                currency: "INR",
+                status: "success",
+                gateway: "COD",
+                created_by: params.changedBy,
+                updated_by: params.changedBy,
+                is_active: true,
+              },
+            });
+          }
+        }
+      }
+
+      const historyNote = shouldMarkPaymentPaid
+        ? `${params.note || "Order marked as delivered by admin"} (Payment status updated to Paid)`
+        : params.note || null;
+
       await tx.order_status_history.create({
         data: {
           order_id: params.orderId,
           status: params.status,
-          note: params.note || null,
+          note: historyNote,
           changed_by: params.changedBy,
           is_active: true,
           created_by: params.changedBy,

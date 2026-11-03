@@ -21,6 +21,13 @@ export const verifyRazorpayPaymentSchema = z.object({
 
 export type VerifyRazorpayPaymentInput = z.infer<typeof verifyRazorpayPaymentSchema>;
 
+export const reconcileRazorpayPaymentSchema = z.object({
+  razorpayOrderId: z.string().optional(),
+});
+
+export type ReconcileRazorpayPaymentInput = z.infer<typeof reconcileRazorpayPaymentSchema>;
+
+
 
 export interface RazorpayOrderResponse {
   razorpayOrderId: string;

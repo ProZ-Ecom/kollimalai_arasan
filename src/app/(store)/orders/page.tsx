@@ -176,7 +176,7 @@ function OrdersContent() {
             </span>
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-theme-text-subtle">
-            Track and manage your authentic Kolli Hills orders.
+            Track shipment live status and manage your authentic Kolli Hills orders.
           </p>
         </div>
 
@@ -197,7 +197,7 @@ function OrdersContent() {
       <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="flex-1">
           <SearchInput
-            placeholder="Search by order number (e.g. ORD-2026...)"
+            placeholder="Search by order number or AWB tracking number (e.g. ORD-2026...)"
             value={searchQuery}
             onSearch={(val) => {
               setSearchQuery(val);

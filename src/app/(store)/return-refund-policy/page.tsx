@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: "Refund & Replacement Policy | Kollimalai Arasan",
   description:
     "Learn about our 7 business days return, refund, and replacement policy for farm-fresh organic products from Kolli Hills.",
+  alternates: {
+    canonical: "/return-refund-policy",
+  },
 };
 
 export default function ReturnRefundPolicyPage() {
