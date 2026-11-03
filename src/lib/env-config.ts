@@ -20,11 +20,21 @@ export function isProduction(): boolean {
   if (isStaging()) {
     return false;
   }
-  return process.env.NODE_ENV === "production";
+  const env = (
+    process.env.APP_ENV ||
+    process.env.NEXT_PUBLIC_APP_ENV ||
+    ""
+  ).toLowerCase().trim();
+  return env === "production" || process.env.NODE_ENV === "production";
 }
 
 export function isDevelopment(): boolean {
-  return process.env.NODE_ENV === "development" || isStaging();
+  const env = (
+    process.env.APP_ENV ||
+    process.env.NEXT_PUBLIC_APP_ENV ||
+    ""
+  ).toLowerCase().trim();
+  return env === "development" || process.env.NODE_ENV === "development" || isStaging();
 }
 
 export function isTest(): boolean {
@@ -44,11 +54,11 @@ export function isShiprocketSandbox(): boolean {
 
 /**
  * Returns true if local tracking simulation is explicitly permitted.
- * STRICT: Only permitted if NODE_ENV === 'development' AND SHIPROCKET_LOCAL_TRACKING_SIMULATION === 'true'.
- * Always returns false in production.
+ * STRICT: Only permitted if in development environment AND SHIPROCKET_LOCAL_TRACKING_SIMULATION === 'true'.
+ * Always returns false in production or testing.
  */
 export function isLocalTrackingSimulationAllowed(): boolean {
-  if (isProduction()) {
+  if (isProduction() || isStaging()) {
     return false;
   }
   return (
@@ -120,4 +130,3 @@ export function assertNotProduction(featureName: string): void {
     );
   }
 }
-
