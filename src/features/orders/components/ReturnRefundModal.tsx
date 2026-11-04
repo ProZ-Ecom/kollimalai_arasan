@@ -88,6 +88,14 @@ const MANUAL_PAYMENT_MODES = [
   "Other Manual Transfer",
 ];
 
+function getVideoMimeType(url?: string | null): string {
+  if (!url) return "video/mp4";
+  const clean = url.split("?")[0].toLowerCase();
+  if (clean.endsWith(".webm")) return "video/webm";
+  if (clean.endsWith(".mov")) return "video/quicktime";
+  return "video/mp4";
+}
+
 export function ReturnRefundModal({
   open,
   onClose,
@@ -143,6 +151,7 @@ export function ReturnRefundModal({
   // Fetch full return request details whenever modal opens
   const fetchReturnDetails = async (returnId: string) => {
     setIsLoadingDetail(true);
+    setVideoPlaybackError(false);
     try {
       const res = await fetch(`/api/admin/returns/${returnId}`);
       if (!res.ok) throw new Error("Failed to load return request details");
@@ -189,6 +198,7 @@ export function ReturnRefundModal({
 
   useEffect(() => {
     if (order && open) {
+      setVideoPlaybackError(false);
       setSelectedPreset(100);
       setRefundAmount(Number(order.totalAmount || 0).toFixed(2));
       const orderIsCod = Boolean(
@@ -447,10 +457,8 @@ export function ReturnRefundModal({
     const num = parseFloat(clean);
     if (isNaN(num) || num <= 0) {
       setValidationError("Refund amount must be greater than ₹0.");
-    } else if (num > totalAmount) {
+    } else if (num > totalAmount + 0.01) {
       setValidationError(`Refund cannot exceed order total of ${formatPrice(totalAmount)}.`);
-    } else if (num > eligibleAmount + 0.01) {
-      setValidationError(`Refund cannot exceed eligible return amount of ${formatPrice(eligibleAmount)}.`);
     } else {
       setValidationError(null);
     }
@@ -511,6 +519,11 @@ export function ReturnRefundModal({
     try {
       if (returnId && !isCancelledOrder) {
         // Dedicated Return Refund endpoint
+        const isFull =
+          selectedPreset === 100 ||
+          currentRefundNum >= eligibleAmount - 0.01 ||
+          currentRefundNum >= totalAmount - 0.01;
+
         const res = await fetch(`/api/admin/returns/${returnId}/refund`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -520,6 +533,7 @@ export function ReturnRefundModal({
             paymentMode: selectedMode,
             referenceId: referenceId.trim() || undefined,
             note: note.trim() || undefined,
+            isFullRefund: isFull,
           }),
         });
 
@@ -852,13 +866,20 @@ export function ReturnRefundModal({
               <div className="overflow-hidden rounded-xl bg-black border border-neutral-800">
                 {!videoPlaybackError ? (
                   <video
+                    key={returnDetail.videoUrl}
                     controls
                     playsInline
                     preload="metadata"
-                    src={returnDetail.videoUrl}
-                    onError={() => setVideoPlaybackError(true)}
+                    onError={(e) => {
+                      console.error("[Return Video Stream Error]:", e.currentTarget.error);
+                      setVideoPlaybackError(true);
+                    }}
                     className="w-full h-auto max-h-64 object-contain mx-auto"
                   >
+                    <source
+                      src={returnDetail.videoUrl}
+                      type={getVideoMimeType(returnDetail.videoUrl)}
+                    />
                     Your browser does not support HTML5 video playback.
                   </video>
                 ) : (
@@ -867,14 +888,23 @@ export function ReturnRefundModal({
                     <p className="text-neutral-300">
                       Unable to stream video inline in current format.
                     </p>
-                    <a
-                      href={returnDetail.videoUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-block px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs mt-2"
-                    >
-                      Download or Open Video Link
-                    </a>
+                    <div className="flex items-center justify-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setVideoPlaybackError(false)}
+                        className="inline-block px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 font-semibold text-xs"
+                      >
+                        Retry Playback
+                      </button>
+                      <a
+                        href={returnDetail.videoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-block px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs"
+                      >
+                        Download or Open Video Link
+                      </a>
+                    </div>
                   </div>
                 )}
               </div>

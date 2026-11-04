@@ -215,6 +215,7 @@ export const adminProcessReturnRefundSchema = z
     paymentMode: z.string().trim().min(1, "Payment mode is required").optional(),
     referenceId: z.string().trim().max(100).optional(),
     note: z.string().trim().max(500).optional(),
+    isFullRefund: z.boolean().optional(),
   })
   .strict();
 
