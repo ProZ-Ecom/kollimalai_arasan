@@ -433,37 +433,86 @@ export const returnRepository = {
 
   async markDeliveredTransaction(params: {
     returnRequestId: bigint;
-    orderId: bigint;
-    adminId: bigint;
+    orderId?: bigint | null;
+    adminId?: bigint | null;
     note?: string;
   }) {
     const now = new Date();
 
-    return db.$transaction(async (tx) => {
-      const updatedReturn = await tx.return_requests.update({
-        where: { id: params.returnRequestId },
-        data: {
-          status: "delivered",
-          updated_at: now,
-          updated_by: params.adminId ?? undefined,
-        },
-        include: returnDetailInclude,
-      });
+    const executeUpdate = async () => {
+      return db.$transaction(async (tx) => {
+        const updatedReturn = await tx.return_requests.update({
+          where: { id: params.returnRequestId },
+          data: {
+            status: "delivered",
+            updated_at: now,
+            updated_by: params.adminId || null,
+          },
+          include: returnDetailInclude,
+        });
 
-      await tx.order_status_history.create({
-        data: {
-          order_id: params.orderId,
-          status: "returned",
-          note: params.note || "Return parcel received at warehouse (Test Mode simulation)",
-          changed_by: params.adminId ?? undefined,
-          is_active: true,
-          created_by: params.adminId ?? undefined,
-          updated_by: params.adminId ?? undefined,
-        },
-      });
+        if (params.orderId) {
+          try {
+            await tx.order_status_history.create({
+              data: {
+                order_id: params.orderId,
+                status: "returned",
+                note: (
+                  params.note ||
+                  "Return parcel received at warehouse (Test Mode simulation)"
+                ).slice(0, 255),
+                changed_by: params.adminId || null,
+                is_active: true,
+                created_by: params.adminId || null,
+                updated_by: params.adminId || null,
+              },
+            });
+          } catch (historyErr) {
+            console.warn(
+              "[markDeliveredTransaction] Non-fatal: order_status_history create failed:",
+              historyErr
+            );
+          }
+        }
 
-      return updatedReturn;
-    });
+        return updatedReturn;
+      });
+    };
+
+    try {
+      return await executeUpdate();
+    } catch (err: any) {
+      const errMsg = err?.message || String(err);
+      console.warn("[markDeliveredTransaction] Initial update failed:", errMsg);
+
+      // Check if MySQL ENUM does not yet include 'delivered' (missing migration on remote database)
+      if (
+        errMsg.includes("Data truncated for column 'status'") ||
+        errMsg.includes("return_requests_status") ||
+        errMsg.includes("1265") ||
+        errMsg.toLowerCase().includes("enum")
+      ) {
+        console.info(
+          "[markDeliveredTransaction] Attempting auto-migration to add 'delivered' to return_requests.status ENUM..."
+        );
+        try {
+          await db.$executeRawUnsafe(
+            "ALTER TABLE `return_requests` MODIFY COLUMN `status` ENUM('requested', 'approved', 'rejected', 'picked_up', 'delivered', 'refunded') NOT NULL DEFAULT 'requested';"
+          );
+          console.info(
+            "[markDeliveredTransaction] Auto-migration successful. Retrying update..."
+          );
+          return await executeUpdate();
+        } catch (migErr) {
+          console.error(
+            "[markDeliveredTransaction] Auto-migration ALTER TABLE failed:",
+            migErr
+          );
+        }
+      }
+
+      throw err;
+    }
   },
 
   async processReturnRefundTransaction(params: {

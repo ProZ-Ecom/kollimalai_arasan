@@ -7,27 +7,37 @@ import { returnUuidParamSchema } from "@/features/returns/validations/return.sch
 export const POST = createApiHandler(
   {
     POST: async (_request, context) => {
-      const adminSessionUserId = context.session?.user?.id;
-      if (!adminSessionUserId) {
-        throw ApiError.unauthorized("Authentication required");
+      try {
+        const adminSessionUserId = context.session?.user?.id;
+        if (!adminSessionUserId) {
+          throw ApiError.unauthorized("Authentication required");
+        }
+
+        const rawUuid = context.params?.uuid;
+        const parsedParam = returnUuidParamSchema.safeParse({ uuid: rawUuid });
+        if (!parsedParam.success) {
+          throw ApiError.badRequest("Invalid return UUID format");
+        }
+
+        const result = await returnService.markReturnDelivered(
+          adminSessionUserId,
+          parsedParam.data.uuid
+        );
+
+        return apiSuccess(
+          result,
+          result.message || "Return request status updated to delivered",
+          200
+        );
+      } catch (error: any) {
+        if (error instanceof ApiError) {
+          throw error;
+        }
+        console.error("[POST /api/admin/returns/[uuid]/deliver] Error:", error);
+        throw ApiError.badRequest(
+          error?.message || "Failed to mark return request as delivered"
+        );
       }
-
-      const rawUuid = context.params?.uuid;
-      const parsedParam = returnUuidParamSchema.safeParse({ uuid: rawUuid });
-      if (!parsedParam.success) {
-        throw ApiError.badRequest("Invalid return UUID format");
-      }
-
-      const result = await returnService.markReturnDelivered(
-        adminSessionUserId,
-        parsedParam.data.uuid
-      );
-
-      return apiSuccess(
-        result,
-        result.message || "Return request status updated to delivered",
-        200
-      );
     },
   },
   {

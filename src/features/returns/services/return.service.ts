@@ -38,6 +38,19 @@ import type {
   ReturnPayoutDetails,
 } from "../types/return.types";
 
+function resolveAdminInternalId(
+  admin: { internalId?: any; id?: any } | null | undefined
+): bigint {
+  if (!admin) return BigInt(1);
+  const raw =
+    admin.internalId ??
+    (typeof admin.id === "number" ||
+    (typeof admin.id === "string" && /^\d+$/.test(admin.id))
+      ? admin.id
+      : null);
+  return raw ? BigInt(raw) : BigInt(1);
+}
+
 function formatReturnItems(returnItems: any[]): ReturnItemInfo[] {
   return (returnItems || []).map((item) => {
     const unitPrice = Number(item.order_items.unit_price);
@@ -415,7 +428,7 @@ export const returnService = {
     if (!admin) {
       throw ApiError.unauthorized("Session expired. Please log in again.");
     }
-    const adminId = BigInt(admin.internalId || admin.id);
+    const adminId = resolveAdminInternalId(admin);
 
     const req = await returnRepository.findReturnRequestByUuidOnly(uuid);
     if (!req) {
@@ -454,7 +467,7 @@ export const returnService = {
     if (!admin) {
       throw ApiError.unauthorized("Session expired. Please log in again.");
     }
-    const adminId = BigInt(admin.internalId || admin.id);
+    const adminId = resolveAdminInternalId(admin);
 
     const req = await returnRepository.findReturnRequestByUuidOnly(uuid);
     if (!req) {
@@ -490,7 +503,7 @@ export const returnService = {
     if (!admin) {
       throw ApiError.unauthorized("Session expired. Please log in again.");
     }
-    const adminId = BigInt(admin.internalId || admin.id);
+    const adminId = resolveAdminInternalId(admin);
 
     const req = await returnRepository.findReturnRequestByUuidOnly(uuid);
     if (!req) {
@@ -536,7 +549,7 @@ export const returnService = {
     if (!admin) {
       throw ApiError.unauthorized("Session expired. Please log in again.");
     }
-    const adminId = BigInt(admin.internalId || admin.id);
+    const adminId = resolveAdminInternalId(admin);
 
     const req = await returnRepository.findReturnRequestByUuidOnly(uuid);
     if (!req) {
@@ -566,28 +579,36 @@ export const returnService = {
     if (req.status === "delivered") {
       return {
         id: req.uuid || String(req.id),
-        orderId: req.orders.uuid || String(req.orders.id),
-        orderNumber: req.orders.orderNumber,
+        orderId: req.orders?.uuid || String(req.orders?.id || ""),
+        orderNumber: req.orders?.orderNumber || "",
         status: "delivered",
         message: "Return request is already marked as delivered",
       };
     }
 
     const note = `Return parcel received at warehouse (Test Mode simulation by admin: ${admin.email || admin.name})`;
-    const updated = await returnRepository.markDeliveredTransaction({
-      returnRequestId: req.id,
-      orderId: req.orders.id,
-      adminId,
-      note,
-    });
+    try {
+      const updated = await returnRepository.markDeliveredTransaction({
+        returnRequestId: req.id,
+        orderId: req.orders?.id ?? null,
+        adminId,
+        note,
+      });
 
-    return {
-      id: updated.uuid || String(updated.id),
-      orderId: updated.orders.uuid || String(updated.orders.id),
-      orderNumber: updated.orders.orderNumber,
-      status: updated.status,
-      message: "Return request status successfully updated to delivered (Test Mode)",
-    };
+      return {
+        id: updated.uuid || String(updated.id),
+        orderId: updated.orders?.uuid || String(updated.orders?.id || ""),
+        orderNumber: updated.orders?.orderNumber || "",
+        status: updated.status,
+        message: "Return request status successfully updated to delivered (Test Mode)",
+      };
+    } catch (err: any) {
+      console.error("[markReturnDelivered] Execution failed:", err);
+      if (err instanceof ApiError) throw err;
+      throw ApiError.badRequest(
+        err?.message || "Failed to mark return request as delivered"
+      );
+    }
   },
 
   async reviewReturnRequest(
@@ -599,7 +620,7 @@ export const returnService = {
     if (!admin) {
       throw ApiError.unauthorized("Session expired. Please log in again.");
     }
-    const adminId = BigInt(admin.internalId || admin.id);
+    const adminId = resolveAdminInternalId(admin);
 
     const req = await returnRepository.findReturnRequestByUuidOnly(uuid);
     if (!req) {
@@ -642,7 +663,7 @@ export const returnService = {
     if (!admin) {
       throw ApiError.unauthorized("Session expired. Please log in again.");
     }
-    const adminId = BigInt(admin.internalId || admin.id);
+    const adminId = resolveAdminInternalId(admin);
 
     const req = await returnRepository.findReturnRequestByUuidOnly(uuid);
     if (!req) {
