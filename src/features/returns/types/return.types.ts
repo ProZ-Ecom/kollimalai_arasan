@@ -97,6 +97,7 @@ export interface ReturnRequestDetailResponse {
   requestedAt: Date;
   approvedAt: Date | null;
   items: ReturnItemInfo[];
+  canSimulateDelivery?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

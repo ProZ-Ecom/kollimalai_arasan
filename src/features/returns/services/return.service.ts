@@ -131,6 +131,13 @@ function formatReturnDetail(req: any): ReturnRequestDetailResponse {
     requestedAt: req.requested_at,
     approvedAt: req.approved_at,
     items,
+    canSimulateDelivery: !isProduction() || Boolean(
+      req.return_awb_code?.startsWith("TEST-") ||
+      req.return_awb_code?.startsWith("SR-") ||
+      req.courier_partner_name?.toLowerCase().includes("mock") ||
+      req.courier_partner_name?.toLowerCase().includes("test") ||
+      req.courier_partner_name?.toLowerCase().includes("sandbox")
+    ),
     createdAt: req.created_at,
     updatedAt: req.updated_at,
   };
@@ -525,12 +532,6 @@ export const returnService = {
     status: string;
     message: string;
   }> {
-    if (isProduction()) {
-      throw ApiError.forbidden(
-        "Manual return delivery simulation is strictly disabled in live production environment. In production, delivery status is updated automatically by Shiprocket webhooks."
-      );
-    }
-
     const admin = await userRepository.findById(adminSessionUserId);
     if (!admin) {
       throw ApiError.unauthorized("Session expired. Please log in again.");
@@ -540,6 +541,20 @@ export const returnService = {
     const req = await returnRepository.findReturnRequestByUuidOnly(uuid);
     if (!req) {
       throw ApiError.notFound("Return request not found");
+    }
+
+    const isMockReturn = Boolean(
+      req.return_awb_code?.startsWith("TEST-") ||
+      req.return_awb_code?.startsWith("SR-") ||
+      req.courier_partner_name?.toLowerCase().includes("mock") ||
+      req.courier_partner_name?.toLowerCase().includes("test") ||
+      req.courier_partner_name?.toLowerCase().includes("sandbox")
+    );
+
+    if (isProduction() && !isMockReturn) {
+      throw ApiError.forbidden(
+        "Manual return delivery simulation is strictly disabled in live production environment. In production, delivery status is updated automatically by Shiprocket webhooks."
+      );
     }
 
     if (req.status === "refunded" || req.status === "rejected") {

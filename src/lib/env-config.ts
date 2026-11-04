@@ -12,7 +12,15 @@ export function isStaging(): boolean {
     process.env.NEXT_PUBLIC_APP_ENV ||
     ""
   ).toLowerCase().trim();
-  return env === "staging" || env === "testing" || env === "test";
+  return (
+    env === "staging" ||
+    env === "testing" ||
+    env === "test" ||
+    process.env.SHIPROCKET_TEST_MODE === "true" ||
+    process.env.SHIPROCKET_LOCAL_MOCK_FALLBACK === "true" ||
+    (process.env.NEXT_PUBLIC_APP_URL || "").includes("pro-z.in") ||
+    (process.env.NEXT_PUBLIC_APP_URL || "").includes("localhost")
+  );
 }
 
 export function isProduction(): boolean {
