@@ -232,11 +232,50 @@ export function ReturnRefundModal({
     }
   }, [order, open]);
 
-  // Environment check: Only active in local development and testing environments
+  // Environment check: Active in testing server, development, or for mock/test shipments
   const isTestingEnv = useMemo(() => {
+    // 1. Explicit backend capability flag
+    if (returnDetail?.canSimulateDelivery) return true;
+
+    // 2. Mock or Test AWB / Courier detection (e.g. TEST-RET-... or Local Mock)
+    const awb = (returnDetail?.returnAwb || pickupSuccess?.returnAwb || "").toUpperCase();
+    const courier = (returnDetail?.courierName || pickupSuccess?.courierName || "").toLowerCase();
+    if (
+      awb.startsWith("TEST-") ||
+      awb.startsWith("SR-") ||
+      courier.includes("mock") ||
+      courier.includes("test") ||
+      courier.includes("sandbox")
+    ) {
+      return true;
+    }
+
+    // 3. Environment variables
     const env = (process.env.NEXT_PUBLIC_APP_ENV || "").toLowerCase().trim();
-    return env === "development" || env === "testing" || env === "staging" || process.env.NODE_ENV !== "production";
-  }, []);
+    if (env === "development" || env === "testing" || env === "staging" || env === "test") {
+      return true;
+    }
+    if (process.env.NODE_ENV !== "production") {
+      return true;
+    }
+
+    // 4. Client URL / domain detection (pro-z.in, localhost, test domains)
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname.toLowerCase();
+      if (
+        hostname === "localhost" ||
+        hostname === "127.0.0.1" ||
+        hostname.includes("pro-z.in") ||
+        hostname.includes("testing") ||
+        hostname.includes("staging") ||
+        hostname.includes("dev")
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [returnDetail, pickupSuccess]);
 
   // Handle Test Mode Simulate Delivery
   const handleSimulateDelivery = async () => {
