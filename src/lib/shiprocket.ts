@@ -1,3 +1,5 @@
+import { isProduction } from "@/lib/env-config";
+
 /**
  * Shiprocket API Client & Service Layer
  * Handles authentication (with token caching), order creation, AWB generation,
@@ -159,6 +161,9 @@ function cleanBaseUrl(rawUrl: string): string {
 
 export function isShiprocketSandbox(): boolean {
   syncShiprocketEnv();
+  if (isProduction()) {
+    return false;
+  }
   return process.env.SHIPROCKET_TEST_MODE === "true";
 }
 

@@ -431,6 +431,41 @@ export const returnRepository = {
     });
   },
 
+  async markDeliveredTransaction(params: {
+    returnRequestId: bigint;
+    orderId: bigint;
+    adminId: bigint;
+    note?: string;
+  }) {
+    const now = new Date();
+
+    return db.$transaction(async (tx) => {
+      const updatedReturn = await tx.return_requests.update({
+        where: { id: params.returnRequestId },
+        data: {
+          status: "delivered",
+          updated_at: now,
+          updated_by: params.adminId ?? undefined,
+        },
+        include: returnDetailInclude,
+      });
+
+      await tx.order_status_history.create({
+        data: {
+          order_id: params.orderId,
+          status: "returned",
+          note: params.note || "Return parcel received at warehouse (Test Mode simulation)",
+          changed_by: params.adminId ?? undefined,
+          is_active: true,
+          created_by: params.adminId ?? undefined,
+          updated_by: params.adminId ?? undefined,
+        },
+      });
+
+      return updatedReturn;
+    });
+  },
+
   async processReturnRefundTransaction(params: {
     returnRequestId: bigint;
     orderId: bigint;

@@ -515,6 +515,66 @@ export const returnService = {
     };
   },
 
+  async markReturnDelivered(
+    adminSessionUserId: string,
+    uuid: string
+  ): Promise<{
+    id: string;
+    orderId: string;
+    orderNumber: string;
+    status: string;
+    message: string;
+  }> {
+    if (isProduction()) {
+      throw ApiError.forbidden(
+        "Manual return delivery simulation is strictly disabled in live production environment. In production, delivery status is updated automatically by Shiprocket webhooks."
+      );
+    }
+
+    const admin = await userRepository.findById(adminSessionUserId);
+    if (!admin) {
+      throw ApiError.unauthorized("Session expired. Please log in again.");
+    }
+    const adminId = BigInt(admin.internalId || admin.id);
+
+    const req = await returnRepository.findReturnRequestByUuidOnly(uuid);
+    if (!req) {
+      throw ApiError.notFound("Return request not found");
+    }
+
+    if (req.status === "refunded" || req.status === "rejected") {
+      throw ApiError.badRequest(
+        `Cannot mark return request as delivered: request is already in '${req.status}' status.`
+      );
+    }
+
+    if (req.status === "delivered") {
+      return {
+        id: req.uuid || String(req.id),
+        orderId: req.orders.uuid || String(req.orders.id),
+        orderNumber: req.orders.orderNumber,
+        status: "delivered",
+        message: "Return request is already marked as delivered",
+      };
+    }
+
+    const note = `Return parcel received at warehouse (Test Mode simulation by admin: ${admin.email || admin.name})`;
+    const updated = await returnRepository.markDeliveredTransaction({
+      returnRequestId: req.id,
+      orderId: req.orders.id,
+      adminId,
+      note,
+    });
+
+    return {
+      id: updated.uuid || String(updated.id),
+      orderId: updated.orders.uuid || String(updated.orders.id),
+      orderNumber: updated.orders.orderNumber,
+      status: updated.status,
+      message: "Return request status successfully updated to delivered (Test Mode)",
+    };
+  },
+
   async reviewReturnRequest(
     adminSessionUserId: string,
     uuid: string,
@@ -810,13 +870,7 @@ export const returnService = {
       returnStatus: "refunded",
       orderPaymentStatus: result.isFullyRefunded ? "refunded" : "partial_refund",
       isSimulated,
-      message: isSimulated
-        ? `[Simulated Test] Return refund of ₹${refundAmount.toFixed(
-            2
-          )} recorded locally (Simulation Mode - No live gateway transaction).`
-        : `Successfully processed refund of ₹${refundAmount.toFixed(
-            2
-          )} for Return Request #${req.id} via ${paymentMode}.`,
+      message: `Refund of ₹${refundAmount.toFixed(2)} processed successfully.`,
     };
   },
 };

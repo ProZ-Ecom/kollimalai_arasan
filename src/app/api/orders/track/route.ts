@@ -263,6 +263,123 @@ export async function GET(request: NextRequest) {
         });
       }
 
+      // Hybrid JIT (Just-in-Time) auto-sync for Shiprocket:
+      // When live tracking succeeds, synchronize DB order & shipment statuses if updated
+      if (result.success && shipment && shipment.orders) {
+        const order = shipment.orders;
+        const currentOrderStatus = (order.order_status || "").toLowerCase();
+
+        if (
+          currentOrderStatus !== "delivered" &&
+          currentOrderStatus !== "cancelled" &&
+          currentOrderStatus !== "returned"
+        ) {
+          const now = new Date();
+          const cleanStatus = (result.summary?.currentStatus || "").toUpperCase();
+          const isLiveDelivered = result.isDelivered || cleanStatus.includes("DELIVER");
+          const isLiveOutForDelivery = !isLiveDelivered && cleanStatus.includes("OUT FOR DELIV");
+
+          if (isLiveDelivered && ["shipped", "out_for_delivery", "packed", "processing"].includes(currentOrderStatus)) {
+            try {
+              const latestPayment = await db.payment.findFirst({
+                where: { orderId: order.id, is_active: true },
+                include: { payment_methods: true },
+                orderBy: { id: "desc" },
+              });
+              const isCodOrder = Boolean(
+                latestPayment?.gateway?.toUpperCase() === "COD" ||
+                latestPayment?.payment_methods?.code?.toUpperCase() === "COD" ||
+                (order.notes && order.notes.toLowerCase().includes("cod"))
+              );
+              const newPaymentStatus =
+                order.payment_status === "paid" ? "paid" : isCodOrder ? "paid" : order.payment_status;
+
+              await db.$transaction(async (tx) => {
+                await tx.shipments.update({
+                  where: { id: shipment.id },
+                  data: {
+                    status: "delivered",
+                    delivered_at: shipment.delivered_at || now,
+                    updated_at: now,
+                  },
+                });
+
+                await tx.order.update({
+                  where: { id: order.id },
+                  data: {
+                    order_status: "delivered",
+                    payment_status: newPaymentStatus,
+                    updatedAt: now,
+                  },
+                });
+
+                await tx.order_status_history.create({
+                  data: {
+                    order_id: order.id,
+                    status: "delivered",
+                    note: `Auto-synced: Delivered via Shiprocket live tracking (AWB: ${result.awb})`,
+                    is_active: true,
+                  },
+                });
+
+                // Commit reserved stock hold on delivery
+                const orderItems = await tx.orderItem.findMany({
+                  where: { orderId: order.id, is_active: true },
+                  select: { variantUnitPriceId: true, quantity: true },
+                });
+
+                for (const item of orderItems) {
+                  if (!item.variantUnitPriceId) continue;
+                  const vupId = BigInt(item.variantUnitPriceId);
+                  const inv = await tx.inventory.findFirst({
+                    where: { variantUnitPriceId: vupId, is_active: true },
+                  });
+                  if (!inv) continue;
+                  const reserved = Math.max(0, Number(inv.quantity_reserved) - item.quantity);
+                  await tx.inventory.update({
+                    where: { id: BigInt(inv.id) },
+                    data: { quantity_reserved: reserved },
+                  });
+                  await tx.inventoryTransaction.create({
+                    data: {
+                      variant_unit_price_id: vupId,
+                      type: "out" as any,
+                      quantity: item.quantity,
+                      note: `SALE: order delivered — auto-synced via Shiprocket (AWB: ${result.awb})`,
+                    },
+                  });
+                }
+              });
+            } catch (syncErr) {
+              console.error("Shiprocket JIT live tracking auto-sync error:", syncErr);
+            }
+          } else if (isLiveOutForDelivery && currentOrderStatus === "shipped") {
+            try {
+              await db.$transaction(async (tx) => {
+                await tx.shipments.update({
+                  where: { id: shipment.id },
+                  data: { status: "out_for_delivery", updated_at: now },
+                });
+                await tx.order.update({
+                  where: { id: order.id },
+                  data: { order_status: "out_for_delivery", updatedAt: now },
+                });
+                await tx.order_status_history.create({
+                  data: {
+                    order_id: order.id,
+                    status: "out_for_delivery",
+                    note: `Auto-synced: Out for delivery via Shiprocket live tracking (AWB: ${result.awb})`,
+                    is_active: true,
+                  },
+                });
+              });
+            } catch (syncErr) {
+              console.error("Shiprocket JIT out for delivery sync error:", syncErr);
+            }
+          }
+        }
+      }
+
       return NextResponse.json(result, {
         status: 200,
         headers: { "Cache-Control": "private, max-age=30" },
