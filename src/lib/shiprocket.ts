@@ -228,7 +228,7 @@ function syncShiprocketEnv() {
       const dotenv = req("dotenv");
       const parsed = dotenv.parse(content);
       for (const [k, v] of Object.entries(parsed)) {
-        if ((k.startsWith("SHIPROCKET_") || k === "APP_ENV") && process.env[k] === undefined) {
+        if (k.startsWith("SHIPROCKET_") || k === "APP_ENV") {
           process.env[k] = String(v);
         }
       }
@@ -244,8 +244,8 @@ function syncShiprocketEnv() {
  */
 export async function getShiprocketToken(): Promise<string> {
   syncShiprocketEnv();
-  const email = process.env.SHIPROCKET_EMAIL;
-  const password = process.env.SHIPROCKET_PASSWORD;
+  const email = process.env.SHIPROCKET_EMAIL?.trim();
+  const password = process.env.SHIPROCKET_PASSWORD?.trim();
   const isSandbox = isShiprocketSandbox();
 
   if (!email || !password) {

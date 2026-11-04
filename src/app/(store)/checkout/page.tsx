@@ -2565,7 +2565,7 @@ export default function CheckoutPage() {
                 ) : paymentMethod === "COD" ? (
                   <>
                     <Banknote className="mr-2 h-4 w-4" />
-                    Place Order with COD ({formatPrice(grandTotal)})
+                    Pay {formatPrice(grandTotal)} via Cash on Delivery (COD)
                   </>
                 ) : (
                   <>
@@ -2576,9 +2576,9 @@ export default function CheckoutPage() {
               </Button>
 
               {/* COD Option in Order Summary Section (Below Pay Button) */}
-              {paymentMethod !== "COD" ? (
+              {paymentMethod !== "COD" && (
                 <div className="pt-2">
-                  <div className="relative flex items-center py-1">
+                  <div className="relative flex items-center py-1 mb-2">
                     <div className="flex-grow border-t border-theme-border-subtle" />
                     <span className="flex-shrink mx-2 text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">
                       Or choose COD
@@ -2586,7 +2586,7 @@ export default function CheckoutPage() {
                     <div className="flex-grow border-t border-theme-border-subtle" />
                   </div>
 
-                  <button
+                  <Button
                     type="button"
                     onClick={() => {
                       if (isShiprocketChecked && !isShiprocketAvailable) {
@@ -2601,87 +2601,19 @@ export default function CheckoutPage() {
                       setCourierType("shiprocket");
                       setCheckoutError(null);
                     }}
-                    disabled={isShiprocketChecked && !isShiprocketAvailable}
+                    disabled={isAdminUser || (isShiprocketChecked && !isShiprocketAvailable)}
                     className={cn(
-                      "w-full rounded-xl border p-3 transition-all text-left flex items-center justify-between group",
-                      isShiprocketChecked && !isShiprocketAvailable
-                        ? "border-neutral-200 bg-neutral-50/70 opacity-60 cursor-not-allowed"
-                        : "border-emerald-300 bg-emerald-50/70 hover:bg-emerald-100/80 hover:border-emerald-400 text-emerald-950 shadow-xs cursor-pointer"
+                      "w-full min-h-[48px] rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2",
+                      isAdminUser || (isShiprocketChecked && !isShiprocketAvailable)
+                        ? "bg-neutral-200 text-neutral-500 cursor-not-allowed border border-neutral-300 shadow-none hover:bg-neutral-200"
+                        : "bg-emerald-700 hover:bg-emerald-800 text-white shadow-emerald-700/20 cursor-pointer"
                     )}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className={cn(
-                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
-                          isShiprocketChecked && !isShiprocketAvailable
-                            ? "border-neutral-300 bg-neutral-100 text-neutral-400"
-                            : "border-emerald-300 bg-emerald-100 text-emerald-700"
-                        )}
-                      >
-                        <Banknote className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-theme-text-primary">
-                            Cash on Delivery (COD)
-                          </span>
-                          {isShiprocketChecked && !isShiprocketAvailable ? (
-                            <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded">
-                              Unavailable
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/90 border border-emerald-200 px-1.5 py-0.2 rounded">
-                              Pay at Doorstep
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-theme-text-muted leading-tight mt-0.5">
-                          {isShiprocketChecked && !isShiprocketAvailable
-                            ? `Not available for PIN ${deliveryPincode || ""}`
-                            : "Pay via Cash or QR code on delivery"}
-                        </p>
-                      </div>
-                    </div>
-                    {(!isShiprocketChecked || isShiprocketAvailable) && (
-                      <span className="text-xs font-bold text-emerald-700 group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                        Choose COD &rarr;
-                      </span>
-                    )}
-                  </button>
-                </div>
-              ) : (
-                <div className="pt-2">
-                  <div className="rounded-xl border border-emerald-300 bg-emerald-50/90 p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
-                        <Check className="h-4 w-4 stroke-[3]" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-black text-emerald-950">
-                            Cash on Delivery Selected
-                          </span>
-                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-200/80 px-1.5 py-0.2 rounded">
-                            Active
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-emerald-800 leading-tight mt-0.5">
-                          Pay with cash or QR code to courier on delivery
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPaymentMethod("CARD");
-                        setCourierType("st_courier");
-                        setCheckoutError(null);
-                      }}
-                      className="text-xs font-bold text-theme-primary hover:text-theme-primary-hover underline underline-offset-2 ml-2 shrink-0 cursor-pointer"
-                    >
-                      Switch to Online
-                    </button>
-                  </div>
+                    <Banknote className="mr-2 h-4 w-4" />
+                    {isShiprocketChecked && !isShiprocketAvailable
+                      ? "Cash on Delivery Unavailable"
+                      : "Pay via Cash on Delivery (COD)"}
+                  </Button>
                 </div>
               )}
 
