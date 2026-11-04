@@ -2,38 +2,35 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Check, Package, X, Copy, ExternalLink, Truck, RotateCcw } from "lucide-react";
+import { Check, Package, X, Copy, ExternalLink, Truck, RotateCcw, Eye, CreditCard, Clock, MapPin, CheckCircle2 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { OrderDetailResponse } from "@/features/orders/types";
 import {
   useCustomerOrders,
   useCancelCustomerOrder,
-  useRequestCustomerReturn,
 } from "../../hooks/use-customer-orders";
 import { useAddToCartMutation } from "../../hooks/use-customer-cart";
 import { CustomDropdown, type DropdownOption } from "./CustomDropdown";
+import { Select } from "@/components/ui/select";
 import { SearchInput } from "@/components/common/search-input";
 import { ProductImage } from "@/components/common/ProductImage";
 import { LiveTrackingModal } from "@/features/orders/components/LiveTrackingModal";
-import { FormModal } from "@/components/common/FormModal";
 import { toast } from "@/components/ui/Toast";
-
-const RETURN_REASONS = [
-  "Damaged product on delivery",
-  "Quality or freshness issue",
-  "Wrong item received",
-  "Package broken or seal tampered",
-  "Other / Customer dissatisfaction",
-];
+import { CustomerReturnRequestModal } from "@/features/returns/components/CustomerReturnRequestModal";
+import {
+  isWithinReturnWindow,
+  getRemainingReturnBusinessDays,
+} from "@/features/returns/utils/return-window";
 
 export function getReturnWindowInfo(order: OrderDetailResponse) {
-  if (order.status?.toLowerCase() !== "delivered") {
+  const statusLower = order.status?.toLowerCase();
+  if (statusLower !== "delivered" && statusLower !== "returned") {
     return { isEligible: false, daysLeft: 0, expired: false, hasReturnRequest: false, returnStatus: null };
   }
 
   // Check if an active return request already exists
   const activeReturn = (order as any).returnRequest;
-  if (activeReturn && activeReturn.status !== "cancelled" && activeReturn.status !== "rejected") {
+  if (activeReturn && activeReturn.status !== "cancelled") {
     return {
       isEligible: false,
       daysLeft: 0,
@@ -43,22 +40,21 @@ export function getReturnWindowInfo(order: OrderDetailResponse) {
     };
   }
 
+  if (statusLower === "returned") {
+    return { isEligible: false, daysLeft: 0, expired: true, hasReturnRequest: false, returnStatus: null };
+  }
+
   const deliveredDate =
     (order.delivery as any)?.deliveredAt ||
     (order.delivery as any)?.delivered_at ||
     order.updatedAt ||
     order.createdAt;
 
-  const deliveredTime = new Date(deliveredDate).getTime();
-  const fiveDaysInMs = 5 * 24 * 60 * 60 * 1000;
-  const elapsedMs = Date.now() - deliveredTime;
-
-  if (elapsedMs > fiveDaysInMs) {
+  if (!isWithinReturnWindow(deliveredDate)) {
     return { isEligible: false, daysLeft: 0, expired: true, hasReturnRequest: false, returnStatus: null };
   }
 
-  const msLeft = fiveDaysInMs - elapsedMs;
-  const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+  const daysLeft = getRemainingReturnBusinessDays(deliveredDate);
 
   return { isEligible: true, daysLeft: Math.max(1, daysLeft), expired: false, hasReturnRequest: false, returnStatus: null };
 }
@@ -110,11 +106,12 @@ export function OrdersTab({
 
   const cancelMutation = useCancelCustomerOrder();
   const addToCartMutation = useAddToCartMutation();
-  const returnMutation = useRequestCustomerReturn();
 
   const [returnModalOrder, setReturnModalOrder] = useState<OrderDetailResponse | null>(null);
-  const [returnReason, setReturnReason] = useState<string>(RETURN_REASONS[0]);
-  const [returnNote, setReturnNote] = useState<string>("");
+  const [selectedDetailOrder, setSelectedDetailOrder] = useState<OrderDetailResponse | null>(null);
+  const [detailTxCopied, setDetailTxCopied] = useState(false);
+  const [detailOrderNumCopied, setDetailOrderNumCopied] = useState(false);
+  const [detailGatewayOrderCopied, setDetailGatewayOrderCopied] = useState(false);
 
   const {
     data: ordersResponse,
@@ -426,16 +423,42 @@ export function OrdersTab({
                           Refund within 1 week
                         </span>
                       )}
-                    {order.status?.toLowerCase() === "cancelled" &&
-                      (order.paymentStatus?.toLowerCase() === "refunded" ||
-                        order.paymentStatus?.toLowerCase() === "partial_refund") && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800">
-                          Refunded
-                        </span>
-                      )}
-                    {order.status?.toLowerCase() === "delivered" && (order as any).returnRequest && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border border-purple-200 bg-purple-50 text-purple-800">
-                        Return {(order as any).returnRequest.status === "approved" ? "Approved" : (order as any).returnRequest.status === "picked_up" ? "Picked Up" : "Requested"}
+                    {(order.paymentStatus?.toLowerCase() === "refunded" ||
+                      order.paymentStatus?.toLowerCase() === "partial_refund") && (
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                          order.paymentStatus?.toLowerCase() === "partial_refund"
+                            ? "border-amber-200 bg-amber-50 text-amber-800"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                        }`}
+                      >
+                        {order.paymentStatus?.toLowerCase() === "partial_refund"
+                          ? "Partial Refund"
+                          : "Refunded"}
+                      </span>
+                    )}
+                    {(order as any).returnRequest && (
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                          (order as any).returnRequest.status === "refunded"
+                            ? "border-purple-300 bg-purple-50 text-purple-800"
+                            : (order as any).returnRequest.status === "rejected"
+                            ? "border-rose-200 bg-rose-50 text-rose-800"
+                            : "border-purple-200 bg-purple-50 text-purple-800"
+                        }`}
+                      >
+                        Return{" "}
+                        {(order as any).returnRequest.status === "approved"
+                          ? "Approved"
+                          : (order as any).returnRequest.status === "picked_up"
+                          ? "Picked Up"
+                          : (order as any).returnRequest.status === "delivered"
+                          ? "Delivered"
+                          : (order as any).returnRequest.status === "refunded"
+                          ? "Completed"
+                          : (order as any).returnRequest.status === "rejected"
+                          ? "Rejected"
+                          : "Requested"}
                       </span>
                     )}
                   </div>
@@ -535,6 +558,15 @@ export function OrdersTab({
 
                   <button
                     type="button"
+                    onClick={() => setSelectedDetailOrder(order)}
+                    className="border border-secondary-300 hover:border-secondary-500 bg-secondary-50/70 hover:bg-secondary-100 text-secondary-800 text-xs font-semibold uppercase tracking-wider py-2.5 px-4 rounded-lg transition-colors cursor-pointer min-h-[40px] inline-flex items-center gap-1.5"
+                  >
+                    <Eye className="h-3.5 w-3.5 text-secondary-700" />
+                    <span>View Details</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() =>
                       window.open(`/invoice/${order.id}`, "_blank", "noopener")
                     }
@@ -552,17 +584,39 @@ export function OrdersTab({
                     </button>
                   </Link>
 
-                  {/* 5-Day Return Option after Delivery */}
-                  {order.status?.toLowerCase() === "delivered" && (() => {
+                  {/* 7 Business Days Return Option after Delivery / Return status */}
+                  {(order.status?.toLowerCase() === "delivered" ||
+                    order.status?.toLowerCase() === "returned" ||
+                    Boolean((order as any).returnRequest)) && (() => {
                     const returnInfo = getReturnWindowInfo(order);
                     if (returnInfo.hasReturnRequest) {
                       return (
-                        <span className="inline-flex items-center gap-1.5 border border-purple-200 bg-purple-50 text-purple-700 text-xs font-semibold py-2 px-3 rounded-lg">
-                          <RotateCcw className="h-3.5 w-3.5" />
+                        <span
+                          className={`inline-flex items-center gap-1.5 border text-xs font-semibold py-2 px-3 rounded-lg ${
+                            returnInfo.returnStatus === "refunded"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                              : returnInfo.returnStatus === "rejected"
+                              ? "border-rose-200 bg-rose-50 text-rose-800"
+                              : "border-purple-200 bg-purple-50 text-purple-700"
+                          }`}
+                        >
+                          {returnInfo.returnStatus === "refunded" ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          ) : returnInfo.returnStatus === "rejected" ? (
+                            <X className="h-3.5 w-3.5 text-rose-600" />
+                          ) : (
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          )}
                           {returnInfo.returnStatus === "approved"
                             ? "Return Approved (Pickup Scheduled)"
                             : returnInfo.returnStatus === "picked_up"
                             ? "Return Picked Up"
+                            : returnInfo.returnStatus === "delivered"
+                            ? "Return Delivered (Under Inspection)"
+                            : returnInfo.returnStatus === "refunded"
+                            ? "Return Completed"
+                            : returnInfo.returnStatus === "rejected"
+                            ? "Return Rejected"
                             : "Return Requested"}
                         </span>
                       );
@@ -571,11 +625,7 @@ export function OrdersTab({
                       return (
                         <button
                           type="button"
-                          onClick={() => {
-                            setReturnModalOrder(order);
-                            setReturnReason(RETURN_REASONS[0]);
-                            setReturnNote("");
-                          }}
+                          onClick={() => setReturnModalOrder(order)}
                           className="border border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold uppercase tracking-wider py-2.5 px-4 rounded-lg transition-colors cursor-pointer min-h-[40px] inline-flex items-center gap-1.5"
                         >
                           <RotateCcw className="h-3.5 w-3.5" />
@@ -611,6 +661,445 @@ export function OrdersTab({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Comprehensive Order Details & Payment Modal */}
+      {selectedDetailOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-theme-surface border border-theme-border rounded-2xl max-w-2xl w-full p-5 sm:p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150 my-auto max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-4 border-b border-theme-border-subtle pb-4 flex-shrink-0">
+              <div>
+                <div className="text-[11px] uppercase tracking-wider font-bold text-theme-text-muted">
+                  Order Details & Payment
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <h3 className="text-base sm:text-lg font-bold font-mono text-theme-text-primary">
+                    {selectedDetailOrder.orderNumber || `#${String(selectedDetailOrder.id).slice(0, 8)}`}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedDetailOrder.orderNumber) {
+                        navigator.clipboard.writeText(selectedDetailOrder.orderNumber);
+                        setDetailOrderNumCopied(true);
+                        setTimeout(() => setDetailOrderNumCopied(false), 2000);
+                      }
+                    }}
+                    className="p-1 text-theme-text-muted hover:text-theme-text-primary rounded-md transition-colors"
+                    title="Copy Order Number"
+                  >
+                    {detailOrderNumCopied ? (
+                      <Check className="h-3.5 w-3.5 text-secondary-600" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  {(() => {
+                    const sm = getStatusMeta(selectedDetailOrder.status);
+                    return (
+                      <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border ${sm.bg}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${sm.dot}`} />
+                        {selectedDetailOrder.status.replace(/_/g, " ")}
+                      </span>
+                    );
+                  })()}
+                  {selectedDetailOrder.paymentStatus && (
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
+                        selectedDetailOrder.paymentStatus.toLowerCase() === "paid"
+                          ? "bg-secondary-50 text-secondary-700 border-secondary-200"
+                          : selectedDetailOrder.paymentStatus.toLowerCase() === "refunded"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : selectedDetailOrder.paymentStatus.toLowerCase() === "partial_refund"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-orange-50 text-orange-700 border-orange-200"
+                      }`}
+                    >
+                      {selectedDetailOrder.paymentStatus.replace(/_/g, " ")}
+                    </span>
+                  )}
+                  {selectedDetailOrder.createdAt && (
+                    <span className="text-xs text-theme-text-muted flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {new Date(selectedDetailOrder.createdAt).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedDetailOrder(null)}
+                className="w-8 h-8 rounded-full border border-theme-border flex items-center justify-center text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-surface-alt transition-colors cursor-pointer flex-shrink-0"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body (Scrollable) */}
+            <div className="overflow-y-auto flex-1 pr-1 space-y-4">
+              {/* 1. Ordered Items Breakdown */}
+              <div className="rounded-xl border border-theme-border bg-theme-surface-alt/40 p-4 space-y-2.5">
+                <div className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center justify-between">
+                  <span>Ordered Items ({selectedDetailOrder.items?.length || 0})</span>
+                  <span className="text-theme-primary font-extrabold">{formatPrice(selectedDetailOrder.totalAmount)}</span>
+                </div>
+                <div className="divide-y divide-theme-border-subtle max-h-48 overflow-y-auto pr-1">
+                  {selectedDetailOrder.items?.map((it, idx) => (
+                    <div key={idx} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden border border-theme-border-subtle flex-shrink-0">
+                        <ProductImage
+                          src={
+                            (it as any).primaryImage ||
+                            (it as any).image ||
+                            (it as any).productImage ||
+                            null
+                          }
+                          alt={it.productName || "Product"}
+                          fallbackText={it.productName}
+                          containerClassName="w-full h-full"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-theme-text-primary truncate">
+                          {it.productName}
+                        </p>
+                        <p className="text-[11px] text-theme-text-muted">
+                          {it.variantName ? `${it.variantName} • ` : ""}Qty: {it.quantity}
+                          {it.unitPrice ? ` • ${formatPrice(it.unitPrice)} each` : ""}
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold text-theme-primary flex-shrink-0">
+                        {formatPrice(it.totalPrice ?? it.unitPrice ?? 0)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. Dedicated Payment Details Card */}
+              {(() => {
+                const pay = selectedDetailOrder.paymentDetails || {
+                  gateway: selectedDetailOrder.isCod ? "COD" : selectedDetailOrder.paymentMethod || "Online Gateway",
+                  methodName: selectedDetailOrder.isCod ? "Cash on Delivery" : "Online Payment (Razorpay)",
+                  status: selectedDetailOrder.paymentStatus || "pending",
+                  amount: Number(selectedDetailOrder.totalAmount || 0),
+                  currency: "INR",
+                  transactionId: (selectedDetailOrder as any).payments?.[0]?.gateway_payment_id || null,
+                  gatewayOrderId: (selectedDetailOrder as any).payments?.[0]?.gateway_order_id || null,
+                  paidAt: selectedDetailOrder.createdAt,
+                  isCod: selectedDetailOrder.isCod,
+                };
+
+                return (
+                  <div className="rounded-xl border border-secondary-200/80 bg-secondary-50/20 p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-theme-border-subtle pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-secondary-600" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-theme-text-primary">
+                          Payment Details
+                        </h4>
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                          selectedDetailOrder.paymentStatus?.toLowerCase() === "paid"
+                            ? "bg-secondary-100 text-secondary-800 border-secondary-300"
+                            : selectedDetailOrder.paymentStatus?.toLowerCase() === "refunded"
+                            ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                            : "bg-orange-100 text-orange-800 border-orange-300"
+                        }`}
+                      >
+                        {selectedDetailOrder.paymentStatus || "Pending"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-wider font-semibold text-theme-text-muted">
+                          Payment Mode
+                        </span>
+                        <span className="font-bold text-theme-text-primary mt-0.5 block">
+                          {pay.isCod ? "Cash on Delivery (COD)" : pay.methodName || "Online Gateway (Razorpay)"}
+                        </span>
+                        {pay.gateway && !pay.isCod && (
+                          <span className="text-[11px] text-theme-text-muted capitalize">
+                            Gateway: {pay.gateway}
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="block text-[10px] uppercase tracking-wider font-semibold text-theme-text-muted">
+                          Total Amount Paid
+                        </span>
+                        <span className="font-extrabold text-sm sm:text-base text-theme-primary mt-0.5 block">
+                          {formatPrice(pay.amount ?? selectedDetailOrder.totalAmount)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Online Transaction ID */}
+                    {pay.transactionId && (
+                      <div className="p-2.5 bg-theme-surface rounded-lg border border-theme-border-subtle text-xs space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-theme-text-muted">
+                            Transaction ID / Reference
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (pay.transactionId) {
+                                navigator.clipboard.writeText(pay.transactionId);
+                                setDetailTxCopied(true);
+                                setTimeout(() => setDetailTxCopied(false), 2000);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary-600 hover:text-secondary-800 cursor-pointer"
+                          >
+                            {detailTxCopied ? (
+                              <>
+                                <Check className="h-3 w-3 text-secondary-600" />
+                                <span>Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <div className="font-mono text-xs font-bold text-theme-text-primary break-all select-all">
+                          {pay.transactionId}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Gateway Order ID */}
+                    {pay.gatewayOrderId && (
+                      <div className="p-2.5 bg-theme-surface rounded-lg border border-theme-border-subtle text-xs space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-theme-text-muted">
+                            Gateway Order ID
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (pay.gatewayOrderId) {
+                                navigator.clipboard.writeText(pay.gatewayOrderId);
+                                setDetailGatewayOrderCopied(true);
+                                setTimeout(() => setDetailGatewayOrderCopied(false), 2000);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary-600 hover:text-secondary-800 cursor-pointer"
+                          >
+                            {detailGatewayOrderCopied ? (
+                              <>
+                                <Check className="h-3 w-3 text-secondary-600" />
+                                <span>Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <div className="font-mono text-xs font-bold text-theme-text-primary break-all select-all">
+                          {pay.gatewayOrderId}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* COD Info Callout */}
+                    {pay.isCod && (
+                      <div className="p-2.5 rounded-lg bg-orange-50 border border-orange-200 text-orange-900 text-xs">
+                        <strong>Cash on Delivery:</strong> Please pay{" "}
+                        <span className="font-bold">{formatPrice(selectedDetailOrder.totalAmount)}</span> in cash to the delivery executive upon arrival.
+                      </div>
+                    )}
+
+                    {!pay.isCod && selectedDetailOrder.paymentStatus?.toLowerCase() === "paid" && (
+                      <div className="p-2.5 rounded-lg bg-secondary-50 border border-secondary-200 text-secondary-900 text-[11px] flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-secondary-600 shrink-0" />
+                        <span>Payment verified & received via Razorpay secure gateway.</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* 3. Delivery & Courier Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {selectedDetailOrder.shippingAddress && (
+                  <div className="rounded-xl border border-theme-border bg-theme-surface-alt/40 p-3.5 space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5 mb-1">
+                      <MapPin className="h-3.5 w-3.5 text-secondary-600" />
+                      Delivery Address
+                    </div>
+                    <div className="font-bold text-theme-text-primary">
+                      {selectedDetailOrder.shippingAddress.fullName}
+                    </div>
+                    <div className="text-theme-text-subtle text-[11px] leading-relaxed">
+                      {[
+                        selectedDetailOrder.shippingAddress.addressLine1,
+                        selectedDetailOrder.shippingAddress.addressLine2,
+                        selectedDetailOrder.shippingAddress.city,
+                        selectedDetailOrder.shippingAddress.state,
+                        selectedDetailOrder.shippingAddress.pincode,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </div>
+                    {selectedDetailOrder.shippingAddress.phone && (
+                      <div className="text-[11px] text-theme-text-muted pt-1">
+                        Phone: {selectedDetailOrder.shippingAddress.phone}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-theme-border bg-theme-surface-alt/40 p-3.5 space-y-2">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                    <Truck className="h-3.5 w-3.5 text-secondary-600" />
+                    Courier & Shipment
+                  </div>
+                  <div className="text-xs font-semibold text-theme-text-primary">
+                    {selectedDetailOrder.delivery?.deliveryPartner?.name ||
+                      (selectedDetailOrder.delivery as any)?.courierPartnerName ||
+                      (Number(selectedDetailOrder.shippingCharge) === 200 ? "MSS (Mettur Super Services)" : "Shiprocket Express")}
+                  </div>
+                  {selectedDetailOrder.delivery?.trackingNumber ? (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-mono font-bold text-theme-text-primary">
+                          AWB: {selectedDetailOrder.delivery.trackingNumber}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectedDetailOrder.delivery?.trackingNumber) {
+                              handleCopyAwb(selectedDetailOrder.delivery.trackingNumber);
+                            }
+                          }}
+                          className="text-secondary-600 font-semibold cursor-pointer"
+                        >
+                          {copiedAwb === selectedDetailOrder.delivery.trackingNumber ? "Copied!" : "Copy"}
+                        </button>
+                      </div>
+                      {selectedDetailOrder.status?.toLowerCase() !== "delivered" &&
+                        selectedDetailOrder.status?.toLowerCase() !== "cancelled" &&
+                        selectedDetailOrder.status?.toLowerCase() !== "returned" ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectedDetailOrder.delivery?.trackingNumber) {
+                              setLiveTrackingModal({
+                                open: true,
+                                awb: selectedDetailOrder.delivery.trackingNumber,
+                                courierName:
+                                  selectedDetailOrder.delivery.deliveryPartner?.name ||
+                                  (selectedDetailOrder.delivery as any)?.courierPartnerName ||
+                                  "Courier",
+                                orderNumber: selectedDetailOrder.orderNumber,
+                              });
+                            }
+                          }}
+                          className="w-full py-1.5 px-3 rounded-lg bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <Truck className="h-3.5 w-3.5" />
+                          <span>Live Tracking</span>
+                        </button>
+                      ) : selectedDetailOrder.status?.toLowerCase() === "delivered" ? (
+                        <div className="pt-1 flex items-center gap-1.5 text-[11px] font-semibold text-secondary-700">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-secondary-600" />
+                          <span>Delivered to your address</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-theme-text-muted pt-1">
+                      Shipment tracking will be activated once dispatched.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 4. Order Totals Breakdown */}
+              <div className="rounded-xl border border-theme-border bg-theme-surface p-3.5 text-xs space-y-1.5">
+                <div className="flex justify-between text-theme-text-subtle">
+                  <span>Subtotal</span>
+                  <span>{formatPrice(selectedDetailOrder.subtotal)}</span>
+                </div>
+                {Number(selectedDetailOrder.shippingCharge) > 0 && (
+                  <div className="flex justify-between text-theme-text-subtle">
+                    <span>Shipping</span>
+                    <span>{formatPrice(selectedDetailOrder.shippingCharge)}</span>
+                  </div>
+                )}
+                {Number(selectedDetailOrder.discountAmount) > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-medium">
+                    <span>Discount</span>
+                    <span>-{formatPrice(selectedDetailOrder.discountAmount)}</span>
+                  </div>
+                )}
+                {Number(selectedDetailOrder.taxAmount) > 0 && (
+                  <div className="flex justify-between text-theme-text-subtle">
+                    <span>Tax (GST)</span>
+                    <span>{formatPrice(selectedDetailOrder.taxAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-sm text-theme-text-primary pt-2 border-t border-theme-border-subtle">
+                  <span>Grand Total</span>
+                  <span className="text-theme-primary">{formatPrice(selectedDetailOrder.totalAmount)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between gap-3 pt-3 border-t border-theme-border-subtle flex-shrink-0 flex-wrap">
+              <button
+                type="button"
+                onClick={() =>
+                  window.open(`/invoice/${selectedDetailOrder.id}`, "_blank", "noopener")
+                }
+                className="border border-theme-border hover:bg-theme-surface-alt text-theme-text-primary text-xs font-semibold uppercase tracking-wider py-2 px-3.5 rounded-lg transition-colors cursor-pointer"
+              >
+                Download Invoice
+              </button>
+
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/orders/${selectedDetailOrder.id}`}
+                  className="inline-flex items-center gap-1 border border-secondary-300 hover:border-secondary-500 bg-secondary-50 hover:bg-secondary-100 text-secondary-800 text-xs font-semibold uppercase tracking-wider py-2 px-3.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  <span>Open Full Page</span>
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedDetailOrder(null)}
+                  className="bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-fg text-xs font-semibold uppercase tracking-wider py-2 px-4 rounded-lg transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -844,103 +1333,14 @@ export function OrdersTab({
         orderNumber={liveTrackingModal.orderNumber}
       />
 
-      {/* Customer 5-Day Return Request Modal */}
+      {/* Customer 7 Business Days Return Request Modal */}
       {returnModalOrder && (
-        <FormModal
+        <CustomerReturnRequestModal
           open={!!returnModalOrder}
           onClose={() => setReturnModalOrder(null)}
-          title={`Request Return for #${returnModalOrder.orderNumber}`}
-          description="Returns are accepted within 5 days of delivery. Select the reason below and our team will arrange doorstep reverse courier pickup."
-          size="md"
-        >
-          <div className="space-y-4 pt-1">
-            <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-900 flex items-center justify-between">
-              <span>5-Day Return Window Active:</span>
-              <span className="font-bold">
-                {getReturnWindowInfo(returnModalOrder).daysLeft}{" "}
-                {getReturnWindowInfo(returnModalOrder).daysLeft === 1 ? "day" : "days"} remaining
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-theme-text-primary mb-1.5">
-                Reason for Return *
-              </label>
-              <select
-                value={returnReason}
-                onChange={(e) => setReturnReason(e.target.value)}
-                className="w-full py-2.5 px-3 rounded-xl border border-theme-border bg-theme-surface text-xs font-semibold text-theme-text-primary focus:border-theme-primary outline-none"
-              >
-                {RETURN_REASONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-theme-text-primary mb-1.5">
-                Additional Comments / Issue Details (Optional)
-              </label>
-              <textarea
-                rows={3}
-                value={returnNote}
-                onChange={(e) => setReturnNote(e.target.value)}
-                placeholder="Describe any defects, damage or reason for returning..."
-                className="w-full p-3 rounded-xl border border-theme-border bg-theme-surface text-xs text-theme-text-primary focus:border-theme-primary outline-none resize-none"
-              />
-            </div>
-
-            <div className="rounded-xl border border-theme-border-subtle bg-theme-surface-alt p-3 text-[11px] text-theme-text-muted leading-relaxed">
-              📦 Our courier partner will pick up the package directly from your delivery address. Please ensure all items and packaging are intact.
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-theme-border-subtle">
-              <button
-                type="button"
-                onClick={() => setReturnModalOrder(null)}
-                disabled={returnMutation.isPending}
-                className="py-2 px-4 rounded-xl text-xs font-semibold border border-theme-border hover:bg-theme-surface-alt cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const fullNote = returnNote.trim()
-                    ? `${returnReason}: ${returnNote.trim()}`
-                    : returnReason;
-
-                  returnMutation.mutate(
-                    {
-                      uuid: returnModalOrder.id,
-                      payload: { note: fullNote },
-                    },
-                    {
-                      onSuccess: () => {
-                        setReturnModalOrder(null);
-                        setReturnNote("");
-                        toast.success(
-                          "Return Request Submitted",
-                          "Your request has been placed. Doorstep pickup will be scheduled after quick verification."
-                        );
-                        handleRefetch();
-                      },
-                      onError: (err: any) => {
-                        toast.error(err?.message || "Failed to submit return request");
-                      },
-                    }
-                  );
-                }}
-                disabled={returnMutation.isPending}
-                className="py-2 px-5 rounded-xl text-xs font-bold bg-purple-700 hover:bg-purple-800 text-white cursor-pointer disabled:opacity-50"
-              >
-                {returnMutation.isPending ? "Submitting..." : "Confirm Return Request"}
-              </button>
-            </div>
-          </div>
-        </FormModal>
+          order={returnModalOrder}
+          onSuccess={handleRefetch}
+        />
       )}
     </div>
   );

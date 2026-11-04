@@ -56,6 +56,7 @@ function FormSelect({
             </Label>
           )}
           <Select
+            id={name}
             {...field}
             options={options}
             placeholder={placeholder}

@@ -42,7 +42,7 @@ export function getIndianFinancialYear(date: Date = new Date()): string {
  * e.g. ("WEB", "26-27", 1) -> "WEB/26-27/0001"
  */
 export function formatInvoiceNumber(
-  prefix = "WEB",
+  prefix: string,
   financialYear: string,
   sequenceNumber: number
 ): string {

@@ -91,6 +91,8 @@ export function OrderDetailView({
   canReturn = false,
 }: OrderDetailViewProps) {
   const [awbCopied, setAwbCopied] = useState(false);
+  const [txCopied, setTxCopied] = useState(false);
+  const [gatewayOrderCopied, setGatewayOrderCopied] = useState(false);
   const [liveTrackingOpen, setLiveTrackingOpen] = useState(false);
 
   const shippingAddress =
@@ -109,6 +111,18 @@ export function OrderDetailView({
 
   const statusMeta = getStatusBadgeMeta(order.status);
   const paymentStatus = (order as any).paymentStatus || (order as any).payment_status;
+
+  const paymentDetails = (order as any).paymentDetails || {
+    gateway: (order as any).isCod ? "COD" : (order as any).paymentMethod || "Online Gateway",
+    methodName: (order as any).isCod ? "Cash on Delivery" : "Online Payment (Razorpay)",
+    status: paymentStatus || "pending",
+    amount: Number(order.totalAmount || 0),
+    currency: "INR",
+    transactionId: (order as any).payments?.[0]?.gateway_payment_id || null,
+    gatewayOrderId: (order as any).payments?.[0]?.gateway_order_id || null,
+    paidAt: (order as any).payments?.[0]?.updatedAt || (order as any).payments?.[0]?.createdAt || order.createdAt,
+    isCod: (order as any).isCod,
+  };
 
   const formattedDate = order.createdAt
     ? new Date(order.createdAt).toLocaleDateString("en-IN", {
@@ -139,10 +153,15 @@ export function OrderDetailView({
       ? `${Math.round(totalWeightKg * 1000)} g`
       : `${Math.round(totalWeightKg * 1000000)} mg`;
 
-  const courierPartnerName =
+  const rawCourierPartnerName =
     delivery?.deliveryPartner?.name ||
     delivery?.courierPartnerName ||
-    (Number(shippingCharge) === 200 ? "MSS (Mettur Super Services)" : "Shiprocket Multi-Carrier");
+    (Number(shippingCharge) === 200 ? "MSS (Mettur Super Services)" : "Shiprocket Express");
+
+  const courierPartnerName = rawCourierPartnerName
+    .replace(/\(Sandbox\)|\(Test Mode\)|Sandbox|Test Mode/gi, "")
+    .replace(/\s+/g, " ")
+    .trim() || rawCourierPartnerName;
 
   const weightDetails =
     totalWeightKg > 0
@@ -180,12 +199,17 @@ export function OrderDetailView({
           {/* Payment Status Badge */}
           {paymentStatus && (
             <span
-              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${paymentStatus.toLowerCase() === "paid"
-                ? "bg-secondary-50 text-secondary-700 border-secondary-200"
-                : "bg-primary-50 text-primary-700 border-primary-200"
-                }`}
+              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                paymentStatus.toLowerCase() === "paid"
+                  ? "bg-secondary-50 text-secondary-700 border-secondary-200"
+                  : paymentStatus.toLowerCase() === "refunded"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : paymentStatus.toLowerCase() === "partial_refund"
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-primary-50 text-primary-700 border-primary-200"
+              }`}
             >
-              {paymentStatus}
+              {paymentStatus.replace(/_/g, " ")}
             </span>
           )}
 
@@ -227,19 +251,80 @@ export function OrderDetailView({
 
       {/* Return Request Active Notice */}
       {(order as any).returnRequest && (
-        <div className="flex items-start gap-3 rounded-2xl border border-purple-200 bg-purple-50 p-4 text-purple-900 shadow-2xs">
-          <RotateCcw className="h-5 w-5 text-purple-600 shrink-0 mt-0.5" />
+        <div
+          className={`flex items-start gap-3 rounded-2xl border p-4 shadow-2xs ${
+            (order as any).returnRequest.status === "refunded"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-950"
+              : (order as any).returnRequest.status === "rejected"
+              ? "border-rose-200 bg-rose-50 text-rose-950"
+              : "border-purple-200 bg-purple-50 text-purple-900"
+          }`}
+        >
+          {(order as any).returnRequest.status === "refunded" ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+          ) : (order as any).returnRequest.status === "rejected" ? (
+            <Clock className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+          ) : (
+            <RotateCcw className="h-5 w-5 text-purple-600 shrink-0 mt-0.5" />
+          )}
           <div className="space-y-1">
-            <h4 className="text-xs sm:text-sm font-bold text-purple-950">
-              Return Request {(order as any).returnRequest.status === "approved" ? "Approved" : (order as any).returnRequest.status === "picked_up" ? "Picked Up" : "Under Review"}
+            <h4
+              className={`text-xs sm:text-sm font-bold ${
+                (order as any).returnRequest.status === "refunded"
+                  ? "text-emerald-950"
+                  : (order as any).returnRequest.status === "rejected"
+                  ? "text-rose-950"
+                  : "text-purple-950"
+              }`}
+            >
+              {(order as any).returnRequest.status === "approved"
+                ? "Return Request Approved"
+                : (order as any).returnRequest.status === "picked_up"
+                ? "Return Picked Up"
+                : (order as any).returnRequest.status === "delivered"
+                ? "Return Delivered (Under Inspection)"
+                : (order as any).returnRequest.status === "refunded"
+                ? "Return Completed & Refund Processed"
+                : (order as any).returnRequest.status === "rejected"
+                ? "Return Request Rejected"
+                : "Return Request Under Review"}
             </h4>
-            <p className="text-xs text-purple-800 leading-relaxed">
+            <p
+              className={`text-xs leading-relaxed ${
+                (order as any).returnRequest.status === "refunded"
+                  ? "text-emerald-800"
+                  : (order as any).returnRequest.status === "rejected"
+                  ? "text-rose-800"
+                  : "text-purple-800"
+              }`}
+            >
               {(order as any).returnRequest.status === "approved"
                 ? "Your return request has been approved. Reverse courier pickup is scheduled at your delivery address."
                 : (order as any).returnRequest.status === "picked_up"
                 ? "Package has been picked up by the courier and is on its way to our Kolli Hills warehouse."
+                : (order as any).returnRequest.status === "delivered"
+                ? "The returned package has reached our warehouse and is currently undergoing product inspection."
+                : (order as any).returnRequest.status === "refunded"
+                ? "Your returned items have been verified and refund has been authorized and completed."
+                : (order as any).returnRequest.status === "rejected"
+                ? "Your return request could not be accepted. Please contact customer support if you need assistance."
                 : "Your return request has been received and is currently under review by our store team. We will arrange doorstep reverse courier pickup upon verification."}
             </p>
+            {(order as any).returnRequest?.payoutDetails && (
+              <div className="pt-1.5 flex flex-wrap items-center gap-2 text-[11px]">
+                <span className="font-bold text-neutral-600">Refund Destination:</span>
+                {(order as any).returnRequest.payoutDetails.method === "upi" ? (
+                  <span className="inline-flex items-center gap-1 font-mono font-bold bg-white/90 border border-purple-200 px-2.5 py-0.5 rounded-lg text-purple-950 shadow-2xs">
+                    UPI: {(order as any).returnRequest.payoutDetails.upiId}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 font-mono font-bold bg-white/90 border border-purple-200 px-2.5 py-0.5 rounded-lg text-purple-950 shadow-2xs">
+                    Bank: {(order as any).returnRequest.payoutDetails.bankName ? `${(order as any).returnRequest.payoutDetails.bankName} | ` : ""}
+                    A/C {(order as any).returnRequest.payoutDetails.accountNumber} (IFSC: {(order as any).returnRequest.payoutDetails.ifscCode})
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -294,8 +379,8 @@ export function OrderDetailView({
             </div>
           </div>
 
-          {/* 2. Three Info Cards: Customer, Address & Staff */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-1">
+          {/* 2. Info Cards: Customer, Address, Courier & Payment Details */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Customer Details */}
             {customer && (
               <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-2xs overflow-hidden">
@@ -473,6 +558,165 @@ export function OrderDetailView({
                     <p className="text-xs text-theme-text-muted mt-2">
                       Order will be dispatched via {courierPartnerName} once packed.
                     </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Details Card */}
+            <div className="rounded-2xl border border-theme-border bg-theme-surface shadow-2xs overflow-hidden">
+              <div className="bg-theme-surface-alt border-b border-theme-border-subtle px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-theme-secondary" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-primary">
+                    Payment Details
+                  </h3>
+                </div>
+                {paymentStatus && (
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                      paymentStatus.toLowerCase() === "paid"
+                        ? "bg-secondary-50 text-secondary-700 border-secondary-200"
+                        : paymentStatus.toLowerCase() === "refunded"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : paymentStatus.toLowerCase() === "partial_refund"
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : "bg-orange-50 text-orange-700 border-orange-200"
+                    }`}
+                  >
+                    {paymentStatus.replace(/_/g, " ")}
+                  </span>
+                )}
+              </div>
+              <div className="p-4 text-xs space-y-3 text-theme-text-subtle">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <span className="block text-[11px] font-bold text-theme-text-muted uppercase tracking-wider mb-0.5">
+                      Payment Method
+                    </span>
+                    <span className="font-bold text-sm text-theme-text-primary">
+                      {paymentDetails.isCod
+                        ? "Cash on Delivery (COD)"
+                        : paymentDetails.methodName || "Online Payment (Razorpay)"}
+                    </span>
+                    {paymentDetails.gateway && !paymentDetails.isCod && (
+                      <span className="block text-[11px] text-theme-text-muted capitalize">
+                        Gateway: {paymentDetails.gateway}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="block text-[11px] font-bold text-theme-text-muted uppercase tracking-wider mb-0.5">
+                      Amount Paid
+                    </span>
+                    <span className="font-extrabold text-sm sm:text-base text-theme-primary">
+                      {formatPrice(paymentDetails.amount ?? order.totalAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Transaction & Reference IDs if Online */}
+                {paymentDetails.transactionId && (
+                  <div className="p-3 bg-theme-surface-alt rounded-xl border border-theme-border-subtle space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider">
+                        Transaction / Payment ID
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (paymentDetails.transactionId) {
+                            navigator.clipboard.writeText(paymentDetails.transactionId);
+                            setTxCopied(true);
+                            setTimeout(() => setTxCopied(false), 2000);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary-600 hover:text-secondary-800 cursor-pointer"
+                      >
+                        {txCopied ? (
+                          <>
+                            <Check className="h-3 w-3 text-secondary-600" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="font-mono text-xs font-bold text-neutral-900 break-all select-all">
+                      {paymentDetails.transactionId}
+                    </div>
+                  </div>
+                )}
+
+                {paymentDetails.gatewayOrderId && (
+                  <div className="p-3 bg-theme-surface-alt rounded-xl border border-theme-border-subtle space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider">
+                        Gateway Order ID
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (paymentDetails.gatewayOrderId) {
+                            navigator.clipboard.writeText(paymentDetails.gatewayOrderId);
+                            setGatewayOrderCopied(true);
+                            setTimeout(() => setGatewayOrderCopied(false), 2000);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary-600 hover:text-secondary-800 cursor-pointer"
+                      >
+                        {gatewayOrderCopied ? (
+                          <>
+                            <Check className="h-3 w-3 text-secondary-600" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="font-mono text-xs font-bold text-neutral-900 break-all select-all">
+                      {paymentDetails.gatewayOrderId}
+                    </div>
+                  </div>
+                )}
+
+                {/* Paid At Timestamp */}
+                {paymentDetails.paidAt && (
+                  <div className="text-[11px] text-theme-text-muted flex items-center gap-1.5 pt-0.5">
+                    <Clock className="h-3 w-3 shrink-0" />
+                    <span>
+                      {paymentDetails.status?.toLowerCase() === "paid" ? "Paid on " : "Initiated on "}
+                      {formatDateTime(paymentDetails.paidAt)}
+                    </span>
+                  </div>
+                )}
+
+                {/* COD Specific Notice */}
+                {paymentDetails.isCod && (
+                  <div className="p-3 rounded-xl bg-orange-50/80 border border-orange-200 text-orange-900 text-xs space-y-1">
+                    <div className="font-bold flex items-center gap-1.5 text-orange-950">
+                      <span>Cash on Delivery</span>
+                    </div>
+                    <p className="text-[11px] text-orange-800 leading-relaxed">
+                      Please keep <strong>{formatPrice(order.totalAmount)}</strong> in exact cash ready to hand over to the delivery partner upon arrival.
+                    </p>
+                  </div>
+                )}
+
+                {/* Paid Online Assurance */}
+                {!paymentDetails.isCod && paymentStatus?.toLowerCase() === "paid" && (
+                  <div className="p-2.5 rounded-xl bg-secondary-50/70 border border-secondary-200/80 text-secondary-900 text-[11px] flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-secondary-600 shrink-0" />
+                    <span>Payment verified & secured. No additional payment required at delivery.</span>
                   </div>
                 )}
               </div>

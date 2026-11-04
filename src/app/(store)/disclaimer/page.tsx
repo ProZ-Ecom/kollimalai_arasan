@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   title: "Disclaimer Policy | Kollimalai Arasan",
   description:
     "Read the official disclaimer policy for Kollimalai Arasan organic farm products, health representations, and external links.",
+  alternates: {
+    canonical: "/disclaimer",
+  },
 };
 
 export default function DisclaimerPolicyPage() {

@@ -16,6 +16,7 @@ export interface InvoiceLineDto {
   serial: number;
   description: string;
   hsn: string | null;
+  weight?: string | null;
   quantity: number;
   per: string;
   /** Rate per unit, exclusive of GST. */

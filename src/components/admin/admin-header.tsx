@@ -1,11 +1,12 @@
 "use client";
 
-import { Bell, Home, Menu } from "lucide-react";
+import { useState } from "react";
+import { Bell, Home, Menu, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Dropdown, DropdownItem } from "@/components/common/dropdown";
-import { useSession, signOut } from "next-auth/react";
-import { logoutApi } from "@/features/auth/api/auth.api";
+import { useSession } from "next-auth/react";
+import { LogoutConfirmModal } from "@/components/common/LogoutConfirmModal";
 import { getInitials } from "@/lib/utils";
 
 interface AdminHeaderProps {
@@ -15,15 +16,7 @@ interface AdminHeaderProps {
 function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const { data: session } = useSession();
   const router = useRouter();
-
-  const handleLogout = async () => {
-    try {
-      await logoutApi();
-    } catch {
-      // ignore network errors on logout
-    }
-    await signOut({ callbackUrl: "/admin/login" });
-  };
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 lg:hidden">
@@ -59,11 +52,19 @@ function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             <Home className="mr-2 h-4 w-4" />
             Visit Store
           </DropdownItem>
-          <DropdownItem onClick={handleLogout}>
+          <DropdownItem onClick={() => setShowLogoutModal(true)}>
+            <LogOut className="mr-2 h-4 w-4" />
             Logout
           </DropdownItem>
         </Dropdown>
       </div>
+
+      {/* Confirmation modal before signing out */}
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        isAdmin
+      />
     </header>
   );
 }

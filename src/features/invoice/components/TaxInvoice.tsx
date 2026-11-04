@@ -202,11 +202,12 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
         <thead>
           <tr>
             <th style={{ width: "4%" }} className="c">Sl.<br />No</th>
-            <th style={{ width: "36%" }} className="l">Description</th>
+            <th style={{ width: "31%" }} className="l">Description</th>
+            <th style={{ width: "7%" }} className="c">Weight</th>
             <th style={{ width: "10%" }} className="r">Unit Price</th>
             <th style={{ width: "5%" }} className="c">Qty</th>
-            <th style={{ width: "11%" }} className="r">Net Amount</th>
-            <th style={{ width: "7%" }} className="c">Tax<br />Rate</th>
+            <th style={{ width: "10%" }} className="r">Net Amount</th>
+            <th style={{ width: "6%" }} className="c">Tax<br />Rate</th>
             <th style={{ width: "10%" }} className="c">Tax Type</th>
             <th style={{ width: "8%" }} className="r">Tax Amount</th>
             <th style={{ width: "9%" }} className="r">Total Amount</th>
@@ -224,6 +225,7 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
                   <span className="ti-item-desc">{line.description}</span>
                   <span className="ti-item-hsn">HSN: {line.hsn || "-"}</span>
                 </td>
+                <td className="c">{line.weight || "-"}</td>
                 <td className="r">&#8377;{money(line.rate)}</td>
                 <td className="c">{line.quantity}</td>
                 <td className="r">&#8377;{money(line.taxableValue)}</td>
@@ -242,6 +244,7 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
               <td className="l">
                 <span className="ti-item-desc">Delivery Charges / Shipping</span>
               </td>
+              <td className="c">-</td>
               <td className="r">&#8377;{money(invoice.deliveryCharge)}</td>
               <td className="c">1</td>
               <td className="r">&#8377;{money(invoice.deliveryCharge)}</td>
@@ -264,12 +267,13 @@ export function TaxInvoice({ invoice }: { invoice: InvoiceDto }) {
               <td>&nbsp;</td>
               <td>&nbsp;</td>
               <td>&nbsp;</td>
+              <td>&nbsp;</td>
             </tr>
           ))}
 
           {/* Table Total Row */}
           <tr className="ti-total-row">
-            <td colSpan={3} className="r ti-total-label">Total</td>
+            <td colSpan={4} className="r ti-total-label">Total</td>
             <td className="c">{invoice.totalQuantity}</td>
             <td className="r">&#8377;{money(invoice.taxableValue + invoice.deliveryCharge)}</td>
             <td className="c"></td>

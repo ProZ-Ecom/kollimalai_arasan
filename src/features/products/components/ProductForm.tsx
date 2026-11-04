@@ -30,7 +30,8 @@ const productFormSchema = z.object({
     .min(1, "Please select a category"),
   brandId: z
     .string()
-    .optional(),
+    .optional()
+    .nullable(),
   hsnCodeId: z
     .string()
     .optional()
@@ -200,7 +201,7 @@ function ProductForm({
     await onSubmit({
       ...formData,
       name: formatTitleCase(formData.name),
-      brandId: finalBrandId,
+      brandId: finalBrandId || undefined,
       slug: finalSlug,
       hsnCodeId: formData.hsnCodeId ? formData.hsnCodeId : null,
     });

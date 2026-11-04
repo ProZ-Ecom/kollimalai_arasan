@@ -63,6 +63,64 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
 
+  // Authorization Protection: Customer Return Videos require authentication and ownership verification
+  if (folder === "returns") {
+    try {
+      const { auth } = await import("@/lib/auth");
+      const session = await auth();
+
+      if (!session?.user) {
+        return new NextResponse("Unauthorized", { status: 401 });
+      }
+
+      const role = (session.user as any).role;
+      const userId = session.user.id;
+
+      // Admin & Staff can always review return inspection videos
+      if (role !== "ADMIN" && role !== "STAFF") {
+        // Customers can only view videos belonging to their own return requests
+        const { db } = await import("@/lib/db/prisma");
+        const userRecord = await db.user.findFirst({
+          where: {
+            OR: [
+              { uuid: userId },
+              ...(isNaN(Number(userId)) ? [] : [{ id: BigInt(userId) }]),
+            ],
+          },
+          select: { id: true },
+        });
+
+        if (!userRecord) {
+          return new NextResponse("Forbidden", { status: 403 });
+        }
+
+        const isReturnOwner = await db.return_requests.findFirst({
+          where: {
+            user_id: userRecord.id,
+            video_url: { contains: filename },
+            is_active: true,
+          },
+          select: { id: true },
+        });
+
+        // If the return request is not yet created (e.g. freshly uploaded during return modal filling),
+        // permit access if uploaded within the last 1 hour
+        if (!isReturnOwner) {
+          const isFreshUpload = Date.now() - stat.mtimeMs < 60 * 60 * 1000;
+          if (!isFreshUpload) {
+            return new NextResponse(
+              "Forbidden: You do not have permission to access this return video.",
+              { status: 403 }
+            );
+          }
+        }
+      }
+    } catch (authErr) {
+      console.error("[Return Video Auth Error]:", authErr);
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+  }
+
   const headers = new Headers({
     "Content-Type": contentType,
     "Cache-Control": "public, max-age=31536000, immutable",

@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { signOut } from "next-auth/react";
+import React, { useState } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -13,6 +12,7 @@ import {
   LogOut,
   ChevronRight,
 } from "lucide-react";
+import { LogoutConfirmModal } from "@/components/common/LogoutConfirmModal";
 import { DashboardTab } from "./DashboardTab";
 import { OrdersTab } from "./OrdersTab";
 import { ProfileDetailsTab } from "./ProfileDetailsTab";
@@ -30,6 +30,7 @@ interface AccountShellProps {
 }
 
 export function AccountShell({ activeTab, onTabChange }: AccountShellProps) {
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { data: profile, isLoading: profileLoading } = useCustomerProfile();
   const {
     data: ordersResponse,
@@ -69,7 +70,7 @@ export function AccountShell({ activeTab, onTabChange }: AccountShellProps) {
 
   const handleNavClick = (id: string) => {
     if (id === "logout") {
-      signOut({ callbackUrl: "/login" });
+      setShowLogoutModal(true);
       return;
     }
     onTabChange(id);
@@ -279,6 +280,13 @@ export function AccountShell({ activeTab, onTabChange }: AccountShellProps) {
           {activeTab === "settings" && <SettingsTab />}
         </main>
       </div>
+
+      {/* Confirmation modal before signing out */}
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        callbackUrl="/login"
+      />
     </div>
   );
 }

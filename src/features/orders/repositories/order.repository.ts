@@ -3,6 +3,7 @@ import { db } from "@/lib/db/prisma";
 import { Prisma } from "@/generated/prisma";
 import { ApiError } from "@/lib/api/api-error";
 import { formatVariantMeasurement } from "@/features/variants/utils/measurement.util";
+import { parsePayoutDetailsFromReason, cleanReasonText } from "@/features/returns/utils/payout-parser";
 import type {
   OrderDetailResponse,
   OrderListItemResponse,
@@ -11,6 +12,7 @@ import type {
   OrderStatusHistoryResponse,
   OrderListResponse,
   AdminOrdersCountResponse,
+  OrderPaymentDetail,
 } from "../types";
 import type {
   CustomerOrdersQueryInput,
@@ -125,6 +127,28 @@ export const orderDetailInclude = Prisma.validator<Prisma.OrderInclude>()({
       courier_partner_name: true,
     },
     orderBy: { id: "desc" },
+    take: 1,
+  },
+  payments: {
+    where: { is_active: true },
+    select: {
+      id: true,
+      amount: true,
+      currency: true,
+      gateway: true,
+      status: true,
+      gateway_order_id: true,
+      gateway_payment_id: true,
+      createdAt: true,
+      updatedAt: true,
+      payment_methods: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+        },
+      },
+    },
     take: 1,
   },
 });
@@ -261,14 +285,63 @@ export function formatOrderDelivery(
     assignedAt: latest.created_at ? latest.created_at.toISOString() : null,
     trackingNumber: latest.tracking_number ?? null,
     deliveryPartnerId: latest.delivery_partner_id ? String(latest.delivery_partner_id) : null,
-    deliveryPartner: partner
-      ? {
-          id: String(partner.id),
-          name: partner.name,
-          code: partner.code,
-          contactNumber: partner.contact_number ?? null,
+    deliveryPartner: (() => {
+      const isShiprocket = Boolean(
+        (latest as any).shiprocket_shipment_id ||
+        (latest as any).shiprocket_order_id ||
+        (latest.tracking_number && (latest.tracking_number.startsWith("TEST-SR-") || latest.tracking_number.startsWith("SR-"))) ||
+        partner?.code?.toUpperCase().includes("SHIPROCKET") ||
+        (partner as any)?.courier_type?.toLowerCase().includes("shiprocket") ||
+        partner?.name?.toLowerCase().includes("shiprocket") ||
+        (latest.delivery_notes && latest.delivery_notes.toLowerCase().includes("shiprocket"))
+      );
+
+      let resolvedPartnerName = "ST Courier";
+      if (isShiprocket) {
+        let subCarrier = (latest as any).courier_partner_name || "";
+        subCarrier = subCarrier
+          .replace(/\(Sandbox\)|\(Test Mode\)|Sandbox|Test Mode/gi, "")
+          .trim();
+
+        if (subCarrier && !subCarrier.toLowerCase().includes("shiprocket")) {
+          const cleanCarrier = subCarrier.replace(/Surface|Express|Standard/gi, "").trim() || subCarrier;
+          resolvedPartnerName = `Shiprocket (${cleanCarrier})`;
+        } else {
+          resolvedPartnerName = "Shiprocket Express";
         }
-      : null,
+      } else {
+        const raw = partner?.name || (latest as any).courier_partner_name || "ST Courier";
+        resolvedPartnerName = raw
+          .replace(/\(Sandbox\)|\(Test Mode\)/gi, "")
+          .trim() || "ST Courier";
+      }
+
+      const resolvedPartnerCode = partner
+        ? partner.code
+        : isShiprocket
+        ? "SHIPROCKET"
+        : "ST_COURIER";
+
+      if (partner) {
+        return {
+          id: String(partner.id),
+          name: resolvedPartnerName,
+          code: resolvedPartnerCode,
+          contactNumber: partner.contact_number ?? null,
+        };
+      }
+
+      if (latest.tracking_number || isShiprocket || (latest as any).courier_partner_name) {
+        return {
+          id: isShiprocket ? "shiprocket" : "courier",
+          name: resolvedPartnerName,
+          code: resolvedPartnerCode,
+          contactNumber: null,
+        };
+      }
+
+      return null;
+    })(),
     status: latest.status ?? null,
     shippedAt: latest.shipped_at ? latest.shipped_at.toISOString() : null,
     deliveryNotes: latest.delivery_notes ?? null,
@@ -301,12 +374,62 @@ export function formatOrderDetail(
     formatOrderStatusHistory
   );
 
+  const isCod = Boolean(
+    (order as any).payments?.some(
+      (p: any) =>
+        p.gateway?.toUpperCase() === "COD" ||
+        p.payment_methods?.code?.toUpperCase() === "COD"
+    ) ||
+      ((order as any).notes && (order as any).notes.toLowerCase().includes("cod")) ||
+      (order as any).order_status_history?.some(
+        (h: any) =>
+          (h.note || "").toLowerCase().includes("cash on delivery") ||
+          (h.note || "").toLowerCase().includes("(cod)")
+      )
+  );
+
+  const paymentMethod =
+    (order as any).payments?.[0]?.gateway || (isCod ? "COD" : null);
+
+  const rawPayment = (order as any).payments?.[0];
+  const paymentDetails: OrderPaymentDetail | null = rawPayment
+    ? {
+        id: String(rawPayment.id),
+        gateway: rawPayment.gateway || (isCod ? "COD" : "Razorpay"),
+        methodName: rawPayment.payment_methods?.name || (isCod ? "Cash on Delivery" : "Online Gateway"),
+        methodCode: rawPayment.payment_methods?.code || (isCod ? "COD" : "ONLINE"),
+        status: String(rawPayment.status || order.payment_status),
+        amount: rawPayment.amount != null ? Number(rawPayment.amount) : Number(order.totalAmount),
+        currency: rawPayment.currency || "INR",
+        transactionId: rawPayment.gateway_payment_id || null,
+        gatewayOrderId: rawPayment.gateway_order_id || null,
+        paidAt: rawPayment.updatedAt || rawPayment.createdAt || order.createdAt,
+        isCod,
+      }
+    : isCod
+    ? {
+        gateway: "COD",
+        methodName: "Cash on Delivery",
+        methodCode: "COD",
+        status: String(order.payment_status),
+        amount: Number(order.totalAmount),
+        currency: "INR",
+        transactionId: null,
+        gatewayOrderId: null,
+        paidAt: null,
+        isCod: true,
+      }
+    : null;
+
   return {
     id: order.uuid || String(order.id),
     orderNumber: order.orderNumber,
     customer,
     status: order.order_status,
     paymentStatus: order.payment_status,
+    isCod,
+    paymentMethod,
+    paymentDetails,
     subtotal: Number(order.subtotal),
     discountAmount: Number(order.discountAmount),
     taxAmount: Number(order.taxAmount),
@@ -326,7 +449,8 @@ export function formatOrderDetail(
       ? {
           id: (order as any).return_requests[0].uuid || String((order as any).return_requests[0].id),
           status: (order as any).return_requests[0].status,
-          reason: (order as any).return_requests[0].reason ?? null,
+          reason: cleanReasonText((order as any).return_requests[0].reason) ?? null,
+          payoutDetails: parsePayoutDetailsFromReason((order as any).return_requests[0].reason),
           returnAwb: (order as any).return_requests[0].return_awb_code ?? null,
           labelUrl: (order as any).return_requests[0].return_label_url ?? null,
           courierName: (order as any).return_requests[0].courier_partner_name ?? null,
@@ -368,12 +492,62 @@ export function formatOrderListItem(
     0
   );
 
+  const isCod = Boolean(
+    (order as any).payments?.some(
+      (p: any) =>
+        p.gateway?.toUpperCase() === "COD" ||
+        p.payment_methods?.code?.toUpperCase() === "COD"
+    ) ||
+      ((order as any).notes && (order as any).notes.toLowerCase().includes("cod")) ||
+      (order as any).order_status_history?.some(
+        (h: any) =>
+          (h.note || "").toLowerCase().includes("cash on delivery") ||
+          (h.note || "").toLowerCase().includes("(cod)")
+      )
+  );
+
+  const paymentMethod =
+    (order as any).payments?.[0]?.gateway || (isCod ? "COD" : null);
+
+  const rawPayment = (order as any).payments?.[0];
+  const paymentDetails: OrderPaymentDetail | null = rawPayment
+    ? {
+        id: String(rawPayment.id),
+        gateway: rawPayment.gateway || (isCod ? "COD" : "Razorpay"),
+        methodName: rawPayment.payment_methods?.name || (isCod ? "Cash on Delivery" : "Online Gateway"),
+        methodCode: rawPayment.payment_methods?.code || (isCod ? "COD" : "ONLINE"),
+        status: String(rawPayment.status || order.payment_status),
+        amount: rawPayment.amount != null ? Number(rawPayment.amount) : Number(order.totalAmount),
+        currency: rawPayment.currency || "INR",
+        transactionId: rawPayment.gateway_payment_id || null,
+        gatewayOrderId: rawPayment.gateway_order_id || null,
+        paidAt: rawPayment.updatedAt || rawPayment.createdAt || order.createdAt,
+        isCod,
+      }
+    : isCod
+    ? {
+        gateway: "COD",
+        methodName: "Cash on Delivery",
+        methodCode: "COD",
+        status: String(order.payment_status),
+        amount: Number(order.totalAmount),
+        currency: "INR",
+        transactionId: null,
+        gatewayOrderId: null,
+        paidAt: null,
+        isCod: true,
+      }
+    : null;
+
   return {
     id: order.uuid || String(order.id),
     orderNumber: order.orderNumber,
     customer,
     status: order.order_status,
     paymentStatus: order.payment_status,
+    isCod,
+    paymentMethod,
+    paymentDetails,
     subtotal: Number(order.subtotal),
     discountAmount: Number(order.discountAmount),
     taxAmount: Number(order.taxAmount),
@@ -389,7 +563,8 @@ export function formatOrderListItem(
       ? {
           id: (order as any).return_requests[0].uuid || String((order as any).return_requests[0].id),
           status: (order as any).return_requests[0].status,
-          reason: (order as any).return_requests[0].reason ?? null,
+          reason: cleanReasonText((order as any).return_requests[0].reason) ?? null,
+          payoutDetails: parsePayoutDetailsFromReason((order as any).return_requests[0].reason),
           returnAwb: (order as any).return_requests[0].return_awb_code ?? null,
           labelUrl: (order as any).return_requests[0].return_label_url ?? null,
           courierName: (order as any).return_requests[0].courier_partner_name ?? null,
@@ -568,13 +743,19 @@ export const orderRepository = {
       });
 
       // 4. Create Status History
+      const isCod =
+        params.paymentMethod === "COD" ||
+        params.paymentMethod === "CASH_ON_DELIVERY";
+
       await tx.order_status_history.create({
         data: {
           order_id: createdOrder.id,
           status: (params.orderStatus ?? "pending") as any,
           note:
             params.notes ||
-            (params.paymentStatus === "paid"
+            (isCod
+              ? "Order placed with Cash on Delivery (COD) via Shiprocket Express"
+              : params.paymentStatus === "paid"
               ? `Order confirmed with payment via ${params.paymentMethod ?? "CARD"}`
               : "Order placed by customer"),
           changed_by: params.userId,
@@ -583,6 +764,36 @@ export const orderRepository = {
           updated_by: params.userId,
         },
       });
+
+      // 4a. Create Payment Record for COD orders
+      if (isCod) {
+        let codMethod = await tx.payment_methods.findUnique({
+          where: { code: "COD" },
+        });
+        if (!codMethod) {
+          codMethod = await tx.payment_methods.create({
+            data: {
+              name: "Cash on Delivery",
+              code: "COD",
+              is_active: true,
+            },
+          });
+        }
+
+        await tx.payment.create({
+          data: {
+            orderId: createdOrder.id,
+            payment_method_id: codMethod.id,
+            amount: params.totalAmount,
+            currency: "INR",
+            status: "pending",
+            gateway: "COD",
+            gateway_order_id: `COD_${createdOrder.orderNumber}`,
+            created_by: params.userId,
+            updated_by: params.userId,
+          },
+        });
+      }
 
       // 4b. Create Initial Shipment Record with Selected Courier Partner
       let partnerCode = "ST_COURIER";
@@ -599,6 +810,13 @@ export const orderRepository = {
         where: {
           OR: [
             { code: partnerCode },
+            ...(params.courierType === "shiprocket"
+              ? [
+                  { code: "SHIPROCKET_MOCK" },
+                  { courier_type: "shiprocket_mock" },
+                  { name: { contains: "Shiprocket" } },
+                ]
+              : []),
             { courier_type: params.courierType || "st_courier" },
           ],
           is_active: true,
@@ -1228,69 +1446,8 @@ export const orderRepository = {
         },
       });
 
-      // Return stock to available (items physically come back)
-      const orderItems = await tx.orderItem.findMany({
-        where: { orderId: params.orderId, is_active: true },
-        select: { variantUnitPriceId: true, quantity: true },
-      });
-
-      for (const item of orderItems) {
-        if (!item.variantUnitPriceId) continue;
-        const vupId = BigInt(item.variantUnitPriceId);
-
-        const inv = await tx.inventory.findFirst({
-          where: { variantUnitPriceId: vupId, is_active: true },
-        });
-        if (!inv) continue;
-
-        // At return time the order was already delivered: quantity_reserved was
-        // zeroed at delivery. We just add back to quantity_available.
-        const available = Number(inv.quantity_available) + item.quantity;
-
-        await tx.inventory.update({
-          where: { id: BigInt(inv.id) },
-          data: {
-            quantity_available: available,
-            updated_by: params.changedBy,
-          },
-        });
-
-        await tx.inventoryTransaction.create({
-          data: {
-            variant_unit_price_id: vupId,
-            type: "in" as any,
-            quantity: item.quantity,
-            note: `RETURN: stock restored`,
-            created_by: params.changedBy,
-            updated_by: params.changedBy,
-          },
-        });
-      }
-
-      // Sync out_of_stock flags
-      const uniqueVupIds = [
-        ...new Set(
-          orderItems
-            .filter((i) => i.variantUnitPriceId != null)
-            .map((i) => BigInt(i.variantUnitPriceId!))
-        ),
-      ];
-      for (const vupId of uniqueVupIds) {
-        const vup = await tx.variantUnitPrice.findFirst({
-          where: { id: vupId, deleted_at: null },
-          select: { variant_id: true },
-        });
-        if (!vup) continue;
-        const unitPrices = await tx.variantUnitPrice.findMany({
-          where: { variant_id: vup.variant_id, deleted_at: null },
-          include: { inventories: { select: { quantity_available: true } } },
-        });
-        const hasStock = unitPrices.some((up) => up.inventories && up.inventories.quantity_available > 0);
-        await tx.productVariant.updateMany({
-          where: { id: vup.variant_id },
-          data: { out_of_stock: !hasStock },
-        });
-      }
+      // Returned products are NOT automatically added to inventory.
+      // Admin will manually inspect and adjust stock via the Inventory module if needed.
 
       const updated = await tx.order.findUniqueOrThrow({
         where: { id: params.orderId },
@@ -1310,20 +1467,106 @@ export const orderRepository = {
     return db.$transaction(async (tx) => {
       const now = new Date();
 
+      const existingOrder = await tx.order.findUnique({
+        where: { id: params.orderId },
+        select: {
+          id: true,
+          payment_status: true,
+          totalAmount: true,
+          notes: true,
+          payments: {
+            where: { is_active: true },
+            select: { id: true, status: true, gateway: true },
+          },
+          order_status_history: {
+            select: { note: true },
+          },
+        },
+      });
+
+      const isDelivered = params.status === "delivered";
+      const isCod = Boolean(
+        existingOrder?.payments?.some(
+          (p: any) => p.gateway?.toUpperCase() === "COD"
+        ) ||
+          (existingOrder?.notes && existingOrder.notes.toLowerCase().includes("cod")) ||
+          existingOrder?.order_status_history?.some(
+            (h: any) =>
+              (h.note || "").toLowerCase().includes("cash on delivery") ||
+              (h.note || "").toLowerCase().includes("(cod)")
+          )
+      );
+
+      // When marking order as delivered: if it is COD or payment is pending,
+      // update payment_status to 'paid' so COD lifecycle and returns can proceed.
+      const shouldMarkPaymentPaid =
+        isDelivered && (isCod || existingOrder?.payment_status === "pending");
+
       await tx.order.update({
         where: { id: params.orderId },
         data: {
           order_status: params.status as any,
+          ...(shouldMarkPaymentPaid ? { payment_status: "paid" } : {}),
           updatedAt: now,
           updated_by: params.changedBy,
         },
       });
 
+      if (shouldMarkPaymentPaid) {
+        // 1. Update any pending payment records for this order to "success"
+        const updateResult = await tx.payment.updateMany({
+          where: {
+            orderId: params.orderId,
+            status: "pending",
+            is_active: true,
+          },
+          data: {
+            status: "success",
+            updatedAt: now,
+            updated_by: params.changedBy,
+          },
+        });
+
+        // 2. If no payment record existed, create one for COD
+        if (updateResult.count === 0 && (!existingOrder?.payments || existingOrder.payments.length === 0)) {
+          const codMethod = await tx.payment_methods.findFirst({
+            where: {
+              OR: [
+                { code: "COD" },
+                { code: "cod" },
+                { name: { contains: "Cash on Delivery" } },
+              ],
+              is_active: true,
+            },
+          });
+
+          if (codMethod && existingOrder) {
+            await tx.payment.create({
+              data: {
+                orderId: params.orderId,
+                payment_method_id: codMethod.id,
+                amount: existingOrder.totalAmount,
+                currency: "INR",
+                status: "success",
+                gateway: "COD",
+                created_by: params.changedBy,
+                updated_by: params.changedBy,
+                is_active: true,
+              },
+            });
+          }
+        }
+      }
+
+      const historyNote = shouldMarkPaymentPaid
+        ? `${params.note || "Order marked as delivered by admin"} (Payment status updated to Paid)`
+        : params.note || null;
+
       await tx.order_status_history.create({
         data: {
           order_id: params.orderId,
           status: params.status,
-          note: params.note || null,
+          note: historyNote,
           changed_by: params.changedBy,
           is_active: true,
           created_by: params.changedBy,

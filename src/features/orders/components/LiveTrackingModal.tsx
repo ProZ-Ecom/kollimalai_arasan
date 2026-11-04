@@ -51,9 +51,14 @@ export function LiveTrackingModal({
           : lower.includes("mss") || lower.includes("mettur")
           ? "mss"
           : "st-courier";
-      const res = await fetch(
-        `/api/orders/track?awb=${encodeURIComponent(awbNumber)}&courier=${courierParam}`
-      );
+      const queryParams = new URLSearchParams({
+        awb: awbNumber,
+        courier: courierParam,
+      });
+      if (orderNumber) {
+        queryParams.set("orderNumber", orderNumber);
+      }
+      const res = await fetch(`/api/orders/track?${queryParams.toString()}`);
       const json: TrackingResult = await res.json();
 
       if (!json.success && json.error) {
@@ -106,6 +111,11 @@ export function LiveTrackingModal({
                 {orderNumber && (
                   <span className="text-xs text-secondary-200 font-mono">
                     Order {orderNumber}
+                  </span>
+                )}
+                {(data as any)?.shiprocketShipmentId && (
+                  <span className="text-[11px] text-emerald-300 font-mono bg-emerald-950/60 border border-emerald-700/60 px-2 py-0.5 rounded-md">
+                    Shipment #{(data as any).shiprocketShipmentId}
                   </span>
                 )}
               </div>

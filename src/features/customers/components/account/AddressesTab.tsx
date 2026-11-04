@@ -14,6 +14,7 @@ import {
 } from "../../validations/customer-address.schema";
 import type { CustomerAddressResponse } from "../../types/customer-address.types";
 import { CustomDropdown } from "./CustomDropdown";
+import { Select } from "@/components/ui/select";
 import { usePincodeLookup } from "../../hooks/use-pincode-lookup";
 import { CheckCircle2, Loader2, Lock } from "lucide-react";
 
@@ -675,19 +676,17 @@ export function AddressesTab() {
                 <label className="text-[11px] font-semibold text-theme-text-secondary">
                   Select Post Office / Locality ({pincodePostalData.postOffices.length} found in India Post)
                 </label>
-                <select
+                <Select
                   disabled={isSubmitting}
                   value={formData.addressLine2}
-                  onChange={(e) => handleFieldChange("addressLine2", e.target.value)}
-                  className="w-full border border-theme-border-input rounded-lg px-3.5 py-2.5 text-xs text-theme-text-primary bg-white focus:border-theme-primary transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <option value="">-- Choose your nearest Post Office / Area --</option>
-                  {pincodePostalData.postOffices.map((po) => (
-                    <option key={po.name} value={po.name}>
-                      {po.name} ({po.branchType} • {po.deliveryStatus})
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={(val) => handleFieldChange("addressLine2", val)}
+                  placeholder="-- Choose your nearest Post Office / Area --"
+                  options={pincodePostalData.postOffices.map((po) => ({
+                    value: po.name,
+                    label: `${po.name} (${po.branchType} • ${po.deliveryStatus})`,
+                  }))}
+                  size="sm"
+                />
                 <span className="text-[10px] text-theme-text-muted">
                   Auto-fills your locality for faster, accurate postal delivery.
                 </span>

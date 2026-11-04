@@ -33,6 +33,18 @@ export const invoiceRepository = {
           where: { is_active: true },
           orderBy: { id: "asc" },
           include: {
+            variant_unit_price: {
+              select: {
+                unit_value: true,
+                weight_kg: true,
+                product_units: {
+                  select: {
+                    name: true,
+                    code: true,
+                  },
+                },
+              },
+            },
             product: {
               select: {
                 name: true,
@@ -70,7 +82,7 @@ export const invoiceRepository = {
   async allocateInvoiceNumberForOrder(
     orderId: bigint,
     issueDate: Date = new Date(),
-    prefix = "WEB"
+    prefix: string
   ): Promise<{ invoiceNumber: string; invoiceDate: Date }> {
     return db.$transaction(async (tx) => {
       // 1. Re-check order with fresh read inside transaction to prevent concurrent duplicate allocation

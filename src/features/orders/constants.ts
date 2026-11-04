@@ -24,6 +24,6 @@ export const PAYMENT_METHOD_OPTIONS: {
   {
     value: "CASH_ON_DELIVERY",
     label: "Cash on Delivery (COD)",
-    description: "Pay in cash when your order arrives at your doorstep",
+    description: "Pay in cash when your order arrives at your doorstep (Delivered exclusively via Shiprocket Express)",
   },
 ];

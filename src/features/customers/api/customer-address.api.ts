@@ -82,7 +82,11 @@ export const customerAddressApi = {
 
     const json = await res.json();
     if (!res.ok) {
-      throw new Error(json.message || "Failed to delete address");
+      const errorMsg =
+        json.errors && json.errors.length > 0
+          ? json.errors.join(", ")
+          : json.message || "Failed to delete address";
+      throw new Error(errorMsg);
     }
 
     return { success: true };

@@ -13,6 +13,7 @@ import {
   CreditCard,
   Sparkles,
   Phone,
+  Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatPrice } from "@/lib/utils";
@@ -120,9 +121,15 @@ function SuccessContent() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted block mb-1">
                 Payment Status
               </span>
-              <span className="inline-flex items-center rounded-md bg-emerald-100 text-emerald-800 px-2 py-0.5 text-xs font-bold">
-                {order?.paymentStatus ? order.paymentStatus.toUpperCase() : "PAID"}
-              </span>
+              {order?.paymentStatus?.toLowerCase() === "pending" ? (
+                <span className="inline-flex items-center rounded-md bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 text-xs font-bold">
+                  PAY ON DELIVERY (PENDING)
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-md bg-emerald-100 text-emerald-800 px-2 py-0.5 text-xs font-bold">
+                  {order?.paymentStatus ? order.paymentStatus.toUpperCase() : "PAID"}
+                </span>
+              )}
             </div>
 
             <div className="col-span-2 sm:col-span-1">
@@ -134,6 +141,19 @@ function SuccessContent() {
               </span>
             </div>
           </div>
+
+          {/* COD Notice if Cash on Delivery */}
+          {order?.paymentStatus?.toLowerCase() === "pending" && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 text-xs text-amber-950 flex items-start gap-2.5">
+              <Banknote className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-amber-900">Cash on Delivery with Shiprocket Express</p>
+                <p className="text-amber-800 text-[11px] mt-0.5">
+                  Please keep exact cash or UPI ready at the time of delivery. The Shiprocket courier executive will collect payment at your doorstep.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Delivery Address Snapshot */}
           {order?.shippingAddress && (
@@ -210,7 +230,7 @@ function SuccessContent() {
                 </span>
               </div>
               <div className="border-t border-theme-border-subtle pt-2 flex justify-between items-baseline text-sm font-bold text-theme-text-primary">
-                <span>Total Paid</span>
+                <span>{order.paymentStatus?.toLowerCase() === "pending" ? "Total Payable (COD)" : "Total Paid"}</span>
                 <span className="text-lg font-extrabold text-theme-primary">
                   {formatPrice(order.totalAmount)}
                 </span>

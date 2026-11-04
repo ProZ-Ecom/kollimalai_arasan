@@ -1,4 +1,3 @@
-import "server-only";
 import { checkShiprocketServiceability } from "@/lib/shiprocket";
 import {
   calculateShippingCharge,
@@ -12,7 +11,8 @@ import {
 export async function calculateShippingChargeAsync(
   courierType: "st_courier" | "mss" | "shiprocket" = "st_courier",
   totalWeightKg: number = 0.5,
-  deliveryPostcode?: string
+  deliveryPostcode?: string,
+  isCod?: boolean
 ): Promise<ShippingCalculationResult> {
   const safeWeight = Math.max(0.01, Number(totalWeightKg) || 0.5);
 
@@ -25,6 +25,7 @@ export async function calculateShippingChargeAsync(
       const serviceability = await checkShiprocketServiceability({
         deliveryPostcode: deliveryPostcode.trim(),
         weightKg: safeWeight,
+        isCod,
       });
 
       if (serviceability.isServiceable && serviceability.recommendedCourier?.rate) {

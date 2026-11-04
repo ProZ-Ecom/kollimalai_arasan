@@ -39,9 +39,9 @@ import {
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
-import { signOut, useSession } from "next-auth/react";
-import { logoutApi } from "@/features/auth/api/auth.api";
+import { useSession } from "next-auth/react";
 import { Drawer } from "@/components/common/drawer";
+import { LogoutConfirmModal } from "@/components/common/LogoutConfirmModal";
 
 interface SidebarItem {
   label: string;
@@ -122,17 +122,18 @@ const sidebarItems: SidebarItem[] = [
     ],
   },
   { label: "Reports", href: "/admin/dashboard/reports", icon: BarChart3 },
-  {
-    label: "WhatsApp",
-    href: "/admin/dashboard/whatsapp",
-    icon: MessageCircle,
-    children: [
-      { label: "Overview", href: "/admin/dashboard/whatsapp", icon: LayoutDashboard },
-      { label: "Campaigns", href: "/admin/dashboard/whatsapp/campaigns", icon: Megaphone },
-      { label: "Templates", href: "/admin/dashboard/whatsapp/templates", icon: Tag },
-      { label: "Reports", href: "/admin/dashboard/whatsapp/reports", icon: BarChart3 },
-    ],
-  },
+  // WhatsApp Module - Commented out for now; preserved for future updates
+  // {
+  //   label: "WhatsApp",
+  //   href: "/admin/dashboard/whatsapp",
+  //   icon: MessageCircle,
+  //   children: [
+  //     { label: "Overview", href: "/admin/dashboard/whatsapp", icon: LayoutDashboard },
+  //     { label: "Campaigns", href: "/admin/dashboard/whatsapp/campaigns", icon: Megaphone },
+  //     { label: "Templates", href: "/admin/dashboard/whatsapp/templates", icon: Tag },
+  //     { label: "Reports", href: "/admin/dashboard/whatsapp/reports", icon: BarChart3 },
+  //   ],
+  // },
   { label: "Settings", href: "/admin/dashboard/settings", icon: Settings },
   { label: "Trash", href: "/admin/dashboard/trash", icon: Trash2, section: "System" },
 ];
@@ -368,18 +369,10 @@ function SidebarNavigation({
 
 function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
   const { data: session } = useSession();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const name = session?.user?.name || "Admin";
   const role = (session?.user as { role?: string })?.role;
   const roleLabel = role ? role.charAt(0) + role.slice(1).toLowerCase() : "Administrator";
-
-  const handleLogout = async () => {
-    try {
-      await logoutApi();
-    } catch {
-      // ignore network errors on logout
-    }
-    await signOut({ callbackUrl: "/admin/login" });
-  };
 
   return (
     <div className="border-t border-neutral-300/70 p-3">
@@ -406,7 +399,7 @@ function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
         {!collapsed && "Visit Store"}
       </Link>
       <button
-        onClick={handleLogout}
+        onClick={() => setShowLogoutModal(true)}
         title={collapsed ? "Logout" : undefined}
         className={cn(
           "group flex w-full items-center gap-2.5 rounded-lg py-2 text-sm font-medium text-neutral-600 transition-all duration-200 cursor-pointer hover:bg-neutral-100 hover:text-secondary-600",
@@ -416,6 +409,13 @@ function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
         <LogOut className="h-4 w-4 flex-shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
         {!collapsed && "Logout"}
       </button>
+
+      {/* Confirmation modal before signing out */}
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        isAdmin
+      />
     </div>
   );
 }

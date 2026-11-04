@@ -32,6 +32,53 @@ function readBankDetails(): InvoiceBankDto | null {
   };
 }
 
+function formatItemWeight(item: any): string | null {
+  const vup = item.variant_unit_price;
+  if (!vup) {
+    // Graceful fallback for legacy records without variant_unit_price
+    const match = item.variant_snapshot?.match(/(\d+(?:\.\d+)?)\s*(kg|g|gm|gms|ml|l|ltr)\b/i);
+    if (match) {
+      const num = match[1];
+      const unit =
+        match[2].toLowerCase() === "kg"
+          ? "Kg"
+          : match[2].toLowerCase() === "gm" || match[2].toLowerCase() === "gms"
+          ? "g"
+          : match[2];
+      return `${num} ${unit}`;
+    }
+    return null;
+  }
+
+  const unitVal = Number(vup.unit_value);
+  const unitCode = vup.product_units?.code?.trim();
+  const unitName = vup.product_units?.name?.trim();
+
+  if (unitVal > 0 && (unitCode || unitName)) {
+    const rawUnit = unitCode || unitName;
+    const formattedUnit =
+      rawUnit.toLowerCase() === "kg" || rawUnit.toLowerCase() === "kilogram"
+        ? "Kg"
+        : rawUnit.toLowerCase() === "g" ||
+          rawUnit.toLowerCase() === "gram" ||
+          rawUnit.toLowerCase() === "grams"
+        ? "g"
+        : rawUnit;
+    return `${unitVal} ${formattedUnit}`;
+  }
+
+  const weightKg = Number(vup.weight_kg);
+  if (weightKg > 0) {
+    if (weightKg >= 1) {
+      return `${weightKg % 1 === 0 ? weightKg : weightKg.toFixed(2)} Kg`;
+    } else {
+      return `${Math.round(weightKg * 1000)} g`;
+    }
+  }
+
+  return null;
+}
+
 export const invoiceService = {
   /**
    * @param ownerUserId When given (a customer viewing their own invoice), the
@@ -73,10 +120,15 @@ export const invoiceService = {
         invoiceDate = orderDate;
       } else {
         // New order or series active: atomically allocate from official WEB/YY-YY/XXXX series
+        const prefix = process.env.INVOICE_SERIES_PREFIX?.trim();
+        if (!prefix) {
+          throw new Error("INVOICE_SERIES_PREFIX is not configured in .env");
+        }
         const issueDate = new Date();
         const allocated = await invoiceRepository.allocateInvoiceNumberForOrder(
           order.id,
-          issueDate
+          issueDate,
+          prefix
         );
         invoiceNumber = allocated.invoiceNumber;
         invoiceDate = allocated.invoiceDate;
@@ -158,6 +210,7 @@ export const invoiceService = {
       const sgstAmount = round2((taxableValue * sgstPercent) / 100);
       const igstAmount = round2((taxableValue * igstPercent) / 100);
       const quantity = item.quantity;
+      const weight = formatItemWeight(item);
 
       return {
         serial: index + 1,
@@ -165,6 +218,7 @@ export const invoiceService = {
           .filter(Boolean)
           .join(" - "),
         hsn: hsn?.code ?? null,
+        weight,
         quantity,
         per: "Nos",
         rate: quantity ? round2(taxableValue / quantity) : 0,

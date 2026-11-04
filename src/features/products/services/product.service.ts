@@ -162,10 +162,24 @@ export const productService = {
       throw ApiError.badRequest("Invalid or inactive category");
     }
 
-    // 2. Resolve & Validate Brand UUID
-    const brand = await brandRepository.findByUuid(data.brandId);
-    if (!brand || !brand.isActive) {
-      throw ApiError.badRequest("Invalid or inactive brand");
+    // 2. Resolve & Validate Brand UUID (optional, fallback to default store brand)
+    let resolvedBrandId: bigint | null = null;
+    if (data.brandId) {
+      const brand = await brandRepository.findByUuid(data.brandId);
+      if (!brand || !brand.isActive) {
+        throw ApiError.badRequest("Invalid or inactive brand");
+      }
+      resolvedBrandId = brand.id;
+    } else {
+      const defaultBrand =
+        (await brandRepository.findBySlug("kollimalai-arasan")) ??
+        (await db.productBrand.findFirst({
+          where: { isActive: true, deleted_at: null },
+          orderBy: { id: "asc" },
+        }));
+      if (defaultBrand) {
+        resolvedBrandId = defaultBrand.id;
+      }
     }
 
     // 3. Resolve & Validate HSN Code UUID (optional)
@@ -195,7 +209,7 @@ export const productService = {
     const created = await productRepository.create({
       uuid: crypto.randomUUID(),
       categoryId: category.id,
-      brandId: brand.id,
+      brandId: resolvedBrandId,
       hsn_code_id: resolvedHsnCodeId,
       name: formattedName,
       slug: data.slug, // Frontend-supplied slug preserved without modification
@@ -395,11 +409,15 @@ export const productService = {
 
     // Resolve Brand UUID if provided
     if (data.brandId !== undefined) {
-      const brand = await brandRepository.findByUuid(data.brandId);
-      if (!brand || !brand.isActive) {
-        throw ApiError.badRequest("Invalid or inactive brand");
+      if (data.brandId === null || data.brandId === "") {
+        updateData.brandId = null;
+      } else {
+        const brand = await brandRepository.findByUuid(data.brandId);
+        if (!brand || !brand.isActive) {
+          throw ApiError.badRequest("Invalid or inactive brand");
+        }
+        updateData.brandId = brand.id;
       }
-      updateData.brandId = brand.id;
     }
 
     // Resolve HSN Code UUID if provided

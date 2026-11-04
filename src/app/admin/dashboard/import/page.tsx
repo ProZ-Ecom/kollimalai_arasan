@@ -27,7 +27,7 @@ export default function BulkImportRedirectPage() {
     {
       title: "Products",
       description:
-        "Import master products in bulk. Validates product codes, category matching, brand matching, and HSN codes.",
+        "Import master products in bulk. Validates product codes, category matching, and HSN codes.",
       href: "/admin/dashboard/products",
       icon: Package,
       badge: "Module Import Available",

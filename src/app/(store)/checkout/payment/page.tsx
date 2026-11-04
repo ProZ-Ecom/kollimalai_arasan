@@ -26,6 +26,7 @@ import { useCheckoutSummary, usePlaceOrder } from "@/features/orders/hooks";
 import {
   useCreateRazorpayOrder,
   useVerifyRazorpayPayment,
+  useReconcileRazorpayPayment,
 } from "@/features/customers/hooks/use-customer-payment";
 import { loadRazorpayScript } from "@/features/customers/utils/razorpay-loader";
 import { OrderItemsList } from "@/features/orders/components/OrderItemsList";
@@ -45,8 +46,73 @@ export default function CheckoutPaymentPage() {
   const placeOrder = usePlaceOrder();
   const createRazorpayOrder = useCreateRazorpayOrder();
   const verifyRazorpayPayment = useVerifyRazorpayPayment();
+  const reconcileRazorpayPayment = useReconcileRazorpayPayment();
 
   const [isRazorpayLoading, setIsRazorpayLoading] = React.useState(false);
+  const [isReconciling, setIsReconciling] = React.useState(false);
+
+  // Warn user before refreshing during active payment processing
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isRazorpayLoading || isReconciling) {
+        e.preventDefault();
+        e.returnValue = "Payment is currently processing. Refreshing or leaving will interrupt your order confirmation.";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isRazorpayLoading, isReconciling]);
+
+  const hasAutoCheckedRef = React.useRef(false);
+
+  // Check and recover payment if user refreshed or disconnected
+  React.useEffect(() => {
+    let isMounted = true;
+    const attemptReconcile = async () => {
+      let pendingOrderId: string | undefined;
+      try {
+        const stored = sessionStorage.getItem("kollimalai_pending_rzp");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Date.now() - parsed.timestamp < 2 * 60 * 60 * 1000) {
+            pendingOrderId = parsed.razorpayOrderId;
+          } else {
+            sessionStorage.removeItem("kollimalai_pending_rzp");
+          }
+        }
+      } catch {}
+
+      if (!pendingOrderId) return;
+
+      try {
+        const res = await reconcileRazorpayPayment.mutateAsync({
+          razorpayOrderId: pendingOrderId,
+        });
+
+        if (!isMounted) return;
+
+        if (res && res.found && (res.success || res.alreadyProcessed) && res.orderNumber) {
+          try {
+            sessionStorage.removeItem("kollimalai_pending_rzp");
+          } catch {}
+          toast.success("Payment Received!", "Your payment was verified and order has been confirmed.");
+          checkout.resetCheckout();
+          router.push(`/checkout/success?orderNumber=${res.orderNumber}`);
+        }
+      } catch {
+        // Silently stay on page if no payment found
+      }
+    };
+
+    if (session?.user && !hasAutoCheckedRef.current) {
+      hasAutoCheckedRef.current = true;
+      attemptReconcile();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [session?.user]);
 
   const {
     data: summary,
@@ -90,6 +156,7 @@ export default function CheckoutPaymentPage() {
           addressId: checkout.addressId,
           shippingAddressId: String(checkout.addressId),
           deliveryMethod: checkout.deliveryMethod,
+          courierType: "shiprocket",
           couponCode: checkout.couponCode ?? undefined,
           paymentMethod: "CASH_ON_DELIVERY",
           notes: checkout.notes || undefined,
@@ -162,6 +229,10 @@ export default function CheckoutPaymentPage() {
               razorpay_signature: response.razorpay_signature,
             });
 
+            try {
+              sessionStorage.removeItem("kollimalai_pending_rzp");
+            } catch {}
+
             toast.success("Payment Successful", "Your order has been placed successfully!");
             checkout.resetCheckout();
             router.push(`/checkout/success?orderNumber=${verifyResult.orderNumber}`);
@@ -173,9 +244,23 @@ export default function CheckoutPaymentPage() {
         },
       };
 
+      try {
+        sessionStorage.setItem(
+          "kollimalai_pending_rzp",
+          JSON.stringify({
+            razorpayOrderId: rzpOrder.razorpayOrderId,
+            shippingAddressId: String(checkout.addressId),
+            timestamp: Date.now(),
+          })
+        );
+      } catch {}
+
       const razorpayInstance = new (window as any).Razorpay(options);
       razorpayInstance.on("payment.failed", function (response: any) {
         setIsRazorpayLoading(false);
+        try {
+          sessionStorage.removeItem("kollimalai_pending_rzp");
+        } catch {}
         toast.error("Payment Failed", response?.error?.description || "Transaction failed. Please try again.");
       });
       razorpayInstance.open();
@@ -187,6 +272,27 @@ export default function CheckoutPaymentPage() {
 
   return (
     <div>
+      {isRazorpayLoading && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center space-y-4 border border-zinc-200 dark:border-zinc-800 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-center">
+              <div className="h-14 w-14 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center">
+                <Loader2 className="h-7 w-7 text-emerald-600 animate-spin" />
+              </div>
+            </div>
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+              Verifying Your Payment
+            </h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              We are verifying your transaction with Razorpay and preparing your order receipt...
+            </p>
+            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-xs text-amber-900 dark:text-amber-200 font-medium">
+              ⚠️ Please do not refresh, go back, or close this window.
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Payment</h1>
         <Button variant="outline" onClick={() => router.push("/checkout")}>

@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: "Terms & Conditions | Kollimalai Arasan",
   description:
     "Read the terms and conditions governing the use of the Kollimalai Arasan website, product purchases, shipping, and return policies.",
+  alternates: {
+    canonical: "/terms-and-conditions",
+  },
 };
 
 export default function TermsAndConditionsPage() {

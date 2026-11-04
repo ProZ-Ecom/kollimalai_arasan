@@ -201,7 +201,7 @@ export function PincodeDeliveryChecker({
 
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 font-medium">
                   <RotateCcw className="h-3.5 w-3.5" />
-                  7-Day Replacement Guarantee
+                  7 Business Days Return Policy
                 </span>
               </div>
             </>
