@@ -13,7 +13,7 @@ export async function createReturnPickupViaShiprocket(
   returnRequestIdentifier: string
 ) {
   const adminUser = await userRepository.findById(adminSessionUserId);
-  const adminId = adminUser?.internalId ?? null;
+  const adminId = adminUser?.internalId ? BigInt(adminUser.internalId) : null;
 
   const isNumeric = /^\d+$/.test(returnRequestIdentifier);
   const returnReq = await db.return_requests.findFirst({
