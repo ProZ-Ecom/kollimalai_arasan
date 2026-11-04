@@ -89,12 +89,19 @@ export async function createReturnPickupViaShiprocket(
     customerAddress.full_name || order.user.name || "Customer";
   const customerPhone = customerAddress.phone || order.user.phone || "";
 
-  // 1. Create return order on Shiprocket
+  // 1. Create return order on Shiprocket (or reuse existing return shipment if already registered)
   const isProd = isProduction();
   const allowMockFallback = isShiprocketMockFallbackAllowed();
 
   let returnOrder: { order_id: number; shipment_id: number; status: string };
 
+  if (returnReq.return_shipment_id) {
+    returnOrder = {
+      order_id: Number(returnReq.return_shipment_id),
+      shipment_id: Number(returnReq.return_shipment_id),
+      status: "NEW",
+    };
+  } else {
   try {
     returnOrder = await createShiprocketReturnOrder({
       orderNumber: order.orderNumber,
@@ -128,6 +135,15 @@ export async function createReturnPickupViaShiprocket(
         `Failed to create reverse pickup order on Shiprocket: ${err.message}`
       );
     }
+  }
+
+  await db.return_requests.update({
+    where: { id: returnReq.id },
+    data: {
+      return_shipment_id: String(returnOrder.shipment_id),
+      updated_at: new Date(),
+    },
+  });
   }
 
   // 2. Assign Return AWB

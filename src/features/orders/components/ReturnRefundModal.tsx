@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Rocket,
   Loader2,
+  FlaskConical,
   ExternalLink,
   Video,
   Play,
@@ -59,6 +60,7 @@ interface ReturnRefundModalProps {
     } | null;
   } | null;
   onSuccess: () => void;
+  onProcessUpdate?: () => void;
 }
 
 const PRESET_PERCENTAGES = [
@@ -91,6 +93,7 @@ export function ReturnRefundModal({
   onClose,
   order,
   onSuccess,
+  onProcessUpdate,
 }: ReturnRefundModalProps) {
   // Detailed Return Request state fetched from backend
   const [returnDetail, setReturnDetail] = useState<ReturnRequestDetailResponse | null>(null);
@@ -98,6 +101,7 @@ export function ReturnRefundModal({
 
   // Shiprocket Doorstep Reverse Pickup state
   const [isBookingPickup, setIsBookingPickup] = useState(false);
+  const [isSimulatingDelivery, setIsSimulatingDelivery] = useState(false);
   const [pickupSuccess, setPickupSuccess] = useState<{
     returnAwb: string;
     courierName: string;
@@ -204,6 +208,7 @@ export function ReturnRefundModal({
       setVideoPlaybackError(false);
       setReviewSuccessMessage(null);
       setPickupError(null);
+      setIsSimulatingDelivery(false);
 
       const returnId = order.returnRequest?.id;
       if (returnId) {
@@ -226,6 +231,39 @@ export function ReturnRefundModal({
       }
     }
   }, [order, open]);
+
+  // Environment check: Only active in local development and testing environments
+  const isTestingEnv = useMemo(() => {
+    const env = (process.env.NEXT_PUBLIC_APP_ENV || "").toLowerCase().trim();
+    return env === "development" || env === "testing" || env === "staging" || process.env.NODE_ENV !== "production";
+  }, []);
+
+  // Handle Test Mode Simulate Delivery
+  const handleSimulateDelivery = async () => {
+    const returnId = returnDetail?.id || order?.returnRequest?.id;
+    if (!returnId) return;
+    setIsSimulatingDelivery(true);
+
+    try {
+      const res = await fetch(`/api/admin/returns/${returnId}/deliver`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || data.error?.message || "Failed to mark return as delivered");
+      }
+      toast.success(
+        "Return Parcel Delivered (Test Mode)",
+        "Status updated to delivered. Physical inspection review is now unlocked."
+      );
+      await fetchReturnDetails(returnId);
+      onProcessUpdate?.();
+    } catch (err: any) {
+      toast.error("Simulation Failed", err.message);
+    } finally {
+      setIsSimulatingDelivery(false);
+    }
+  };
 
   // Handle Shiprocket pickup booking
   const handleBookShiprocketPickup = async () => {
@@ -251,7 +289,7 @@ export function ReturnRefundModal({
       });
       toast.success("Reverse Pickup Booked", "Shiprocket doorstep pickup scheduled.");
       await fetchReturnDetails(returnId);
-      onSuccess();
+      onProcessUpdate?.();
     } catch (err: any) {
       setPickupError(err.message || "Failed to book reverse pickup with Shiprocket");
       toast.error("Pickup Booking Failed", err.message);
@@ -273,7 +311,7 @@ export function ReturnRefundModal({
       if (!res.ok) throw new Error(data.message || "Failed to approve return request");
       toast.success("Return Request Approved", "Request is approved. You can now schedule reverse pickup.");
       await fetchReturnDetails(returnId);
-      onSuccess();
+      onProcessUpdate?.();
     } catch (err: any) {
       toast.error("Approval Failed", err.message);
     }
@@ -338,7 +376,7 @@ export function ReturnRefundModal({
           : "Return inspection failed and marked rejected."
       );
       await fetchReturnDetails(returnId);
-      onSuccess();
+      onProcessUpdate?.();
     } catch (err: any) {
       toast.error("Review Failed", err.message);
     } finally {
@@ -895,6 +933,48 @@ export function ReturnRefundModal({
                 )}
               </Button>
             ) : null}
+
+            {/* TEST MODE ONLY: Simulate Courier Return Delivery to Warehouse */}
+            {isTestingEnv &&
+              (pickupSuccess || returnDetail.returnAwb || currentStatus === "approved" || currentStatus === "picked_up") &&
+              currentStatus !== "delivered" &&
+              !isRefunded &&
+              !isRejected && (
+                <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/90 p-3 space-y-2 mt-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1.5 font-bold text-amber-950">
+                      <FlaskConical className="h-4 w-4 text-amber-600 shrink-0" />
+                      Test Simulation: Courier Delivery to Warehouse
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200/80 text-amber-900 uppercase tracking-wide">
+                      Testing Mode Only
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    In live production, this status is automatically updated by the Shiprocket tracking webhook once the courier delivers the package to your warehouse. For testing, click below to mark the parcel as delivered and unlock physical inspection:
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-amber-300 bg-white hover:bg-amber-100/80 text-amber-950 font-bold text-xs h-8 rounded-lg flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                    onClick={handleSimulateDelivery}
+                    disabled={isSimulatingDelivery}
+                  >
+                    {isSimulatingDelivery ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Updating Status to Delivered...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                        Mark Return Parcel Delivered (Test Mode)
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
           </div>
         )}
 

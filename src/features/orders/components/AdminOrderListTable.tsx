@@ -1260,6 +1260,12 @@ export function AdminOrderListTable({
             refetchDetail();
           }
         }}
+        onProcessUpdate={() => {
+          refetch();
+          if (viewOrderId) {
+            refetchDetail();
+          }
+        }}
       />
 
       {/* Cancel Order Dialog */}

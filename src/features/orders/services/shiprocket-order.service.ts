@@ -177,7 +177,7 @@ export async function shipOrderViaShiprocket(
   const customerPhone = shippingAddress.phone || order.user.phone || "";
   const customerEmail = order.user.email || "";
 
-  // 1. Create order on Shiprocket
+  // 1. Create order on Shiprocket (or reuse existing shipment ID if order was already registered)
   const isProd = isProduction();
   const allowMockFallback = isShiprocketMockFallbackAllowed();
   let shiprocketOrder: {
@@ -189,6 +189,14 @@ export async function shipOrderViaShiprocket(
     courier_name?: string;
   };
 
+  if (activeShipment?.shiprocket_shipment_id) {
+    shiprocketOrder = {
+      order_id: Number(activeShipment.shiprocket_order_id) || Number(activeShipment.shiprocket_shipment_id),
+      shipment_id: Number(activeShipment.shiprocket_shipment_id),
+      awb_code: activeShipment.tracking_number || undefined,
+      courier_name: activeShipment.courier_partner_name || undefined,
+    };
+  } else {
   try {
     shiprocketOrder = await createShiprocketOrder({
       orderNumber: order.orderNumber,
@@ -226,6 +234,7 @@ export async function shipOrderViaShiprocket(
     } else {
       throw err;
     }
+  }
   }
 
   // 2. Assign AWB & Auto-Select Courier (calls Shiprocket API)

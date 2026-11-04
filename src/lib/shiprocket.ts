@@ -1,3 +1,5 @@
+import { isProduction } from "@/lib/env-config";
+
 /**
  * Shiprocket API Client & Service Layer
  * Handles authentication (with token caching), order creation, AWB generation,
@@ -159,6 +161,9 @@ function cleanBaseUrl(rawUrl: string): string {
 
 export function isShiprocketSandbox(): boolean {
   syncShiprocketEnv();
+  if (isProduction()) {
+    return false;
+  }
   return process.env.SHIPROCKET_TEST_MODE === "true";
 }
 
@@ -216,13 +221,14 @@ function syncShiprocketEnv() {
     const req = (globalThis as unknown as { __non_webpack_require__?: (mod: string) => any }).__non_webpack_require__ || eval("require");
     const fs = req("fs");
     const path = req("path");
-    const envPath = path.resolve(process.cwd(), ".env");
+    const envFileName = process.env.ENV_FILE || ".env";
+    const envPath = path.resolve(process.cwd(), envFileName);
     if (fs.existsSync(envPath)) {
       const content = fs.readFileSync(envPath, "utf-8");
       const dotenv = req("dotenv");
       const parsed = dotenv.parse(content);
       for (const [k, v] of Object.entries(parsed)) {
-        if (k.startsWith("SHIPROCKET_") || k === "APP_ENV") {
+        if ((k.startsWith("SHIPROCKET_") || k === "APP_ENV") && process.env[k] === undefined) {
           process.env[k] = String(v);
         }
       }
