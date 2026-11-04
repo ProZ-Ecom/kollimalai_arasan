@@ -146,6 +146,7 @@ export function AdminOrderListTable({
     orderNumber: string;
     customerName?: string;
     partnerCode?: string;
+    customerCourierName?: string;
     trackingNumber?: string;
     isCod?: boolean;
   } | null>(null);
@@ -547,33 +548,15 @@ export function AdminOrderListTable({
                       orderNumber: row.original.orderNumber,
                       customerName: row.original.customer?.name,
                       partnerCode: delivery?.deliveryPartner?.code || (row.original.isCod ? "SHIPROCKET" : undefined),
+                      customerCourierName: delivery?.deliveryPartner?.name || (row.original.isCod ? "Shiprocket Express (COD)" : "ST Courier"),
                       trackingNumber: delivery?.trackingNumber || "",
                       isCod: row.original.isCod,
                     })
                   }
-                  title={
-                    row.original.isCod
-                      ? "Ship via Shiprocket Express (Exclusive COD Partner)"
-                      : `Ship via ${delivery?.deliveryPartner?.name || "Courier"}`
-                  }
-                  className={cn(
-                    "text-[11px] font-semibold hover:underline cursor-pointer",
-                    row.original.isCod
-                      ? "text-emerald-700 font-bold"
-                      : delivery?.deliveryPartner?.code === "MSS"
-                      ? "text-blue-700 font-bold"
-                      : delivery?.deliveryPartner?.code?.toUpperCase().includes("SHIPROCKET")
-                      ? "text-emerald-700 font-bold"
-                      : "text-amber-700 font-bold"
-                  )}
+                  title="Ship via Courier Partner (ST Courier Default)"
+                  className="text-[11px] font-bold text-amber-700 hover:underline cursor-pointer"
                 >
-                  {row.original.isCod
-                    ? "Shiprocket (COD)"
-                    : delivery?.deliveryPartner?.code === "MSS"
-                    ? "MSS Cargo"
-                    : delivery?.deliveryPartner?.code?.toUpperCase().includes("SHIPROCKET")
-                    ? "Shiprocket"
-                    : "ST Courier"}
+                  ST Courier
                 </button>
               </div>
             )}
@@ -712,6 +695,7 @@ export function AdminOrderListTable({
                       orderNumber: row.original.orderNumber,
                       customerName: row.original.customer?.name,
                       partnerCode: row.original.delivery?.deliveryPartner?.code,
+                      customerCourierName: row.original.delivery?.deliveryPartner?.name || (row.original.isCod ? "Shiprocket Express (COD)" : "ST Courier"),
                       trackingNumber: row.original.delivery?.trackingNumber || "",
                       isCod: row.original.isCod,
                     })
@@ -1126,6 +1110,7 @@ export function AdminOrderListTable({
                           orderNumber: orderDetail.orderNumber,
                           customerName: orderDetail.customer?.name,
                           partnerCode: orderDetail.delivery?.deliveryPartner?.code,
+                          customerCourierName: orderDetail.delivery?.deliveryPartner?.name || (orderDetail.isCod ? "Shiprocket Express (COD)" : "ST Courier"),
                           trackingNumber: orderDetail.delivery?.trackingNumber || "",
                           isCod: orderDetail.isCod,
                         });
@@ -1227,6 +1212,7 @@ export function AdminOrderListTable({
         orderNumber={shipCourierOrder?.orderNumber}
         customerName={shipCourierOrder?.customerName}
         initialPartnerCode={shipCourierOrder?.partnerCode}
+        customerCourierName={shipCourierOrder?.customerCourierName}
         initialTrackingNumber={shipCourierOrder?.trackingNumber}
         isCod={shipCourierOrder?.isCod}
         onSuccess={() => {

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { FormModal } from "@/components/common/FormModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, type SelectOption } from "@/components/ui/select";
 import {
   useDeliveryPartners,
   useShipOrderCourier,
@@ -21,7 +22,6 @@ import {
   Rocket,
   Sparkles,
   Printer,
-  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +32,7 @@ interface ShipOrderModalProps {
   orderNumber?: string;
   customerName?: string;
   initialPartnerCode?: string;
+  customerCourierName?: string;
   initialTrackingNumber?: string;
   isCod?: boolean;
   onSuccess?: () => void;
@@ -44,6 +45,7 @@ export function ShipOrderModal({
   orderNumber,
   customerName,
   initialPartnerCode,
+  customerCourierName,
   initialTrackingNumber,
   isCod,
   onSuccess,
@@ -62,7 +64,33 @@ export function ShipOrderModal({
     labelUrl?: string | null;
   } | null>(null);
 
-  // Default to Shiprocket for COD, or ST Courier / existing courier for prepaid
+  // Compute customer's chosen courier from checkout
+  const customerChoice = useMemo(() => {
+    if (customerCourierName?.trim()) return customerCourierName.trim();
+    if (isCod) return "Shiprocket Express (COD)";
+    if (initialPartnerCode) {
+      const match = partners.find(
+        (p) =>
+          p.code?.toUpperCase() === initialPartnerCode.toUpperCase() ||
+          p.name?.toLowerCase().includes(initialPartnerCode.toLowerCase())
+      );
+      if (match) return match.name;
+      if (initialPartnerCode.toUpperCase().includes("SHIPROCKET")) return "Shiprocket Express";
+      if (initialPartnerCode.toUpperCase().includes("MSS")) return "Mettur Super Services (MSS)";
+      if (initialPartnerCode.toUpperCase().includes("ST")) return "ST Courier";
+      return initialPartnerCode;
+    }
+    return "ST Courier";
+  }, [customerCourierName, initialPartnerCode, isCod, partners]);
+
+  const partnerOptions = useMemo<SelectOption[]>(() => {
+    return partners.map((partner) => ({
+      value: String(partner.id),
+      label: `${partner.name} (${partner.code})`,
+    }));
+  }, [partners]);
+
+  // Default to ST Courier in the modal dropdown, or first available partner
   useEffect(() => {
     if (open) {
       if (initialTrackingNumber) {
@@ -76,72 +104,18 @@ export function ShipOrderModal({
       setShiprocketSuccess(null);
 
       if (partners.length > 0) {
-        const shiprocketPartner = partners.find(
-          (p) =>
-            p.code?.toUpperCase() === "SHIPROCKET" ||
-            p.code?.toUpperCase() === "SHIPROCKET_MOCK" ||
-            p.name.toLowerCase().includes("shiprocket")
-        );
-        const mssPartner = partners.find(
-          (p) =>
-            p.code?.toUpperCase() === "MSS" ||
-            p.name.toLowerCase().includes("mettur") ||
-            p.name.toLowerCase().includes("mss")
-        );
         const stPartner = partners.find(
           (p) =>
             p.code === "ST_COURIER" ||
             p.name.toLowerCase().includes("st courier")
         );
-
-        let targetPartner = null;
-        if (isCod) {
-          targetPartner = shiprocketPartner;
-        } else if (initialPartnerCode) {
-          const codeUpper = initialPartnerCode.toUpperCase();
-          if (codeUpper.includes("SHIPROCKET")) {
-            targetPartner = shiprocketPartner;
-          } else if (codeUpper.includes("MSS")) {
-            targetPartner = mssPartner;
-          } else if (codeUpper.includes("ST_COURIER") || codeUpper === "ST") {
-            targetPartner = stPartner;
-          } else {
-            targetPartner = partners.find(
-              (p) =>
-                p.code?.toLowerCase() === initialPartnerCode.toLowerCase() ||
-                p.name?.toLowerCase().includes(initialPartnerCode.toLowerCase())
-            );
-          }
-        }
-
-        if (!targetPartner) {
-          targetPartner = stPartner || partners[0];
-        }
-
+        const targetPartner = stPartner || partners[0];
         if (targetPartner) {
           setSelectedPartnerId(String(targetPartner.id));
         }
       }
     }
-  }, [open, partners, initialPartnerCode, initialTrackingNumber, isCod]);
-
-  // Keep partner locked to Shiprocket if order is COD
-  useEffect(() => {
-    if (isCod && partners.length > 0) {
-      const shiprocketPartner = partners.find(
-        (p) =>
-          p.code?.toUpperCase() === "SHIPROCKET" ||
-          p.code?.toUpperCase() === "SHIPROCKET_MOCK" ||
-          p.name.toLowerCase().includes("shiprocket")
-      );
-      if (
-        shiprocketPartner &&
-        String(selectedPartnerId) !== String(shiprocketPartner.id)
-      ) {
-        setSelectedPartnerId(String(shiprocketPartner.id));
-      }
-    }
-  }, [isCod, partners, selectedPartnerId]);
+  }, [open, partners, initialTrackingNumber]);
 
   const activePartner = useMemo(() => {
     return partners.find((p) => String(p.id) === String(selectedPartnerId));
@@ -150,20 +124,17 @@ export function ShipOrderModal({
   const isShiprocket = useMemo(() => {
     return Boolean(
       activePartner?.code?.toUpperCase().includes("SHIPROCKET") ||
-      activePartner?.name?.toLowerCase().includes("shiprocket") ||
-      initialPartnerCode?.toUpperCase().includes("SHIPROCKET") ||
-      isCod
+      activePartner?.name?.toLowerCase().includes("shiprocket")
     );
-  }, [activePartner, initialPartnerCode, isCod]);
+  }, [activePartner]);
 
   const isMss = useMemo(() => {
     return Boolean(
       activePartner?.code?.toUpperCase() === "MSS" ||
       activePartner?.name?.toLowerCase().includes("mettur") ||
-      activePartner?.name?.toLowerCase().includes("mss") ||
-      initialPartnerCode?.toUpperCase().includes("MSS")
+      activePartner?.name?.toLowerCase().includes("mss")
     );
-  }, [activePartner, initialPartnerCode]);
+  }, [activePartner]);
 
   const handleClose = () => {
     setTrackingNumber("");
@@ -212,16 +183,13 @@ export function ShipOrderModal({
       return;
     }
 
-    if (isCod && !isShiprocket) {
-      setValidationError(
-        "This order was placed with Cash on Delivery (COD). COD orders must be assigned to Shiprocket Express."
-      );
-      return;
-    }
-
     const trimmedAwb = trackingNumber.trim();
-    if (!trimmedAwb || trimmedAwb.length < 3) {
-      setValidationError("Please enter a valid AWB / Tracking number (min 3 digits)");
+    if (!trimmedAwb) {
+      setValidationError(
+        isMss
+          ? "Please enter the MSS LR / Waybill number"
+          : "Please enter the ST Courier tracking / AWB number"
+      );
       return;
     }
 
@@ -337,7 +305,7 @@ export function ShipOrderModal({
           {!isShiprocket && (
             <Button
               type="button"
-              className="bg-secondary-600 hover:bg-secondary-700 text-white flex items-center gap-2 h-9 sm:h-10 px-5 sm:px-6 text-xs sm:text-sm font-semibold shadow-xs"
+              className="bg-secondary-600 hover:bg-secondary-700 text-white flex items-center gap-2 h-9 sm:h-10 px-5 sm:px-6 text-xs sm:text-sm font-semibold shadow-xs cursor-pointer"
               onClick={handleShip}
               disabled={shipMutation.isPending}
             >
@@ -375,80 +343,54 @@ export function ShipOrderModal({
           </div>
         )}
 
+        {/* Customer Choice Banner at Top */}
+        <div className="p-3 bg-secondary-50/70 border border-secondary-200 rounded-xl flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Truck className="h-4 w-4 text-secondary-600 shrink-0" />
+            <span className="text-xs text-neutral-600 font-medium">Customer&apos;s Chosen Courier:</span>
+            <span className="text-xs font-bold text-neutral-900 bg-white border border-neutral-200 px-2.5 py-0.5 rounded-md shadow-xs">
+              {customerChoice}
+            </span>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-secondary-800 bg-white border border-secondary-300 px-2 py-0.5 rounded-full shadow-xs">
+            Customer Choice
+          </span>
+        </div>
+
         {/* COD Notice Banner */}
         {isCod && (
           <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-start gap-2.5">
             <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
             <div className="leading-relaxed">
-              <span className="font-bold">Cash on Delivery (COD) Order:</span> This customer selected Cash on Delivery. ST Courier and MSS Cargo do not support Cash on Delivery. The courier service is restricted exclusively to <strong>Shiprocket Express</strong>.
+              <span className="font-bold">Cash on Delivery (COD) Order:</span> Customer chose Cash on Delivery. For automated door collection and label generation, Shiprocket is recommended. You can also select another courier if managing cash collection manually.
             </div>
           </div>
         )}
 
-        {/* Courier Service Partner (Locked to Customer's Selection) */}
-        <div className="space-y-2">
+        {/* Courier Service Partner Dropdown */}
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider">
-              Courier Service Partner <span className="text-neutral-400 font-normal text-[11px] lowercase">(locked to order)</span>
+              Select Courier Partner
             </label>
-            {isCod ? (
-              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full shrink-0">
-                Shiprocket Only (COD)
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-secondary-800 bg-secondary-50 border border-secondary-200 px-2.5 py-0.5 rounded-full shrink-0">
-                <Lock className="h-3 w-3 text-secondary-600" />
-                Customer Choice
-              </span>
-            )}
+            <span className="text-[11px] text-neutral-500 font-medium">
+              Choose courier to dispatch order
+            </span>
           </div>
           {partnersLoading ? (
-            <div className="h-14 w-full bg-neutral-100 rounded-xl animate-pulse" />
+            <div className="h-10 w-full bg-neutral-100 rounded-xl animate-pulse" />
           ) : (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/80">
-              <div className="flex items-start sm:items-center gap-3 min-w-0">
-                <div
-                  className={cn(
-                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-xs border mt-0.5 sm:mt-0",
-                    isShiprocket
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-600"
-                      : isMss
-                      ? "bg-blue-50 border-blue-200 text-blue-600"
-                      : "bg-amber-50 border-amber-200 text-secondary-600"
-                  )}
-                >
-                  {isShiprocket ? (
-                    <Rocket className="h-5 w-5" />
-                  ) : (
-                    <Truck className="h-5 w-5" />
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-bold text-xs sm:text-sm text-neutral-900 flex items-center gap-1.5 flex-wrap">
-                    <span>
-                      {activePartner?.name || (isShiprocket ? "Shiprocket Express" : isMss ? "Mettur Super Services (MSS)" : "ST Courier")}
-                    </span>
-                    <span className="text-[10px] font-semibold text-neutral-500 bg-white border border-neutral-200 px-1.5 py-0.5 rounded font-mono shrink-0">
-                      {activePartner?.code || (isShiprocket ? "SHIPROCKET" : isMss ? "MSS" : "ST_COURIER")}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-neutral-500 mt-0.5 leading-relaxed">
-                    {isShiprocket
-                      ? "Order will be dispatched using Shiprocket Multi-Carrier API."
-                      : isMss
-                      ? "Dispatched via Mettur Super Services (MSS) parcel branch."
-                      : "Dispatched via ST Courier South Express delivery."}
-                  </p>
-                </div>
-              </div>
-              <span className="self-start sm:self-center text-[10px] font-semibold text-neutral-500 bg-white border border-neutral-200 px-2 py-1 rounded-md shrink-0">
-                Authoritative Courier
-              </span>
-            </div>
+            <Select
+              value={selectedPartnerId}
+              onValueChange={(val) => setSelectedPartnerId(val)}
+              options={partnerOptions}
+              placeholder="-- Choose a courier partner --"
+              size="md"
+            />
           )}
         </div>
 
-        {/* Special 1-Click Shiprocket Banner */}
+        {/* Special 1-Click Shiprocket Banner (shown when Shiprocket is selected in dropdown) */}
         {isShiprocket ? (
           <div className="rounded-xl sm:rounded-2xl border-2 border-primary-200 bg-gradient-to-br from-primary-50/80 to-amber-50/50 p-3.5 sm:p-4 space-y-3 sm:space-y-3.5">
             <div className="flex items-start gap-3">

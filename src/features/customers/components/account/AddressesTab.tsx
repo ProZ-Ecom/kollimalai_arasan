@@ -683,7 +683,7 @@ export function AddressesTab() {
                   placeholder="-- Choose your nearest Post Office / Area --"
                   options={pincodePostalData.postOffices.map((po) => ({
                     value: po.name,
-                    label: `${po.name} (${po.branchType} • ${po.deliveryStatus})`,
+                    label: po.name,
                   }))}
                   size="sm"
                 />

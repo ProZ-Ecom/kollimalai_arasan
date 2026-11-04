@@ -525,7 +525,7 @@ export const returnRepository = {
     note?: string;
     gatewayRefundId?: string;
     isPrepaidGateway: boolean;
-
+    isFullRefund?: boolean;
     isSimulated?: boolean;
   }) {
     const now = new Date();
@@ -649,7 +649,10 @@ export const returnRepository = {
         0
       );
 
-      const isFullyRefunded = totalRefundedSum >= totalOrderAmount - 0.01;
+      const isFullyRefunded =
+        params.isFullRefund !== undefined
+          ? params.isFullRefund
+          : totalRefundedSum >= totalOrderAmount - 0.01;
 
       // 8. Update payment and order status
       await tx.payment.update({

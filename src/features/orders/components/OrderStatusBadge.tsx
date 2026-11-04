@@ -29,13 +29,14 @@ export const PAYMENT_STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
   paid: "Paid",
   failed: "Failed",
-  refunded: "Refunded",
-  partial_refund: "Partial Refund",
+  refunded: "Fully Refunded",
+  partial_refund: "Partially Refunded",
   PENDING: "Pending",
   PAID: "Paid",
   COMPLETED: "Completed",
   FAILED: "Failed",
-  REFUNDED: "Refunded",
+  REFUNDED: "Fully Refunded",
+  PARTIAL_REFUND: "Partially Refunded",
   CANCELLED: "Cancelled",
 };
 
@@ -71,6 +72,7 @@ const PAYMENT_STATUS_VARIANTS: Record<string, BadgeProps["variant"]> = {
   COMPLETED: "success",
   FAILED: "destructive",
   REFUNDED: "secondary",
+  PARTIAL_REFUND: "warning",
   CANCELLED: "destructive",
 };
 
