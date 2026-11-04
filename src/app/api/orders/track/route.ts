@@ -109,11 +109,30 @@ export async function GET(request: NextRequest) {
       orderBy: { id: "desc" },
     });
 
+    const returnReq = await db.return_requests.findFirst({
+      where: {
+        is_active: true,
+        OR: [
+          ...(effectiveAwb
+            ? [
+                { return_awb_code: effectiveAwb },
+                { return_shipment_id: effectiveAwb },
+              ]
+            : []),
+        ],
+      },
+      include: { orders: true },
+      orderBy: { id: "desc" },
+    });
+
     const isShiprocket =
       courier === "shiprocket" ||
       courier.includes("shiprocket") ||
       effectiveAwb.startsWith("TEST-SR") ||
       effectiveAwb.startsWith("SR-") ||
+      effectiveAwb.startsWith("TEST-RET") ||
+      Boolean(returnReq?.return_awb_code) ||
+      Boolean(returnReq?.return_shipment_id) ||
       Boolean(shipment?.shiprocket_shipment_id) ||
       Boolean(shipment?.shiprocket_order_id) ||
       shipment?.delivery_partners?.code === "SHIPROCKET" ||
@@ -123,13 +142,14 @@ export async function GET(request: NextRequest) {
     if (isShiprocket) {
       const { getShiprocketShipmentTracking } = await import("@/lib/shiprocket");
       const result = await getShiprocketShipmentTracking({
-        awb: effectiveAwb || shipment?.tracking_number || undefined,
+        awb: effectiveAwb || shipment?.tracking_number || returnReq?.return_awb_code || undefined,
         shipmentId:
           shipment?.shiprocket_shipment_id ||
+          returnReq?.return_shipment_id ||
           (effectiveAwb && /^\d+$/.test(effectiveAwb) ? effectiveAwb : undefined),
         orderId: shipment?.shiprocket_order_id || undefined,
-        orderNumber: orderNumber || shipment?.orders?.orderNumber || undefined,
-        courierPartnerName: shipment?.courier_partner_name || undefined,
+        orderNumber: orderNumber || shipment?.orders?.orderNumber || returnReq?.orders?.orderNumber || undefined,
+        courierPartnerName: shipment?.courier_partner_name || returnReq?.courier_partner_name || undefined,
       });
 
       // Safe Development & Staging Simulation Check
@@ -376,6 +396,39 @@ export async function GET(request: NextRequest) {
             } catch (syncErr) {
               console.error("Shiprocket JIT out for delivery sync error:", syncErr);
             }
+          }
+        }
+      }
+
+      // Hybrid JIT (Just-in-Time) auto-sync for Shiprocket Returns:
+      // When live tracking succeeds for a return AWB, automatically update return_requests status
+      if (result.success && returnReq) {
+        const cleanStatus = (result.summary?.currentStatus || "").toUpperCase();
+        const isLiveDelivered = result.isDelivered || cleanStatus.includes("DELIVER");
+        const isLivePickedUp = cleanStatus.includes("PICKED") || cleanStatus.includes("TRANSIT");
+
+        if (
+          isLiveDelivered &&
+          returnReq.status !== "delivered" &&
+          returnReq.status !== "refunded" &&
+          returnReq.status !== "rejected"
+        ) {
+          try {
+            await db.return_requests.update({
+              where: { id: returnReq.id },
+              data: { status: "delivered", updated_at: new Date() },
+            });
+          } catch (retSyncErr) {
+            console.error("Shiprocket return JIT delivery auto-sync error:", retSyncErr);
+          }
+        } else if (isLivePickedUp && returnReq.status === "approved") {
+          try {
+            await db.return_requests.update({
+              where: { id: returnReq.id },
+              data: { status: "picked_up", updated_at: new Date() },
+            });
+          } catch (retSyncErr) {
+            console.error("Shiprocket return JIT pickup auto-sync error:", retSyncErr);
           }
         }
       }
