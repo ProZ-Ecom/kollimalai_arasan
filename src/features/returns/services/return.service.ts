@@ -709,7 +709,7 @@ export const returnService = {
     const maxRemainingRefundable = Math.max(0, orderTotal - existingRefundsSum);
 
     const refundAmount = input.amount
-      ? Math.min(input.amount, eligibleAmount)
+      ? Math.min(input.amount, maxRemainingRefundable)
       : Math.min(eligibleAmount, maxRemainingRefundable);
 
     if (refundAmount <= 0) {
@@ -722,6 +722,18 @@ export const returnService = {
           2
         )}.`
       );
+    }
+
+    // Determine if this is a full refund or partial refund
+    let isFullRefund = input.isFullRefund;
+    if (isFullRefund === undefined) {
+      if (input.amount) {
+        isFullRefund =
+          input.amount >= orderTotal - 0.01 ||
+          input.amount >= eligibleAmount - 0.01;
+      } else {
+        isFullRefund = true;
+      }
     }
 
     // 3. Detect payment method & COD vs Prepaid
@@ -892,7 +904,7 @@ export const returnService = {
       note: input.note,
       gatewayRefundId,
       isPrepaidGateway: !isManualRefund,
-
+      isFullRefund,
       isSimulated,
     });
 
