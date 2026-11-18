@@ -304,14 +304,14 @@ export function AdminOrderListTable({
               {row.original.returnRequest.status === "approved"
                 ? "Approved"
                 : row.original.returnRequest.status === "picked_up"
-                ? "Picked Up"
-                : row.original.returnRequest.status === "delivered"
-                ? "Delivered"
-                : row.original.returnRequest.status === "refunded"
-                ? "Completed"
-                : row.original.returnRequest.status === "rejected"
-                ? "Rejected"
-                : "Requested"}
+                  ? "Picked Up"
+                  : row.original.returnRequest.status === "delivered"
+                    ? "Delivered"
+                    : row.original.returnRequest.status === "refunded"
+                      ? "Completed"
+                      : row.original.returnRequest.status === "rejected"
+                        ? "Rejected"
+                        : "Requested"}
             </span>
           )}
         </div>
@@ -431,8 +431,8 @@ export function AdminOrderListTable({
                     isAccepted
                       ? "bg-emerald-600"
                       : isRejected
-                      ? "bg-rose-500"
-                      : "bg-secondary-600"
+                        ? "bg-rose-500"
+                        : "bg-secondary-600"
                   )}
                 >
                   {initial}
@@ -670,16 +670,16 @@ export function AdminOrderListTable({
                         row.original.delivery?.assignmentStatus?.toLowerCase() === "rejected"
                           ? "Reassign Delivery Staff (Previous staff declined)"
                           : row.original.delivery?.isAssigned && row.original.delivery?.staff
-                          ? "Change Delivery Staff"
-                          : "Assign Delivery Staff"
+                            ? "Change Delivery Staff"
+                            : "Assign Delivery Staff"
                       }
                       className={cn(
                         "grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer shadow-xs",
                         row.original.delivery?.assignmentStatus?.toLowerCase() === "rejected"
                           ? "border-rose-600 bg-rose-600 text-white hover:bg-rose-700"
                           : row.original.delivery?.isAssigned && row.original.delivery?.staff
-                          ? "border-amber-600 bg-amber-600 text-white hover:bg-amber-700"
-                          : "border-secondary-600 bg-secondary-600 text-white hover:bg-secondary-700"
+                            ? "border-amber-600 bg-amber-600 text-white hover:bg-amber-700"
+                            : "border-secondary-600 bg-secondary-600 text-white hover:bg-secondary-700"
                       )}
                       disabled={isTransitionPending}
                     >
@@ -767,21 +767,21 @@ export function AdminOrderListTable({
             {/* Quick Deliver Action for Shipped or Out For Delivery Orders */}
             {(orderStatus === "shipped" ||
               orderStatus === "out_for_delivery") && (
-              <button
-                type="button"
-                onClick={() =>
-                  setDeliverOrderConfirm({
-                    id: row.original.id,
-                    orderNumber: row.original.orderNumber,
-                  })
-                }
-                title="Mark as Delivered"
-                className="grid h-8 w-8 place-items-center rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold transition-all cursor-pointer shadow-xs"
-                disabled={isTransitionPending}
-              >
-                <CheckCircle className="h-3.5 w-3.5" />
-              </button>
-            )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDeliverOrderConfirm({
+                      id: row.original.id,
+                      orderNumber: row.original.orderNumber,
+                    })
+                  }
+                  title="Mark as Delivered"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+                  disabled={isTransitionPending}
+                >
+                  <CheckCircle className="h-3.5 w-3.5" />
+                </button>
+              )}
 
             {/* Process Return / Refund button - ONLY shown when customer raises return or cancelled order needs refund, and not yet refunded */}
             {row.original.paymentStatus !== "refunded" &&
@@ -790,36 +790,35 @@ export function AdminOrderListTable({
                 (orderStatus === "cancelled" &&
                   (row.original.paymentStatus === "paid" ||
                     row.original.paymentStatus === "partial_refund"))) && (
-              <button
-                type="button"
-                onClick={() =>
-                  setReturnRefundOrder({
-                    id: row.original.id,
-                    orderNumber: row.original.orderNumber,
-                    totalAmount: Number(row.original.totalAmount),
-                    paymentStatus: row.original.paymentStatus,
-                    customerName: row.original.customer?.name,
-                    orderStatus: row.original.status,
-                    returnRequest: row.original.returnRequest,
-                  })
-                }
-                title={
-                  row.original.returnRequest
-                    ? `Process Customer Return: ${row.original.returnRequest.reason || "Customer requested return"}`
-                    : orderStatus === "cancelled"
-                    ? "Approve & Process Refund"
-                    : "Process Return / Refund"
-                }
-                className={`grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
-                  row.original.returnRequest
-                    ? "border-purple-400 bg-purple-100 text-purple-800 hover:bg-purple-200 ring-2 ring-purple-300"
-                    : "border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100"
-                }`}
-                disabled={isTransitionPending}
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-              </button>
-            )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setReturnRefundOrder({
+                      id: row.original.id,
+                      orderNumber: row.original.orderNumber,
+                      totalAmount: Number(row.original.totalAmount),
+                      paymentStatus: row.original.paymentStatus,
+                      customerName: row.original.customer?.name,
+                      orderStatus: row.original.status,
+                      returnRequest: row.original.returnRequest,
+                    })
+                  }
+                  title={
+                    row.original.returnRequest
+                      ? `Process Customer Return: ${row.original.returnRequest.reason || "Customer requested return"}`
+                      : orderStatus === "cancelled"
+                        ? "Approve & Process Refund"
+                        : "Process Return / Refund"
+                  }
+                  className={`grid h-8 w-8 place-items-center rounded-lg border text-xs font-semibold transition-all cursor-pointer ${row.original.returnRequest
+                      ? "border-purple-400 bg-purple-100 text-purple-800 hover:bg-purple-200 ring-2 ring-purple-300"
+                      : "border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100"
+                    }`}
+                  disabled={isTransitionPending}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </button>
+              )}
 
             <button
               type="button"
@@ -1131,29 +1130,29 @@ export function AdminOrderListTable({
                     (currentDetailStatus === "cancelled" &&
                       (orderDetail.paymentStatus === "paid" ||
                         orderDetail.paymentStatus === "partial_refund"))) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-purple-700 border-purple-300 hover:bg-purple-50"
-                    onClick={() =>
-                      setReturnRefundOrder({
-                        id: orderDetail.id,
-                        orderNumber: orderDetail.orderNumber,
-                        totalAmount: Number(orderDetail.totalAmount),
-                        paymentStatus: orderDetail.paymentStatus,
-                        customerName: orderDetail.customer?.name,
-                        orderStatus: orderDetail.status,
-                        returnRequest: orderDetail.returnRequest,
-                      })
-                    }
-                    disabled={isTransitionPending}
-                  >
-                    <RotateCcw className="mr-1.5 h-4 w-4" />
-                    {currentDetailStatus === "cancelled"
-                      ? "Approve / Process Refund"
-                      : "Process Return / Refund"}
-                  </Button>
-                )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                      onClick={() =>
+                        setReturnRefundOrder({
+                          id: orderDetail.id,
+                          orderNumber: orderDetail.orderNumber,
+                          totalAmount: Number(orderDetail.totalAmount),
+                          paymentStatus: orderDetail.paymentStatus,
+                          customerName: orderDetail.customer?.name,
+                          orderStatus: orderDetail.status,
+                          returnRequest: orderDetail.returnRequest,
+                        })
+                      }
+                      disabled={isTransitionPending}
+                    >
+                      <RotateCcw className="mr-1.5 h-4 w-4" />
+                      {currentDetailStatus === "cancelled"
+                        ? "Approve / Process Refund"
+                        : "Process Return / Refund"}
+                    </Button>
+                  )}
 
                 <Button
                   variant="outline"
