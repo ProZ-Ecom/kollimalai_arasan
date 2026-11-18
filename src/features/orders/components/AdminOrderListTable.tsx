@@ -372,6 +372,7 @@ export function AdminOrderListTable({
                       orderNumber: row.original.orderNumber,
                       customerName: row.original.customer?.name,
                       partnerCode: delivery.deliveryPartner?.code || (isShiprocket ? "SHIPROCKET" : undefined),
+                      customerCourierName: delivery.deliveryPartner?.name || delivery.courierPartnerName || undefined,
                       trackingNumber: trackingNum,
                       isCod: row.original.isCod,
                     })
