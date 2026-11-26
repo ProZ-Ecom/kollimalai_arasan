@@ -99,6 +99,17 @@ export default auth(async (req) => {
       return applyCookies(NextResponse.redirect(url));
     }
 
+    if (
+      (pathname === "/admin/dashboard/reports" ||
+        pathname.startsWith("/admin/dashboard/reports/")) &&
+      userRole !== "ADMIN"
+    ) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/admin/dashboard";
+      url.search = "";
+      return applyCookies(NextResponse.redirect(url));
+    }
+
     return applyCookies(NextResponse.next());
   }
 
