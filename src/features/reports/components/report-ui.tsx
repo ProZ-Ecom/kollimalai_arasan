@@ -340,7 +340,7 @@ export function Panel({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-neutral-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-8px_rgba(16,24,40,0.06)]",
+        "min-w-0 rounded-2xl border border-neutral-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-8px_rgba(16,24,40,0.06)]",
         className
       )}
     >
@@ -528,7 +528,7 @@ export function ReportTable<T>({
               <th
                 key={`${i}-${c.header}`}
                 className={cn(
-                  "h-11 px-4 text-left align-middle text-[11px] font-bold tracking-wider whitespace-nowrap uppercase sm:px-5 bg-secondary-600 text-white border-b border-secondary-700 sticky top-0 z-10",
+                  "h-10 px-3 text-left align-middle text-[11px] font-bold tracking-wider whitespace-nowrap uppercase sm:px-3.5 bg-secondary-600 text-white border-b border-secondary-700 sticky top-0 z-10",
                   c.align === "right" && "text-right",
                   c.className
                 )}
@@ -570,7 +570,7 @@ export function ReportTable<T>({
                   <td
                     key={`${i}-${c.header}`}
                     className={cn(
-                      "border-b border-neutral-100 bg-white px-4 py-3 align-middle whitespace-nowrap text-sm text-neutral-800 transition-colors group-hover:bg-neutral-50/90 group-last:border-b-0 sm:px-5",
+                      "border-b border-neutral-100 bg-white px-3 py-2.5 align-middle whitespace-nowrap text-sm text-neutral-800 transition-colors group-hover:bg-neutral-50/90 group-last:border-b-0 sm:px-3.5",
                       c.align === "right" && "text-right tabular-nums",
                       c.className
                     )}
@@ -676,7 +676,7 @@ export {
 export function ReportSkeleton() {
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}

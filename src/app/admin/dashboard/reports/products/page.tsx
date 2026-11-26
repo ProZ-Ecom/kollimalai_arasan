@@ -169,7 +169,7 @@ export default function ProductsReportPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label="SKUs sold"
                 value={count(data.totals.skusSold)}
@@ -210,7 +210,7 @@ export default function ProductsReportPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="Top selling SKUs"
                 hint="Highest revenue-generating SKUs in this period."
@@ -245,7 +245,7 @@ export default function ProductsReportPage() {
               </Panel>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="By category"
                 action={

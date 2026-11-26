@@ -235,7 +235,7 @@ export default function OrdersReportPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label="Total orders"
                 value={count(data.totals.orders)}
@@ -324,7 +324,7 @@ export default function OrdersReportPage() {
               />
             </Panel>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="Order status mix"
                 hint="Distribution of orders across fulfilment stages."
@@ -365,7 +365,7 @@ export default function OrdersReportPage() {
               </Panel>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="By order status"
                 action={

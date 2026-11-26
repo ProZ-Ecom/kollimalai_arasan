@@ -45,8 +45,9 @@ export function chartBucketLabel(key: string, bucket: "day" | "week" | "month") 
   return bucket === "week" ? `w/c ${short}` : short;
 }
 
-function niceMax(v: number): number {
-  if (v <= 0) return 100;
+function niceMax(v: number, isCurrency: boolean): number {
+  if (v <= 0) return isCurrency ? 100 : 4;
+  if (!isCurrency && v <= 4) return 4;
   const pow = Math.pow(10, Math.floor(Math.log10(v)));
   const n = v / pow;
   return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * pow;
@@ -63,7 +64,7 @@ function formatAxisTick(val: number, sampleFormatted: string): string {
   if (val >= 10_000_000) return `${prefix}${formatShortUnit(val, 10_000_000, "Cr")}`;
   if (val >= 100_000) return `${prefix}${formatShortUnit(val, 100_000, "L")}`;
   if (val >= 1_000) return `${prefix}${formatShortUnit(val, 1_000, "k")}`;
-  return `${prefix}${Math.round(val)}`;
+  return `${prefix}${Number.isInteger(val) ? val : Number(val.toFixed(1))}`;
 }
 
 /**
@@ -218,8 +219,8 @@ export function TrendChart<T extends { bucket: string }>({
     );
   }
 
-  const width = 880;
-  const pad = { top: 24, right: 34, bottom: 40, left: 68 };
+  const width = 720;
+  const pad = { top: 22, right: 30, bottom: 36, left: 60 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
 
@@ -228,7 +229,8 @@ export function TrendChart<T extends { bucket: string }>({
     ...data.flatMap((row) => visibleSeries.map((s) => s.value(row)))
   );
   const hasAnyValue = rawMax > 0;
-  const max = niceMax(rawMax);
+  const isCurrencyChart = format(100).includes("₹");
+  const max = niceMax(rawMax, isCurrencyChart);
   const sampleFormatted = format(max);
 
   const barSeries = visibleSeries.filter((s) => s.kind === "bar");
@@ -303,7 +305,7 @@ export function TrendChart<T extends { bucket: string }>({
       </div>
 
       <div className="relative w-full overflow-x-auto scrollbar-thin">
-        <div className="relative min-w-[540px]">
+        <div className="relative min-w-[340px]">
           {activeRow && (
             <div
               className="pointer-events-none absolute top-1 z-20 -translate-x-1/2 rounded-xl border border-slate-700/80 bg-[#1e293b]/95 px-3.5 py-2.5 text-xs text-white shadow-xl"
@@ -586,11 +588,11 @@ export function DonutChart({
     [nonZero]
   );
 
-  const size = 190;
+  const size = 180;
   const cx = size / 2;
   const cy = size / 2;
-  const r = 68;
-  const strokeWidth = 24;
+  const r = 64;
+  const strokeWidth = 22;
   const circumference = 2 * Math.PI * r;
 
   const segments = React.useMemo(() => {
@@ -655,92 +657,95 @@ export function DonutChart({
   const active = segments.find((s) => s.key === hoverKey) ?? null;
 
   return (
-    <div className="grid grid-cols-1 items-center gap-5 p-4 sm:grid-cols-[200px_1fr] sm:p-5">
-      <div className="relative mx-auto flex h-[190px] w-[190px] items-center justify-center">
-        <svg
-          viewBox={`0 0 ${size} ${size}`}
-          className="h-full w-full -rotate-90"
-          role="img"
-          aria-label="Distribution chart"
-        >
-          <circle
-            cx={cx}
-            cy={cy}
-            r={r}
-            fill="none"
-            stroke="#f1f5f9"
-            strokeWidth={strokeWidth}
-          />
+    <div className="@container w-full overflow-hidden rounded-b-2xl">
+      <div className="grid grid-cols-1 items-center gap-4 p-4 @[440px]:grid-cols-[172px_minmax(0,1fr)] @[440px]:gap-5 sm:p-5">
+        <div className="relative mx-auto flex h-[168px] w-[168px] shrink-0 items-center justify-center">
+          <svg
+            viewBox={`0 0 ${size} ${size}`}
+            className="h-full w-full -rotate-90"
+            role="img"
+            aria-label="Distribution chart"
+          >
+            <circle
+              cx={cx}
+              cy={cy}
+              r={r}
+              fill="none"
+              stroke="#f1f5f9"
+              strokeWidth={strokeWidth}
+            />
+            {segments.map((seg) => {
+              const isHovered = hoverKey === seg.key;
+              return (
+                <circle
+                  key={seg.key}
+                  cx={cx}
+                  cy={cy}
+                  r={r}
+                  fill="none"
+                  stroke={seg.color}
+                  strokeWidth={isHovered ? strokeWidth + 4 : strokeWidth}
+                  strokeDasharray={seg.dashArray}
+                  strokeDashoffset={seg.dashOffset}
+                  className="cursor-pointer transition-all duration-150"
+                  opacity={hoverKey && !isHovered ? 0.45 : 1}
+                  onMouseEnter={() => setHoverKey(seg.key)}
+                  onMouseLeave={() => setHoverKey(null)}
+                />
+              );
+            })}
+          </svg>
+
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-5 text-center">
+            <span className="max-w-full truncate text-[10px] font-semibold tracking-wider text-neutral-500 uppercase">
+              {active ? active.label : centerLabel}
+            </span>
+            <span className="mt-0.5 text-sm font-bold tracking-tight text-neutral-900 tabular-nums sm:text-base">
+              {active ? format(active.value) : format(total)}
+            </span>
+            {active && (
+              <span className="text-[11px] font-semibold text-secondary-700">
+                {active.pct}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="min-w-0 w-full space-y-1.5">
           {segments.map((seg) => {
             const isHovered = hoverKey === seg.key;
             return (
-              <circle
+              <div
                 key={seg.key}
-                cx={cx}
-                cy={cy}
-                r={r}
-                fill="none"
-                stroke={seg.color}
-                strokeWidth={isHovered ? strokeWidth + 4 : strokeWidth}
-                strokeDasharray={seg.dashArray}
-                strokeDashoffset={seg.dashOffset}
-                className="cursor-pointer transition-all duration-150"
-                opacity={hoverKey && !isHovered ? 0.45 : 1}
+                title={`${seg.label}: ${format(seg.value)} (${seg.pct}%)`}
                 onMouseEnter={() => setHoverKey(seg.key)}
                 onMouseLeave={() => setHoverKey(null)}
-              />
+                className={cn(
+                  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-xs transition-colors cursor-default",
+                  isHovered ? "bg-neutral-100" : "hover:bg-neutral-50"
+                )}
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: seg.color }}
+                  />
+                  <span className="truncate font-medium text-neutral-800">
+                    {seg.label}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 whitespace-nowrap tabular-nums">
+                  <span className="font-semibold text-neutral-900">
+                    {format(seg.value)}
+                  </span>
+                  <span className="min-w-[3rem] text-right text-neutral-500">
+                    {seg.pct}%
+                  </span>
+                </div>
+              </div>
             );
           })}
-        </svg>
-
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-          <span className="max-w-full truncate text-[10px] font-semibold tracking-wider text-neutral-500 uppercase">
-            {active ? active.label : centerLabel}
-          </span>
-          <span className="mt-0.5 text-base font-bold tracking-tight text-neutral-900 tabular-nums">
-            {active ? format(active.value) : format(total)}
-          </span>
-          {active && (
-            <span className="text-[11px] font-semibold text-secondary-700">
-              {active.pct}%
-            </span>
-          )}
         </div>
-      </div>
-
-      <div className="min-w-0 space-y-2">
-        {segments.map((seg) => {
-          const isHovered = hoverKey === seg.key;
-          return (
-            <div
-              key={seg.key}
-              onMouseEnter={() => setHoverKey(seg.key)}
-              onMouseLeave={() => setHoverKey(null)}
-              className={cn(
-                "flex items-center justify-between gap-3 rounded-xl px-2.5 py-1.5 text-xs transition-colors cursor-default",
-                isHovered ? "bg-neutral-100" : "hover:bg-neutral-50"
-              )}
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: seg.color }}
-                />
-                <span className="truncate font-medium text-neutral-800">
-                  {seg.label}
-                </span>
-              </div>
-              <div className="flex shrink-0 items-center gap-2.5 tabular-nums">
-                <span className="font-semibold text-neutral-900">
-                  {format(seg.value)}
-                </span>
-                <span className="w-11 text-right text-neutral-500">
-                  {seg.pct}%
-                </span>
-              </div>
-            </div>
-          );
-        })}
       </div>
     </div>
   );
@@ -785,14 +790,14 @@ export function HorizontalBarChart({
   const maxVal = Math.max(...visible.map((i) => i.value), 1);
 
   return (
-    <div className="space-y-3 p-4 sm:p-5">
+    <div className="w-full overflow-hidden rounded-b-2xl space-y-3 p-4 sm:p-5">
       {visible.map((item, idx) => {
         const pct = Math.max(2, Math.round((item.value / maxVal) * 100));
         const fill = item.color ?? color;
         return (
-          <div key={item.key} className="group space-y-1">
-            <div className="flex items-baseline justify-between gap-3 text-xs">
-              <div className="min-w-0 truncate">
+          <div key={item.key} className="group min-w-0 space-y-1">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3 text-xs">
+              <div className="min-w-0 truncate" title={item.label}>
                 <span className="mr-1.5 font-semibold text-neutral-400 tabular-nums">
                   {idx + 1}.
                 </span>
@@ -805,7 +810,7 @@ export function HorizontalBarChart({
                   </span>
                 )}
               </div>
-              <span className="shrink-0 font-bold text-neutral-900 tabular-nums">
+              <span className="shrink-0 whitespace-nowrap font-bold text-neutral-900 tabular-nums">
                 {format(item.value)}
               </span>
             </div>

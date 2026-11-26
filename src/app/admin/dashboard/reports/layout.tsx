@@ -25,7 +25,7 @@ export default function AdminReportsLayout({
     return (
       <div className="space-y-4">
         <div className="h-10 w-56 animate-pulse rounded-xl bg-neutral-200/70" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, idx) => (
             <div
               key={idx}

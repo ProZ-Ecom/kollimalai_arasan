@@ -214,7 +214,7 @@ export default function RevenueReportPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label="Net revenue"
                 value={money(data.totals.netRevenue)}
@@ -314,7 +314,7 @@ export default function RevenueReportPage() {
               />
             </Panel>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="Collection by payment method"
                 hint="Share of successful payments collected."
@@ -378,7 +378,7 @@ export default function RevenueReportPage() {
               </Note>
             )}
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="By payment method"
                 hint="Successful payments recorded in this period."

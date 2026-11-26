@@ -152,7 +152,7 @@ export default function CustomersReportPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label="New signups"
                 value={count(data.totals.signups)}
@@ -220,7 +220,7 @@ export default function CustomersReportPage() {
               />
             </Panel>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="New vs. returning buyers"
                 hint="Buyer mix in the selected period."
@@ -285,7 +285,7 @@ export default function CustomersReportPage() {
               />
             </Panel>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="By state"
                 hint="Based on shipping addresses on orders."

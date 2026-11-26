@@ -290,7 +290,7 @@ export default function InventoryReportPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label="Stock value (retail)"
                 value={money(data.totals.valueAtPrice)}
@@ -335,7 +335,7 @@ export default function InventoryReportPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="Stock health breakdown"
                 hint="Active SKUs grouped by current availability status."
@@ -415,7 +415,7 @@ export default function InventoryReportPage() {
               />
             </Panel>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="Out of stock alerts"
                 action={

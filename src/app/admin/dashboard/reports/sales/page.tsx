@@ -154,7 +154,7 @@ export default function SalesReportPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label="Net sales"
                 value={money(data.totals.netSales)}
@@ -242,7 +242,7 @@ export default function SalesReportPage() {
               />
             </Panel>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="Orders over time"
                 hint={`Order volume per ${data.range.bucket}.`}
@@ -281,7 +281,7 @@ export default function SalesReportPage() {
               </Panel>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
               <Panel
                 title="By category"
                 hint="Share is calculated on item sales value."
@@ -364,7 +364,7 @@ export default function SalesReportPage() {
               <Panel
                 title="Top customers"
                 hint="Top 10 buyers by net spend in this period."
-                className="lg:col-span-2"
+                className="xl:col-span-2"
                 action={
                   <ExportButton
                     rows={data.topCustomers}
