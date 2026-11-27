@@ -35,7 +35,7 @@ export const razorpayService = {
     const isCartCheckout = !input.orderId || input.orderId === "cart";
 
     // A. Cart-First Flow: Create Razorpay Order directly from active cart (No internal order created yet)
-      if (isCartCheckout) {
+    if (isCartCheckout) {
       const cart = await cartService.getCart(sessionUserId);
       if (!cart || cart.items.length === 0) {
         throw ApiError.badRequest("Your cart is empty. Please add items before checking out.");
@@ -263,6 +263,33 @@ export const razorpayService = {
         throw ApiError.badRequest("Shipping address is required to complete the order.");
       }
 
+      // ── IDEMPOTENCY GUARD ──────────────────────────────────────────────────────────
+      // Check if this payment/order was already created (e.g. by Webhook, reconcile, or duplicate request)
+      const existingPayment = await paymentRepository.findPaymentByGatewayOrderId(input.razorpay_order_id);
+      if (existingPayment && existingPayment.order) {
+        if (existingPayment.status !== "success") {
+          await paymentRepository.recordPaymentSuccess({
+            paymentId: existingPayment.id,
+            orderId: existingPayment.order.id,
+            userId,
+            razorpayPaymentId: input.razorpay_payment_id,
+            gatewayResponse: {
+              razorpay_order_id: input.razorpay_order_id,
+              razorpay_payment_id: input.razorpay_payment_id,
+              razorpay_signature: input.razorpay_signature,
+            },
+            amount: Number(existingPayment.order.totalAmount),
+          });
+        }
+
+        return {
+          success: true,
+          message: "Payment already verified and order confirmed",
+          orderNumber: existingPayment.order.orderNumber,
+          orderId: existingPayment.order.uuid || String(existingPayment.order.id),
+        };
+      }
+
       // Recover courierType from Razorpay order notes if omitted in verify request payload
       let resolvedCourierType = input.courierType;
       if (!resolvedCourierType && input.razorpay_order_id) {
@@ -299,29 +326,58 @@ export const razorpayService = {
           },
         });
       } catch (orderErr: any) {
-        // Stock reservation or order creation failed after payment capture.
-        // Automatically refund captured payment immediately so customer is protected.
-        try {
-          const razorpay = getRazorpayClient();
-          await razorpay.payments.refund(input.razorpay_payment_id, {
-            notes: {
-              reason: "Stock unavailable during checkout; automatic full refund initiated",
-              razorpay_order_id: input.razorpay_order_id,
-            },
-          });
-          console.warn(
-            `[Razorpay] Auto-refunded payment ${input.razorpay_payment_id} due to order placement failure: ${orderErr?.message}`
-          );
-        } catch (refundErr: any) {
-          console.error(
-            `[Razorpay] CRITICAL: Auto-refund failed for payment ${input.razorpay_payment_id}:`,
-            refundErr
-          );
+        // Concurrency Guard: Check if the order was created concurrently (e.g. by webhook during createCustomerOrder)
+        const parallelPayment = await paymentRepository.findPaymentByGatewayOrderId(input.razorpay_order_id);
+        if (parallelPayment && parallelPayment.order) {
+          if (parallelPayment.status !== "success") {
+            await paymentRepository.recordPaymentSuccess({
+              paymentId: parallelPayment.id,
+              orderId: parallelPayment.order.id,
+              userId,
+              razorpayPaymentId: input.razorpay_payment_id,
+              gatewayResponse: {
+                razorpay_order_id: input.razorpay_order_id,
+                razorpay_payment_id: input.razorpay_payment_id,
+                razorpay_signature: input.razorpay_signature,
+              },
+              amount: Number(parallelPayment.order.totalAmount),
+            });
+          }
+          return {
+            success: true,
+            message: "Payment verified and order confirmed successfully",
+            orderNumber: parallelPayment.order.orderNumber,
+            orderId: parallelPayment.order.uuid || String(parallelPayment.order.id),
+          };
         }
 
-        const baseMsg = orderErr?.message || "Could not complete order due to stock unavailability.";
+        // Also check if any order was created with this gateway order id in payments
+        const fallbackOrderByGateway = await db.order.findFirst({
+          where: {
+            payments: {
+              some: { gateway_order_id: input.razorpay_order_id },
+            },
+          },
+          select: { id: true, uuid: true, orderNumber: true },
+        });
+        if (fallbackOrderByGateway) {
+          return {
+            success: true,
+            message: "Payment verified and order confirmed successfully",
+            orderNumber: fallbackOrderByGateway.orderNumber,
+            orderId: fallbackOrderByGateway.uuid || String(fallbackOrderByGateway.id),
+          };
+        }
+
+        // Note: Automatic Razorpay refund has been disabled per configuration.
+        // Payment remains captured in Razorpay so store admin can review and manually fulfill or refund.
+        console.error(
+          `[Razorpay] Order creation failed after payment capture. Payment ID: ${input.razorpay_payment_id}, Gateway Order ID: ${input.razorpay_order_id}. Error: ${orderErr?.message}`
+        );
+
+        const baseMsg = orderErr?.message || "Could not complete order.";
         throw ApiError.badRequest(
-          `${baseMsg} A full refund has been automatically initiated to your payment method.`
+          `${baseMsg} If your payment was deducted (Payment ID: ${input.razorpay_payment_id}), please contact support to verify and confirm your order.`
         );
       }
 
@@ -337,22 +393,31 @@ export const razorpayService = {
       });
 
       if (dbOrder) {
-        const paymentMethod = await paymentRepository.getOrCreatePaymentMethod(
-          "RAZORPAY",
-          "Razorpay Online Payment"
-        );
+        const existingPayment = await paymentRepository.findPaymentByGatewayOrderId(input.razorpay_order_id);
+        let paymentId = existingPayment?.id;
+        let isAlreadySuccess = existingPayment?.status === "success";
 
-        const paymentRecord = await paymentRepository.createPaymentRecord({
-          orderId: dbOrder.id,
-          paymentMethodId: paymentMethod.id,
-          amount: Number(dbOrder.totalAmount),
-          currency: "INR",
-          gatewayOrderId: input.razorpay_order_id,
-          createdBy: userId,
-        });
+          if (!existingPayment) {
+            const paymentMethod = await paymentRepository.getOrCreatePaymentMethod(
+              "RAZORPAY",
+              "Razorpay Online Payment"
+            );
 
+          const newPayment = await paymentRepository.createPaymentRecord({
+            orderId: dbOrder.id,
+            paymentMethodId: paymentMethod.id,
+            amount: Number(dbOrder.totalAmount),
+            currency: "INR",
+            gatewayOrderId: input.razorpay_order_id,
+            createdBy: userId,
+          });
+          paymentId = newPayment.id;
+          isAlreadySuccess = newPayment.status === "success";
+        }
+
+      if (paymentId && !isAlreadySuccess) {
         await paymentRepository.recordPaymentSuccess({
-          paymentId: paymentRecord.id,
+          paymentId,
           orderId: dbOrder.id,
           userId,
           razorpayPaymentId: input.razorpay_payment_id,
@@ -364,59 +429,60 @@ export const razorpayService = {
           amount: Number(dbOrder.totalAmount),
         });
       }
-
-      return {
-        success: true,
-        message: "Payment verified and order placed successfully",
-        orderNumber: createdOrder.orderNumber,
-        orderId: createdOrder.id,
-      };
     }
-
-    // 3. Handle Existing Order Verification
-    const order = await paymentRepository.findCustomerOrder(userId, input.orderId!);
-    if (!order) {
-      throw ApiError.notFound("Order not found or does not belong to customer");
-    }
-
-    const payment = await paymentRepository.findPendingPayment(
-      order.id,
-      input.razorpay_order_id
-    );
-
-    if (!payment) {
-      throw ApiError.notFound("Matching payment record not found for this order");
-    }
-
-    if (payment.status === "success" && order.payment_status === "paid") {
-      return {
-        success: true,
-        message: "Payment already verified",
-        orderNumber: order.orderNumber,
-        orderId: order.uuid || String(order.id),
-      };
-    }
-
-    const result = await paymentRepository.recordPaymentSuccess({
-      paymentId: payment.id,
-      orderId: order.id,
-      userId,
-      razorpayPaymentId: input.razorpay_payment_id,
-      gatewayResponse: {
-        razorpay_order_id: input.razorpay_order_id,
-        razorpay_payment_id: input.razorpay_payment_id,
-        razorpay_signature: input.razorpay_signature,
-      },
-      amount: Number(order.totalAmount),
-    });
 
     return {
       success: true,
-      message: "Payment verified successfully",
-      orderNumber: result.order.orderNumber,
-      orderId: result.order.uuid || String(result.order.id),
+      message: "Payment verified and order placed successfully",
+      orderNumber: createdOrder.orderNumber,
+      orderId: createdOrder.id,
     };
+  }
+
+        // 3. Handle Existing Order Verification
+        const order = await paymentRepository.findCustomerOrder(userId, input.orderId!);
+  if(!order) {
+    throw ApiError.notFound("Order not found or does not belong to customer");
+  }
+
+        const payment = await paymentRepository.findPendingPayment(
+    order.id,
+    input.razorpay_order_id
+  );
+
+  if(!payment) {
+    throw ApiError.notFound("Matching payment record not found for this order");
+  }
+
+        if(payment.status === "success" && order.payment_status === "paid") {
+    return {
+      success: true,
+      message: "Payment already verified",
+      orderNumber: order.orderNumber,
+      orderId: order.uuid || String(order.id),
+          };
+        }
+
+const result = await paymentRepository.recordPaymentSuccess({
+  paymentId: payment.id,
+  orderId: order.id,
+  userId,
+  razorpayPaymentId: input.razorpay_payment_id,
+  gatewayResponse: {
+    razorpay_order_id: input.razorpay_order_id,
+    razorpay_payment_id: input.razorpay_payment_id,
+    razorpay_signature: input.razorpay_signature,
   },
+  amount: Number(order.totalAmount),
+});
+
+return {
+  success: true,
+  message: "Payment verified successfully",
+  orderNumber: result.order.orderNumber,
+  orderId: result.order.uuid || String(result.order.id),
+};
+      },
 
   /**
    * Reconcile an interrupted or unfinalized Razorpay payment.
@@ -424,239 +490,249 @@ export const razorpayService = {
    * this verifies payment directly with Razorpay API and creates/finalizes the order.
    */
   async reconcileOrder(
-    sessionUserId: string,
-    input: ReconcileRazorpayPaymentInput
-  ) {
-    const user = await userRepository.findById(sessionUserId);
-    if (!user || !user.internalId) {
-      throw ApiError.unauthorized("User not found");
-    }
-    const userId = user.internalId;
-    const razorpay = getRazorpayClient();
+  sessionUserId: string,
+  input: ReconcileRazorpayPaymentInput
+) {
+  const user = await userRepository.findById(sessionUserId);
+  if (!user || !user.internalId) {
+    throw ApiError.unauthorized("User not found");
+  }
+  const userId = user.internalId;
+  const razorpay = getRazorpayClient();
 
-    let orderIdToInspect = input.razorpayOrderId?.trim();
+  let orderIdToInspect = input.razorpayOrderId?.trim();
 
-    // If orderId is not provided, look up the user's latest orders directly from Razorpay
-    if (!orderIdToInspect) {
-      try {
-        const recentOrders = await razorpay.orders.all({ count: 15 });
-        const userPaidOrder = recentOrders.items.find(
-          (o: any) =>
-            (o.status === "paid" || Number(o.amount_paid) > 0) &&
-            String(o.notes?.userId) === String(userId) &&
-            o.notes?.checkoutType === "cart"
-        );
-        if (userPaidOrder) {
-          orderIdToInspect = userPaidOrder.id;
-        }
-      } catch (fetchErr) {
-        console.warn("[Razorpay Reconcile] Error fetching recent orders:", fetchErr);
+  // If orderId is not provided, look up the user's latest orders directly from Razorpay
+  if (!orderIdToInspect) {
+    try {
+      const recentOrders = await razorpay.orders.all({ count: 15 });
+      const userPaidOrder = recentOrders.items.find(
+        (o: any) =>
+          (o.status === "paid" || Number(o.amount_paid) > 0) &&
+          String(o.notes?.userId) === String(userId) &&
+          o.notes?.checkoutType === "cart"
+      );
+      if (userPaidOrder) {
+        orderIdToInspect = userPaidOrder.id;
       }
+    } catch (fetchErr) {
+      console.warn("[Razorpay Reconcile] Error fetching recent orders:", fetchErr);
     }
+  }
 
-    if (!orderIdToInspect) {
-      return { found: false, message: "No unfulfilled paid payment found" };
-    }
+  if (!orderIdToInspect) {
+    return { found: false, message: "No unfulfilled paid payment found" };
+  }
 
-    // 1. Check if an order already exists for this gateway_order_id in our database
-    const existingPayment = await paymentRepository.findPaymentByGatewayOrderId(orderIdToInspect);
-    if (existingPayment && existingPayment.order) {
+  // 1. Check if an order already exists for this gateway_order_id in our database
+  const existingPayment = await paymentRepository.findPaymentByGatewayOrderId(orderIdToInspect);
+  if (existingPayment && existingPayment.order) {
+    return {
+      found: true,
+      alreadyProcessed: true,
+      orderId: existingPayment.order.uuid || String(existingPayment.order.id),
+      orderNumber: existingPayment.order.orderNumber,
+      paymentStatus: existingPayment.order.payment_status,
+    };
+  }
+
+  // 2. Query Razorpay API for the real state of this order
+  const rzpOrder = await razorpay.orders.fetch(orderIdToInspect);
+  if (!rzpOrder) {
+    return { found: false, message: "Order not found on payment gateway" };
+  }
+
+  // Security check: verify this order belongs to this customer
+  if (rzpOrder.notes?.userId && String(rzpOrder.notes.userId) !== String(userId)) {
+    throw ApiError.forbidden("Razorpay order does not belong to your account");
+  }
+
+  // If Razorpay order is not paid, nothing to reconcile
+  if (rzpOrder.status !== "paid" && Number(rzpOrder.amount_paid) <= 0) {
+    return {
+      found: true,
+      status: rzpOrder.status,
+      isPaid: false,
+      message: "Payment is not marked as paid on Razorpay",
+    };
+  }
+
+  // 3. Fetch captured payment details from Razorpay
+  const payments = await razorpay.orders.fetchPayments(orderIdToInspect);
+  const capturedPayment =
+    payments.items?.find((p: any) => p.status === "captured") ||
+    payments.items?.[0];
+
+  if (!capturedPayment || capturedPayment.status !== "captured") {
+    return {
+      found: true,
+      status: capturedPayment?.status || rzpOrder.status,
+      isPaid: false,
+      message: "Payment was not captured",
+    };
+  }
+
+  // 4. Identify shipping details from order notes or fallback to user's active address
+  const rawAddressId = rzpOrder.notes?.shippingAddressId;
+  const requestedAddressId = rawAddressId != null ? String(rawAddressId).trim() : undefined;
+  let shippingAddress: any = null;
+
+  if (requestedAddressId) {
+    const isNum = /^\d+$/.test(requestedAddressId);
+    shippingAddress = await db.customerAddress.findFirst({
+      where: {
+        userId,
+        is_active: true,
+        deleted_at: null,
+        OR: [
+          { uuid: requestedAddressId },
+          ...(isNum ? [{ id: BigInt(requestedAddressId) }] : []),
+        ],
+      },
+    });
+  }
+
+  // If requested address not found or inactive, fallback to customer's default or latest active address
+  if (!shippingAddress) {
+    shippingAddress = await db.customerAddress.findFirst({
+      where: { userId, is_active: true, deleted_at: null },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+    });
+  }
+
+  if (!shippingAddress) {
+    return {
+      found: true,
+      success: false,
+      message: "No delivery address found for your account. Please add an address to complete this order.",
+    };
+  }
+
+  const resolvedAddressId = shippingAddress.uuid || String(shippingAddress.id);
+  const rawCourier = rzpOrder.notes?.courierType;
+  const courierType = (rawCourier ? String(rawCourier) : "st_courier") as "st_courier" | "mss" | "shiprocket";
+
+  // 5. Create customer order from cart
+  let createdOrder: any;
+  try {
+    createdOrder = await orderService.createCustomerOrder(sessionUserId, {
+      shippingAddressId: resolvedAddressId,
+      billingAddressId: resolvedAddressId,
+      paymentMethod: "CARD",
+      courierType,
+      paymentDetails: {
+        gateway: "RAZORPAY",
+        isPaid: true,
+        razorpay_order_id: orderIdToInspect,
+        razorpay_payment_id: capturedPayment.id,
+        razorpay_signature: "reconciled_via_gateway_verification",
+      },
+    });
+  } catch (orderErr: any) {
+    console.warn("[Razorpay Reconcile] createCustomerOrder result/error:", orderErr?.message);
+    // If order was already created in parallel, check again
+    const parallelPayment = await paymentRepository.findPaymentByGatewayOrderId(orderIdToInspect);
+    if (parallelPayment && parallelPayment.order) {
       return {
         found: true,
         alreadyProcessed: true,
-        orderId: existingPayment.order.uuid || String(existingPayment.order.id),
-        orderNumber: existingPayment.order.orderNumber,
-        paymentStatus: existingPayment.order.payment_status,
+        orderId: parallelPayment.order.uuid || String(parallelPayment.order.id),
+        orderNumber: parallelPayment.order.orderNumber,
       };
     }
+    return {
+      found: true,
+      success: false,
+      message: orderErr?.message || "Failed to finalize order from cart.",
+    };
+  }
 
-    // 2. Query Razorpay API for the real state of this order
-    const rzpOrder = await razorpay.orders.fetch(orderIdToInspect);
-    if (!rzpOrder) {
-      return { found: false, message: "Order not found on payment gateway" };
-    }
-
-    // Security check: verify this order belongs to this customer
-    if (rzpOrder.notes?.userId && String(rzpOrder.notes.userId) !== String(userId)) {
-      throw ApiError.forbidden("Razorpay order does not belong to your account");
-    }
-
-    // If Razorpay order is not paid, nothing to reconcile
-    if (rzpOrder.status !== "paid" && Number(rzpOrder.amount_paid) <= 0) {
-      return {
-        found: true,
-        status: rzpOrder.status,
-        isPaid: false,
-        message: "Payment is not marked as paid on Razorpay",
-      };
-    }
-
-    // 3. Fetch captured payment details from Razorpay
-    const payments = await razorpay.orders.fetchPayments(orderIdToInspect);
-    const capturedPayment =
-      payments.items?.find((p: any) => p.status === "captured") ||
-      payments.items?.[0];
-
-    if (!capturedPayment || capturedPayment.status !== "captured") {
-      return {
-        found: true,
-        status: capturedPayment?.status || rzpOrder.status,
-        isPaid: false,
-        message: "Payment was not captured",
-      };
-    }
-
-    // 4. Identify shipping details from order notes or fallback to user's active address
-    const rawAddressId = rzpOrder.notes?.shippingAddressId;
-    const requestedAddressId = rawAddressId != null ? String(rawAddressId).trim() : undefined;
-    let shippingAddress: any = null;
-
-    if (requestedAddressId) {
-      const isNum = /^\d+$/.test(requestedAddressId);
-      shippingAddress = await db.customerAddress.findFirst({
-        where: {
-          userId,
-          is_active: true,
-          deleted_at: null,
-          OR: [
-            { uuid: requestedAddressId },
-            ...(isNum ? [{ id: BigInt(requestedAddressId) }] : []),
-          ],
-        },
-      });
-    }
-
-    // If requested address not found or inactive, fallback to customer's default or latest active address
-    if (!shippingAddress) {
-      shippingAddress = await db.customerAddress.findFirst({
-        where: { userId, is_active: true, deleted_at: null },
-        orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
-      });
-    }
-
-    if (!shippingAddress) {
-      return {
-        found: true,
-        success: false,
-        message: "No delivery address found for your account. Please add an address to complete this order.",
-      };
-    }
-
-    const resolvedAddressId = shippingAddress.uuid || String(shippingAddress.id);
-    const rawCourier = rzpOrder.notes?.courierType;
-    const courierType = (rawCourier ? String(rawCourier) : "st_courier") as "st_courier" | "mss" | "shiprocket";
-
-    // 5. Create customer order from cart
-    let createdOrder: any;
-    try {
-      createdOrder = await orderService.createCustomerOrder(sessionUserId, {
-        shippingAddressId: resolvedAddressId,
-        billingAddressId: resolvedAddressId,
-        paymentMethod: "CARD",
-        courierType,
-        paymentDetails: {
-          gateway: "RAZORPAY",
-          isPaid: true,
-          razorpay_order_id: orderIdToInspect,
-          razorpay_payment_id: capturedPayment.id,
-          razorpay_signature: "reconciled_via_gateway_verification",
-        },
-      });
-    } catch (orderErr: any) {
-      console.warn("[Razorpay Reconcile] createCustomerOrder result/error:", orderErr?.message);
-      // If order was already created in parallel, check again
-      const parallelPayment = await paymentRepository.findPaymentByGatewayOrderId(orderIdToInspect);
-      if (parallelPayment && parallelPayment.order) {
-        return {
-          found: true,
-          alreadyProcessed: true,
-          orderId: parallelPayment.order.uuid || String(parallelPayment.order.id),
-          orderNumber: parallelPayment.order.orderNumber,
-        };
-      }
-      return {
-        found: true,
-        success: false,
-        message: orderErr?.message || "Failed to finalize order from cart.",
-      };
-    }
-
-    // 6. Record payment record and mark success
-    const dbOrder = await db.order.findFirst({
-      where: {
-        OR: [
-          { uuid: createdOrder.id },
-          { orderNumber: createdOrder.orderNumber },
-        ],
-      },
-      select: { id: true, uuid: true, orderNumber: true, totalAmount: true },
-    });
+  // 6. Record payment record and mark success
+  const dbOrder = await db.order.findFirst({
+    where: {
+      OR: [
+        { uuid: createdOrder.id },
+        { orderNumber: createdOrder.orderNumber },
+      ],
+    },
+    select: { id: true, uuid: true, orderNumber: true, totalAmount: true },
+  });
 
     if (dbOrder) {
-      const paymentMethod = await paymentRepository.getOrCreatePaymentMethod(
-        "RAZORPAY",
-        "Razorpay Online Payment"
-      );
+      const existingPayment = await paymentRepository.findPaymentByGatewayOrderId(orderIdToInspect);
+      let paymentId = existingPayment?.id;
+      let isAlreadySuccess = existingPayment?.status === "success";
 
-      const paymentRecord = await paymentRepository.createPaymentRecord({
-        orderId: dbOrder.id,
-        paymentMethodId: paymentMethod.id,
-        amount: Number(dbOrder.totalAmount),
-        currency: "INR",
-        gatewayOrderId: orderIdToInspect,
-        createdBy: userId,
-      });
+        if (!existingPayment) {
+          const paymentMethod = await paymentRepository.getOrCreatePaymentMethod(
+            "RAZORPAY",
+            "Razorpay Online Payment"
+          );
 
+        const newPayment = await paymentRepository.createPaymentRecord({
+          orderId: dbOrder.id,
+          paymentMethodId: paymentMethod.id,
+          amount: Number(dbOrder.totalAmount),
+          currency: "INR",
+          gatewayOrderId: orderIdToInspect,
+          createdBy: userId,
+        });
+        paymentId = newPayment.id;
+        isAlreadySuccess = newPayment.status === "success";
+      }
+
+      if(paymentId && !isAlreadySuccess) {
       await paymentRepository.recordPaymentSuccess({
-        paymentId: paymentRecord.id,
+        paymentId,
         orderId: dbOrder.id,
         userId,
         razorpayPaymentId: capturedPayment.id,
         gatewayResponse: {
           reconciled: true,
-          razorpay_order_id: orderIdToInspect,
-          razorpay_payment_id: capturedPayment.id,
-        },
-        amount: Number(dbOrder.totalAmount),
-      });
+        razorpay_order_id: orderIdToInspect,
+        razorpay_payment_id: capturedPayment.id,
+          },
+    amount: Number(dbOrder.totalAmount),
+        });
+}
     }
 
-    return {
-      found: true,
-      success: true,
-      reconciled: true,
-      orderNumber: createdOrder.orderNumber,
-      orderId: createdOrder.id,
-      message: "Payment successfully verified and order confirmed!",
-    };
+return {
+  found: true,
+  success: true,
+  reconciled: true,
+  orderNumber: createdOrder.orderNumber,
+  orderId: createdOrder.id,
+  message: "Payment successfully verified and order confirmed!",
+};
   },
 
   /**
    * Handle server-to-server Razorpay webhooks idempotently
    */
   async handleWebhook(rawBody: string, signatureHeader: string | null) {
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      throw new Error("RAZORPAY_WEBHOOK_SECRET is not configured");
-    }
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    throw new Error("RAZORPAY_WEBHOOK_SECRET is not configured");
+  }
 
-    if (!signatureHeader) {
-      throw ApiError.badRequest("Missing Razorpay webhook signature header");
-    }
+  if (!signatureHeader) {
+    throw ApiError.badRequest("Missing Razorpay webhook signature header");
+  }
 
-    // 1. Verify webhook signature
-    const expectedSignature = crypto
-      .createHmac("sha256", webhookSecret)
-      .update(rawBody)
-      .digest("hex");
+  // 1. Verify webhook signature
+  const expectedSignature = crypto
+    .createHmac("sha256", webhookSecret)
+    .update(rawBody)
+    .digest("hex");
 
-    if (expectedSignature !== signatureHeader) {
-      throw ApiError.badRequest("Invalid webhook signature");
-    }
+  if (expectedSignature !== signatureHeader) {
+    throw ApiError.badRequest("Invalid webhook signature");
+  }
 
-    // 2. Parse event payload
-    const event = JSON.parse(rawBody);
-    const eventType = event.event as string;
+  // 2. Parse event payload
+  const event = JSON.parse(rawBody);
+  const eventType = event.event as string;
 
     // We specifically handle payment captured or order paid events
     if (eventType === "order.paid" || eventType === "payment.captured") {
@@ -704,33 +780,71 @@ export const razorpayService = {
         amount: Number(order.totalAmount),
       });
 
-      return { received: true, processed: true };
-    }
+    return { received: true, processed: true };
+  }
 
-    if (eventType === "payment.failed") {
-      const paymentEntity = event.payload?.payment?.entity;
-      const gatewayOrderId = paymentEntity?.order_id;
-      const errorDescription =
-        paymentEntity?.error_description || "Payment failed via webhook notification";
+  if (eventType === "payment.failed") {
+    const paymentEntity = event.payload?.payment?.entity;
+    const gatewayOrderId = paymentEntity?.order_id;
+    const errorDescription =
+      paymentEntity?.error_description || "Payment failed via webhook notification";
 
-      if (gatewayOrderId) {
-        const paymentRecord = await paymentRepository.findPaymentByGatewayOrderId(gatewayOrderId);
-        if (paymentRecord && paymentRecord.status !== "success") {
-          await paymentRepository.recordPaymentFailure({
-            paymentId: paymentRecord.id,
-            orderId: paymentRecord.order.id,
-            userId: paymentRecord.order.userId,
-            errorReason: errorDescription,
-            gatewayResponse: event,
-            amount: Number(paymentRecord.order.totalAmount),
-          });
-        }
+    if (gatewayOrderId) {
+      const paymentRecord = await paymentRepository.findPaymentByGatewayOrderId(gatewayOrderId);
+      if (paymentRecord && paymentRecord.status !== "success") {
+        await paymentRepository.recordPaymentFailure({
+          paymentId: paymentRecord.id,
+          orderId: paymentRecord.order.id,
+          userId: paymentRecord.order.userId,
+          errorReason: errorDescription,
+          gatewayResponse: event,
+          amount: Number(paymentRecord.order.totalAmount),
+        });
       }
-
-      return { received: true, processed: true };
     }
 
-    return { received: true, unhandledEvent: eventType };
+  return { received: true, processed: true };
+}
+
+  if (eventType === "refund.processed" || eventType === "refund.created") {
+    const refundEntity = event.payload?.refund?.entity;
+    const paymentEntity = event.payload?.payment?.entity;
+    const gatewayPaymentId = refundEntity?.payment_id || paymentEntity?.id;
+    const gatewayOrderId = paymentEntity?.order_id || refundEntity?.notes?.razorpay_order_id;
+    const refundId = refundEntity?.id;
+    const refundAmount = refundEntity?.amount ? Number(refundEntity.amount) / 100 : 0;
+    const refundReason = refundEntity?.notes?.reason || "Refund processed via Razorpay";
+
+    let paymentRecord: Awaited<ReturnType<typeof paymentRepository.findPaymentByGatewayOrderId>> = null;
+    if (gatewayPaymentId) {
+      paymentRecord = await paymentRepository.findPaymentByGatewayPaymentId(gatewayPaymentId);
+    }
+    if (!paymentRecord && gatewayOrderId) {
+      paymentRecord = await paymentRepository.findPaymentByGatewayOrderId(gatewayOrderId);
+    }
+
+      if (paymentRecord && paymentRecord.order) {
+        if (paymentRecord.status === "refunded" && paymentRecord.order.payment_status === "refunded") {
+          return { received: true, duplicate: true };
+        }
+
+        await paymentRepository.recordPaymentRefund({
+          paymentId: paymentRecord.id,
+          orderId: paymentRecord.order.id,
+          userId: paymentRecord.order.userId,
+          refundId,
+          refundAmount: refundAmount || Number(paymentRecord.amount),
+          reason: refundReason,
+          gatewayResponse: event,
+        });
+
+      return { received: true, processed: true, refundId };
+    }
+
+  return { received: true, ignored: "Payment record not found for refund event" };
+}
+
+return { received: true, unhandledEvent: eventType };
   },
 };
 

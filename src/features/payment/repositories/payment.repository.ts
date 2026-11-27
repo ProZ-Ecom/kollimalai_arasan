@@ -92,6 +92,25 @@ export const paymentRepository = {
   },
 
   /**
+   * Find an order globally by gateway payment id (used by refund webhooks)
+   */
+  async findPaymentByGatewayPaymentId(gatewayPaymentId: string) {
+    return db.payment.findFirst({
+      where: {
+        gateway_payment_id: gatewayPaymentId,
+        is_active: true,
+      },
+      include: {
+        order: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+  },
+
+  /**
    * Check if an active pending payment record exists for this order & gateway order id
    */
   async findPendingPayment(orderId: bigint, gatewayOrderId?: string) {
@@ -257,6 +276,75 @@ export const paymentRepository = {
           updated_by: params.userId,
         },
       });
+    });
+  },
+
+  /**
+   * Record payment refund from webhook or gateway notification
+   */
+  async recordPaymentRefund(params: {
+    paymentId: bigint;
+    orderId: bigint;
+    userId?: bigint;
+    refundId?: string;
+    refundAmount: number;
+    reason?: string;
+    gatewayResponse?: Record<string, unknown>;
+  }) {
+    return db.$transaction(async (tx) => {
+      const now = new Date();
+
+      // 1. Update Payment status to refunded
+      const updatedPayment = await tx.payment.update({
+        where: { id: params.paymentId },
+        data: {
+          status: "refunded",
+          updatedAt: now,
+          ...(params.userId ? { updated_by: params.userId } : {}),
+        },
+      });
+
+      // 2. Create PaymentTransaction audit entry
+      await tx.paymentTransaction.create({
+        data: {
+          paymentId: params.paymentId,
+          transaction_type: "refund",
+          amount: params.refundAmount,
+          status: "refunded",
+          gatewayResponse: (params.gatewayResponse || {
+            refundId: params.refundId,
+            reason: params.reason,
+          }) as Prisma.InputJsonValue,
+          ...(params.userId ? { created_by: params.userId, updated_by: params.userId } : {}),
+        },
+      });
+
+      // 3. Update Order payment_status to refunded
+      const updatedOrder = await tx.order.update({
+        where: { id: params.orderId },
+        data: {
+          payment_status: "refunded",
+          updatedAt: now,
+          ...(params.userId ? { updated_by: params.userId } : {}),
+        },
+      });
+
+      // 4. Append to status history
+      await tx.order_status_history.create({
+        data: {
+          order_id: params.orderId,
+          status: updatedOrder.order_status,
+          note: `Payment refunded via Razorpay${params.refundId ? ` (Refund ID: ${params.refundId})` : ""}${params.reason ? ` - ${params.reason}` : ""}`,
+          changed_by: params.userId || updatedOrder.userId,
+          created_by: params.userId || updatedOrder.userId,
+          updated_by: params.userId || updatedOrder.userId,
+        },
+      });
+
+      return {
+        payment: updatedPayment,
+        order: updatedOrder,
+      };
     });
   },
 

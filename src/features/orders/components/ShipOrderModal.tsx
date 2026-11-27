@@ -38,6 +38,43 @@ interface ShipOrderModalProps {
   onSuccess?: () => void;
 }
 
+// Helper matchers for known delivery partners
+function isStCourierPartner(p: { code?: string | null; name?: string | null }) {
+  const code = (p.code || "").toUpperCase();
+  const name = (p.name || "").toLowerCase();
+  return (
+    code === "ST" ||
+    code === "ST_COURIER" ||
+    code.startsWith("ST_") ||
+    name.includes("st courier") ||
+    name.includes("south express") ||
+    name.includes("st express") ||
+    name.startsWith("st ") ||
+    name === "st"
+  );
+}
+
+function isMssPartner(p: { code?: string | null; name?: string | null }) {
+  const code = (p.code || "").toUpperCase();
+  const name = (p.name || "").toLowerCase();
+  return (
+    code === "MSS" ||
+    code.includes("MSS") ||
+    name.includes("mettur") ||
+    name.includes("mss")
+  );
+}
+
+function isShiprocketPartner(p: { code?: string | null; name?: string | null }) {
+  const code = (p.code || "").toUpperCase();
+  const name = (p.name || "").toLowerCase();
+  return (
+    code === "SHIPROCKET" ||
+    code.includes("SHIPROCKET") ||
+    name.includes("shiprocket")
+  );
+}
+
 export function ShipOrderModal({
   open,
   onClose,
@@ -90,7 +127,7 @@ export function ShipOrderModal({
     }));
   }, [partners]);
 
-  // Default to ST Courier in the modal dropdown, or first available partner
+  // Default to the customer's chosen courier in the modal dropdown, or ST Courier fallback
   useEffect(() => {
     if (open) {
       if (initialTrackingNumber) {
@@ -104,36 +141,62 @@ export function ShipOrderModal({
       setShiprocketSuccess(null);
 
       if (partners.length > 0) {
-        const stPartner = partners.find(
-          (p) =>
-            p.code === "ST_COURIER" ||
-            p.name.toLowerCase().includes("st courier")
-        );
-        const targetPartner = stPartner || partners[0];
+        const stPartner = partners.find(isStCourierPartner);
+        const mssPartner = partners.find(isMssPartner);
+        const shiprocketPartner = partners.find(isShiprocketPartner);
+
+        let targetPartner = null;
+
+        if (isCod) {
+          targetPartner = shiprocketPartner;
+        } else {
+          // Match against customer choice, courier name, or initial partner code
+          const choiceStr = `${initialPartnerCode || ""} ${customerCourierName || ""} ${customerChoice || ""}`.toLowerCase();
+
+          if (
+            choiceStr.includes("st") ||
+            choiceStr.includes("south express") ||
+            choiceStr.includes("st courier")
+          ) {
+            targetPartner = stPartner;
+          } else if (
+            choiceStr.includes("mss") ||
+            choiceStr.includes("mettur")
+          ) {
+            targetPartner = mssPartner;
+          } else if (choiceStr.includes("shiprocket")) {
+            targetPartner = shiprocketPartner;
+          } else if (initialPartnerCode) {
+            targetPartner = partners.find(
+              (p) =>
+                p.code?.toLowerCase() === initialPartnerCode.toLowerCase() ||
+                p.name?.toLowerCase().includes(initialPartnerCode.toLowerCase())
+            );
+          }
+        }
+
+        // Default fallback to ST Courier (primary store carrier)
+        if (!targetPartner) {
+          targetPartner = stPartner || partners[0];
+        }
+
         if (targetPartner) {
           setSelectedPartnerId(String(targetPartner.id));
         }
       }
     }
-  }, [open, partners, initialTrackingNumber]);
+  }, [open, partners, initialTrackingNumber, initialPartnerCode, customerCourierName, customerChoice, isCod]);
 
   const activePartner = useMemo(() => {
     return partners.find((p) => String(p.id) === String(selectedPartnerId));
   }, [partners, selectedPartnerId]);
 
   const isShiprocket = useMemo(() => {
-    return Boolean(
-      activePartner?.code?.toUpperCase().includes("SHIPROCKET") ||
-      activePartner?.name?.toLowerCase().includes("shiprocket")
-    );
+    return activePartner ? isShiprocketPartner(activePartner) : false;
   }, [activePartner]);
 
   const isMss = useMemo(() => {
-    return Boolean(
-      activePartner?.code?.toUpperCase() === "MSS" ||
-      activePartner?.name?.toLowerCase().includes("mettur") ||
-      activePartner?.name?.toLowerCase().includes("mss")
-    );
+    return activePartner ? isMssPartner(activePartner) : false;
   }, [activePartner]);
 
   const handleClose = () => {

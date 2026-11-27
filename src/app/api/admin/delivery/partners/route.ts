@@ -19,10 +19,24 @@ export const GET = createApiHandler(
         orderBy: { id: "asc" },
       });
 
-      // Self-healing fallback: If no active delivery partners exist in database, auto-provision default ST Courier
-      if (partners.length === 0) {
+      // Ensure ST Courier is active and included so standard prepaid dispatches are always available
+      const hasStCourier = partners.some(
+        (p) =>
+          p.code?.toUpperCase() === "ST_COURIER" ||
+          p.code?.toUpperCase() === "ST" ||
+          p.name?.toLowerCase().includes("st courier")
+      );
+
+      if (!hasStCourier) {
         const existingSt = await db.delivery_partners.findFirst({
-          where: { code: "ST_COURIER" },
+          where: {
+            OR: [
+              { code: "ST_COURIER" },
+              { code: "ST" },
+              { courier_type: "st_courier" },
+              { name: { contains: "ST" } },
+            ],
+          },
         });
 
         if (existingSt) {
@@ -37,12 +51,13 @@ export const GET = createApiHandler(
               is_active: true,
             },
           });
-          partners = [updated];
+          partners.unshift(updated);
         } else {
           const created = await db.delivery_partners.create({
             data: {
               name: "ST Courier",
               code: "ST_COURIER",
+              courier_type: "st_courier",
               contact_number: "044-24614488",
               is_active: true,
             },
@@ -54,7 +69,7 @@ export const GET = createApiHandler(
               is_active: true,
             },
           });
-          partners = [created];
+          partners.unshift(created);
         }
       }
 
