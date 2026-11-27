@@ -326,6 +326,12 @@ function SidebarNavigation({
 
   const navigationItems = useMemo(() => {
     return sidebarItems
+      .filter((item) => {
+        if (item.href === "/admin/dashboard/reports") {
+          return !isStaff;
+        }
+        return true;
+      })
       .map((item) => {
         if (!item.children) return item;
         const filteredChildren = item.children.filter((child) => {
